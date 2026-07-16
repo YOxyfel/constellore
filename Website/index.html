@@ -1,0 +1,290 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#070914">
+  <meta name="description" content="Constellore is a cosmic word-combination game. Combine ideas, trace a path through the universe, and reach the hidden word. Play the public beta free in your browser.">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Constellore — build a universe, find the word">
+  <meta property="og:description" content="A goal-driven word-combination game by Oxyfel Games. Play the public beta free in your browser.">
+  <meta property="og:site_name" content="Constellore">
+  <meta name="twitter:card" content="summary">
+  <title>Constellore — Build a universe. Find the word.</title>
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="website.css?v=1.0.1">
+  <script src="website.js?v=1.0.1" defer></script>
+</head>
+<body data-beta-url="/play/" data-repository-url="https://github.com/YOxyfel/constellore">
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <header class="site-header" id="top">
+    <a class="brand" href="#top" aria-label="Constellore home">
+      <span class="brand-mark" aria-hidden="true"><i></i><b>✦</b></span>
+      <span><strong>CONSTELLORE</strong><small>BY OXYFEL GAMES</small></span>
+    </a>
+
+    <button class="menu-button" id="menuButton" type="button" aria-expanded="false" aria-controls="mobileNav">
+      <span></span><span></span><span></span><span class="sr-only">Open navigation</span>
+    </button>
+
+    <nav class="site-nav" id="siteNav" aria-label="Main navigation">
+      <a href="#how">How it works</a>
+      <a href="#modes">Modes</a>
+      <a href="#fair-play">Fair play</a>
+      <a href="#questions">FAQ</a>
+    </nav>
+
+    <a class="header-play" href="/play/"><span class="live-dot" aria-hidden="true"></span> Play beta</a>
+  </header>
+
+  <nav class="mobile-nav" id="mobileNav" aria-label="Mobile navigation">
+    <a href="#how"><span>01</span> How it works</a>
+    <a href="#modes"><span>02</span> Modes</a>
+    <a href="#fair-play"><span>03</span> Fair play</a>
+    <a href="#questions"><span>04</span> FAQ</a>
+    <a class="mobile-play" href="/play/"><i class="live-dot" aria-hidden="true"></i> Play public beta <b aria-hidden="true">↗</b></a>
+  </nav>
+
+  <main id="main">
+    <section class="hero" aria-labelledby="heroTitle">
+      <div class="hero-aurora" aria-hidden="true"></div>
+      <div class="hero-grid" aria-hidden="true"></div>
+
+      <div class="hero-copy reveal">
+        <p class="kicker"><span>PUBLIC BETA</span> A UNIVERSE MADE OF WORDS</p>
+        <h1 id="heroTitle">Build a universe.<br><em>Find the word.</em></h1>
+        <p class="hero-lede">Start with Earth, Water, Fire, and Air. Combine ideas into new discoveries, trace a route through the cosmos, and reach the word waiting at the end.</p>
+        <div class="hero-actions">
+          <a class="primary-button" href="/play/"><span>Play free in your browser</span><b aria-hidden="true">↗</b></a>
+          <a class="text-link" href="#how">See how it works <span aria-hidden="true">↓</span></a>
+        </div>
+        <ul class="hero-facts" aria-label="Beta highlights">
+          <li><strong>Free beta</strong><span>No checkout</span></li>
+          <li><strong>Instant play</strong><span>No download</span></li>
+          <li><strong>Built for touch</strong><span>Mobile first</span></li>
+        </ul>
+      </div>
+
+      <div class="hero-demo reveal" data-delay="1" aria-label="Interactive combination preview">
+        <div class="demo-chrome">
+          <span><i></i> LIVE COSMOS</span>
+          <strong>GOAL · FIND BIRD</strong>
+        </div>
+        <div class="demo-board" id="demoBoard">
+          <div class="orbit orbit-one" aria-hidden="true"></div>
+          <div class="orbit orbit-two" aria-hidden="true"></div>
+          <svg class="star-lines" viewBox="0 0 700 620" preserveAspectRatio="none" aria-hidden="true">
+            <path d="M88 475 C190 408 228 333 336 296 S505 228 611 124"></path>
+            <path d="M100 112 C214 146 270 224 336 296 S452 401 604 478"></path>
+          </svg>
+          <span class="tiny-star star-a" aria-hidden="true"></span>
+          <span class="tiny-star star-b" aria-hidden="true"></span>
+          <span class="tiny-star star-c" aria-hidden="true"></span>
+
+          <button class="word-node node-earth active" type="button" data-recipe="mud"><span>🌍</span>Earth</button>
+          <button class="word-node node-water active" type="button" data-recipe="mud"><span>💧</span>Water</button>
+          <button class="word-node node-fire" type="button" data-recipe="energy"><span>🔥</span>Fire</button>
+          <button class="word-node node-air" type="button" data-recipe="energy"><span>💨</span>Air</button>
+
+          <div class="merge-signal" aria-hidden="true"><i></i><i></i><i></i></div>
+          <div class="result-node" id="demoResult" aria-live="polite"><span>🟤</span><strong>Mud</strong><small>EARTH + WATER</small></div>
+          <div class="target-node"><span>🐦</span><strong>Bird</strong><small>YOUR DESTINATION</small></div>
+        </div>
+        <div class="demo-footer">
+          <p id="demoNote">Water softens earth into mud.</p>
+          <div class="demo-switcher" aria-label="Preview a combination">
+            <button type="button" data-demo="mud" aria-pressed="true">01</button>
+            <button type="button" data-demo="energy" aria-pressed="false">02</button>
+            <button type="button" data-demo="bird" aria-pressed="false">03</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <aside class="beta-ribbon" aria-label="Public beta notice">
+      <span><i aria-hidden="true"></i> PUBLIC BETA IS LIVE</span>
+      <p>Play free. Purchases and rewarded ads are disabled. Guest progress may reset before release.</p>
+      <a href="/play/">Enter the cosmos <span aria-hidden="true">→</span></a>
+    </aside>
+
+    <section class="thesis section-shell reveal" aria-labelledby="thesisTitle">
+      <p class="section-index">01 / THE IDEA</p>
+      <div>
+        <p class="kicker">INFINITE POSSIBILITY · ONE DESTINATION</p>
+        <h2 id="thesisTitle">Not just “what can I make?”<br><em>What can I reach?</em></h2>
+        <p>Constellore gives word crafting a purpose. Every run begins with the same four elements and a reachable target. The combinations can surprise you; the destination keeps every discovery meaningful.</p>
+      </div>
+    </section>
+
+    <section class="how section-shell" id="how" aria-labelledby="howTitle">
+      <div class="section-heading reveal">
+        <p class="section-index">02 / HOW TO PLAY</p>
+        <h2 id="howTitle">Three motions.<br><em>An entire cosmos.</em></h2>
+      </div>
+      <div class="steps">
+        <article class="step reveal">
+          <span class="step-number">01</span>
+          <div class="step-symbol" aria-hidden="true"><i class="drag-dot"></i><b>＋</b><i class="drag-dot second"></i></div>
+          <h3>Place</h3>
+          <p>Summon a discovered word onto the blackboard. Drag it freely through the field.</p>
+        </article>
+        <article class="step reveal" data-delay="1">
+          <span class="step-number">02</span>
+          <div class="step-symbol combine-symbol" aria-hidden="true"><i></i><b>✦</b><i></i></div>
+          <h3>Combine</h3>
+          <p>Drop one idea onto another. Logical connections become new words you can use immediately.</p>
+        </article>
+        <article class="step reveal" data-delay="2">
+          <span class="step-number">03</span>
+          <div class="step-symbol target-symbol" aria-hidden="true"><i></i><b>◎</b></div>
+          <h3>Reach</h3>
+          <p>Follow your discoveries toward the target. Finish cleanly, then compare your path.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="modes section-shell" id="modes" aria-labelledby="modesTitle">
+      <div class="section-heading reveal">
+        <p class="section-index">03 / CHOOSE YOUR ORBIT</p>
+        <h2 id="modesTitle">A different kind of<br><em>pressure every run.</em></h2>
+      </div>
+      <div class="mode-list">
+        <article class="mode-row reveal">
+          <span class="mode-glyph violet" aria-hidden="true">◉</span>
+          <div><small>01 · EXPLORE</small><h3>Reach</h3><p>Find a guaranteed path to a random target, or choose a destination of your own.</p></div>
+          <strong>NO CLOCK</strong>
+          <span class="row-arrow" aria-hidden="true">↗</span>
+        </article>
+        <article class="mode-row reveal">
+          <span class="mode-glyph cyan" aria-hidden="true">↯</span>
+          <div><small>02 · SPRINT</small><h3>Quick Orbit</h3><p>Ninety seconds. One reachable target. Every drag and discovery matters.</p></div>
+          <strong>90 SEC</strong>
+          <span class="row-arrow" aria-hidden="true">↗</span>
+        </article>
+        <article class="mode-row reveal">
+          <span class="mode-glyph amber" aria-hidden="true">◇</span>
+          <div><small>03 · TACTICAL</small><h3>Move Limit</h3><p>Reach the target before your twelve combinations run out.</p></div>
+          <strong>12 MOVES</strong>
+          <span class="row-arrow" aria-hidden="true">↗</span>
+        </article>
+        <article class="mode-row reveal">
+          <span class="mode-glyph rose" aria-hidden="true">✦</span>
+          <div><small>04 · SHARED</small><h3>Word of the Day</h3><p>One deeper target for everyone, governed by a changing cosmic law.</p></div>
+          <strong>ONCE DAILY</strong>
+          <span class="row-arrow" aria-hidden="true">↗</span>
+        </article>
+      </div>
+    </section>
+
+    <section class="play-section" id="play-here" aria-labelledby="playTitle">
+      <div class="play-intro section-shell reveal">
+        <div>
+          <p class="section-index">04 / PLAY HERE</p>
+          <h2 id="playTitle">The beta runs<br><em>right in this page.</em></h2>
+        </div>
+        <div class="play-copy">
+          <p>No install, account, or payment required. Start a run now; if you are on a phone, the beta opens in a full-screen layout designed for touch.</p>
+          <button class="primary-button" id="inlinePlayButton" type="button"><span>Launch playable beta</span><b aria-hidden="true">→</b></button>
+        </div>
+      </div>
+
+      <div class="play-stage section-shell reveal" id="playStage">
+        <div class="play-poster" id="playPoster">
+          <div class="poster-stars" aria-hidden="true"></div>
+          <div class="poster-target"><span>GOAL</span><strong>Find Telescope</strong></div>
+          <div class="poster-path" aria-hidden="true">
+            <span class="poster-word one">🌍 Earth</span>
+            <span class="poster-word two">💧 Water</span>
+            <span class="poster-word three">🟤 Mud</span>
+            <span class="poster-word four">🧱 Brick</span>
+            <i></i><i></i><i></i>
+          </div>
+          <button type="button" id="posterPlayButton" class="poster-play"><span aria-hidden="true">▶</span><strong>PLAY BETA</strong><small>FREE · NO DOWNLOAD</small></button>
+        </div>
+        <div class="game-embed" id="gameEmbed" hidden>
+          <div class="embed-bar"><span><i></i> CONSTELLORE BETA</span><div><a href="/play/" target="_blank" rel="noopener">Open full screen ↗</a><button type="button" id="closeEmbed">Close</button></div></div>
+          <iframe id="gameFrame" title="Playable Constellore beta" allow="fullscreen"></iframe>
+        </div>
+      </div>
+    </section>
+
+    <section class="fair section-shell" id="fair-play" aria-labelledby="fairTitle">
+      <div class="fair-copy reveal">
+        <p class="section-index">05 / PLAY TOGETHER, APART</p>
+        <h2 id="fairTitle">One challenge.<br><em>Two honest ladders.</em></h2>
+        <p>Official runs are verified by the server. Pure paths use only discovered combinations. Wished or Vault-assisted runs compete in Open, so creative shortcuts never erase a clean solve.</p>
+        <a class="text-link" href="/play/">Try today's challenge <span aria-hidden="true">→</span></a>
+      </div>
+      <div class="rank-preview reveal" data-delay="1" aria-label="Leaderboard preview">
+        <div class="rank-head"><span>DAILY · TELESCOPE</span><strong>PURE</strong></div>
+        <ol>
+          <li><b>01</b><span>Quiet Comet</span><em>7 MOVES</em><strong>01:12</strong></li>
+          <li><b>02</b><span>Silver Orbit</span><em>8 MOVES</em><strong>01:04</strong></li>
+          <li class="you"><b>03</b><span>Your constellation</span><em>8 MOVES</em><strong>01:19</strong></li>
+          <li><b>04</b><span>Patient Nova</span><em>9 MOVES</em><strong>01:01</strong></li>
+        </ol>
+        <p>Illustrative names and scores. Live rankings appear inside the beta.</p>
+      </div>
+    </section>
+
+    <section class="principles section-shell" aria-labelledby="principlesTitle">
+      <div class="section-heading reveal">
+        <p class="section-index">06 / DESIGNED FOR DISCOVERY</p>
+        <h2 id="principlesTitle">Surprising,<br><em>not nonsensical.</em></h2>
+      </div>
+      <div class="principle-grid">
+        <article class="reveal"><span>✦</span><h3>Meaning first</h3><p>Combinations should produce a recognizable concept with a reason you can understand.</p></article>
+        <article class="reveal" data-delay="1"><span>⌁</span><h3>Routes that resolve</h3><p>Every official target is checked for a real path from the four starting elements.</p></article>
+        <article class="reveal" data-delay="2"><span>◎</span><h3>Your own constellation</h3><p>The result matters, but the trail of words you used to reach it is the story of the run.</p></article>
+      </div>
+    </section>
+
+    <section class="questions section-shell" id="questions" aria-labelledby="questionsTitle">
+      <div class="questions-heading reveal">
+        <p class="section-index">07 / QUESTIONS</p>
+        <h2 id="questionsTitle">Before you<br><em>enter orbit.</em></h2>
+      </div>
+      <div class="faq-list reveal">
+        <details>
+          <summary>Is the beta free?<span>＋</span></summary>
+          <p>Yes. The current public beta has no live checkout or rewarded advertising. It is for testing the game, balance, and combination quality.</p>
+        </details>
+        <details>
+          <summary>Do I need an account or download?<span>＋</span></summary>
+          <p>No. The browser creates a temporary guest identity on this device. A recoverable account system will arrive before paid ownership is enabled.</p>
+        </details>
+        <details>
+          <summary>Can beta progress be reset?<span>＋</span></summary>
+          <p>Yes. Guest progress and leaderboards may be reset while the production account and database systems are being built.</p>
+        </details>
+        <details>
+          <summary>Will every random combination work?<span>＋</span></summary>
+          <p>No, but the game aims for broad logical coverage rather than arbitrary rejection. Official targets always have a verified route.</p>
+        </details>
+      </div>
+    </section>
+
+    <section class="final-cta">
+      <div class="cta-orbit" aria-hidden="true"></div>
+      <p class="kicker reveal">EARTH · WATER · FIRE · AIR</p>
+      <h2 class="reveal">Your first constellation<br><em>starts with four words.</em></h2>
+      <a class="primary-button reveal" href="/play/"><span>Play the public beta</span><b aria-hidden="true">↗</b></a>
+      <p class="cta-note reveal">Free to play in your browser · Purchases disabled during beta</p>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <a class="brand footer-brand" href="#top">
+      <span class="brand-mark" aria-hidden="true"><i></i><b>✦</b></span>
+      <span><strong>CONSTELLORE</strong><small>BY OXYFEL GAMES</small></span>
+    </a>
+    <p>A goal-driven word-combination game, built in Bulgaria.</p>
+    <nav aria-label="Footer navigation"><a href="#how">How it works</a><a href="#modes">Modes</a><a href="#questions">FAQ</a><a href="/play/">Play beta</a></nav>
+    <div class="footer-bottom"><span>© 2026 Oxyfel Games</span><span>PUBLIC BETA · PROGRESS MAY RESET</span></div>
+  </footer>
+</body>
+</html>
