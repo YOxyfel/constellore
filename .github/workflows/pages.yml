@@ -32,9 +32,14 @@ jobs:
       - name: Build static marketing site
         run: npm run build:pages
         env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
           PUBLIC_BETA_URL: ${{ vars.PUBLIC_BETA_URL }}
+          PUBLIC_INTEREST_API_URL: ${{ vars.PUBLIC_INTEREST_API_URL }}
       - name: Verify Pages artifact
         run: npm run check:pages
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v5
         with:

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFile, stat } from "node:fs/promises";
+import { readdir, readFile, stat } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
@@ -8,8 +8,36 @@ const output = join(root, "dist-pages");
 const rootHtml = await readFile(join(output, "index.html"), "utf8");
 const gameHtml = await readFile(join(output, "play", "index.html"), "utf8");
 
+function bodyDataAttribute(document, name) {
+  const body = document.match(/<body\b[^>]*>/i)?.[0] || "";
+  const value = body.match(new RegExp(`${name}="([^"]*)"`))?.[1];
+  assert.notEqual(value, undefined, `Missing ${name} from the Pages document.`);
+  return value;
+}
+
+async function artifactFiles(directory) {
+  const files = [];
+  for (const entry of await readdir(directory, { withFileTypes: true })) {
+    const path = join(directory, entry.name);
+    if (entry.isDirectory()) files.push(...await artifactFiles(path));
+    else files.push(path);
+  }
+  return files;
+}
+
 assert.match(rootHtml, /data-beta-url="https:\/\/[^\"]+\/play\/"/);
 assert.match(rootHtml, /Your progress stays local/);
+const interestProvider = bodyDataAttribute(rootHtml, "data-interest-provider");
+const interestApiUrl = bodyDataAttribute(rootHtml, "data-interest-api-url");
+const interestCount = bodyDataAttribute(rootHtml, "data-interest-count");
+assert.match(interestCount, /^\d+$/, "The Pages interest count must be a non-negative integer.");
+assert.ok(Number.isSafeInteger(Number(interestCount)), "The Pages interest count exceeds the safe integer range.");
+if (interestProvider === "first-party") {
+  assert.equal(new URL(interestApiUrl).protocol, "https:", "The first-party interest endpoint must use HTTPS.");
+} else {
+  assert.equal(interestProvider, "github", "Unknown Pages interest provider.");
+  assert.equal(interestApiUrl, "", "GitHub fallback must not retain the server-only interest endpoint.");
+}
 assert.match(gameHtml, /data-runtime="local-practice"/);
 for (const expected of [
   'href="./manifest.webmanifest"',
@@ -32,4 +60,12 @@ assert.equal(world.lookupLocalCombination("Fire", "Fire").word, "Inferno");
 assert.equal(world.lookupLocalCombination("Species", "Air").word, "Bird");
 assert.equal(world.buildLocalGame("reach", 5, "Telescope").ranked, false);
 
-console.log("GitHub Pages artifact verified: marketing site, local game route, compact world, and subpath-safe assets.");
+const workflowToken = process.env.GITHUB_TOKEN?.trim();
+if (workflowToken) {
+  for (const file of await artifactFiles(output)) {
+    const contents = await readFile(file);
+    assert.ok(!contents.includes(Buffer.from(workflowToken)), `Workflow token leaked into ${file}.`);
+  }
+}
+
+console.log(`GitHub Pages artifact verified: ${interestProvider} interest signal, local game route, compact world, and subpath-safe assets.`);

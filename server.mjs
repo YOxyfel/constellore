@@ -803,6 +803,10 @@ const mime = {
 };
 
 const requestWindows = new Map();
+const interestRequestWindows = new Map();
+const INTEREST_RATE_WINDOW_MS = 10 * 60_000;
+const INTEREST_RATE_LIMIT = 20;
+const INTEREST_RATE_MAX_KEYS = 5_000;
 const analyticsEvents = new Set([
   "app_opened", "run_started", "combination_completed", "combination_rejected", "target_reached",
   "run_failed", "wish_opened", "wish_used", "paywall_viewed", "checkout_started", "share_created",
@@ -820,6 +824,58 @@ function rateLimited(request, limit = 180) {
   }
   current.count += 1;
   return current.count > limit;
+}
+
+function interestRateLimited(request, anonymousId) {
+  const now = Date.now();
+  for (const [key, window] of interestRequestWindows) {
+    if (now - window.startedAt > INTEREST_RATE_WINDOW_MS) interestRequestWindows.delete(key);
+  }
+  while (interestRequestWindows.size >= INTEREST_RATE_MAX_KEYS) {
+    interestRequestWindows.delete(interestRequestWindows.keys().next().value);
+  }
+  const networkAddress = request.socket.remoteAddress || "unknown";
+  const key = gameStore.sign(`rate:interest:${networkAddress}:${anonymousId}`);
+  const current = interestRequestWindows.get(key);
+  if (!current) {
+    interestRequestWindows.set(key, { startedAt: now, count: 1 });
+    return false;
+  }
+  if (now - current.startedAt > INTEREST_RATE_WINDOW_MS) {
+    interestRequestWindows.set(key, { startedAt: now, count: 1 });
+    return false;
+  }
+  current.count += 1;
+  return current.count > INTEREST_RATE_LIMIT;
+}
+
+function configuredInterestOrigins() {
+  const origins = new Set();
+  for (const candidate of String(process.env.INTEREST_ALLOWED_ORIGINS || "").split(",").map((value) => value.trim()).filter(Boolean)) {
+    try {
+      const parsed = new URL(candidate);
+      const normalized = candidate.replace(/\/$/, "");
+      if (["http:", "https:"].includes(parsed.protocol) && parsed.origin === normalized) origins.add(parsed.origin);
+    } catch { /* Invalid configured origins are ignored rather than reflected. */ }
+  }
+  return origins;
+}
+
+function allowInterestOrigin(request, response) {
+  const rawOrigin = String(request.headers.origin || "").trim();
+  if (!rawOrigin) return true;
+  let origin;
+  try {
+    origin = new URL(rawOrigin);
+  } catch {
+    return false;
+  }
+  if (!["http:", "https:"].includes(origin.protocol) || origin.origin !== rawOrigin.replace(/\/$/, "")) return false;
+  const sameOrigin = origin.host.toLowerCase() === String(request.headers.host || "").toLowerCase();
+  if (!sameOrigin && !configuredInterestOrigins().has(origin.origin)) return false;
+  response.setHeader("Access-Control-Allow-Origin", origin.origin);
+  response.setHeader("Vary", "Origin");
+  return true;
 }
 
 function setSecurityHeaders(response) {
@@ -886,11 +942,19 @@ function publicRun(run, token) {
   };
 }
 
-async function jsonBody(request) {
+async function jsonBody(request, maximumBytes = 50_000) {
   let body = "";
+  let bytes = 0;
+  const declaredLength = Number(request.headers["content-length"]);
+  if (Number.isFinite(declaredLength) && declaredLength > maximumBytes) {
+    const error = new Error("Request too large.");
+    error.statusCode = 413;
+    throw error;
+  }
   for await (const chunk of request) {
+    bytes += Buffer.byteLength(chunk);
     body += chunk;
-    if (body.length > 50_000) {
+    if (bytes > maximumBytes) {
       const error = new Error("Request too large.");
       error.statusCode = 413;
       throw error;
@@ -909,11 +973,36 @@ export const server = createServer(async (request, response) => {
   setSecurityHeaders(response);
   try {
     const url = new URL(request.url, `http://${request.headers.host || "localhost"}`);
+    if (url.pathname === "/api/interest") {
+      if (!allowInterestOrigin(request, response)) return sendJson(response, 403, { error: "That origin is not allowed.", code: "interest_origin_denied" });
+      if (request.method === "OPTIONS") {
+        response.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+        response.setHeader("Access-Control-Allow-Headers", "Content-Type");
+        response.setHeader("Access-Control-Max-Age", "600");
+        response.writeHead(204);
+        return response.end();
+      }
+      if (request.method === "GET") return sendJson(response, 200, gameStore.interestAggregate("web-release"));
+      if (request.method === "POST") {
+        const contentType = String(request.headers["content-type"] || "").split(";", 1)[0].trim().toLowerCase();
+        if (contentType !== "application/json") throw serviceError(415, "Interest requests must use application/json.", "interest_content_type_required");
+        const body = await jsonBody(request, 1_024);
+        const expectedKeys = ["action", "anonymousId", "campaign", "source"];
+        if (!body || typeof body !== "object" || Array.isArray(body) || Object.keys(body).sort().join(",") !== expectedKeys.join(",")) {
+          throw serviceError(400, "Interest requests must contain only anonymousId, campaign, source, and action.", "invalid_interest_request");
+        }
+        if (interestRateLimited(request, body.anonymousId)) return sendJson(response, 429, { error: "Too many interest requests. Please try again later.", code: "interest_rate_limited" });
+        const result = await gameStore.recordInterest(body);
+        return sendJson(response, result.changed && result.interested ? 201 : 200, result);
+      }
+      response.setHeader("Allow", "GET, POST, OPTIONS");
+      return sendJson(response, 405, { error: "Method not allowed.", code: "method_not_allowed" });
+    }
     if (["GET", "HEAD"].includes(request.method) && url.pathname === "/play") {
       response.writeHead(308, { Location: "/play/", "Cache-Control": "no-cache" });
       return response.end();
     }
-    if (request.method === "GET" && url.pathname === "/healthz") return sendJson(response, 200, { ok: true, game: "Constellore", version: "1.3.0" });
+    if (request.method === "GET" && url.pathname === "/healthz") return sendJson(response, 200, { ok: true, game: "Constellore", version: "1.4.0" });
     if (request.method === "GET" && url.pathname === "/api/config") {
       const billing = billingSettings();
       return sendJson(response, 200, {

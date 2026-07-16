@@ -15,10 +15,10 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="website.css?v=1.0.1">
-  <script src="website.js?v=1.0.1" defer></script>
+  <link rel="stylesheet" href="website.css?v=1.1.0">
+  <script src="website.js?v=1.1.0" defer></script>
 </head>
-<body data-beta-url="/play/" data-repository-url="https://github.com/YOxyfel/constellore">
+<body data-beta-url="/play/" data-repository-url="https://github.com/YOxyfel/constellore" data-interest-api-url="/api/interest" data-interest-provider="first-party" data-interest-count="0">
   <a class="skip-link" href="#main">Skip to content</a>
 
   <header class="site-header" id="top">
@@ -35,6 +35,7 @@
       <a href="#how">How it works</a>
       <a href="#modes">Modes</a>
       <a href="#fair-play">Fair play</a>
+      <a href="#wishlist">Wishlist</a>
       <a href="#questions">FAQ</a>
     </nav>
 
@@ -45,7 +46,8 @@
     <a href="#how"><span>01</span> How it works</a>
     <a href="#modes"><span>02</span> Modes</a>
     <a href="#fair-play"><span>03</span> Fair play</a>
-    <a href="#questions"><span>04</span> FAQ</a>
+    <a href="#wishlist"><span>04</span> Wishlist</a>
+    <a href="#questions"><span>05</span> FAQ</a>
     <a class="mobile-play" href="/play/"><i class="live-dot" aria-hidden="true"></i> Play public beta <b aria-hidden="true">↗</b></a>
   </nav>
 
@@ -243,9 +245,41 @@
       </div>
     </section>
 
+    <section class="wishlist section-shell" id="wishlist" aria-labelledby="wishlistTitle">
+      <div class="wishlist-copy reveal">
+        <p class="section-index">07 / LAUNCH WISHLIST</p>
+        <p class="kicker">A SMALL SIGNAL WITH A REAL NUMBER</p>
+        <h2 id="wishlistTitle">Should this universe<br><em>keep expanding?</em></h2>
+        <p class="wishlist-lede">If Constellore has your attention, add one signal for launch. It helps Oxyfel judge real interest before spending on store pages, servers, and a larger word universe.</p>
+        <div class="wishlist-actions">
+          <button class="primary-button wishlist-button" id="wishlistButton" type="button" aria-pressed="false">
+            <span>☆ Add to launch wishlist</span><b aria-hidden="true">＋</b>
+          </button>
+          <button class="text-link share-button" id="shareButton" type="button">Share Constellore <span aria-hidden="true">↗</span></button>
+        </div>
+        <p class="wishlist-status" id="wishlistStatus" aria-live="polite">Loading the public launch signal…</p>
+      </div>
+
+      <div class="wishlist-instrument reveal" data-delay="1" aria-label="Constellore launch interest">
+        <div class="signal-orbits" aria-hidden="true">
+          <i></i><i></i><i></i><b>✦</b>
+        </div>
+        <div class="signal-score">
+          <small id="wishlistMetricLabel">LAUNCH WISHLISTS</small>
+          <strong id="wishlistCount">—</strong>
+          <span id="wishlistStage">COLLECTING FIRST SIGNALS</span>
+        </div>
+        <div class="signal-progress">
+          <div><span>COMMUNITY ORBIT</span><strong id="wishlistProgressLabel">STARTING</strong></div>
+          <div class="signal-track" aria-hidden="true"><i id="wishlistMeter"></i></div>
+          <p id="wishlistDisclosure">One anonymous browser can add or remove one signal. No email, account, or marketing list.</p>
+        </div>
+      </div>
+    </section>
+
     <section class="questions section-shell" id="questions" aria-labelledby="questionsTitle">
       <div class="questions-heading reveal">
-        <p class="section-index">07 / QUESTIONS</p>
+        <p class="section-index">08 / QUESTIONS</p>
         <h2 id="questionsTitle">Before you<br><em>enter orbit.</em></h2>
       </div>
       <div class="faq-list reveal">
@@ -265,6 +299,10 @@
           <summary>Will every random combination work?<span>＋</span></summary>
           <p>No, but the game aims for broad logical coverage rather than arbitrary rejection. Official targets always have a verified route.</p>
         </details>
+        <details>
+          <summary>Is the launch wishlist a store preorder?<span>＋</span></summary>
+          <p>No. It is an early interest signal, not a purchase or a Steam, Epic, Google Play, or App Store wishlist. The static preview labels GitHub stars separately; the online server can count one reversible anonymous browser signal.</p>
+        </details>
       </div>
     </section>
 
@@ -283,7 +321,7 @@
       <span><strong>CONSTELLORE</strong><small>BY OXYFEL GAMES</small></span>
     </a>
     <p>A goal-driven word-combination game, built in Bulgaria.</p>
-    <nav aria-label="Footer navigation"><a href="#how">How it works</a><a href="#modes">Modes</a><a href="#questions">FAQ</a><a href="/play/">Play beta</a></nav>
+    <nav aria-label="Footer navigation"><a href="#how">How it works</a><a href="#modes">Modes</a><a href="#wishlist">Wishlist</a><a href="#questions">FAQ</a><a href="/play/">Play beta</a></nav>
     <div class="footer-bottom"><span>© 2026 Oxyfel Games</span><span>PUBLIC BETA · PROGRESS MAY RESET</span></div>
   </footer>
 </body>

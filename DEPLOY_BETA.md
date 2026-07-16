@@ -12,6 +12,7 @@ The configuration follows Render's current [Blueprint YAML reference](https://re
 - HTTP health checks at `/healthz`.
 - A 1 GB disk mounted at `/var/data`, with the game store at `/var/data/constellore.json`.
 - Production mode, with rewarded ads disabled.
+- Cross-origin launch-interest requests allowed only from the exact GitHub Pages origin.
 
 Render documents that a disk-backed service cannot run multiple instances, loses zero-downtime deploys, and makes only the mounted path persistent. Those limits are acceptable for a small beta, not for a commercial wallet or entitlement system. See [Persistent Disks](https://render.com/docs/disks) and [Scaling Render Services](https://render.com/docs/scaling).
 
@@ -42,7 +43,9 @@ Do not add Postgres, Key Value, preview services, extra instances, a Pro workspa
 4. Confirm the Environment page has only the non-secret beta variables in `render.yaml`. Remove `OPENAI_API_KEY` and `NEBULA_CHECKOUT_URL` if they were inherited.
 5. Apply the Blueprint and watch the first deploy. Later releases require a deliberate **Manual Deploy** because automatic deploys are disabled.
 6. Open the generated `onrender.com` URL only after the service reports healthy.
-7. In the GitHub repository, set the Actions variable `PUBLIC_BETA_URL` to that Render URL and rerun **Deploy marketing site to Pages**. This switches the website CTAs from local practice to the full server beta. Cross-origin hosts open top-level so mobile controls, storage, PWA scope, and security policy remain intact.
+7. In the GitHub repository, set the Actions variable `PUBLIC_BETA_URL` to that Render URL. Set `PUBLIC_INTEREST_API_URL` to the same hostname plus `/api/interest`, for example `https://constellore-beta.onrender.com/api/interest`.
+8. Confirm Render has `INTEREST_ALLOWED_ORIGINS=https://yoxyfel.github.io`. If a custom website domain is added later, append its exact origin with a comma; do not use `*`.
+9. Rerun **Deploy marketing site to Pages**. The website now sends players to the full server beta and its on-site Launch Wishlist uses the server-backed aggregate. If the interest URL is absent, Pages deliberately falls back to the repository's real GitHub star count instead of inventing a shared counter.
 
 Render assigns a public `onrender.com` address and terminates HTTPS for web services. The app already reads Render's `PORT` variable and exposes `/healthz`; no port secret or custom `PORT` value is needed. See [Web Services](https://render.com/docs/web-services).
 
@@ -60,6 +63,7 @@ Expected checks:
 
 - `/healthz` returns HTTP 200 with `ok: true`.
 - `/api/config` reports production beta behavior: billing disabled, the test store disabled, rewarded ads disabled, and AI disabled.
+- `/api/interest` reports only aggregate launch-interest totals; adding the same browser signal twice does not increase the active count.
 - `/` shows the public Constellore marketing site and every Play Beta call-to-action reaches `/play/`.
 - `/play/` loads the playable beta directly and survives a browser refresh.
 - A fresh guest can start and finish a game, refresh the page, and still see server-backed progress.

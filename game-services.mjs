@@ -44,6 +44,43 @@ export const MARKET_CATALOG = Object.freeze([
 const catalogById = new Map(MARKET_CATALOG.map((item) => [item.id, item]));
 const adjectives = ["Amber", "Astral", "Bright", "Cinder", "Cosmic", "Distant", "Echo", "Frost", "Golden", "Hidden", "Ivory", "Lunar", "Neon", "Quiet", "Solar", "Velvet"];
 const nouns = ["Comet", "Drifter", "Ember", "Harbor", "Meteor", "Moon", "Nova", "Orbit", "Pioneer", "Raven", "Signal", "Sparrow", "Star", "Voyager", "Willow", "Wisp"];
+const INTEREST_CAMPAIGN = "web-release";
+const INTEREST_SOURCES = new Set(["github-pages", "website", "local-practice", "game", "direct"]);
+const INTEREST_ACTIONS = new Set(["add", "remove"]);
+const anonymousInterestIdPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function emptyInterestData() {
+  return { version: 1, records: {}, totals: {}, updatedAt: null };
+}
+
+function normalizeInterestData(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return emptyInterestData();
+  return {
+    version: 1,
+    records: value.records && typeof value.records === "object" && !Array.isArray(value.records) ? value.records : {},
+    totals: value.totals && typeof value.totals === "object" && !Array.isArray(value.totals) ? value.totals : {},
+    updatedAt: typeof value.updatedAt === "string" ? value.updatedAt : null
+  };
+}
+
+function emptyInterestTotals() {
+  return { active: 0, total: 0, additions: 0, removals: 0, reactivations: 0, sources: {} };
+}
+
+function normalizeInterestTotals(value) {
+  const totals = value && typeof value === "object" && !Array.isArray(value) ? value : {};
+  const sources = totals.sources && typeof totals.sources === "object" && !Array.isArray(totals.sources) ? totals.sources : {};
+  return {
+    active: Math.max(0, Number(totals.active) || 0),
+    total: Math.max(0, Number(totals.total) || 0),
+    additions: Math.max(0, Number(totals.additions) || 0),
+    removals: Math.max(0, Number(totals.removals) || 0),
+    reactivations: Math.max(0, Number(totals.reactivations) || 0),
+    sources: Object.fromEntries(Object.entries(sources)
+      .filter(([source]) => INTEREST_SOURCES.has(source))
+      .map(([source, count]) => [source, Math.max(0, Number(count) || 0)]))
+  };
+}
 
 function hashNumber(value) {
   let hash = 2166136261;
@@ -109,7 +146,7 @@ function betterEntry(next, current) {
 export class GameStore {
   constructor(path = ":memory:") {
     this.path = path;
-    this.data = { version: 1, secret: "", players: {}, scores: [], demand: {} };
+    this.data = { version: 2, secret: "", players: {}, scores: [], demand: {}, interest: emptyInterestData() };
     this.writeQueue = Promise.resolve();
   }
 
@@ -117,7 +154,15 @@ export class GameStore {
     if (this.path !== ":memory:") {
       try {
         const parsed = JSON.parse(await readFile(this.path, "utf8"));
-        if (parsed && typeof parsed === "object") this.data = { ...this.data, ...parsed, players: parsed.players || {}, scores: parsed.scores || [], demand: parsed.demand || {} };
+        if (parsed && typeof parsed === "object") this.data = {
+          ...this.data,
+          ...parsed,
+          version: 2,
+          players: parsed.players || {},
+          scores: parsed.scores || [],
+          demand: parsed.demand || {},
+          interest: normalizeInterestData(parsed.interest)
+        };
       } catch (error) {
         if (error.code !== "ENOENT") throw error;
       }
@@ -190,6 +235,66 @@ export class GameStore {
       dailyWishUsedDate: player.dailyWishUsedDate || "",
       vault: MARKET_CATALOG.filter((item) => player.licenses[item.id]).map((item) => ({ ...item, owned: true }))
     };
+  }
+
+  interestAggregate(campaign = INTEREST_CAMPAIGN) {
+    if (campaign !== INTEREST_CAMPAIGN) throw serviceError(400, "That interest campaign is not available.", "invalid_interest_campaign");
+    const totals = normalizeInterestTotals(this.data.interest.totals[campaign]);
+    return {
+      campaign,
+      ...totals,
+      sources: { ...totals.sources },
+      updatedAt: this.data.interest.updatedAt || null
+    };
+  }
+
+  async recordInterest({ anonymousId, campaign, source, action }, date = new Date()) {
+    if (!anonymousInterestIdPattern.test(String(anonymousId || ""))) throw serviceError(400, "A valid anonymous interest ID is required.", "invalid_interest_id");
+    if (campaign !== INTEREST_CAMPAIGN) throw serviceError(400, "That interest campaign is not available.", "invalid_interest_campaign");
+    if (!INTEREST_SOURCES.has(source)) throw serviceError(400, "That interest source is not available.", "invalid_interest_source");
+    if (!INTEREST_ACTIONS.has(action)) throw serviceError(400, "That interest action is not available.", "invalid_interest_action");
+    if (!(date instanceof Date) || Number.isNaN(date.getTime())) throw serviceError(400, "A valid interest date is required.", "invalid_interest_date");
+
+    const day = date.toISOString().slice(0, 10);
+    const digest = this.sign(`interest:v1:${campaign}:${anonymousId}`);
+    const recordKey = `${campaign}:${digest}`;
+    const records = this.data.interest.records;
+    const existing = records[recordKey];
+    const totals = normalizeInterestTotals(this.data.interest.totals[campaign]);
+    this.data.interest.totals[campaign] = totals;
+    let changed = false;
+    let interested = Boolean(existing?.active);
+
+    if (action === "add" && !existing) {
+      records[recordKey] = { campaign, active: true, firstDate: day, lastChangedDate: day, firstSource: source };
+      totals.active += 1;
+      totals.total += 1;
+      totals.additions += 1;
+      totals.sources[source] = (totals.sources[source] || 0) + 1;
+      changed = true;
+      interested = true;
+    } else if (action === "add" && !existing.active) {
+      existing.active = true;
+      existing.lastChangedDate = day;
+      totals.active += 1;
+      totals.additions += 1;
+      totals.reactivations += 1;
+      changed = true;
+      interested = true;
+    } else if (action === "remove" && existing?.active) {
+      existing.active = false;
+      existing.lastChangedDate = day;
+      totals.active = Math.max(0, totals.active - 1);
+      totals.removals += 1;
+      changed = true;
+      interested = false;
+    }
+
+    if (changed) {
+      this.data.interest.updatedAt = day;
+      await this.persist();
+    }
+    return { campaign, interested, changed };
   }
 
   demandForMinute(wordId, minute) {

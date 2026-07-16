@@ -26,6 +26,8 @@ For the current no-payments public beta, follow [DEPLOY_BETA.md](DEPLOY_BETA.md)
 
 The marketing site is deployed at [yoxyfel.github.io/constellore](https://yoxyfel.github.io/constellore/) and local practice at [yoxyfel.github.io/constellore/play](https://yoxyfel.github.io/constellore/play/). The Pages build compiles the server's current combination rules into a compact browser universe, keeps progression in a separate local profile, marks every result unranked, and removes payments. When the public Node host is ready, set the repository Actions variable `PUBLIC_BETA_URL` to its HTTPS URL and rerun the Pages workflow; the website then sends players to the full server beta.
 
+The Launch Wishlist has two honest deployment modes. Static Pages shows the repository's real GitHub star count and sends the visitor to GitHub, because Pages cannot persist a shared wishlist. The Node server exposes a first-party anonymous signal at `GET/POST /api/interest`: one browser can add or remove one signal, while the store keeps only an HMAC digest of its random UUID. To use that counter from Pages, set `PUBLIC_INTEREST_API_URL` to the deployed HTTPS `/api/interest` URL and allow the exact Pages origin with `INTEREST_ALLOWED_ORIGINS=https://yoxyfel.github.io`. Never expose the JSON data file or treat these signals as Steam/App Store wishlists or preorders.
+
 ## Player experience
 
 - **Reach** - a reachable random target or a player-entered target.

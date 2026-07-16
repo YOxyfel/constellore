@@ -9,6 +9,9 @@ const repositoryName = process.env.GITHUB_REPOSITORY?.split("/")[1] || "constell
 const repositoryOwner = process.env.GITHUB_REPOSITORY?.split("/")[0] || "YOxyfel";
 const pagesUrl = (process.env.PAGES_BASE_URL || `https://${repositoryOwner.toLowerCase()}.github.io/${repositoryName}/`).replace(/\/?$/, "/");
 const configuredBetaUrl = process.env.PUBLIC_BETA_URL?.trim() || "";
+const configuredInterestApiUrl = process.env.PUBLIC_INTEREST_API_URL?.trim() || "";
+const githubRepository = process.env.GITHUB_REPOSITORY?.trim() || "YOxyfel/constellore";
+const githubToken = process.env.GITHUB_TOKEN?.trim() || "";
 
 function requirePublicUrl(value, name) {
   if (!value) return "";
@@ -19,6 +22,7 @@ function requirePublicUrl(value, name) {
     throw new Error(`${name} must be an absolute HTTPS URL.`);
   }
   if (parsed.protocol !== "https:") throw new Error(`${name} must use HTTPS.`);
+  if (parsed.username || parsed.password) throw new Error(`${name} must not include credentials.`);
   return parsed.href;
 }
 
@@ -26,12 +30,66 @@ function escapeAttribute(value) {
   return value.replaceAll("&", "&amp;").replaceAll('"', "&quot;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
 }
 
+function setBodyDataAttribute(document, name, value) {
+  let foundBody = false;
+  const updated = document.replace(/<body\b([^>]*)>/i, (tag, attributes) => {
+    foundBody = true;
+    const encoded = escapeAttribute(String(value));
+    const attributePattern = new RegExp(`\\s${name}="[^"]*"`);
+    const nextAttributes = attributePattern.test(attributes)
+      ? attributes.replace(attributePattern, ` ${name}="${encoded}"`)
+      : `${attributes} ${name}="${encoded}"`;
+    return `<body${nextAttributes}>`;
+  });
+  if (!foundBody) throw new Error(`Website document is missing a <body> element for ${name}.`);
+  return updated;
+}
+
+async function githubStargazerCount(repository, token) {
+  if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repository)) {
+    console.warn("GITHUB_REPOSITORY is invalid; using a zero GitHub interest count.");
+    return 0;
+  }
+
+  const [owner, name] = repository.split("/");
+  const headers = {
+    Accept: "application/vnd.github+json",
+    "User-Agent": "constellore-pages-build",
+    "X-GitHub-Api-Version": "2022-11-28"
+  };
+  if (token) headers.Authorization = `Bearer ${token}`;
+
+  try {
+    const response = await fetch(`https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(name)}`, {
+      headers,
+      signal: AbortSignal.timeout(10_000)
+    });
+    if (!response.ok) {
+      console.warn(`GitHub interest lookup returned HTTP ${response.status}; using zero.`);
+      return 0;
+    }
+    const payload = await response.json();
+    const count = Number(payload.stargazers_count);
+    if (!Number.isSafeInteger(count) || count < 0) {
+      console.warn("GitHub interest lookup returned an invalid count; using zero.");
+      return 0;
+    }
+    return count;
+  } catch (error) {
+    console.warn(`GitHub interest lookup failed (${error?.name || "request error"}); using zero.`);
+    return 0;
+  }
+}
+
 const validatedPagesUrl = requirePublicUrl(pagesUrl, "PAGES_BASE_URL");
 const externalBetaUrl = requirePublicUrl(configuredBetaUrl, "PUBLIC_BETA_URL");
+const interestApiUrl = requirePublicUrl(configuredInterestApiUrl, "PUBLIC_INTEREST_API_URL");
 const localBetaUrl = new URL("play/", validatedPagesUrl).href;
 const betaUrl = externalBetaUrl || localBetaUrl;
 const safePagesUrl = escapeAttribute(validatedPagesUrl);
 const safeBetaUrl = escapeAttribute(betaUrl);
+const interestProvider = interestApiUrl ? "first-party" : "github";
+const interestCount = interestApiUrl ? 0 : await githubStargazerCount(githubRepository, githubToken);
 
 await rm(output, { recursive: true, force: true });
 await mkdir(output, { recursive: true });
@@ -41,6 +99,9 @@ html = html
   .replace("<head>", `<head>\n  <link rel="canonical" href="${safePagesUrl}">\n  <meta property="og:url" content="${safePagesUrl}">`)
   .replace('data-beta-url="/play/"', `data-beta-url="${safeBetaUrl}"`)
   .replaceAll('href="/play/"', `href="${safeBetaUrl}"`);
+html = setBodyDataAttribute(html, "data-interest-api-url", interestApiUrl);
+html = setBodyDataAttribute(html, "data-interest-provider", interestProvider);
+html = setBodyDataAttribute(html, "data-interest-count", interestCount);
 
 if (!externalBetaUrl) {
   const staticCopy = new Map([
@@ -110,3 +171,4 @@ await writeFile(join(output, "sitemap.xml"), `<?xml version="1.0" encoding="UTF-
 
 console.log(`Built GitHub Pages site at ${output}`);
 console.log(externalBetaUrl ? `Playable server beta: ${externalBetaUrl}` : `Playable local-practice beta: ${localBetaUrl}`);
+console.log(interestApiUrl ? `Interest provider: first-party (${interestApiUrl})` : `Interest provider: GitHub (${interestCount} stargazers)`);

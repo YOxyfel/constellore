@@ -54,6 +54,12 @@ test("authenticated HTTP runs produce verified Pure and Open leaderboard scores"
   const address = server.address();
   assert.ok(address && typeof address === "object");
   const baseUrl = `http://127.0.0.1:${address.port}`;
+  const previousInterestOrigins = process.env.INTEREST_ALLOWED_ORIGINS;
+  process.env.INTEREST_ALLOWED_ORIGINS = "https://yoxyfel.github.io,https://constellore.example";
+  t.after(() => {
+    if (previousInterestOrigins === undefined) delete process.env.INTEREST_ALLOWED_ORIGINS;
+    else process.env.INTEREST_ALLOWED_ORIGINS = previousInterestOrigins;
+  });
   let auth = {};
 
   const landingResponse = await fetch(`${baseUrl}/`);
@@ -89,18 +95,126 @@ test("authenticated HTTP runs produce verified Pure and Open leaderboard scores"
   assert.ok(Number(headResponse.headers.get("content-length")) > 0);
   assert.equal(await headResponse.text(), "");
 
-  const request = async (path, { method = "GET", body, authenticated = true } = {}) => {
+  const request = async (path, { method = "GET", body, authenticated = true, headers = {} } = {}) => {
     const response = await fetch(`${baseUrl}${path}`, {
       method,
       headers: {
         ...(body ? { "content-type": "application/json" } : {}),
-        ...(authenticated ? auth : {})
+        ...(authenticated ? auth : {}),
+        ...headers
       },
       body: body ? JSON.stringify(body) : undefined
     });
     const payload = await response.json();
     return { response, payload };
   };
+
+  const allowedOrigin = "https://yoxyfel.github.io";
+  const preflight = await fetch(`${baseUrl}/api/interest`, {
+    method: "OPTIONS",
+    headers: { Origin: allowedOrigin, "Access-Control-Request-Method": "POST", "Access-Control-Request-Headers": "content-type" }
+  });
+  assert.equal(preflight.status, 204);
+  assert.equal(preflight.headers.get("access-control-allow-origin"), allowedOrigin);
+  assert.equal(preflight.headers.get("access-control-allow-methods"), "GET, POST, OPTIONS");
+  assert.equal(preflight.headers.get("access-control-allow-headers"), "Content-Type");
+  assert.equal(preflight.headers.get("access-control-allow-credentials"), null);
+
+  const initialInterest = await request("/api/interest", { authenticated: false, headers: { Origin: baseUrl } });
+  assert.equal(initialInterest.response.status, 200);
+  assert.equal(initialInterest.response.headers.get("access-control-allow-origin"), baseUrl);
+  assert.deepEqual(initialInterest.payload, {
+    campaign: "web-release",
+    active: 0,
+    total: 0,
+    additions: 0,
+    removals: 0,
+    reactivations: 0,
+    sources: {},
+    updatedAt: null
+  });
+
+  const interestBody = {
+    anonymousId: "223e4567-e89b-42d3-a456-426614174000",
+    campaign: "web-release",
+    source: "github-pages",
+    action: "add"
+  };
+  const wrongType = await fetch(`${baseUrl}/api/interest`, {
+    method: "POST",
+    headers: { Origin: allowedOrigin, "Content-Type": "text/plain" },
+    body: JSON.stringify(interestBody)
+  });
+  assert.equal(wrongType.status, 415);
+
+  const oversized = await fetch(`${baseUrl}/api/interest`, {
+    method: "POST",
+    headers: { Origin: allowedOrigin, "Content-Type": "application/json" },
+    body: JSON.stringify({ ...interestBody, padding: "x".repeat(1_100) })
+  });
+  assert.equal(oversized.status, 413);
+
+  const extraField = await request("/api/interest", {
+    method: "POST",
+    authenticated: false,
+    headers: { Origin: allowedOrigin },
+    body: { ...interestBody, email: "do-not-store@example.com" }
+  });
+  assert.equal(extraField.response.status, 400);
+  assert.equal(extraField.payload.code, "invalid_interest_request");
+
+  const deniedOrigin = await request("/api/interest", {
+    method: "POST",
+    authenticated: false,
+    headers: { Origin: "https://attacker.example" },
+    body: interestBody
+  });
+  assert.equal(deniedOrigin.response.status, 403);
+  assert.equal(deniedOrigin.response.headers.get("access-control-allow-origin"), null);
+
+  const addedInterest = await request("/api/interest", { method: "POST", authenticated: false, headers: { Origin: allowedOrigin }, body: interestBody });
+  assert.equal(addedInterest.response.status, 201);
+  assert.equal(addedInterest.response.headers.get("access-control-allow-origin"), allowedOrigin);
+  assert.deepEqual(addedInterest.payload, { campaign: "web-release", interested: true, changed: true });
+  assert.equal(JSON.stringify(addedInterest.payload).includes(interestBody.anonymousId), false);
+
+  const duplicateInterest = await request("/api/interest", { method: "POST", authenticated: false, headers: { Origin: allowedOrigin }, body: interestBody });
+  assert.equal(duplicateInterest.response.status, 200);
+  assert.deepEqual(duplicateInterest.payload, { campaign: "web-release", interested: true, changed: false });
+
+  const removedInterest = await request("/api/interest", {
+    method: "POST",
+    authenticated: false,
+    headers: { Origin: allowedOrigin },
+    body: { ...interestBody, action: "remove" }
+  });
+  assert.equal(removedInterest.response.status, 200);
+  assert.deepEqual(removedInterest.payload, { campaign: "web-release", interested: false, changed: true });
+
+  const restoredInterest = await request("/api/interest", { method: "POST", authenticated: false, headers: { Origin: allowedOrigin }, body: interestBody });
+  assert.equal(restoredInterest.response.status, 201);
+  const interestAggregate = await request("/api/interest", { authenticated: false, headers: { Origin: allowedOrigin } });
+  assert.deepEqual(interestAggregate.payload, {
+    campaign: "web-release",
+    active: 1,
+    total: 1,
+    additions: 2,
+    removals: 1,
+    reactivations: 1,
+    sources: { "github-pages": 1 },
+    updatedAt: new Date().toISOString().slice(0, 10)
+  });
+
+  const rateLimitedId = "323e4567-e89b-42d3-a456-426614174000";
+  const rateBody = { ...interestBody, anonymousId: rateLimitedId, action: "remove" };
+  for (let index = 0; index < 20; index += 1) {
+    const allowed = await request("/api/interest", { method: "POST", authenticated: false, headers: { Origin: allowedOrigin }, body: rateBody });
+    assert.equal(allowed.response.status, 200);
+    assert.equal(allowed.payload.changed, false);
+  }
+  const limited = await request("/api/interest", { method: "POST", authenticated: false, headers: { Origin: allowedOrigin }, body: rateBody });
+  assert.equal(limited.response.status, 429);
+  assert.equal(limited.payload.code, "interest_rate_limited");
 
   const registration = await request("/api/player/register", { method: "POST", authenticated: false });
   assert.equal(registration.response.status, 201);

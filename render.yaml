@@ -16,6 +16,8 @@ services:
         value: /var/data/constellore.json
       - key: REWARDED_ADS_ENABLED
         value: "false"
+      - key: INTEREST_ALLOWED_ORIGINS
+        value: https://yoxyfel.github.io
     # Free-to-play beta storage only. Do not use this JSON store for paid ownership.
     # OPENAI_API_KEY and NEBULA_CHECKOUT_URL are intentionally absent.
     disk:

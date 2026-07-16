@@ -8,6 +8,59 @@ test("generated public callsigns have a scalable anonymous discriminator", () =>
   assert.ok(callsigns.every((callsign) => /^[A-Za-z]+ [A-Za-z]+ [A-Z0-9]{8}$/.test(callsign)));
 });
 
+test("anonymous release interest is HMAC-deduplicated, reversible, and aggregate-only", async () => {
+  const store = await new GameStore(":memory:").init();
+  const anonymousId = "123e4567-e89b-42d3-a456-426614174000";
+  const input = { anonymousId, campaign: "web-release", source: "github-pages" };
+  const firstDate = new Date("2026-07-16T12:00:00.000Z");
+  const nextDate = new Date("2026-07-17T12:00:00.000Z");
+
+  const [first, duplicate] = await Promise.all([
+    store.recordInterest({ ...input, action: "add" }, firstDate),
+    store.recordInterest({ ...input, action: "add" }, firstDate)
+  ]);
+  assert.deepEqual([first.changed, duplicate.changed].sort(), [false, true]);
+  assert.deepEqual(store.interestAggregate(), {
+    campaign: "web-release",
+    active: 1,
+    total: 1,
+    additions: 1,
+    removals: 0,
+    reactivations: 0,
+    sources: { "github-pages": 1 },
+    updatedAt: "2026-07-16"
+  });
+
+  assert.deepEqual(await store.recordInterest({ ...input, action: "remove" }, nextDate), { campaign: "web-release", interested: false, changed: true });
+  assert.deepEqual(await store.recordInterest({ ...input, action: "remove" }, nextDate), { campaign: "web-release", interested: false, changed: false });
+  assert.deepEqual(await store.recordInterest({ ...input, source: "direct", action: "add" }, nextDate), { campaign: "web-release", interested: true, changed: true });
+  assert.deepEqual(store.interestAggregate(), {
+    campaign: "web-release",
+    active: 1,
+    total: 1,
+    additions: 2,
+    removals: 1,
+    reactivations: 1,
+    sources: { "github-pages": 1 },
+    updatedAt: "2026-07-17"
+  });
+
+  const serialized = JSON.stringify(store.data.interest);
+  assert.equal(serialized.includes(anonymousId), false, "the raw browser identifier must never be persisted");
+  assert.equal(Object.keys(store.data.interest.records).length, 1);
+  assert.equal("anonymousId" in Object.values(store.data.interest.records)[0], false);
+});
+
+test("interest storage rejects identifiers and dimensions outside the public contract", async () => {
+  const store = await new GameStore(":memory:").init();
+  const valid = { anonymousId: "123e4567-e89b-42d3-a456-426614174000", campaign: "web-release", source: "website", action: "add" };
+  await assert.rejects(store.recordInterest({ ...valid, anonymousId: "visitor-1" }), (error) => error.serviceCode === "invalid_interest_id");
+  await assert.rejects(store.recordInterest({ ...valid, campaign: "steam" }), (error) => error.serviceCode === "invalid_interest_campaign");
+  await assert.rejects(store.recordInterest({ ...valid, source: "newsletter" }), (error) => error.serviceCode === "invalid_interest_source");
+  await assert.rejects(store.recordInterest({ ...valid, action: "toggle" }), (error) => error.serviceCode === "invalid_interest_action");
+  assert.equal(store.interestAggregate().total, 0);
+});
+
 test("minute market prices are deterministic, bounded, and usefulness-weighted", () => {
   const minute = 30_000_000;
   const moon = MARKET_CATALOG.find((item) => item.id === "moon");
