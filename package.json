@@ -1,15 +1,17 @@
 {
   "name": "constellore",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "description": "A mobile-first cosmic word-combination puzzle game.",
   "private": true,
   "type": "module",
   "scripts": {
     "start": "node server.mjs",
     "dev": "node --watch server.mjs",
+    "preview:pages": "node scripts/serve-pages-preview.mjs",
     "build:pages": "node scripts/build-pages.mjs",
+    "check:pages": "node scripts/verify-pages-build.mjs",
     "test": "node --test",
-    "check": "node --check game-services.mjs && node --check server.mjs && node --check public/app.js && node --check Website/site.js && node --check scripts/build-pages.mjs && node --test"
+    "check": "node --check game-services.mjs && node --check server.mjs && node --check public/app.js && node --check public/local-beta.mjs && node --check Website/site.js && node --check scripts/build-pages.mjs && node --check scripts/build-local-world.mjs && node --check scripts/verify-pages-build.mjs && node --check scripts/serve-pages-preview.mjs && node --test"
   },
   "engines": {
     "node": ">=20"

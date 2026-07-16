@@ -1,7 +1,8 @@
 const starterEmoji = { Earth: "🌍", Water: "💧", Fire: "🔥", Air: "💨" };
 const starterCategory = { Earth: "nature", Water: "force", Fire: "force", Air: "force" };
-const PROFILE_KEY = "constellore-profile-v1";
-const LEGACY_PROFILE_KEYS = ["wordforge-profile-v3", "wordforge-profile-v2"];
+const isStaticBeta = document.body.dataset.runtime === "local-practice";
+const PROFILE_KEY = isStaticBeta ? "constellore-local-profile-v1" : "constellore-profile-v1";
+const LEGACY_PROFILE_KEYS = isStaticBeta ? [] : ["wordforge-profile-v3", "wordforge-profile-v2"];
 const todayKey = new Date().toISOString().slice(0, 10);
 const sessionId = globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
@@ -64,6 +65,7 @@ const state = {
 
 let profile = loadProfile();
 let config = { billingEnabled: false, checkoutUrl: "", testStoreEnabled: false, creditPacks: [], rewardedAdsEnabled: false, founderPrice: "€6.99", aiEnabled: false };
+let localRuntimePromise;
 
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
@@ -240,6 +242,11 @@ async function loadConfig() {
 }
 
 async function fetchJson(url, options = {}, timeout = 20000) {
+  if (isStaticBeta) {
+    localRuntimePromise ||= import("./local-beta.mjs");
+    const runtime = await localRuntimePromise;
+    return runtime.localRequest(url, options);
+  }
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeout);
   try {
@@ -262,6 +269,7 @@ async function fetchJson(url, options = {}, timeout = 20000) {
 }
 
 function track(name, properties = {}) {
+  if (isStaticBeta) return;
   const body = JSON.stringify({ name, sessionId, properties });
   try {
     if (navigator.sendBeacon) navigator.sendBeacon("/api/analytics", new Blob([body], { type: "application/json" }));
@@ -695,8 +703,8 @@ function finishGame(won, reason = "") {
   const elapsed = Math.max(1, Math.round((Date.now() - state.startedAt) / 1000));
   let reward = null;
   state.resultAction = returnHome;
-  $("#rankResultCard").hidden = !won;
-  $("#resultLeaderboard").hidden = !won;
+  $("#rankResultCard").hidden = isStaticBeta || !won;
+  $("#resultLeaderboard").hidden = isStaticBeta || !won;
   if (won) {
     reward = calculateReward();
     if (state.mode === "daily") updateDailyStreak();
@@ -720,7 +728,13 @@ function finishGame(won, reason = "") {
     saveProfile();
   }
   els.resultEmoji.textContent = won ? state.game.emoji : state.mode === "quick" ? "⌛" : "◇";
-  els.resultKicker.textContent = won ? (state.mode === "weekly" && !profile.weekly.complete ? `STAGE ${state.game.stage + 1} COMPLETE` : "TARGET REACHED") : "ORBIT ENDED";
+  els.resultKicker.textContent = won
+    ? isStaticBeta
+      ? "LOCAL TARGET REACHED"
+      : state.mode === "weekly" && !profile.weekly.complete
+        ? `STAGE ${state.game.stage + 1} COMPLETE`
+        : "TARGET REACHED"
+    : "ORBIT ENDED";
   els.resultTitle.textContent = won ? `You found ${state.game.target}.` : reason;
   const timeStat = state.game.timeLimit || state.mode === "challenge" ? ` · ${formatTime(elapsed)} elapsed` : "";
   els.resultStats.textContent = `${state.words.length} discoveries · ${state.moves} moves${timeStat}${state.wished ? " · 1 Wish" : ""}`;
@@ -788,6 +802,10 @@ function updateWishButton() {
   const button = $("#wishWord");
   const used = state.wished;
   button?.classList.toggle("used", used);
+  if (isStaticBeta) {
+    els.wishState.textContent = used ? "USED" : "PRACTICE";
+    return;
+  }
   if (used) els.wishState.textContent = "USED";
   else if (profile.premium) els.wishState.textContent = profile.wishAvailable ? "DAILY" : "TOMORROW";
   else if (!profile.freeWishUsed) els.wishState.textContent = "FIRST FREE";
@@ -1235,7 +1253,7 @@ function openProfile() {
 }
 
 function chooseTheme(theme) {
-  if (theme !== "void" && !profile.premium) {
+  if (theme !== "void" && !profile.premium && !isStaticBeta) {
     els.profileDialog.close();
     return openPremium();
   }
@@ -1309,7 +1327,31 @@ function showAlchemy(message, error = false) {
 }
 
 function updateConnection() {
+  if (isStaticBeta) {
+    els.connectionBadge.hidden = false;
+    els.connectionBadge.classList.add("local");
+    els.connectionBadge.textContent = "LOCAL PRACTICE · UNRANKED";
+    return;
+  }
   els.connectionBadge.hidden = navigator.onLine;
+}
+
+function configureStaticBetaUi() {
+  if (!isStaticBeta) return;
+  document.body.classList.add("local-beta");
+  const banner = $("#practiceBanner");
+  if (banner) banner.hidden = false;
+  ["marketButton", "leaderboardButton", "viewLeaderboards", "startPremium", "browseExchange", "resultLeaderboard"]
+    .forEach((id) => { const element = document.getElementById(id); if (element) element.hidden = true; });
+  const socialCopy = document.querySelector(".social-row > div p");
+  if (socialCopy) socialCopy.textContent = "Practice runs stay on this device. Verified rankings will arrive with the online account service.";
+  const wishLabel = $("#wishWord b");
+  if (wishLabel) wishLabel.textContent = "Practice Wish";
+  const wishHeading = $("#wishDialog h2");
+  if (wishHeading) wishHeading.textContent = "Wish a mapped word";
+  const wishIntro = document.querySelector("#wishDialog > p");
+  if (wishIntro) wishIntro.textContent = "Add one known concept to this local orbit. It may open a shortcut, but the result remains unranked.";
+  $("#profileCallsign").textContent = "Local Stargazer";
 }
 
 function formatTime(seconds) {
@@ -1403,18 +1445,24 @@ $("#installButton").addEventListener("click", async () => {
 });
 
 async function boot() {
+  configureStaticBetaUi();
   renderProfile();
   updateConnection();
   await loadConfig();
   try { await ensurePlayer(); }
   catch { showToast("Leaderboard and Word Exchange need a connection."); }
-  if ("serviceWorker" in navigator && window.top === window.self) navigator.serviceWorker.register("/play/service-worker.js", { scope: "/play/" }).catch(() => {});
+  if ("serviceWorker" in navigator && window.top === window.self) {
+    const serviceWorkerUrl = isStaticBeta ? "./service-worker.js" : "/play/service-worker.js";
+    const serviceWorkerScope = isStaticBeta ? "./" : "/play/";
+    navigator.serviceWorker.register(serviceWorkerUrl, { scope: serviceWorkerScope }).catch(() => {});
+  }
   track("app_opened", { installed: matchMedia("(display-mode: standalone)").matches });
   const params = new URLSearchParams(location.search);
   if (params.get("challenge") === "1" && params.get("target")) {
     track("challenge_opened", { target: params.get("target") });
     beginMode("challenge", { target: params.get("target"), seed: Number(params.get("seed")) || stableHash(params.get("target")) });
   }
+  if (window.parent !== window) window.parent.postMessage({ type: "constellore:ready", localOnly: isStaticBeta }, location.origin);
 }
 
 boot();

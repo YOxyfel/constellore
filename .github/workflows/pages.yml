@@ -33,6 +33,8 @@ jobs:
         run: npm run build:pages
         env:
           PUBLIC_BETA_URL: ${{ vars.PUBLIC_BETA_URL }}
+      - name: Verify Pages artifact
+        run: npm run check:pages
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v5
         with:

@@ -33,6 +33,9 @@ button:focus-visible, input:focus-visible { outline: 2px solid var(--cyan); outl
 button:disabled { cursor: not-allowed; }
 
 .eyebrow { color: var(--muted); font: 500 9px "DM Mono", monospace; letter-spacing: .19em; }
+.practice-banner { min-height: 34px; position: relative; z-index: 5; display: flex; align-items: center; justify-content: center; gap: 18px; padding: 6px 18px; border-bottom: 1px solid rgba(105,230,255,.2); background: rgba(6,14,25,.92); color: var(--cyan); font: 500 8px "DM Mono", monospace; letter-spacing: .13em; text-align: center; }
+.practice-banner a { position: absolute; left: clamp(18px, 4vw, 64px); color: var(--muted); text-decoration: none; letter-spacing: .08em; }
+.practice-banner a:hover { color: var(--text); }
 .start-screen { min-height: 100vh; position: relative; overflow: hidden; isolation: isolate; background: radial-gradient(circle at 12% 9%, color-mix(in srgb, var(--theme-glow) 22%, transparent), transparent 31%), radial-gradient(circle at 88% 68%, rgba(26, 143, 178, .11), transparent 32%), linear-gradient(145deg, #080a16, #0c0e1e 56%, #070913); }
 .start-screen::before { content: ""; position: absolute; inset: 0; pointer-events: none; opacity: .4; background-image: radial-gradient(circle, rgba(255,255,255,.85) 0 1px, transparent 1.5px), radial-gradient(circle, color-mix(in srgb, var(--violet) 74%, transparent) 0 1px, transparent 1.4px); background-size: 83px 83px, 127px 127px; background-position: 12px 18px, 44px 61px; mask-image: linear-gradient(to bottom, #000, transparent 92%); }
 .start-stars { position: absolute; width: 48vw; aspect-ratio: 1; left: -15vw; top: 10vh; border: 1px solid color-mix(in srgb, var(--violet) 10%, transparent); border-radius: 50%; box-shadow: 0 0 0 90px color-mix(in srgb, var(--violet) 2%, transparent), 0 0 0 180px color-mix(in srgb, var(--violet) 1%, transparent); pointer-events: none; }
@@ -224,6 +227,7 @@ button:disabled { cursor: not-allowed; }
 .result-modal { text-align: center; }.result-emoji { display: block; margin-bottom: 18px; font-size: 58px; filter: drop-shadow(0 0 22px var(--violet-soft)); }.result-modal .primary-action { margin-top: 17px; }.result-share { width: 100%; margin-top: 9px; }
 .reward-card { margin: 21px 0 0; padding: 14px 17px; border: 1px solid var(--line); background: rgba(255,255,255,.025); display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 5px 12px; text-align: left; }.reward-card > span { color: var(--muted); font: 500 7px "DM Mono", monospace; letter-spacing: .13em; }.reward-card strong { grid-row: span 2; color: var(--violet); font: 500 20px "DM Mono", monospace; }.reward-card small { color: var(--muted); font-size: 8px; }
 .connection-badge { position: fixed; z-index: 60; left: 50%; top: 12px; transform: translateX(-50%); border: 1px solid rgba(255,204,118,.35); border-radius: 999px; background: #181522; color: var(--amber); padding: 7px 12px; font-size: 9px; }
+.connection-badge.local { top: auto; bottom: max(10px, env(safe-area-inset-bottom)); border-color: rgba(105,230,255,.3); background: rgba(7,14,25,.94); color: var(--cyan); font: 500 8px "DM Mono", monospace; letter-spacing: .1em; pointer-events: none; }
 .toast { position: fixed; z-index: 70; left: 50%; bottom: max(18px, env(safe-area-inset-bottom)); max-width: calc(100% - 28px); transform: translate(-50%,16px); opacity: 0; pointer-events: none; color: var(--text); background: rgba(13,16,34,.96); border: 1px solid var(--line); border-radius: 999px; padding: 10px 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 10px; transition: .2s; }.toast.show { opacity: 1; transform: translate(-50%,0); }
 
 /* Exchange and verified rankings */
@@ -363,6 +367,8 @@ button:disabled { cursor: not-allowed; }
 }
 
 @media (max-width: 700px) {
+  .practice-banner { justify-content: flex-end; min-height: 38px; padding-left: 92px; font-size: 6px; letter-spacing: .08em; }
+  .practice-banner a { left: 14px; }
   .start-nav { min-height: 64px; padding: 9px 14px; }
   .brand { font-size: 10px; }.brand small { display: none; }.brand-star { width: 28px; height: 28px; }
   .premium-link { width: 36px; padding: 0; font-size: 0; }.premium-link span { font-size: 16px; }

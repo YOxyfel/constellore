@@ -16,10 +16,11 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/styles.css?v=1.2.0">
+  <link rel="stylesheet" href="/styles.css?v=1.3.0">
 </head>
 <body>
   <section class="start-screen" id="startScreen" aria-labelledby="startTitle">
+    <div class="practice-banner" id="practiceBanner" hidden><a href="../">← Website</a><span>LOCAL PRACTICE · SAVED ON THIS DEVICE · NO PAYMENTS</span></div>
     <div class="start-stars" aria-hidden="true"></div>
     <header class="start-nav">
       <div class="brand"><span class="brand-star" aria-hidden="true">✦</span><span class="brand-name">CONSTELLORE</span><small>BY OXYFEL GAMES</small></div>
@@ -86,7 +87,7 @@
         <article class="mode-card">
           <div class="mode-top"><span class="mode-icon amber" aria-hidden="true">◇</span><span class="mode-number">03</span></div>
           <h2>Move Limit</h2>
-          <p>Reach an AI-selected word before your twelve moves run out.</p>
+          <p>Reach a game-selected word before your twelve moves run out.</p>
           <div class="mode-meta"><span>12 MOVES</span><span>TACTICAL</span></div>
           <button class="mode-action" type="button" data-mode="moves"><span>Enter orbit</span><span aria-hidden="true">→</span></button>
         </article>
@@ -317,6 +318,6 @@
 
   <div class="connection-badge" id="connectionBadge" role="status" hidden>Offline — reconnect to forge new words</div>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
-  <script type="module" src="/app.js?v=1.2.0"></script>
+  <script type="module" src="/app.js?v=1.3.0"></script>
 </body>
 </html>

@@ -42,7 +42,7 @@ Do not add Postgres, Key Value, preview services, extra instances, a Pro workspa
 4. Confirm the Environment page has only the non-secret beta variables in `render.yaml`. Remove `OPENAI_API_KEY` and `NEBULA_CHECKOUT_URL` if they were inherited.
 5. Apply the Blueprint and watch the first deploy. Later releases require a deliberate **Manual Deploy** because automatic deploys are disabled.
 6. Open the generated `onrender.com` URL only after the service reports healthy.
-7. In the GitHub repository, set the Actions variable `PUBLIC_BETA_URL` to that Render URL and rerun **Deploy marketing site to Pages**. This connects every Pages CTA and the desktop inline player to the live Node host.
+7. In the GitHub repository, set the Actions variable `PUBLIC_BETA_URL` to that Render URL and rerun **Deploy marketing site to Pages**. This switches the website CTAs from local practice to the full server beta. Cross-origin hosts open top-level so mobile controls, storage, PWA scope, and security policy remain intact.
 
 Render assigns a public `onrender.com` address and terminates HTTPS for web services. The app already reads Render's `PORT` variable and exposes `/healthz`; no port secret or custom `PORT` value is needed. See [Web Services](https://render.com/docs/web-services).
 

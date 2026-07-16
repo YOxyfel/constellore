@@ -112,12 +112,13 @@ function openBeta() {
     window.location.assign(repositoryUrl);
     return;
   }
-  if (window.matchMedia("(max-width: 700px)").matches) {
+  const targetUrl = new URL(betaUrl, window.location.href);
+  if (window.matchMedia("(max-width: 700px)").matches || targetUrl.origin !== window.location.origin) {
     window.location.assign(betaUrl);
     return;
   }
   if (!gameFrame.src) {
-    const embeddedUrl = new URL(betaUrl, window.location.href);
+    const embeddedUrl = new URL(targetUrl);
     embeddedUrl.searchParams.set("embedded", "1");
     gameFrame.src = embeddedUrl.href;
   }
@@ -129,7 +130,6 @@ function openBeta() {
 function closeBeta() {
   gameEmbed.hidden = true;
   playPoster.hidden = false;
-  gameFrame.src = "";
   playPoster.scrollIntoView({ behavior: "smooth", block: "center" });
 }
 

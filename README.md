@@ -22,9 +22,9 @@ The public site is deliberately split into two same-origin experiences:
 - Game APIs remain under `/api/*`.
 - The PWA manifest and service worker are scoped to `/play/`, so installing the game does not replace the marketing homepage.
 
-For the current no-payments public beta, follow [DEPLOY_BETA.md](DEPLOY_BETA.md) and review [render.yaml](render.yaml). GitHub Pages publishes the static marketing site; the playable beta requires the Node server on Render or another compatible host.
+For the current no-payments public beta, follow [DEPLOY_BETA.md](DEPLOY_BETA.md) and review [render.yaml](render.yaml). GitHub Pages publishes both the marketing site and a playable local-practice edition. The Node server remains required for verified leaderboards, the shared Exchange/economy, recoverable identity, live AI, and other trusted online features.
 
-The marketing site is deployed at [yoxyfel.github.io/constellore](https://yoxyfel.github.io/constellore/). The Pages workflow builds only `Website/`; when the public Node host is ready, set the repository Actions variable `PUBLIC_BETA_URL` to its HTTPS URL and rerun the Pages workflow. Until then, beta CTAs point to this repository instead of a nonfunctional static `/api` route.
+The marketing site is deployed at [yoxyfel.github.io/constellore](https://yoxyfel.github.io/constellore/) and local practice at [yoxyfel.github.io/constellore/play](https://yoxyfel.github.io/constellore/play/). The Pages build compiles the server's current combination rules into a compact browser universe, keeps progression in a separate local profile, marks every result unranked, and removes payments. When the public Node host is ready, set the repository Actions variable `PUBLIC_BETA_URL` to its HTTPS URL and rerun the Pages workflow; the website then sends players to the full server beta.
 
 ## Player experience
 
