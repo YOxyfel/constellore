@@ -135,7 +135,7 @@ gameHtml = gameHtml
   .replace("<body>", '<body data-runtime="local-practice">')
   .replaceAll('href="/manifest.webmanifest"', 'href="./manifest.webmanifest"')
   .replaceAll('href="/icon.svg"', 'href="./icon.svg"')
-  .replaceAll('href="/styles.css?v=1.4.1"', 'href="./styles.css?v=1.4.1"')
+  .replaceAll('href="/styles.css?v=1.5.1"', 'href="./styles.css?v=1.5.1"')
   .replaceAll('src="/app.js?v=1.3.0"', 'src="./app.js?v=1.3.0"');
 await writeFile(join(playOutput, "index.html"), gameHtml, "utf8");
 await copyFile(join(root, "public", "styles.css"), join(playOutput, "styles.css"));
@@ -152,9 +152,9 @@ manifest.scope = "./";
 manifest.icons = manifest.icons.map((icon) => ({ ...icon, src: "./icon.svg" }));
 await writeFile(join(playOutput, "manifest.webmanifest"), `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
 
-const serviceWorker = `const CACHE = "constellore-pages-practice-v2";
+const serviceWorker = `const CACHE = "constellore-pages-practice-v3";
 const BASE = new URL("./", self.location.href);
-const SHELL = ["./", "./styles.css?v=1.4.1", "./app.js?v=1.3.0", "./local-beta.mjs", "./local-world.mjs", "./manifest.webmanifest", "./icon.svg"].map((path) => new URL(path, BASE).href);
+const SHELL = ["./", "./styles.css?v=1.5.1", "./app.js?v=1.3.0", "./local-beta.mjs", "./local-world.mjs", "./manifest.webmanifest", "./icon.svg"].map((path) => new URL(path, BASE).href);
 self.addEventListener("install", (event) => event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(SHELL)).then(() => self.skipWaiting())));
 self.addEventListener("activate", (event) => event.waitUntil(caches.keys().then((keys) => Promise.all(keys.filter((key) => key !== CACHE).map((key) => caches.delete(key)))).then(() => self.clients.claim())));
 self.addEventListener("fetch", (event) => {
