@@ -41,7 +41,7 @@ if (interestProvider === "first-party") {
 assert.match(gameHtml, /data-runtime="local-practice"/);
 for (const expected of [
   'href="./manifest.webmanifest"',
-  'href="./styles.css?v=1.3.0"',
+  'href="./styles.css?v=1.4.1"',
   'src="./app.js?v=1.3.0"'
 ]) assert.ok(gameHtml.includes(expected), `Missing ${expected} from the Pages game document.`);
 for (const forbidden of ['href="/manifest', 'href="/styles', 'href="/icon', 'src="/app']) {
