@@ -16,7 +16,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/styles.css?v=1.5.1">
+  <link rel="stylesheet" href="/styles.css?v=1.6.0">
 </head>
 <body>
   <section class="start-screen" id="startScreen" aria-labelledby="startTitle">
@@ -124,6 +124,7 @@
         <div id="timerHud" hidden><small>TIME</small><strong id="timerValue">01:30</strong></div>
         <div id="movesHud"><small>MOVES</small><strong id="movesValue">0</strong></div>
         <button class="nav-icon nav-atlas" id="atlasButton" type="button" aria-label="Open constellation path"><span aria-hidden="true">⌁</span><b id="pathCount">0</b></button>
+        <button class="reveal-trigger" id="revealPathButton" type="button" aria-haspopup="dialog" aria-controls="revealDialog" aria-label="Reveal answer path; forfeits all scoring"><span aria-hidden="true">&#10023;</span><b>REVEAL</b></button>
         <button class="nav-icon nav-share" id="shareRunButton" type="button" aria-label="Share this challenge">↗</button>
         <button class="nav-icon" id="resetBoard" type="button" aria-label="Clear the board">↻</button>
       </div>
@@ -140,6 +141,19 @@
           <span>Then drag one word onto another.</span>
         </div>
         <div id="boardItems" class="board-items"></div>
+        <section class="reveal-controller" id="revealController" aria-label="Revealed path controls" hidden>
+          <div class="reveal-status">
+            <span class="reveal-pulse" aria-hidden="true">&#10023;</span>
+            <div><small>COSMOS REVEAL &middot; 0 SCORE</small><strong id="revealStepText">Preparing the constellation&hellip;</strong></div>
+          </div>
+          <div class="reveal-controls">
+            <button id="revealPause" type="button" aria-pressed="false"><span aria-hidden="true">&#8545;</span><b>Pause</b></button>
+            <button id="revealSpeed" type="button" aria-label="Reveal speed: one times">1&times;</button>
+            <button id="revealSkip" type="button">Finish now</button>
+          </div>
+          <div class="reveal-progress" role="progressbar" aria-label="Answer path progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i id="revealProgressBar"></i></div>
+          <p class="sr-only" id="revealAnnouncement" aria-live="polite"></p>
+        </section>
         <div class="run-milestone" id="runMilestone"><span id="milestoneText">Your constellation begins here</span><i><em id="milestoneBar"></em></i></div>
         <div class="alchemy-note" id="alchemyNote" aria-live="polite"></div>
       </section>
@@ -266,6 +280,22 @@
     <div class="atlas-summary" id="atlasSummary" hidden><span><b id="atlasDiscoveries">0</b> discoveries</span><span><b id="atlasMoves">0</b> moves</span></div>
   </dialog>
 
+  <dialog id="revealDialog" class="modal reveal-modal" aria-labelledby="revealTitle" aria-describedby="revealDescription">
+    <button class="modal-close" data-close="revealDialog" type="button" aria-label="Close">×</button>
+    <span class="modal-orb" aria-hidden="true">&#10023;</span>
+    <span class="eyebrow">ASK THE COSMOS</span>
+    <h2 id="revealTitle">Reveal the path?</h2>
+    <p id="revealDescription">The cosmos will trace every required combination from the starting elements.</p>
+    <div class="reveal-consequence">
+      <span class="reveal-zero-score">0 SCORE</span>
+      <strong>This cannot be undone for this challenge.</strong>
+      <p>No leaderboard entry, Stardust, streak credit, rewards, or permanent discoveries will be earned.</p>
+      <p class="reveal-mode-warning" id="revealModeWarning">Timed and limited runs are forfeited when the path begins.</p>
+    </div>
+    <button class="primary-action" id="confirmReveal" type="button"><span>Reveal and forfeit score</span><span aria-hidden="true">&#10023;</span></button>
+    <button class="quiet-action" data-close="revealDialog" type="button">Keep solving</button>
+  </dialog>
+
   <dialog id="profileDialog" class="modal profile-modal">
     <button class="modal-close" data-close="profileDialog" type="button" aria-label="Close">×</button>
     <span class="eyebrow">YOUR UNIVERSE</span>
@@ -308,16 +338,18 @@
     <span class="eyebrow" id="resultKicker">TARGET REACHED</span>
     <h2 id="resultTitle">You found it.</h2>
     <p id="resultStats"></p>
+    <div class="assist-result-card" id="assistResultCard" hidden><span>ASSISTED PATH</span><strong>0 SCORE</strong><small>No competitive or progression rewards were granted.</small></div>
     <div class="reward-card" id="rewardCard" hidden><span>ORBIT REWARD</span><strong>+<b id="rewardDust">0</b> ✦</strong><small id="rewardReason">Path complete</small></div>
     <div class="rank-result-card" id="rankResultCard" hidden><span id="resultDivision">PURE · VERIFIED</span><strong><b id="resultRank">#—</b> · <b id="resultScore">0</b></strong><small id="resultRankMessage">Uploading verified score…</small></div>
     <button class="primary-action" id="resultPrimary" type="button"><span>Next orbit</span><span aria-hidden="true">→</span></button>
     <button class="secondary-action result-leaderboard" id="resultLeaderboard" type="button"><span>View leaderboard</span><span aria-hidden="true">≋</span></button>
     <button class="secondary-action result-share" id="resultShare" type="button"><span>Challenge a friend</span><span aria-hidden="true">↗</span></button>
+    <button class="secondary-action result-reveal" id="resultReveal" type="button" hidden><span>Reveal this path</span><span aria-hidden="true">&#10023;</span></button>
     <button class="quiet-action" id="resultRetry" type="button">Retry this target</button>
   </dialog>
 
   <div class="connection-badge" id="connectionBadge" role="status" hidden>Offline — reconnect to forge new words</div>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
-  <script type="module" src="/app.js?v=1.3.0"></script>
+  <script type="module" src="/app.js?v=1.4.2"></script>
 </body>
 </html>

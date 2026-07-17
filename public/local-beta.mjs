@@ -3,6 +3,7 @@ import {
   canonicalLocalTarget,
   canonicalLocalWord,
   localItemFor,
+  localRouteTo,
   localSuggestions,
   lookupLocalCombination
 } from "./local-world.mjs";
@@ -44,6 +45,23 @@ function requireRun(body) {
   const run = runs.get(body.runId);
   if (!run || run.token !== body.runToken) fail("This local orbit expired. Start it again.", "run_missing", 404);
   return run;
+}
+
+function revealedRun(run) {
+  return {
+    route: structuredClone(run.revealRoute),
+    target: run.game.target,
+    assisted: true,
+    assist: "reveal",
+    completed: true,
+    scoringDisabled: true,
+    scoreEligible: false,
+    rewardEligible: false,
+    leaderboardEligible: false,
+    score: 0,
+    ranked: false,
+    localOnly: true
+  };
 }
 
 export async function localRequest(url, options = {}) {
@@ -101,7 +119,9 @@ export async function localRequest(url, options = {}) {
       moves: 0,
       completed: false,
       wished: false,
-      assist: "none"
+      assist: "none",
+      scoringDisabled: false,
+      revealRoute: null
     };
     runs.set(run.id, run);
     return {
@@ -118,8 +138,25 @@ export async function localRequest(url, options = {}) {
     };
   }
 
+  if (method === "POST" && path === "/api/run/reveal") {
+    const run = requireRun(body);
+    if (run.revealRoute) return revealedRun(run);
+    if (run.completed) fail("This local orbit is already complete.", "run_complete", 409);
+
+    const route = localRouteTo(run.game.target);
+    if (!route) fail("The local cosmos could not reconstruct this answer.", "route_unavailable", 409);
+
+    run.revealRoute = structuredClone(route);
+    run.assist = "reveal";
+    run.scoringDisabled = true;
+    run.completed = true;
+    for (const step of route) run.available.add(step.word.toLowerCase());
+    return revealedRun(run);
+  }
+
   if (method === "POST" && path === "/api/combine") {
     const run = requireRun(body);
+    if (run.completed) fail("This local orbit is already complete.", "run_complete", 409);
     const a = canonicalLocalWord(body.a);
     const b = canonicalLocalWord(body.b);
     if (!a || !b || !run.available.has(a.toLowerCase()) || !run.available.has(b.toLowerCase())) {
@@ -143,6 +180,7 @@ export async function localRequest(url, options = {}) {
 
   if (method === "POST" && path === "/api/wish") {
     const run = requireRun(body);
+    if (run.completed) fail("This local orbit is already complete.", "run_complete", 409);
     if (run.wished) fail("Only one Practice Wish may be used in an orbit.", "wish_used", 409);
     const item = localItemFor(body.word);
     if (!item) fail("Practice Wishes must use a word mapped in the local universe.", "local_wish_unknown");

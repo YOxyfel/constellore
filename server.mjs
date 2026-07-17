@@ -19,6 +19,7 @@ const runRegistry = new RunRegistry(gameStore);
 const STARTERS = ["Earth", "Water", "Fire", "Air"];
 const recipes = new Map();
 const dynamicRecipes = new Map();
+export const DYNAMIC_RECIPE_LIMIT = 256;
 
 const add = (a, b, word, emoji, note) => {
   recipes.set(keyFor(a, b), { a, b, word, emoji, note, source: "world" });
@@ -561,8 +562,91 @@ function keyFor(a, b) {
   return [a, b].map((word) => String(word).trim().toLowerCase()).sort().join("+");
 }
 
+function sameRecipeResult(left, right) {
+  return String(left?.word || "").trim().toLowerCase() === String(right?.word || "").trim().toLowerCase();
+}
+
+function touchDynamicRecipe(key, recipe) {
+  dynamicRecipes.delete(key);
+  dynamicRecipes.set(key, recipe);
+  while (dynamicRecipes.size > DYNAMIC_RECIPE_LIMIT) {
+    dynamicRecipes.delete(dynamicRecipes.keys().next().value);
+  }
+}
+
+export function cacheDynamicRecipe(recipe) {
+  const a = String(recipe?.a || "").trim();
+  const b = String(recipe?.b || "").trim();
+  const normalized = {
+    ...recipe,
+    a,
+    b,
+    word: String(recipe?.word || "").trim(),
+    emoji: String(recipe?.emoji || "").trim(),
+    note: String(recipe?.note || "").trim(),
+    source: recipe?.source === "ai-route" ? "ai-route" : "ai"
+  };
+  if (!a || !b || !isSensibleResult(normalized, a, b)) return null;
+
+  const key = keyFor(a, b);
+  const authored = recipes.get(key);
+  if (authored) return authored;
+
+  const existing = dynamicRecipes.get(key);
+  if (existing) {
+    touchDynamicRecipe(key, existing);
+    return existing;
+  }
+
+  touchDynamicRecipe(key, normalized);
+  return normalized;
+}
+
+export function registerDynamicRoute(steps, target) {
+  if (!Array.isArray(steps) || steps.length < 2 || steps.length > 9) return null;
+  const targetKey = String(target || "").trim().toLowerCase();
+  if (!targetKey) return null;
+
+  const available = new Set(STARTERS.map((word) => word.toLowerCase()));
+  const routePairs = new Map();
+  const normalizedRoute = [];
+
+  for (const candidate of steps) {
+    const proposed = {
+      a: String(candidate?.a || "").trim(),
+      b: String(candidate?.b || "").trim(),
+      word: String(candidate?.word || "").trim(),
+      emoji: String(candidate?.emoji || "").trim(),
+      note: String(candidate?.note || "").trim(),
+      source: "ai-route"
+    };
+    if (!available.has(proposed.a.toLowerCase()) || !available.has(proposed.b.toLowerCase())) return null;
+    if (!isSensibleResult(proposed, proposed.a, proposed.b)) return null;
+
+    const key = keyFor(proposed.a, proposed.b);
+    const authoritative = recipes.get(key) || routePairs.get(key) || dynamicRecipes.get(key);
+    if (authoritative && !sameRecipeResult(authoritative, proposed)) return null;
+
+    const step = authoritative || proposed;
+    routePairs.set(key, step);
+    normalizedRoute.push({ ...step });
+    available.add(step.word.toLowerCase());
+  }
+
+  if (normalizedRoute.at(-1)?.word.toLowerCase() !== targetKey) return null;
+
+  for (const step of normalizedRoute) {
+    if (!recipes.has(keyFor(step.a, step.b))) cacheDynamicRecipe(step);
+  }
+  return normalizedRoute.map((step) => ({ ...step }));
+}
+
+export function dynamicRecipeCacheSize() {
+  return dynamicRecipes.size;
+}
+
 export function curatedCombination(a, b) {
-  return dynamicRecipes.get(keyFor(a, b)) || recipes.get(keyFor(a, b)) || null;
+  return recipes.get(keyFor(a, b)) || dynamicRecipes.get(keyFor(a, b)) || null;
 }
 
 export function contextualCombination(a, b) {
@@ -609,6 +693,47 @@ export function reachableFromStarters() {
     }
   }
   return known;
+}
+
+export function solutionRoute(target, { includeDynamic = false } = {}) {
+  const targetKey = String(target || "").trim().toLowerCase();
+  if (!targetKey) return null;
+
+  const known = new Map(STARTERS.map((word) => [word.toLowerCase(), word]));
+  const parents = new Map();
+  const candidates = [...recipes.values()];
+  if (includeDynamic) {
+    for (const [key, recipe] of dynamicRecipes) {
+      if (!recipes.has(key)) candidates.push(recipe);
+    }
+  }
+
+  let changed = true;
+  while (!known.has(targetKey) && changed) {
+    changed = false;
+    for (const recipe of candidates) {
+      const resultKey = recipe.word.toLowerCase();
+      if (known.has(resultKey) || !known.has(recipe.a.toLowerCase()) || !known.has(recipe.b.toLowerCase())) continue;
+      known.set(resultKey, recipe.word);
+      parents.set(resultKey, { ...recipe });
+      changed = true;
+    }
+  }
+  if (!known.has(targetKey)) return null;
+
+  const route = [];
+  const emitted = new Set();
+  const visit = (word) => {
+    const key = String(word).toLowerCase();
+    if (STARTERS.some((starter) => starter.toLowerCase() === key) || emitted.has(key)) return true;
+    const step = parents.get(key);
+    if (!step || !visit(step.a) || !visit(step.b)) return false;
+    route.push({ a: step.a, b: step.b, word: step.word, emoji: step.emoji, note: step.note, source: step.source || "world" });
+    emitted.add(key);
+    return true;
+  };
+
+  return visit(known.get(targetKey)) ? route : null;
 }
 
 export function isSensibleResult(result, a = "", b = "") {
@@ -715,8 +840,7 @@ async function aiCombination(a, b, discovered) {
   });
   if (!isSensibleResult(result, a, b)) return null;
   const cached = { ...result, a, b, source: "ai" };
-  dynamicRecipes.set(keyFor(a, b), cached);
-  return cached;
+  return cacheDynamicRecipe(cached);
 }
 
 export function isSensibleWish(word) {
@@ -765,21 +889,10 @@ async function createTargetRoute(target) {
     } } },
     max_output_tokens: 900
   });
-  if (!validateRoute(plan.steps, cleanTarget)) return null;
-  for (const step of plan.steps) dynamicRecipes.set(keyFor(step.a, step.b), { ...step, source: "ai-route" });
-  const last = plan.steps.at(-1);
+  const route = registerDynamicRoute(plan.steps, cleanTarget);
+  if (!route) return null;
+  const last = route.at(-1);
   return gameFor({ target: last.word, emoji: last.emoji, clue: "A destination chosen by you. The universe has made a path.", tier: 3 }, "reach");
-}
-
-function validateRoute(steps, target) {
-  if (!Array.isArray(steps) || steps.length < 2 || steps.length > 9) return false;
-  const available = new Set(STARTERS.map((word) => word.toLowerCase()));
-  for (const step of steps) {
-    if (!available.has(String(step.a).toLowerCase()) || !available.has(String(step.b).toLowerCase())) return false;
-    if (!isSensibleResult(step, step.a, step.b)) return false;
-    available.add(step.word.toLowerCase());
-  }
-  return steps.at(-1).word.toLowerCase() === target.toLowerCase();
 }
 
 function isSafeTarget(target) {
@@ -811,7 +924,7 @@ const analyticsEvents = new Set([
   "app_opened", "run_started", "combination_completed", "combination_rejected", "target_reached",
   "run_failed", "wish_opened", "wish_used", "paywall_viewed", "checkout_started", "share_created",
   "challenge_opened", "theme_changed", "pwa_installed", "leaderboard_opened", "score_uploaded",
-  "market_opened", "market_searched", "word_purchased", "market_word_used", "credit_pack_opened"
+  "market_opened", "market_searched", "word_purchased", "market_word_used", "credit_pack_opened", "answer_revealed"
 ]);
 
 function rateLimited(request, limit = 180) {
@@ -916,7 +1029,7 @@ function officialRunDetails(mode, requestedSeed, stage = 0, requestedTarget = ""
   const today = new Date().toISOString().slice(0, 10);
   const week = isoWeekKey();
   const safeStage = Math.min(2, Math.max(0, Number(stage) || 0));
-  const ranked = !custom && ["daily", "weekly", "quick", "moves"].includes(mode);
+  const ranked = ["daily", "weekly", "quick", "moves"].includes(mode);
   let seed = Number.isFinite(Number(requestedSeed)) ? Math.abs(Number(requestedSeed)) : stableHash(`${Date.now()}:${mode}`);
   if (mode === "daily") seed = stableHash(`daily:${today}`);
   if (mode === "weekly") seed = stableHash(`weekly:${week}`);
@@ -936,6 +1049,11 @@ function publicRun(run, token) {
     id: run.runId,
     token,
     ranked: run.ranked,
+    scoringDisabled: Boolean(run.scoringDisabled),
+    scoreEligible: !run.scoringDisabled,
+    rewardEligible: !run.scoringDisabled,
+    leaderboardEligible: Boolean(run.ranked && !run.scoringDisabled),
+    assist: run.assist,
     challengeId: run.challengeId,
     startedAt: new Date(run.startedAt).toISOString(),
     deadlineAt: run.game.timeLimit ? new Date(run.startedAt + run.game.timeLimit * 1000).toISOString() : null
@@ -1002,7 +1120,7 @@ export const server = createServer(async (request, response) => {
       response.writeHead(308, { Location: "/play/", "Cache-Control": "no-cache" });
       return response.end();
     }
-    if (request.method === "GET" && url.pathname === "/healthz") return sendJson(response, 200, { ok: true, game: "Constellore", version: "1.4.2" });
+    if (request.method === "GET" && url.pathname === "/healthz") return sendJson(response, 200, { ok: true, game: "Constellore", version: "1.5.0" });
     if (request.method === "GET" && url.pathname === "/api/config") {
       const billing = billingSettings();
       return sendJson(response, 200, {
@@ -1069,13 +1187,80 @@ export const server = createServer(async (request, response) => {
       const details = officialRunDetails(mode, body.seed, body.stage, String(body.target || ""), Boolean(body.custom));
       if (!details) throw serviceError(422, "That target has no verified route yet.", "target_unavailable");
       if (mode === "daily" && gameStore.hasScore(player.id, details.challengeId)) throw serviceError(409, "Today's ranked Word has already been completed.", "daily_complete");
-      const started = runRegistry.start(player.id, details.game, { ranked: details.ranked, challengeId: details.challengeId });
-      return sendJson(response, 201, { game: details.game, run: publicRun(started.run, started.token), player: gameStore.publicPlayer(player.id) });
+      const priorForfeit = details.ranked ? gameStore.forfeitedChallenge(player.id, details.challengeId) : null;
+      const ranked = details.ranked && !priorForfeit;
+      const game = {
+        ...details.game,
+        ranked,
+        scoringDisabled: Boolean(priorForfeit),
+        scoreEligible: !priorForfeit,
+        rewardEligible: !priorForfeit,
+        leaderboardEligible: Boolean(ranked)
+      };
+      const scopedSolutionRoute = !ranked
+        ? solutionRoute(game.target, { includeDynamic: !details.ranked })
+        : null;
+      if (!ranked && !scopedSolutionRoute) throw serviceError(422, "That target has no verified route yet.", "target_unavailable");
+      const started = runRegistry.start(player.id, game, {
+        ranked,
+        challengeId: details.challengeId,
+        scoringDisabled: Boolean(priorForfeit),
+        forfeitReason: priorForfeit?.reason
+      });
+      if (scopedSolutionRoute) {
+        started.run.solutionRoute = scopedSolutionRoute.map((step) => ({ ...step }));
+        started.run.solutionRecipes = new Map(scopedSolutionRoute.map((step) => [keyFor(step.a, step.b), { ...step }]));
+      }
+      return sendJson(response, 201, { game, run: publicRun(started.run, started.token), player: gameStore.publicPlayer(player.id) });
+    }
+    if (request.method === "POST" && url.pathname === "/api/run/reveal") {
+      if (rateLimited(request, 30)) return sendJson(response, 429, { error: "Too many answer paths requested." });
+      const player = requirePlayer(request);
+      const { runId, runToken } = await jsonBody(request);
+      const run = runRegistry.get(runId, player.id, runToken);
+      const route = run.revealRoute || run.solutionRoute || solutionRoute(run.game.target, { includeDynamic: !run.ranked });
+      if (!route) throw serviceError(422, "No verified answer path is available for this target.", "route_unavailable");
+
+      const revealedRoute = runRegistry.reveal(run, route);
+      if (run.ranked) await gameStore.forfeitChallenge(player.id, run.challengeId, { reason: "reveal", runId: run.runId });
+      return sendJson(response, 200, {
+        assisted: true,
+        assist: "reveal",
+        completed: true,
+        scoringDisabled: true,
+        scoreEligible: false,
+        rewardEligible: false,
+        leaderboardEligible: false,
+        score: 0,
+        ranked: false,
+        target: run.game.target,
+        route: revealedRoute
+      });
     }
     if (request.method === "POST" && url.pathname === "/api/run/submit") {
       const player = requirePlayer(request);
       const { runId, runToken } = await jsonBody(request);
       const run = runRegistry.get(runId, player.id, runToken);
+      const challengeForfeited = run.ranked && gameStore.hasForfeitedChallenge(player.id, run.challengeId);
+      if (run.scoringDisabled || run.forfeited || challengeForfeited) {
+        run.assist = "reveal";
+        run.scoringDisabled = true;
+        run.forfeited = true;
+        run.forfeitReason ||= "reveal";
+        run.forfeitedAt ||= Date.now();
+        run.submitted = true;
+        return sendJson(response, 200, {
+          ranked: false,
+          assisted: true,
+          assist: run.assist || "reveal",
+          scoringDisabled: true,
+          score: 0,
+          creditReward: 0,
+          weeklyBonus: 0,
+          reason: "Reveal Path forfeited this orbit's score and rewards.",
+          player: gameStore.publicPlayer(player.id)
+        });
+      }
       if (!run.ranked) return sendJson(response, 200, { ranked: false, reason: "Practice runs are not uploaded." });
       const entry = runRegistry.finalize(run, player.callsign);
       const placement = await gameStore.addScore(entry);
@@ -1144,7 +1329,9 @@ export const server = createServer(async (request, response) => {
       const allowedCategories = new Set(["force", "nature", "life", "structure"]);
       if (!run && !semanticCategoryFor(a) && allowedCategories.has(categoryA)) learnedSemanticGroups.set(a.trim().toLowerCase(), categoryA);
       if (!run && !semanticCategoryFor(b) && allowedCategories.has(categoryB)) learnedSemanticGroups.set(b.trim().toLowerCase(), categoryB);
-      let result = run?.ranked ? recipes.get(keyFor(a, b)) || null : curatedCombination(a, b);
+      const combinationKey = keyFor(a, b);
+      let result = recipes.get(combinationKey) || null;
+      if (!result && !run?.ranked) result = run?.solutionRecipes?.get(combinationKey) || dynamicRecipes.get(combinationKey) || null;
       if (!result && !run?.ranked) {
         try { result = await aiCombination(a, b, Array.isArray(discovered) ? discovered : []); }
         catch (error) { console.error(error.message); }
@@ -1154,7 +1341,10 @@ export const server = createServer(async (request, response) => {
       const { word, emoji, note, source } = result;
       const category = semanticCategoryFor(word) || registerWishConcept(word);
       const responseResult = { word, emoji, note, source, category };
-      if (run) runRegistry.recordCombination(run, responseResult);
+      if (run) {
+        runRegistry.canCombine(run, a, b);
+        runRegistry.recordCombination(run, responseResult);
+      }
       return sendJson(response, 200, { ...responseResult, completed: Boolean(run?.completedAt), ranked: Boolean(run?.ranked), division: run?.assist === "none" ? "pure" : "open" });
     }
     if (!["GET", "HEAD"].includes(request.method)) return sendJson(response, 404, { error: "Not found" });

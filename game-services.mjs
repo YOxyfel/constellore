@@ -146,7 +146,7 @@ function betterEntry(next, current) {
 export class GameStore {
   constructor(path = ":memory:") {
     this.path = path;
-    this.data = { version: 2, secret: "", players: {}, scores: [], demand: {}, interest: emptyInterestData() };
+    this.data = { version: 3, secret: "", players: {}, scores: [], demand: {}, interest: emptyInterestData() };
     this.writeQueue = Promise.resolve();
   }
 
@@ -157,7 +157,7 @@ export class GameStore {
         if (parsed && typeof parsed === "object") this.data = {
           ...this.data,
           ...parsed,
-          version: 2,
+          version: 3,
           players: parsed.players || {},
           scores: parsed.scores || [],
           demand: parsed.demand || {},
@@ -171,14 +171,18 @@ export class GameStore {
       this.data.secret = randomBytes(32).toString("base64url");
       await this.persist();
     }
-    let callsignsMigrated = false;
+    let playersMigrated = false;
     for (const player of Object.values(this.data.players)) {
       if (!player.callsign || /^[A-Za-z]+ [A-Za-z]+ \d{2}$/.test(player.callsign)) {
         player.callsign = callsignFor(player.id);
-        callsignsMigrated = true;
+        playersMigrated = true;
+      }
+      if (!player.forfeitedChallenges || typeof player.forfeitedChallenges !== "object") {
+        player.forfeitedChallenges = {};
+        playersMigrated = true;
       }
     }
-    if (callsignsMigrated) await this.persist();
+    if (playersMigrated) await this.persist();
     return this;
   }
 
@@ -205,6 +209,7 @@ export class GameStore {
       dailyWishUsedDate: "",
       earned: { date: "", amount: 0 },
       rewardedChallenges: {},
+      forfeitedChallenges: {},
       weeklyActivity: { week: "", days: [], bonusClaimed: false },
       createdAt: new Date().toISOString()
     };
@@ -413,6 +418,42 @@ export class GameStore {
     return this.data.scores.some((entry) => entry.playerId === playerId && entry.challengeId === challengeId);
   }
 
+  forfeitedChallenge(playerId, challengeId) {
+    const player = this.data.players[playerId];
+    const key = String(challengeId || "").trim();
+    return player && key ? player.forfeitedChallenges?.[key] || null : null;
+  }
+
+  hasForfeitedChallenge(playerId, challengeId) {
+    return Boolean(this.forfeitedChallenge(playerId, challengeId));
+  }
+
+  async forfeitChallenge(playerId, challengeId, { reason = "reveal", runId = "" } = {}, date = new Date()) {
+    const player = this.data.players[playerId];
+    const key = String(challengeId || "").trim();
+    if (!player || !key) throw serviceError(400, "A player and challenge are required.", "invalid_challenge_forfeit");
+    player.forfeitedChallenges ||= {};
+    if (player.forfeitedChallenges[key]) {
+      await this.writeQueue;
+      return player.forfeitedChallenges[key];
+    }
+
+    const record = {
+      reason: String(reason || "reveal").slice(0, 32),
+      runId: String(runId || "").slice(0, 64),
+      at: date.toISOString()
+    };
+    player.forfeitedChallenges[key] = record;
+
+    const history = Object.entries(player.forfeitedChallenges);
+    if (history.length > 180) {
+      history.sort((left, right) => Date.parse(right[1].at) - Date.parse(left[1].at));
+      player.forfeitedChallenges = Object.fromEntries(history.slice(0, 180));
+    }
+    await this.persist();
+    return record;
+  }
+
   async addScore(entry) {
     const index = this.data.scores.findIndex((score) => score.playerId === entry.playerId && score.challengeId === entry.challengeId && score.division === entry.division);
     const current = index >= 0 ? this.data.scores[index] : null;
@@ -511,7 +552,7 @@ export class RunRegistry {
     this.runs = new Map();
   }
 
-  start(playerId, game, { ranked = false, challengeId = "" } = {}) {
+  start(playerId, game, { ranked = false, challengeId = "", scoringDisabled = false, forfeitReason = "" } = {}) {
     this.cleanup();
     const runId = randomUUID();
     const startedAt = Date.now();
@@ -525,7 +566,12 @@ export class RunRegistry {
       expiresAt: startedAt + Math.max((game.timeLimit || 0) * 1000 + 10_000, 30 * 60_000),
       discovered: new Map(game.starters.map((word) => [word.toLowerCase(), { word }])),
       moves: 0,
-      assist: "none",
+      assist: scoringDisabled ? "reveal" : "none",
+      scoringDisabled: Boolean(scoringDisabled),
+      forfeited: Boolean(scoringDisabled),
+      forfeitReason: scoringDisabled ? String(forfeitReason || "reveal") : null,
+      forfeitedAt: scoringDisabled ? startedAt : null,
+      revealRoute: null,
       usedBend: false,
       completedAt: null,
       submitted: false
@@ -555,6 +601,24 @@ export class RunRegistry {
     if (result.word.toLowerCase() === run.game.target.toLowerCase()) run.completedAt = Date.now();
   }
 
+  reveal(run, route) {
+    if (run.revealRoute) return run.revealRoute;
+    if (run.submitted) throw serviceError(409, "This score was already submitted.", "already_submitted");
+    if (run.completedAt) throw serviceError(409, "This orbit is already complete.", "run_complete");
+    if (!Array.isArray(route)) throw serviceError(422, "No verified answer path is available.", "route_unavailable");
+
+    run.assist = "reveal";
+    run.scoringDisabled = true;
+    run.forfeited = true;
+    run.forfeitReason = "reveal";
+    run.forfeitedAt ||= Date.now();
+    run.revealRoute = route.map((step) => ({ ...step }));
+    for (const step of run.revealRoute) run.discovered.set(step.word.toLowerCase(), { ...step });
+    run.moves += run.revealRoute.length;
+    run.completedAt = Date.now();
+    return run.revealRoute;
+  }
+
   addBend(run, item, assist) {
     if (run.completedAt) throw serviceError(409, "This orbit is already complete.", "run_complete");
     if (run.usedBend) throw serviceError(409, "Only one Reality Bend may be used in a run.", "bend_used");
@@ -564,6 +628,7 @@ export class RunRegistry {
   }
 
   finalize(run, callsign) {
+    if (run.scoringDisabled || run.forfeited) throw serviceError(409, "Assisted orbits cannot submit a score.", "assisted_run");
     if (!run.completedAt) throw serviceError(422, "The target has not been reached.", "target_missing");
     if (run.submitted) throw serviceError(409, "This score was already submitted.", "already_submitted");
     run.submitted = true;

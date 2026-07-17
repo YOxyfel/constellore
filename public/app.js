@@ -45,6 +45,7 @@ const state = {
   remainingSeconds: 0,
   startedAt: 0,
   finished: false,
+  startingRun: false,
   wished: false,
   rewardedWish: false,
   cosmosFrame: null,
@@ -54,6 +55,20 @@ const state = {
   installPrompt: null,
   run: null,
   assist: "none",
+  scoringDisabled: false,
+  reveal: {
+    active: false,
+    paused: false,
+    speed: 1,
+    skip: false,
+    pending: false,
+    revealed: false,
+    generation: 0,
+    route: [],
+    completed: 0,
+    layout: null,
+    wake: null
+  },
   market: null,
   marketView: "market",
   marketTimer: null,
@@ -82,6 +97,9 @@ const els = {
   paywallDialog: $("#paywallDialog"), wishDialog: $("#wishDialog"), atlasDialog: $("#atlasDialog"),
   profileDialog: $("#profileDialog"), shareDialog: $("#shareDialog"), resultDialog: $("#resultDialog"),
   exchangeDialog: $("#exchangeDialog"), marketBuyDialog: $("#marketBuyDialog"), leaderboardDialog: $("#leaderboardDialog"),
+  revealDialog: $("#revealDialog"), revealController: $("#revealController"), revealPathButton: $("#revealPathButton"),
+  revealStepText: $("#revealStepText"), revealPause: $("#revealPause"), revealSpeed: $("#revealSpeed"),
+  revealSkip: $("#revealSkip"), revealProgressBar: $("#revealProgressBar"), revealAnnouncement: $("#revealAnnouncement"),
   marketList: $("#marketList"), marketBalance: $("#marketBalance"), marketCountdown: $("#marketCountdown"),
   marketMessage: $("#marketMessage"), leaderboardRows: $("#leaderboardRows"), leaderboardMessage: $("#leaderboardMessage"),
   resultEmoji: $("#resultEmoji"), resultKicker: $("#resultKicker"), resultTitle: $("#resultTitle"),
@@ -278,8 +296,11 @@ function track(name, properties = {}) {
 }
 
 async function beginMode(mode, options = {}) {
+  if (state.startingRun) return;
   if (mode === "daily" && profile.dailyCompleted === todayKey) return;
   if (mode === "weekly" && profile.weekly.complete) return;
+  state.startingRun = true;
+  if (state.game) updateHud();
   const button = document.querySelector(`[data-mode="${mode}"]`);
   const label = button?.classList.contains("mode-action") ? button.querySelector("span") : null;
   const original = label?.textContent;
@@ -298,6 +319,8 @@ async function beginMode(mode, options = {}) {
   } catch (error) {
     showToast(error.message);
   } finally {
+    state.startingRun = false;
+    if (state.game) updateHud();
     if (button) button.disabled = (mode === "daily" && profile.dailyCompleted === todayKey) || (mode === "weekly" && profile.weekly.complete);
     if (label && original) label.textContent = original;
   }
@@ -305,10 +328,12 @@ async function beginMode(mode, options = {}) {
 
 async function beginCustomTarget(event) {
   event.preventDefault();
+  if (state.startingRun) return;
   const input = $("#customTarget");
   const target = input.value.trim();
   if (!target) return;
   const submit = event.currentTarget.querySelector("button");
+  state.startingRun = true;
   submit.disabled = true;
   els.targetMessage.textContent = "Building a guaranteed route…";
   try {
@@ -327,15 +352,21 @@ async function beginCustomTarget(event) {
   } catch (error) {
     els.targetMessage.textContent = error.message;
   } finally {
+    state.startingRun = false;
+    if (state.game) updateHud();
     submit.disabled = false;
   }
 }
 
 function startWithGame(game, run) {
   stopTimer();
+  resetRevealPlayback();
+  [els.revealDialog, els.resultDialog, els.leaderboardDialog, els.shareDialog, els.atlasDialog, els.wishDialog, els.paywallDialog, els.exchangeDialog, els.marketBuyDialog]
+    .forEach((dialog) => { if (dialog?.open) dialog.close(); });
   state.game = game;
   state.run = run;
-  state.assist = "none";
+  state.assist = run?.assist || "none";
+  state.scoringDisabled = run?.scoreEligible === false || game?.scoreEligible === false;
   state.mode = game.mode;
   state.words = game.starters.map((word) => ({ word, emoji: starterEmoji[word] || "✦", category: starterCategory[word], source: "origin" }));
   state.nodes = [];
@@ -356,6 +387,7 @@ function startWithGame(game, run) {
   clearTimeout(showAlchemy.timer);
   els.alchemyNote.classList.remove("show", "error");
   els.alchemyNote.textContent = "";
+  els.board.classList.remove("reveal-complete");
   els.startScreen.hidden = true;
   els.gameScreen.hidden = false;
   els.modeName.textContent = game.modeName.toUpperCase();
@@ -374,8 +406,10 @@ function startWithGame(game, run) {
 }
 
 function returnHome() {
+  if (state.startingRun) return showToast("The next orbit is still being mapped.");
   if (state.game && !state.finished && state.history.length) track("run_failed", { mode: state.mode, reason: "abandoned", moves: state.moves });
   stopTimer();
+  resetRevealPlayback();
   cancelAnimationFrame(state.cosmosFrame);
   state.cosmosFrame = null;
   state.game = null;
@@ -383,24 +417,28 @@ function returnHome() {
   state.nodes = [];
   els.gameScreen.hidden = true;
   els.startScreen.hidden = false;
-  [els.resultDialog, els.atlasDialog, els.shareDialog, els.wishDialog, els.paywallDialog, els.exchangeDialog, els.marketBuyDialog, els.leaderboardDialog].forEach((dialog) => { if (dialog.open) dialog.close(); });
+  [els.resultDialog, els.atlasDialog, els.shareDialog, els.wishDialog, els.paywallDialog, els.exchangeDialog, els.marketBuyDialog, els.leaderboardDialog, els.revealDialog].forEach((dialog) => { if (dialog?.open) dialog.close(); });
   renderProfile();
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
-function retryGame() {
-  if (!state.game) return;
+async function retryGame() {
+  if (!state.game || state.startingRun) return;
   const mode = state.game.mode;
   const options = { seed: state.game.seed, target: ["reach", "challenge"].includes(mode) ? state.game.target : undefined };
-  if (els.resultDialog.open) els.resultDialog.close();
-  beginMode(mode, options);
+  const resultActions = [els.resultPrimary, els.resultRetry, $("#resultLeaderboard"), els.resultShare, $("#resultReveal")];
+  resultActions.forEach((control) => { control.disabled = true; });
+  try { await beginMode(mode, options); }
+  finally {
+    resultActions.forEach((control) => { control.disabled = false; });
+  }
 }
 
 function startTimer() {
   stopTimer();
   els.timerValue.textContent = formatTime(state.remainingSeconds);
   state.timerId = setInterval(() => {
-    if (state.finished) return;
+    if (state.finished || state.reveal.active || state.reveal.pending) return;
     state.remainingSeconds = state.run?.deadlineAt
       ? Math.max(0, Math.ceil((Date.parse(state.run.deadlineAt) - Date.now()) / 1000))
       : Math.max(0, Math.ceil((state.startedAt + Number(state.game?.timeLimit || 0) * 1000 - Date.now()) / 1000));
@@ -421,6 +459,12 @@ function updateHud() {
   els.collectionCount.textContent = state.words.length;
   els.pathCount.textContent = state.history.length;
   if (state.game.timeLimit) els.timerValue.textContent = formatTime(state.remainingSeconds);
+  if (els.revealPathButton) {
+    const alreadyRevealed = state.reveal.revealed;
+    els.revealPathButton.disabled = !state.game || state.finished || state.startingRun || state.reveal.active || state.reveal.pending || alreadyRevealed;
+    els.revealPathButton.classList.toggle("assisted", state.scoringDisabled);
+    els.revealPathButton.querySelector("b").textContent = state.scoringDisabled && alreadyRevealed ? "0 SCORE" : "REVEAL";
+  }
   updateWishButton();
 }
 
@@ -436,13 +480,20 @@ function renderInventory() {
   els.wordList.replaceChildren(...state.words.map((item) => {
     const button = document.createElement("button");
     button.type = "button";
-    button.className = `inventory-word${["wish", "market"].includes(item.source) ? " wish" : ""}`;
-    button.draggable = true;
-    button.setAttribute("aria-label", `Add ${item.word} to the cosmos`);
-    const tag = item.source === "wish" ? "WISH" : item.source === "market" ? "VAULT" : item.source?.startsWith("ai") ? "AI" : "";
+    button.className = `inventory-word${["wish", "market"].includes(item.source) ? " wish" : ""}${item.ghost ? " reveal-ghost" : ""}`;
+    const revealLocked = state.reveal.active || state.reveal.pending;
+    const unavailable = state.finished || revealLocked || item.ghost;
+    button.draggable = !unavailable;
+    button.disabled = unavailable;
+    button.setAttribute("aria-label", item.ghost ? `${item.word}, temporary revealed word. Not saved or playable.` : unavailable ? `${item.word}. Unavailable while this orbit is locked.` : `Add ${item.word} to the cosmos`);
+    const tag = item.ghost ? "REVEALED" : item.source === "wish" ? "WISH" : item.source === "market" ? "VAULT" : item.source?.startsWith("ai") ? "AI" : "";
     button.innerHTML = `<span class="emoji">${escapeHtml(item.emoji)}</span><span class="word">${escapeHtml(item.word)}</span>${tag ? `<span class="source-tag">${tag}</span>` : ""}`;
     button.addEventListener("click", () => placeFromTray(item));
     button.addEventListener("dragstart", (event) => {
+      if (state.reveal.active || state.reveal.pending || state.finished) {
+        event.preventDefault();
+        return;
+      }
       event.dataTransfer.effectAllowed = "copy";
       event.dataTransfer.setData("application/x-constellore", item.word);
     });
@@ -460,12 +511,15 @@ function renderBoard(newId = null) {
 function createBoardNode(node, isNew) {
   const button = document.createElement("button");
   button.type = "button";
-  button.className = `board-word${isNew ? " appear" : ""}${["wish", "market"].includes(node.item.source) ? " wish" : ""}${state.selectedNodeId === node.id ? " keyboard-selected" : ""}`;
+  button.className = `board-word${isNew ? " appear" : ""}${["wish", "market"].includes(node.item.source) ? " wish" : ""}${node.item.ghost ? " reveal-ghost" : ""}${node.revealRole ? ` reveal-${node.revealRole}` : ""}${state.selectedNodeId === node.id ? " keyboard-selected" : ""}`;
   button.dataset.id = node.id;
   button.style.setProperty("--x", `${node.x}px`);
   button.style.setProperty("--y", `${node.y}px`);
   button.style.zIndex = node.z;
-  button.setAttribute("aria-label", `${node.item.word}. Drag onto another word to combine.`);
+  const revealedNode = Boolean(node.revealRole || node.item.ghost);
+  const unavailable = state.finished || state.reveal.active || state.reveal.pending || revealedNode;
+  button.disabled = unavailable;
+  button.setAttribute("aria-label", revealedNode ? `${node.item.word}, revealed constellation word. Not playable.` : unavailable ? `${node.item.word}. Unavailable while this orbit is locked.` : `${node.item.word}. Drag onto another word to combine.`);
   button.setAttribute("aria-pressed", String(state.selectedNodeId === node.id));
   button.innerHTML = `<span class="emoji">${escapeHtml(node.item.emoji)}</span><span>${escapeHtml(node.item.word)}</span>`;
   button.addEventListener("pointerdown", (event) => startNodeDrag(event, node, button));
@@ -479,7 +533,7 @@ function createBoardNode(node, isNew) {
 }
 
 function selectNodeForKeyboard(node) {
-  if (state.finished) return;
+  if (state.finished || state.reveal.active || state.reveal.pending) return;
   if (!state.selectedNodeId) {
     state.selectedNodeId = node.id;
     renderBoard();
@@ -497,7 +551,7 @@ function selectNodeForKeyboard(node) {
 }
 
 function placeFromTray(item, point) {
-  if (state.finished) return;
+  if (state.finished || state.reveal.active || state.reveal.pending || item.ghost) return;
   const rect = els.board.getBoundingClientRect();
   const spread = state.nodes.length % 7;
   const x = point ? point.x - rect.left - 55 : rect.width * .46 + (spread - 3) * 22;
@@ -505,13 +559,14 @@ function placeFromTray(item, point) {
   addNode(item, x, y);
 }
 
-function addNode(item, x, y) {
+function addNode(item, x, y, options = {}) {
   const bounds = els.board.getBoundingClientRect();
   const node = {
     id: state.nextId++, item,
     x: clamp(x, 8, Math.max(8, bounds.width - 155)),
     y: clamp(y, 8, Math.max(8, bounds.height - 54)),
-    z: ++state.topZ
+    z: ++state.topZ,
+    ...options
   };
   state.nodes.push(node);
   renderBoard(node.id);
@@ -519,7 +574,7 @@ function addNode(item, x, y) {
 }
 
 function startNodeDrag(event, node, element) {
-  if (event.button !== 0 || state.finished || state.busyPairs.has(node.id)) return;
+  if (event.button !== 0 || state.finished || state.reveal.active || state.reveal.pending || node.revealRole || node.item.ghost || state.busyPairs.has(node.id)) return;
   event.preventDefault();
   const boardRect = els.board.getBoundingClientRect();
   const nodeRect = element.getBoundingClientRect();
@@ -592,7 +647,7 @@ function clearDropTargets() {
 }
 
 async function combineNodes(a, b) {
-  if (state.finished || state.busyPairs.has(a.id) || state.busyPairs.has(b.id)) return;
+  if (state.finished || state.reveal.active || state.reveal.pending || state.busyPairs.has(a.id) || state.busyPairs.has(b.id)) return;
   if (state.game.moveLimit && state.moves >= state.game.moveLimit) return finishGame(false, "No moves remain in this orbit.");
   state.busyPairs.add(a.id);
   state.busyPairs.add(b.id);
@@ -658,7 +713,318 @@ async function combineNodes(a, b) {
   }
 }
 
+function resetRevealPlayback({ keepConstellation = false } = {}) {
+  const previous = state.reveal || {};
+  previous.wake?.();
+  state.reveal = {
+    active: false,
+    paused: false,
+    speed: 1,
+    skip: false,
+    pending: false,
+    revealed: keepConstellation ? Boolean(previous.revealed) : false,
+    generation: Number(previous.generation || 0) + 1,
+    route: keepConstellation ? previous.route || [] : [],
+    completed: keepConstellation ? previous.completed || 0 : 0,
+    layout: keepConstellation ? previous.layout || null : null,
+    wake: null
+  };
+  if (els.revealController) els.revealController.hidden = true;
+  els.revealController?.classList.remove("is-paused", "is-complete");
+  els.board?.classList.remove("reveal-active");
+  els.revealDialog?.classList.remove("is-pending");
+  $$('[data-close="revealDialog"]').forEach((button) => { button.disabled = false; });
+  const confirm = $("#confirmReveal");
+  if (confirm) {
+    confirm.disabled = false;
+    confirm.querySelector("span").textContent = "Reveal and forfeit score";
+  }
+  if (!keepConstellation) els.board?.classList.remove("reveal-complete");
+}
+
+function openRevealPath() {
+  if (!state.game || !state.run || state.startingRun || state.reveal.revealed || state.reveal.active || state.reveal.pending) return;
+  if (state.busyPairs.size) return showToast("Let the current combination resolve before revealing the path.");
+  stopTimer();
+  $("#revealTitle").textContent = `Reveal the path to ${state.game.target}?`;
+  const warnings = {
+    daily: "Today's scored challenge will be consumed. Replays stay unranked.",
+    quick: "Today's sprint will be forfeited. Replays of it stay unranked.",
+    moves: "Today's move challenge will be forfeited. Replays stay unranked.",
+    weekly: "This expedition stage will grant no progress, and its replays stay unranked."
+  };
+  $("#revealModeWarning").textContent = state.scoringDisabled
+    ? "This orbit is already unranked. The revealed words will still remain temporary."
+    : warnings[state.mode] || "This orbit will become a permanent Assisted run.";
+  els.revealDialog.showModal();
+}
+
+async function confirmRevealPath() {
+  if (!state.game || !state.run || state.reveal.active || state.reveal.pending) return;
+  if (state.busyPairs.size) return showToast("Let the current combination resolve before revealing the path.");
+  const revealState = state.reveal;
+  const runId = state.run.id;
+  const runToken = state.run.token;
+  const mode = state.mode;
+  const target = state.game.target;
+  const button = $("#confirmReveal");
+  const label = button.querySelector("span");
+  const dismissers = $$('[data-close="revealDialog"]');
+  let pendingUiCleared = false;
+  const clearPendingUi = () => {
+    revealState.pending = false;
+    button.disabled = false;
+    dismissers.forEach((control) => { control.disabled = false; });
+    els.revealDialog.classList.remove("is-pending");
+    label.textContent = "Reveal and forfeit score";
+    pendingUiCleared = true;
+  };
+  revealState.pending = true;
+  button.disabled = true;
+  dismissers.forEach((control) => { control.disabled = true; });
+  els.revealDialog.classList.add("is-pending");
+  label.textContent = "Committing assisted run…";
+  try {
+    const payload = await fetchJson("/api/run/reveal", {
+      method: "POST",
+      headers: authHeaders({ "Content-Type": "application/json" }),
+      body: JSON.stringify({ runId, runToken })
+    });
+    if (state.reveal !== revealState || state.run?.id !== runId || state.game?.target !== target) return;
+    state.assist = "reveal";
+    state.scoringDisabled = true;
+    state.run = { ...state.run, ranked: false, scoreEligible: false, assisted: true };
+    stopTimer();
+    if (mode === "daily") {
+      profile.dailyCompleted = todayKey;
+      saveProfile();
+    }
+    const route = Array.isArray(payload.route) ? payload.route : [];
+    if (els.revealDialog.open) els.revealDialog.close();
+    clearPendingUi();
+    track("answer_revealed", { mode, target, steps: route.length });
+    await playRevealPath(route);
+  } catch (error) {
+    if (state.reveal === revealState && state.run?.id === runId) showToast(error.message);
+  } finally {
+    if (!pendingUiCleared && state.reveal === revealState) clearPendingUi();
+  }
+}
+
+function buildRevealLayout(route) {
+  const positions = new Map([
+    ["earth", { x: .12, y: .82 }],
+    ["water", { x: .36, y: .88 }],
+    ["fire", { x: .64, y: .88 }],
+    ["air", { x: .88, y: .82 }]
+  ]);
+  const segments = route.map((step, index) => {
+    const progress = route.length <= 1 ? 1 : index / (route.length - 1);
+    const final = index === route.length - 1;
+    const to = {
+      x: final ? .5 : .2 + (stableHash(step.word) % 600) / 1000,
+      y: .7 - progress * .53
+    };
+    const a = positions.get(String(step.a).toLowerCase()) || { x: .22, y: Math.min(.9, to.y + .18) };
+    const b = positions.get(String(step.b).toLowerCase()) || { x: .78, y: Math.min(.9, to.y + .18) };
+    positions.set(String(step.word).toLowerCase(), to);
+    return { a, b, to };
+  });
+  return { segments };
+}
+
+function revealItem(word, fallback = {}) {
+  return state.words.find((item) => item.word.toLowerCase() === String(word).toLowerCase()) || {
+    word,
+    emoji: fallback.emoji || starterEmoji[word] || "✦",
+    category: fallback.category || starterCategory[word] || "nature",
+    source: "reveal",
+    ghost: true
+  };
+}
+
+function addRevealDiscovery(step) {
+  const existing = state.words.find((item) => item.word.toLowerCase() === String(step.word).toLowerCase());
+  if (existing) return existing;
+  const item = {
+    word: step.word,
+    emoji: step.emoji || "✦",
+    category: step.category || "nature",
+    note: step.note || "Revealed by the cosmos.",
+    source: "reveal",
+    ghost: true
+  };
+  state.words.push(item);
+  renderInventory();
+  return item;
+}
+
+function wakeRevealPlayback() {
+  const wake = state.reveal.wake;
+  state.reveal.wake = null;
+  wake?.();
+}
+
+async function revealDelay(milliseconds, generation) {
+  const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let remaining = state.reveal.skip ? 0 : reduced ? Math.min(40, milliseconds) : milliseconds / state.reveal.speed;
+  while (remaining > 0) {
+    if (generation !== state.reveal.generation || !state.reveal.active) return false;
+    if (state.reveal.paused || document.hidden) {
+      await new Promise((resolve) => { state.reveal.wake = resolve; });
+      continue;
+    }
+    const slice = Math.min(50, remaining);
+    await wait(slice);
+    remaining -= slice;
+    if (state.reveal.skip) remaining = 0;
+  }
+  return generation === state.reveal.generation && state.reveal.active;
+}
+
+function updateRevealController(stepIndex = state.reveal.completed, step = null) {
+  const total = state.reveal.route.length;
+  const complete = stepIndex >= total;
+  const label = complete
+    ? `Constellation complete · ${total} combinations traced`
+    : step
+      ? `Step ${stepIndex + 1} of ${total}: ${step.a} + ${step.b} → ${step.word}`
+      : "Preparing the constellation…";
+  els.revealStepText.textContent = label;
+  els.revealAnnouncement.textContent = label;
+  els.revealProgressBar.style.width = `${total ? Math.min(100, stepIndex / total * 100) : 100}%`;
+  els.revealProgressBar.parentElement?.setAttribute("aria-valuenow", String(total ? Math.round(Math.min(100, stepIndex / total * 100)) : 100));
+  els.revealPause.disabled = complete;
+  els.revealSpeed.disabled = complete;
+  els.revealSkip.hidden = complete;
+  els.revealController.classList.toggle("is-paused", state.reveal.paused && !complete);
+  els.revealController.classList.toggle("is-complete", complete);
+}
+
+function moveRevealNode(node, x, y) {
+  node.x = x;
+  node.y = y;
+  const element = els.boardItems.querySelector(`[data-id="${node.id}"]`);
+  if (!element) return;
+  element.classList.add("guided-drop");
+  element.style.setProperty("--x", `${x}px`);
+  element.style.setProperty("--y", `${y}px`);
+}
+
+async function playRevealPath(route) {
+  const generation = state.reveal.generation + 1;
+  state.finished = false;
+  state.nodes = [];
+  state.selectedNodeId = null;
+  state.reveal = {
+    active: true,
+    paused: false,
+    speed: 1,
+    skip: false,
+    pending: false,
+    revealed: true,
+    generation,
+    route,
+    completed: 0,
+    layout: buildRevealLayout(route),
+    wake: null
+  };
+  els.board.classList.add("reveal-active");
+  els.board.classList.remove("reveal-complete");
+  els.revealController.hidden = false;
+  els.revealController.classList.remove("is-paused", "is-complete");
+  els.revealPause.textContent = "Pause";
+  els.revealPause.setAttribute("aria-pressed", "false");
+  els.revealSpeed.textContent = "1×";
+  els.revealSkip.hidden = false;
+  renderInventory();
+  renderBoard();
+  updateHud();
+  updateRevealController(0, route[0]);
+  startCosmos();
+
+  if (!route.length) {
+    const target = revealItem(state.game.target, { emoji: state.game.emoji });
+    const rect = els.board.getBoundingClientRect();
+    state.nodes = [];
+    addNode(target, rect.width / 2 - 55, rect.height * .35, { revealRole: "target" });
+  }
+
+  for (let index = 0; index < route.length; index += 1) {
+    if (generation !== state.reveal.generation) return;
+    const step = route[index];
+    const rect = els.board.getBoundingClientRect();
+    const segment = state.reveal.layout.segments[index];
+    const targetX = clamp(segment.to.x * rect.width - 48, 10, Math.max(10, rect.width - 150));
+    const targetY = clamp(segment.to.y * rect.height - 22, 58, Math.max(58, rect.height - 88));
+    const spread = Math.min(150, rect.width * .25);
+    const sourceY = clamp(targetY + Math.min(145, rect.height * .2), 70, Math.max(70, rect.height - 72));
+    const leftItem = revealItem(step.a);
+    const rightItem = revealItem(step.b);
+    state.nodes = [];
+    const left = addNode(leftItem, clamp(targetX - spread, 8, rect.width - 155), sourceY, { revealRole: "source" });
+    const right = addNode(rightItem, clamp(targetX + spread, 8, rect.width - 155), sourceY, { revealRole: "source" });
+    updateRevealController(index, step);
+    if (!await revealDelay(620, generation)) return;
+    moveRevealNode(left, targetX - 18, targetY + 6);
+    moveRevealNode(right, targetX + 18, targetY + 6);
+    if (!await revealDelay(520, generation)) return;
+    els.boardItems.querySelectorAll(".reveal-source").forEach((element) => element.classList.add("merging"));
+    if (!await revealDelay(220, generation)) return;
+    const result = addRevealDiscovery(step);
+    state.nodes = [];
+    addNode(result, targetX, targetY, { revealRole: index === route.length - 1 ? "target" : "result" });
+    state.moves += 1;
+    state.history.push({ a: step.a, b: step.b, word: step.word, emoji: result.emoji, source: "reveal", newDiscovery: false, revealed: true });
+    state.reveal.completed = index + 1;
+    updateHud();
+    updateMilestone(index === route.length - 1);
+    renderAtlas();
+    updateRevealController(index + 1, route[index + 1]);
+    if (matchMedia("(prefers-reduced-motion: reduce)").matches) startCosmos();
+    if (navigator.vibrate) navigator.vibrate([10, 18, 10]);
+    if (!await revealDelay(620, generation)) return;
+  }
+
+  if (generation !== state.reveal.generation) return;
+  state.reveal.active = false;
+  state.reveal.completed = route.length;
+  els.board.classList.remove("reveal-active");
+  els.board.classList.add("reveal-complete");
+  updateRevealController(route.length);
+  finishGame(true);
+}
+
+function toggleRevealPause() {
+  if (!state.reveal.active) return;
+  state.reveal.paused = !state.reveal.paused;
+  els.revealPause.textContent = state.reveal.paused ? "Resume" : "Pause";
+  els.revealPause.setAttribute("aria-pressed", String(state.reveal.paused));
+  els.revealController.classList.toggle("is-paused", state.reveal.paused);
+  if (!state.reveal.paused) wakeRevealPlayback();
+}
+
+function cycleRevealSpeed() {
+  if (!state.reveal.active) return;
+  const speeds = [.5, 1, 2];
+  state.reveal.speed = speeds[(speeds.indexOf(state.reveal.speed) + 1) % speeds.length];
+  els.revealSpeed.textContent = `${state.reveal.speed}×`;
+  els.revealSpeed.setAttribute("aria-label", `Reveal speed: ${state.reveal.speed} times`);
+  wakeRevealPlayback();
+}
+
+function skipRevealAnimation() {
+  if (!state.reveal.active) return;
+  state.reveal.skip = true;
+  state.reveal.paused = false;
+  els.revealPause.textContent = "Pause";
+  els.revealPause.setAttribute("aria-pressed", "false");
+  els.revealController.classList.remove("is-paused");
+  wakeRevealPlayback();
+}
+
 function calculateReward() {
+  if (state.scoringDisabled) return { reward: 0, reason: "Assisted path · no progression rewards" };
   let reward = state.game.reward || 70;
   const reasons = [];
   if (state.newDiscoveries) {
@@ -701,11 +1067,15 @@ function finishGame(won, reason = "") {
   stopTimer();
   updateMilestone(won);
   const elapsed = Math.max(1, Math.round((Date.now() - state.startedAt) / 1000));
+  const assisted = Boolean(state.scoringDisabled || state.assist === "reveal");
+  const revealed = assisted && state.reveal.revealed;
   let reward = null;
   state.resultAction = returnHome;
-  $("#rankResultCard").hidden = isStaticBeta || !won;
-  $("#resultLeaderboard").hidden = isStaticBeta || !won;
-  if (won) {
+  $("#rankResultCard").hidden = isStaticBeta || !won || assisted;
+  $("#resultLeaderboard").hidden = isStaticBeta || !won || assisted;
+  $("#assistResultCard").hidden = !assisted;
+  $("#resultReveal").hidden = won || assisted || !state.run;
+  if (won && !assisted) {
     reward = calculateReward();
     if (state.mode === "daily") updateDailyStreak();
     if (state.mode === "weekly") {
@@ -726,34 +1096,44 @@ function finishGame(won, reason = "") {
     profile.stardust += reward.reward;
     profile.wins += 1;
     saveProfile();
+  } else if (won && revealed) {
+    state.resultAction = () => els.resultDialog.close();
   }
   els.resultEmoji.textContent = won ? state.game.emoji : state.mode === "quick" ? "⌛" : "◇";
-  els.resultKicker.textContent = won
+  els.resultKicker.textContent = revealed
+    ? "PATH REVEALED · ASSISTED"
+    : won
     ? isStaticBeta
       ? "LOCAL TARGET REACHED"
       : state.mode === "weekly" && !profile.weekly.complete
         ? `STAGE ${state.game.stage + 1} COMPLETE`
         : "TARGET REACHED"
     : "ORBIT ENDED";
-  els.resultTitle.textContent = won ? `You found ${state.game.target}.` : reason;
+  els.resultTitle.textContent = revealed ? `The cosmos revealed ${state.game.target}.` : won ? `You found ${state.game.target}.` : reason;
   const timeStat = state.game.timeLimit || state.mode === "challenge" ? ` · ${formatTime(elapsed)} elapsed` : "";
-  els.resultStats.textContent = `${state.words.length} discoveries · ${state.moves} moves${timeStat}${state.wished ? " · 1 Wish" : ""}`;
-  els.rewardCard.hidden = !won;
+  els.resultStats.textContent = revealed
+    ? `${state.reveal.route.length} combinations traced · 0 score · no discoveries saved`
+    : `${state.words.length} discoveries · ${state.moves} moves${timeStat}${state.wished ? " · 1 Wish" : ""}`;
+  els.rewardCard.hidden = !won || assisted;
   if (reward) {
     els.rewardDust.textContent = reward.reward;
     els.rewardReason.textContent = reward.reason;
   }
-  els.resultPrimary.querySelector("span").textContent = won && state.mode === "weekly" && !profile.weekly.complete ? "Continue expedition" : won ? "Choose another mode" : "Back to modes";
-  els.resultRetry.hidden = won && (state.mode === "daily" || state.mode === "weekly");
+  els.resultPrimary.querySelector("span").textContent = revealed ? "Study constellation" : won && state.mode === "weekly" && !profile.weekly.complete ? "Continue expedition" : won ? "Choose another mode" : "Back to modes";
+  els.resultRetry.hidden = assisted || (won && (state.mode === "daily" || state.mode === "weekly"));
   els.resultRetry.textContent = won ? "Replay this target" : "Try again";
-  els.resultShare.hidden = !won;
+  els.resultShare.hidden = !won || assisted;
   els.resultDialog.showModal();
-  if (won) submitRankedScore();
-  track(won ? "target_reached" : "run_failed", { mode: state.mode, target: state.game.target, moves: state.moves, seconds: elapsed, wished: state.wished, reward: reward?.reward || 0 });
+  if (won && !assisted) submitRankedScore();
+  track(won ? "target_reached" : "run_failed", { mode: state.mode, target: state.game.target, moves: state.moves, seconds: elapsed, wished: state.wished, reward: reward?.reward || 0, assisted, revealed });
 }
 
 async function submitRankedScore() {
   const card = $("#rankResultCard");
+  if (state.scoringDisabled || state.assist === "reveal") {
+    card.hidden = true;
+    return;
+  }
   if (!state.run?.ranked) {
     $("#resultDivision").textContent = "PRACTICE ORBIT";
     $("#resultRank").textContent = "UNRANKED";
@@ -802,6 +1182,7 @@ function updateWishButton() {
   const button = $("#wishWord");
   const used = state.wished;
   button?.classList.toggle("used", used);
+  if (button) button.disabled = state.finished || state.reveal.active || state.reveal.pending;
   if (isStaticBeta) {
     els.wishState.textContent = used ? "USED" : "PRACTICE";
     return;
@@ -819,7 +1200,7 @@ function openPremium() {
 }
 
 function openWish() {
-  if (!state.game || state.finished) return;
+  if (!state.game || state.finished || state.reveal.active || state.reveal.pending) return;
   if (state.wished) return showToast("Only one Wish can bend each orbit.");
   track("wish_opened", { mode: state.mode, free: !profile.freeWishUsed });
   stopTimer();
@@ -917,7 +1298,7 @@ function renderWishVault() {
     const button = document.createElement("button");
     button.type = "button";
     button.className = "vault-word";
-    button.disabled = !state.game || state.finished || state.wished;
+    button.disabled = !state.game || state.finished || state.wished || state.reveal.active || state.reveal.pending;
     button.setAttribute("aria-label", `Activate ${item.word} in this run`);
     button.innerHTML = `<span class="emoji">${escapeHtml(item.emoji)}</span><span class="word">${escapeHtml(item.word)}</span>`;
     button.addEventListener("click", () => activateMarketWord(item.id));
@@ -926,7 +1307,7 @@ function renderWishVault() {
 }
 
 async function activateMarketWord(wordId) {
-  if (!state.game || state.finished) return showToast("Start an orbit before activating a Vault word.");
+  if (!state.game || state.finished || state.reveal.active || state.reveal.pending) return showToast("Start an orbit before activating a Vault word.");
   if (state.wished) return showToast("Only one Reality Bend may be used in a run.");
   const owned = profile.vault.find((item) => item.id === wordId);
   if (!owned) return showToast("That word is not in your Vault.");
@@ -1119,6 +1500,7 @@ async function confirmMarketPurchase() {
 }
 
 async function openLeaderboard(scope = state.leaderboardScope, division = state.leaderboardDivision) {
+  if (state.startingRun) return;
   state.leaderboardScope = ["daily", "weekly", "sprint", "all"].includes(scope) ? scope : "daily";
   state.leaderboardDivision = division === "open" ? "open" : "pure";
   stopTimer();
@@ -1172,7 +1554,7 @@ function renderLeaderboard(board) {
 }
 
 function resumeTimerIfNeeded() {
-  if (state.game?.timeLimit && !state.finished && !els.gameScreen.hidden && !els.paywallDialog.open && !els.wishDialog.open && !els.atlasDialog.open && !els.shareDialog.open && !els.profileDialog.open && !els.exchangeDialog.open && !els.marketBuyDialog.open && !els.leaderboardDialog.open) startTimer();
+  if (state.game?.timeLimit && !state.finished && !state.reveal.active && !state.reveal.pending && !els.gameScreen.hidden && !els.paywallDialog.open && !els.wishDialog.open && !els.atlasDialog.open && !els.shareDialog.open && !els.profileDialog.open && !els.exchangeDialog.open && !els.marketBuyDialog.open && !els.leaderboardDialog.open && !els.revealDialog.open) startTimer();
 }
 
 function renderAtlas() {
@@ -1189,6 +1571,8 @@ function renderAtlas() {
 
 function openAtlas() {
   if (!state.game) return;
+  if (state.startingRun) return showToast("The next orbit is still being mapped.");
+  if (state.reveal.active || state.reveal.pending) return showToast("Pause the Cosmos Reveal before opening the atlas.");
   stopTimer();
   renderAtlas();
   els.atlasDialog.showModal();
@@ -1211,6 +1595,8 @@ function populateShare(game, completed = false) {
 
 function openShare() {
   if (!state.game) return;
+  if (state.startingRun) return showToast("The next orbit is still being mapped.");
+  if (state.reveal.active || state.reveal.pending || state.scoringDisabled) return showToast("Assisted paths are for study, not challenge links.");
   stopTimer();
   populateShare(state.game, state.finished);
   $("#nativeShare").hidden = !navigator.share;
@@ -1284,6 +1670,7 @@ function startCosmos() {
   const ctx = canvas.getContext("2d");
   const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
   const accent = getComputedStyle(document.body).getPropertyValue("--violet").trim() || "#aa8cff";
+  const cyan = getComputedStyle(document.body).getPropertyValue("--cyan").trim() || "#69e6ff";
   const draw = (time = 0) => {
     if (els.gameScreen.hidden) return;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -1311,6 +1698,48 @@ function startCosmos() {
       ctx.beginPath();
       ctx.arc(trail.x, trail.y, 1.5, 0, Math.PI * 2);
       ctx.fill();
+    }
+    const revealSegments = state.reveal.layout?.segments || [];
+    if (revealSegments.length) {
+      ctx.save();
+      for (let index = 0; index < revealSegments.length; index += 1) {
+        const segment = revealSegments[index];
+        const completed = index < state.reveal.completed;
+        const current = state.reveal.active && index === state.reveal.completed;
+        const ax = segment.a.x * rect.width;
+        const ay = segment.a.y * rect.height;
+        const bx = segment.b.x * rect.width;
+        const by = segment.b.y * rect.height;
+        const tx = segment.to.x * rect.width;
+        const ty = segment.to.y * rect.height;
+        const pulse = reduced ? 1 : .72 + Math.sin(time * .004 + index) * .28;
+
+        ctx.globalAlpha = completed ? .78 : current ? .35 + pulse * .22 : .1;
+        ctx.strokeStyle = completed ? cyan : accent;
+        ctx.fillStyle = completed ? cyan : accent;
+        ctx.lineWidth = completed ? 1.8 : current ? 1.35 : .8;
+        ctx.setLineDash(completed ? [] : [4, 9]);
+        ctx.shadowColor = completed ? cyan : accent;
+        ctx.shadowBlur = completed ? 11 : current ? 8 : 0;
+        ctx.beginPath();
+        ctx.moveTo(ax, ay);
+        ctx.lineTo(tx, ty);
+        ctx.moveTo(bx, by);
+        ctx.lineTo(tx, ty);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.beginPath();
+        ctx.arc(tx, ty, completed ? 3 : 2, 0, Math.PI * 2);
+        ctx.fill();
+        if (current) {
+          ctx.globalAlpha = .18 + pulse * .18;
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.arc(tx, ty, 8 + pulse * 5, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+      }
+      ctx.restore();
     }
     ctx.restore();
     if (!reduced) state.cosmosFrame = requestAnimationFrame(draw);
@@ -1376,9 +1805,20 @@ function escapeHtml(value) { return String(value).replace(/[&<>'"]/g, (character
 $$('[data-mode]').forEach((button) => button.addEventListener("click", () => beginMode(button.dataset.mode)));
 $("#customTargetForm").addEventListener("submit", beginCustomTarget);
 $("#homeButton").addEventListener("click", returnHome);
-$("#resetBoard").addEventListener("click", () => { state.nodes = []; state.selectedNodeId = null; renderBoard(); showAlchemy("The board is clear. Your discoveries remain."); });
+$("#resetBoard").addEventListener("click", () => {
+  if (state.startingRun || state.reveal.active || state.reveal.pending) return showToast("The cosmos is tracing this path.");
+  state.nodes = [];
+  state.selectedNodeId = null;
+  renderBoard();
+  showAlchemy("The board is clear. Your discoveries remain.");
+});
 $("#atlasButton").addEventListener("click", openAtlas);
 $("#shareRunButton").addEventListener("click", openShare);
+$("#revealPathButton").addEventListener("click", openRevealPath);
+$("#confirmReveal").addEventListener("click", confirmRevealPath);
+$("#revealPause").addEventListener("click", toggleRevealPause);
+$("#revealSpeed").addEventListener("click", cycleRevealSpeed);
+$("#revealSkip").addEventListener("click", skipRevealAnimation);
 $("#startPremium").addEventListener("click", () => profile.premium ? openProfile() : openPremium());
 $("#wishWord").addEventListener("click", openWish);
 $("#checkoutButton").addEventListener("click", checkoutPremium);
@@ -1409,16 +1849,35 @@ $("#leaderboardScope").addEventListener("change", (event) => {
 $("#createChallenge").addEventListener("click", createChallengeFromHome);
 $("#copyChallenge").addEventListener("click", copyChallenge);
 $("#nativeShare").addEventListener("click", nativeShare);
-$("#resultShare").addEventListener("click", () => { els.resultDialog.close(); openShare(); });
+$("#resultShare").addEventListener("click", () => {
+  if (state.startingRun) return;
+  els.resultDialog.close();
+  openShare();
+});
+$("#resultReveal").addEventListener("click", () => {
+  if (state.startingRun) return;
+  els.resultDialog.close();
+  openRevealPath();
+});
 $("#resultPrimary").addEventListener("click", () => state.resultAction?.());
 $("#resultRetry").addEventListener("click", retryGame);
 $("#resultLeaderboard").addEventListener("click", () => {
+  if (state.startingRun) return;
   if (els.resultDialog.open) els.resultDialog.close();
   openLeaderboard(state.leaderboardScope, state.leaderboardDivision);
 });
 $$('[data-theme]').forEach((button) => button.addEventListener("click", () => chooseTheme(button.dataset.theme)));
-$$('[data-close]').forEach((button) => button.addEventListener("click", () => document.getElementById(button.dataset.close).close()));
-[els.paywallDialog, els.wishDialog, els.atlasDialog, els.shareDialog, els.profileDialog, els.marketBuyDialog, els.leaderboardDialog].forEach((dialog) => dialog.addEventListener("close", () => setTimeout(resumeTimerIfNeeded, 0)));
+$$('[data-close]').forEach((button) => button.addEventListener("click", () => {
+  if (button.dataset.close === "revealDialog" && state.reveal.pending) return;
+  document.getElementById(button.dataset.close).close();
+}));
+els.revealDialog.addEventListener("cancel", (event) => {
+  if (state.reveal.pending) event.preventDefault();
+});
+els.resultDialog.addEventListener("cancel", (event) => {
+  if (state.startingRun) event.preventDefault();
+});
+[els.paywallDialog, els.wishDialog, els.atlasDialog, els.shareDialog, els.profileDialog, els.marketBuyDialog, els.leaderboardDialog, els.revealDialog].forEach((dialog) => dialog.addEventListener("close", () => setTimeout(resumeTimerIfNeeded, 0)));
 els.exchangeDialog.addEventListener("close", () => {
   clearInterval(state.marketTimer);
   state.marketTimer = null;
@@ -1427,6 +1886,7 @@ els.exchangeDialog.addEventListener("close", () => {
 els.board.addEventListener("dragover", (event) => { event.preventDefault(); event.dataTransfer.dropEffect = "copy"; });
 els.board.addEventListener("drop", (event) => {
   event.preventDefault();
+  if (state.reveal.active || state.reveal.pending) return;
   const word = event.dataTransfer.getData("application/x-constellore");
   const item = state.words.find((entry) => entry.word === word);
   if (item) placeFromTray(item, { x: event.clientX, y: event.clientY });
@@ -1434,6 +1894,7 @@ els.board.addEventListener("drop", (event) => {
 window.addEventListener("resize", () => { if (!els.gameScreen.hidden) startCosmos(); });
 window.addEventListener("online", updateConnection);
 window.addEventListener("offline", updateConnection);
+document.addEventListener("visibilitychange", () => { if (!document.hidden) wakeRevealPlayback(); });
 window.addEventListener("beforeinstallprompt", (event) => { event.preventDefault(); state.installPrompt = event; $("#installButton").hidden = false; });
 $("#installButton").addEventListener("click", async () => {
   if (!state.installPrompt) return;

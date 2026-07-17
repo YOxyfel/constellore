@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { MARKET_CATALOG } from "../game-services.mjs";
-import { buildGameForMode, contextualCombination, curatedCombination, isSensibleResult, isSensibleWish, reachableFromStarters, registerWishConcept, semanticCategoryFor } from "../server.mjs";
+import { buildGameForMode, contextualCombination, curatedCombination, isSensibleResult, isSensibleWish, reachableFromStarters, registerWishConcept, semanticCategoryFor, solutionRoute } from "../server.mjs";
 
 test("curated recipes are order independent", () => {
   assert.equal(curatedCombination("Earth", "Water").word, "Mud");
@@ -21,6 +21,23 @@ test("featured targets are reachable from the four starting elements", () => {
   const targets = ["Rainbow", "Forest", "Phoenix", "Telescope", "City", "Lightning", "Rocket", "Space Station"];
   const known = reachableFromStarters();
   for (const target of targets) assert.ok(known.has(target.toLowerCase()), `${target} should be reachable`);
+});
+
+test("solution routes are dependency ordered and end at the requested target", () => {
+  assert.deepEqual(solutionRoute("Earth"), [], "starter targets should use a valid zero-step route");
+  const targets = ["Rainbow", "Forest", "Phoenix", "Telescope", "City", "Lightning", "Rocket", "Space Station"];
+  for (const target of targets) {
+    const available = new Set(["earth", "water", "fire", "air"]);
+    const route = solutionRoute(target);
+    assert.ok(route?.length, `${target} should have a solution route`);
+    for (const step of route) {
+      assert.ok(available.has(step.a.toLowerCase()), `${step.a} must be available before ${step.word}`);
+      assert.ok(available.has(step.b.toLowerCase()), `${step.b} must be available before ${step.word}`);
+      assert.equal(curatedCombination(step.a, step.b).word, step.word);
+      available.add(step.word.toLowerCase());
+    }
+    assert.equal(route.at(-1).word, target);
+  }
 });
 
 test("generated nonsense is rejected", () => {

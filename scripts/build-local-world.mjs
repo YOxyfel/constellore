@@ -190,6 +190,45 @@ export function lookupLocalCombination(a, b) {
   };
 }
 
+export function localRouteTo(value) {
+  const target = indexByWord.get(String(value || \"\").trim().toLowerCase());
+  if (target === undefined) return null;
+
+  const starterWords = [\"Earth\", \"Water\", \"Fire\", \"Air\"];
+  const starters = new Set(starterWords.map((word) => indexByWord.get(word.toLowerCase())));
+  if (starters.has(target)) return [];
+
+  const known = new Set(starters);
+  const queue = [...starters];
+  const parents = new Map();
+  for (let cursor = 0; cursor < queue.length && !known.has(target); cursor += 1) {
+    const left = queue[cursor];
+    for (const right of [...known]) {
+      const result = matrix().getUint16(pairOffset(left, right) * 2, true);
+      if (known.has(result)) continue;
+      known.add(result);
+      parents.set(result, { left, right });
+      queue.push(result);
+    }
+  }
+  if (!known.has(target)) return null;
+
+  const route = [];
+  const emitted = new Set();
+  const visit = (wordIndex) => {
+    if (starters.has(wordIndex) || emitted.has(wordIndex)) return true;
+    const parent = parents.get(wordIndex);
+    if (!parent || !visit(parent.left) || !visit(parent.right)) return false;
+    const a = payload.words[parent.left].word;
+    const b = payload.words[parent.right].word;
+    const result = lookupLocalCombination(a, b);
+    route.push({ a, b, ...result });
+    emitted.add(wordIndex);
+    return true;
+  };
+  return visit(target) ? route : null;
+}
+
 export function buildLocalGame(mode, seed = 0, target = \"\", stage = 0) {
   const normalizedMode = [\"reach\", \"quick\", \"moves\", \"daily\", \"weekly\", \"challenge\"].includes(mode) ? mode : \"reach\";
   const safeSeed = Math.abs(Number(seed) || 0);

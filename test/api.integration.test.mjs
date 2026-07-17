@@ -82,7 +82,7 @@ test("authenticated HTTP runs produce verified Pure and Open leaderboard scores"
 
   const serviceWorkerResponse = await fetch(`${baseUrl}/play/service-worker.js`);
   assert.equal(serviceWorkerResponse.status, 200);
-  assert.match(await serviceWorkerResponse.text(), /constellore-shell-v4/);
+  assert.match(await serviceWorkerResponse.text(), /constellore-shell-v7/);
 
   const manifestResponse = await fetch(`${baseUrl}/manifest.webmanifest`);
   assert.equal(manifestResponse.status, 200);
@@ -339,4 +339,91 @@ test("authenticated HTTP runs produce verified Pure and Open leaderboard scores"
   assert.equal(openBoard.payload.entries[0].assist, "market");
   assert.equal(openBoard.payload.entries[0].target, movesStart.payload.game.target);
   assert.equal(openBoard.payload.playerEntry.rank, 1);
+
+  const assistedRegistration = await request("/api/player/register", { method: "POST", authenticated: false });
+  assert.equal(assistedRegistration.response.status, 201);
+  auth = {
+    "x-constellore-player": assistedRegistration.payload.player.id,
+    "x-constellore-token": assistedRegistration.payload.playerToken
+  };
+  const assistedStart = await request("/api/run/start", { method: "POST", body: { mode: "quick" } });
+  assert.equal(assistedStart.response.status, 201);
+  assert.equal(assistedStart.payload.run.ranked, true);
+  assert.equal(assistedStart.payload.run.scoringDisabled, false);
+  const parallelAssistedStart = await request("/api/run/start", { method: "POST", body: { mode: "quick" } });
+  assert.equal(parallelAssistedStart.response.status, 201);
+  assert.equal(parallelAssistedStart.payload.run.ranked, true);
+  assert.equal(parallelAssistedStart.payload.run.challengeId, assistedStart.payload.run.challengeId);
+
+  const reveal = await request("/api/run/reveal", {
+    method: "POST",
+    body: { runId: assistedStart.payload.run.id, runToken: assistedStart.payload.run.token }
+  });
+  assert.equal(reveal.response.status, 200);
+  assert.equal(reveal.payload.assisted, true);
+  assert.equal(reveal.payload.scoringDisabled, true);
+  assert.equal(reveal.payload.score, 0);
+  assert.equal(reveal.payload.leaderboardEligible, false);
+  const available = new Set(starters.map((word) => word.toLowerCase()));
+  for (const step of reveal.payload.route) {
+    assert.ok(available.has(step.a.toLowerCase()));
+    assert.ok(available.has(step.b.toLowerCase()));
+    available.add(step.word.toLowerCase());
+  }
+  assert.equal(reveal.payload.route.at(-1).word, assistedStart.payload.game.target);
+
+  const repeatedReveal = await request("/api/run/reveal", {
+    method: "POST",
+    body: { runId: assistedStart.payload.run.id, runToken: assistedStart.payload.run.token }
+  });
+  assert.equal(repeatedReveal.response.status, 200);
+  assert.deepEqual(repeatedReveal.payload.route, reveal.payload.route);
+
+  const assistedSubmit = await request("/api/run/submit", {
+    method: "POST",
+    body: { runId: assistedStart.payload.run.id, runToken: assistedStart.payload.run.token }
+  });
+  assert.equal(assistedSubmit.response.status, 200);
+  assert.equal(assistedSubmit.payload.ranked, false);
+  assert.equal(assistedSubmit.payload.assisted, true);
+  assert.equal(assistedSubmit.payload.score, 0);
+  assert.equal(assistedSubmit.payload.creditReward, 0);
+  assert.equal(assistedSubmit.payload.weeklyBonus, 0);
+  assert.equal(assistedSubmit.payload.player.credits, 300);
+
+  await play(parallelAssistedStart);
+  const parallelAssistedSubmit = await request("/api/run/submit", {
+    method: "POST",
+    body: { runId: parallelAssistedStart.payload.run.id, runToken: parallelAssistedStart.payload.run.token }
+  });
+  assert.equal(parallelAssistedSubmit.response.status, 200);
+  assert.equal(parallelAssistedSubmit.payload.ranked, false);
+  assert.equal(parallelAssistedSubmit.payload.assisted, true);
+  assert.equal(parallelAssistedSubmit.payload.score, 0, "a run started before Reveal Path must also forfeit the shared challenge");
+
+  const pureAfterReveal = await request("/api/leaderboard?scope=all&division=pure");
+  const openAfterReveal = await request("/api/leaderboard?scope=all&division=open");
+  assert.equal(pureAfterReveal.payload.entries.length, 1);
+  assert.equal(openAfterReveal.payload.entries.length, 1);
+  assert.equal(pureAfterReveal.payload.entries.some((entry) => entry.callsign === assistedRegistration.payload.player.callsign), false);
+  assert.equal(openAfterReveal.payload.entries.some((entry) => entry.callsign === assistedRegistration.payload.player.callsign), false);
+
+  const assistedReplay = await request("/api/run/start", { method: "POST", body: { mode: "quick" } });
+  assert.equal(assistedReplay.response.status, 201);
+  assert.equal(assistedReplay.payload.run.ranked, false);
+  assert.equal(assistedReplay.payload.run.scoringDisabled, true);
+  assert.equal(assistedReplay.payload.run.assist, "reveal");
+
+  const disguisedMovesStart = await request("/api/run/start", { method: "POST", body: { mode: "moves", custom: true } });
+  assert.equal(disguisedMovesStart.response.status, 201);
+  assert.equal(disguisedMovesStart.payload.run.ranked, true, "client-controlled custom flags cannot downgrade official challenges before revealing them");
+  const disguisedMovesReveal = await request("/api/run/reveal", {
+    method: "POST",
+    body: { runId: disguisedMovesStart.payload.run.id, runToken: disguisedMovesStart.payload.run.token }
+  });
+  assert.equal(disguisedMovesReveal.response.status, 200);
+  const movesReplayAfterReveal = await request("/api/run/start", { method: "POST", body: { mode: "moves" } });
+  assert.equal(movesReplayAfterReveal.response.status, 201);
+  assert.equal(movesReplayAfterReveal.payload.run.ranked, false);
+  assert.equal(movesReplayAfterReveal.payload.run.scoringDisabled, true);
 });

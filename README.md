@@ -37,6 +37,7 @@ The Launch Wishlist has two honest deployment modes. Static Pages shows the repo
 - **Weekly Expedition** - three deterministic stages shared by all players that week.
 - **Friend Challenge** - a shareable URL that preserves the target and seed for asynchronous play.
 - **Constellation Atlas** - every successful step is recorded as a readable path.
+- **Ask the Cosmos** - reveal a target's complete answer as an animated constellation; the run becomes permanently Assisted with zero score, rewards, streak credit, or saved reveal discoveries.
 - **Personal Universe** - unique discoveries, Stardust, ranks, wins, streaks, and themes persist locally.
 
 All built-in targets are verified as reachable from Earth, Water, Fire, and Air. The local semantic system covers the full reachable concept matrix. Nonsense, repeated fragments, and malformed Wishes are rejected.
@@ -51,6 +52,8 @@ Rankings are deliberately split:
 - **Open** - the run used a personal Wish or an owned Word Exchange concept.
 
 Paid or assisted runs therefore never silently compete with unassisted runs. Practice Reach and Friend Challenge runs are not uploaded. Public identity uses a server-generated, non-editable cosmic callsign; no player-entered display name is published.
+
+Reveal Path is a learning tool rather than a scoring shortcut. The server forfeits that deterministic ranked challenge before returning its verified route, and replaying the same challenge remains unranked for that player. The browser animates the returned recipe graph without submitting fake combinations; revealed words are temporary and grant no competitive or progression value.
 
 The included guest identity is device-local and accountless. A production account-linking or recovery flow is still needed if identities, licenses, and balances must follow players across devices.
 

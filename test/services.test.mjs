@@ -1,5 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { GameStore, MARKET_CATALOG, RunRegistry, calculateStarscore, callsignFor, marketPrice } from "../game-services.mjs";
 
 test("generated public callsigns have a scalable anonymous discriminator", () => {
@@ -222,4 +225,42 @@ test("assisted Starscores are lower than otherwise identical pure scores", () =>
   const pure = calculateStarscore({ game, moves: 8, elapsedSeconds: 40, assisted: false });
   const open = calculateStarscore({ game, moves: 8, elapsedSeconds: 40, assisted: true });
   assert.ok(pure > open);
+});
+
+test("Reveal Path irreversibly completes and disqualifies a server run", async () => {
+  const store = await new GameStore(":memory:").init();
+  const player = await store.registerPlayer();
+  const runs = new RunRegistry(store);
+  const game = { mode: "quick", target: "Mud", tier: 1, starters: ["Earth", "Water", "Fire", "Air"] };
+  const started = runs.start(player.id, game, { ranked: true, challengeId: "quick:reveal-test" });
+  const run = runs.get(started.run.runId, player.id, started.token);
+  const route = [{ a: "Earth", b: "Water", word: "Mud", emoji: "🟤", note: "Water softens earth into mud.", source: "world" }];
+
+  assert.deepEqual(runs.reveal(run, route), route);
+  assert.equal(run.assist, "reveal");
+  assert.equal(run.scoringDisabled, true);
+  assert.equal(run.forfeited, true);
+  assert.ok(run.completedAt);
+  assert.equal(run.moves, 1);
+  assert.deepEqual(runs.reveal(run, route), route, "a repeated reveal should return the cached route");
+  assert.equal(run.moves, 1, "an idempotent reveal must not replay server-side moves");
+  assert.throws(() => runs.canCombine(run, "Earth", "Water"), (error) => error.serviceCode === "run_complete");
+  assert.throws(() => runs.finalize(run, player.callsign), (error) => error.serviceCode === "assisted_run");
+});
+
+test("challenge forfeits are idempotent and survive store reloads", async (context) => {
+  const directory = await mkdtemp(join(tmpdir(), "constellore-forfeit-"));
+  const path = join(directory, "store.json");
+  context.after(() => rm(directory, { recursive: true, force: true }));
+  const firstStore = await new GameStore(path).init();
+  const player = await firstStore.registerPlayer();
+  const at = new Date("2026-07-17T12:00:00.000Z");
+
+  const first = await firstStore.forfeitChallenge(player.id, "daily:2026-07-17", { reason: "reveal", runId: "run-one" }, at);
+  const repeated = await firstStore.forfeitChallenge(player.id, "daily:2026-07-17", { reason: "other", runId: "run-two" }, new Date("2026-07-18T12:00:00.000Z"));
+  assert.deepEqual(repeated, first, "the first forfeiture record must remain authoritative");
+
+  const reloaded = await new GameStore(path).init();
+  assert.equal(reloaded.hasForfeitedChallenge(player.id, "daily:2026-07-17"), true);
+  assert.deepEqual(reloaded.forfeitedChallenge(player.id, "daily:2026-07-17"), first);
 });
