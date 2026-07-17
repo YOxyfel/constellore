@@ -7,6 +7,7 @@ const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const output = join(root, "dist-pages");
 const rootHtml = await readFile(join(output, "index.html"), "utf8");
 const gameHtml = await readFile(join(output, "play", "index.html"), "utf8");
+const gameApp = await readFile(join(output, "play", "app.js"), "utf8");
 
 function bodyDataAttribute(document, name) {
   const body = document.match(/<body\b[^>]*>/i)?.[0] || "";
@@ -39,10 +40,14 @@ if (interestProvider === "first-party") {
   assert.equal(interestApiUrl, "", "GitHub fallback must not retain the server-only interest endpoint.");
 }
 assert.match(gameHtml, /data-runtime="local-practice"/);
+assert.match(gameHtml, /One visual replay is available\./);
+assert.match(gameApp, /async function replayRevealPathOnce\(\)/);
+assert.match(gameApp, /await playRevealPath\(route, \{ replay: true \}\)/);
+assert.match(gameApp, /state\.reveal\.phase = "exiting"/);
 for (const expected of [
   'href="./manifest.webmanifest"',
   'href="./styles.css?v=1.6.0"',
-  'src="./app.js?v=1.4.2"'
+  'src="./app.js?v=1.4.3"'
 ]) assert.ok(gameHtml.includes(expected), `Missing ${expected} from the Pages game document.`);
 for (const forbidden of ['href="/manifest', 'href="/styles', 'href="/icon', 'src="/app']) {
   assert.ok(!gameHtml.includes(forbidden), `Root-absolute game path remains: ${forbidden}`);

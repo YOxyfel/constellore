@@ -1120,7 +1120,7 @@ export const server = createServer(async (request, response) => {
       response.writeHead(308, { Location: "/play/", "Cache-Control": "no-cache" });
       return response.end();
     }
-    if (request.method === "GET" && url.pathname === "/healthz") return sendJson(response, 200, { ok: true, game: "Constellore", version: "1.5.0" });
+    if (request.method === "GET" && url.pathname === "/healthz") return sendJson(response, 200, { ok: true, game: "Constellore", version: "1.5.1" });
     if (request.method === "GET" && url.pathname === "/api/config") {
       const billing = billingSettings();
       return sendJson(response, 200, {

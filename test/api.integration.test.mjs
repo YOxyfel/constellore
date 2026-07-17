@@ -82,7 +82,7 @@ test("authenticated HTTP runs produce verified Pure and Open leaderboard scores"
 
   const serviceWorkerResponse = await fetch(`${baseUrl}/play/service-worker.js`);
   assert.equal(serviceWorkerResponse.status, 200);
-  assert.match(await serviceWorkerResponse.text(), /constellore-shell-v7/);
+  assert.match(await serviceWorkerResponse.text(), /constellore-shell-v8/);
 
   const manifestResponse = await fetch(`${baseUrl}/manifest.webmanifest`);
   assert.equal(manifestResponse.status, 200);

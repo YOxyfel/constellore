@@ -63,6 +63,10 @@ const state = {
     skip: false,
     pending: false,
     revealed: false,
+    replayAvailable: false,
+    replayUsed: false,
+    replaying: false,
+    phase: "idle",
     generation: 0,
     route: [],
     completed: 0,
@@ -420,6 +424,7 @@ function returnHome() {
   [els.resultDialog, els.atlasDialog, els.shareDialog, els.wishDialog, els.paywallDialog, els.exchangeDialog, els.marketBuyDialog, els.leaderboardDialog, els.revealDialog].forEach((dialog) => { if (dialog?.open) dialog.close(); });
   renderProfile();
   window.scrollTo({ top: 0, behavior: "smooth" });
+  requestAnimationFrame(() => els.startScreen.querySelector(".mode-grid [data-mode]:not(:disabled)")?.focus({ preventScroll: true }));
 }
 
 async function retryGame() {
@@ -723,6 +728,10 @@ function resetRevealPlayback({ keepConstellation = false } = {}) {
     skip: false,
     pending: false,
     revealed: keepConstellation ? Boolean(previous.revealed) : false,
+    replayAvailable: keepConstellation ? Boolean(previous.replayAvailable) : false,
+    replayUsed: keepConstellation ? Boolean(previous.replayUsed) : false,
+    replaying: false,
+    phase: keepConstellation ? previous.phase || "idle" : "idle",
     generation: Number(previous.generation || 0) + 1,
     route: keepConstellation ? previous.route || [] : [],
     completed: keepConstellation ? previous.completed || 0 : 0,
@@ -886,7 +895,9 @@ function updateRevealController(stepIndex = state.reveal.completed, step = null)
   const total = state.reveal.route.length;
   const complete = stepIndex >= total;
   const label = complete
-    ? `Constellation complete · ${total} combinations traced`
+    ? state.reveal.replaying
+      ? "Replay complete · returning to mode selection…"
+      : `Constellation complete · ${total} combinations traced`
     : step
       ? `Step ${stepIndex + 1} of ${total}: ${step.a} + ${step.b} → ${step.word}`
       : "Preparing the constellation…";
@@ -911,9 +922,10 @@ function moveRevealNode(node, x, y) {
   element.style.setProperty("--y", `${y}px`);
 }
 
-async function playRevealPath(route) {
+async function playRevealPath(route, { replay = false } = {}) {
   const generation = state.reveal.generation + 1;
-  state.finished = false;
+  const runId = state.run?.id;
+  if (!replay) state.finished = false;
   state.nodes = [];
   state.selectedNodeId = null;
   state.reveal = {
@@ -923,6 +935,10 @@ async function playRevealPath(route) {
     skip: false,
     pending: false,
     revealed: true,
+    replayAvailable: false,
+    replayUsed: replay,
+    replaying: replay,
+    phase: replay ? "replay" : "first",
     generation,
     route,
     completed: 0,
@@ -974,12 +990,16 @@ async function playRevealPath(route) {
     const result = addRevealDiscovery(step);
     state.nodes = [];
     addNode(result, targetX, targetY, { revealRole: index === route.length - 1 ? "target" : "result" });
-    state.moves += 1;
-    state.history.push({ a: step.a, b: step.b, word: step.word, emoji: result.emoji, source: "reveal", newDiscovery: false, revealed: true });
+    if (!replay) {
+      state.moves += 1;
+      state.history.push({ a: step.a, b: step.b, word: step.word, emoji: result.emoji, source: "reveal", newDiscovery: false, revealed: true });
+    }
     state.reveal.completed = index + 1;
-    updateHud();
-    updateMilestone(index === route.length - 1);
-    renderAtlas();
+    if (!replay) {
+      updateHud();
+      updateMilestone(index === route.length - 1);
+      renderAtlas();
+    }
     updateRevealController(index + 1, route[index + 1]);
     if (matchMedia("(prefers-reduced-motion: reduce)").matches) startCosmos();
     if (navigator.vibrate) navigator.vibrate([10, 18, 10]);
@@ -992,7 +1012,35 @@ async function playRevealPath(route) {
   els.board.classList.remove("reveal-active");
   els.board.classList.add("reveal-complete");
   updateRevealController(route.length);
+  if (replay) {
+    state.reveal.phase = "exiting";
+    const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    await wait(route.length ? reduced ? 320 : 900 : reduced ? 480 : 1150);
+    if (generation !== state.reveal.generation || state.run?.id !== runId || state.reveal.phase !== "exiting") return;
+    returnHome();
+    return;
+  }
+  state.reveal.replayAvailable = true;
+  state.reveal.phase = "first-complete";
   finishGame(true);
+}
+
+async function replayRevealPathOnce() {
+  const revealState = state.reveal;
+  if (!state.game || !state.run || !state.finished || revealState.active || !revealState.replayAvailable || revealState.replayUsed) return;
+  const route = revealState.route.map((step) => ({ ...step }));
+  const resultActions = [els.resultPrimary, els.resultRetry, $("#resultLeaderboard"), els.resultShare, $("#resultReveal")];
+  revealState.replayAvailable = false;
+  revealState.replayUsed = true;
+  revealState.phase = "replay";
+  state.resultAction = null;
+  resultActions.forEach((control) => { control.disabled = true; });
+  if (els.resultDialog.open) els.resultDialog.close();
+  try {
+    await playRevealPath(route, { replay: true });
+  } finally {
+    resultActions.forEach((control) => { control.disabled = false; });
+  }
 }
 
 function toggleRevealPause() {
@@ -1097,7 +1145,7 @@ function finishGame(won, reason = "") {
     profile.wins += 1;
     saveProfile();
   } else if (won && revealed) {
-    state.resultAction = () => els.resultDialog.close();
+    state.resultAction = replayRevealPathOnce;
   }
   els.resultEmoji.textContent = won ? state.game.emoji : state.mode === "quick" ? "⌛" : "◇";
   els.resultKicker.textContent = revealed
@@ -1119,9 +1167,9 @@ function finishGame(won, reason = "") {
     els.rewardDust.textContent = reward.reward;
     els.rewardReason.textContent = reward.reason;
   }
-  els.resultPrimary.querySelector("span").textContent = revealed ? "Study constellation" : won && state.mode === "weekly" && !profile.weekly.complete ? "Continue expedition" : won ? "Choose another mode" : "Back to modes";
-  els.resultRetry.hidden = assisted || (won && (state.mode === "daily" || state.mode === "weekly"));
-  els.resultRetry.textContent = won ? "Replay this target" : "Try again";
+  els.resultPrimary.querySelector("span").textContent = revealed ? "Replay constellation once" : won && state.mode === "weekly" && !profile.weekly.complete ? "Continue expedition" : won ? "Choose another mode" : "Back to modes";
+  els.resultRetry.hidden = revealed ? false : assisted || (won && (state.mode === "daily" || state.mode === "weekly"));
+  els.resultRetry.textContent = revealed ? "Back to modes" : won ? "Replay this target" : "Try again";
   els.resultShare.hidden = !won || assisted;
   els.resultDialog.showModal();
   if (won && !assisted) submitRankedScore();
@@ -1860,7 +1908,7 @@ $("#resultReveal").addEventListener("click", () => {
   openRevealPath();
 });
 $("#resultPrimary").addEventListener("click", () => state.resultAction?.());
-$("#resultRetry").addEventListener("click", retryGame);
+$("#resultRetry").addEventListener("click", () => state.reveal.replayAvailable ? returnHome() : retryGame());
 $("#resultLeaderboard").addEventListener("click", () => {
   if (state.startingRun) return;
   if (els.resultDialog.open) els.resultDialog.close();
@@ -1875,7 +1923,11 @@ els.revealDialog.addEventListener("cancel", (event) => {
   if (state.reveal.pending) event.preventDefault();
 });
 els.resultDialog.addEventListener("cancel", (event) => {
-  if (state.startingRun) event.preventDefault();
+  if (state.startingRun) return event.preventDefault();
+  if (state.reveal.replayAvailable) {
+    event.preventDefault();
+    returnHome();
+  }
 });
 [els.paywallDialog, els.wishDialog, els.atlasDialog, els.shareDialog, els.profileDialog, els.marketBuyDialog, els.leaderboardDialog, els.revealDialog].forEach((dialog) => dialog.addEventListener("close", () => setTimeout(resumeTimerIfNeeded, 0)));
 els.exchangeDialog.addEventListener("close", () => {
