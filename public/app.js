@@ -1,7 +1,13 @@
 import { createCtrlHoverController } from "./ctrl-hover.mjs?v=1.0.0";
-import { orderInventory, packOrbit, pickMagneticTarget } from "./frictionless.mjs?v=1.0.0";
+import { findOpenSpawn, orderInventory, packOrbit, pickMagneticTarget } from "./frictionless.mjs?v=1.0.0";
 import { buildMasteryCollections, recordRecipeDiscovery, sanitizeRecipeMasteryState, summarizeMasteryCollections } from "./recipe-mastery.mjs?v=1.0.0";
-import { buildGhost, feedbackCuePolicy, ghostSnapshot, grantSenseCharges, refillSenseWallet, sanitizeFeedbackPreferences, sanitizeSenseWallet, spendSenseCharge } from "./engagement-features.mjs?v=1.0.0";
+import { buildGhost, feedbackCuePolicy, ghostSnapshot, grantSenseCharges, reconcileCloudProgression, refillSenseWallet, sanitizeFeedbackPreferences, sanitizeSenseWallet, spendSenseCharge } from "./engagement-features.mjs?v=1.0.0";
+import { firstOrbitProgress, firstOrbitWrongPairMessage, resolveFirstOrbitCombination, sanitizeFirstOrbitState } from "./first-orbit.mjs?v=1.0.0";
+import { buildConstellationCard, constellationCardFilename, constellationCardShareText, renderConstellationCardSvg } from "./constellation-card.mjs?v=1.0.0";
+import { COSMETIC_CATALOG, cosmeticClasses, cosmeticOptions, sanitizeCosmeticLoadout, transformFeedbackAudio } from "./cosmetic-economy.mjs?v=1.0.0";
+import { createRecipeFeedbackRequest } from "./recipe-feedback.mjs?v=1.0.0";
+import { selectUniverse } from "./universe-director.mjs?v=1.0.0";
+import { listPendingScoreRecords, removePendingScoreRecord, savePendingScoreRecord } from "./pending-scores.mjs?v=1.0.0";
 
 const starterEmoji = { Earth: "🌍", Water: "💧", Fire: "🔥", Air: "💨" };
 const starterCategory = { Earth: "nature", Water: "force", Fire: "force", Air: "force" };
@@ -36,9 +42,12 @@ const MASTERY_CATALOG = [
 ].map(([a, b, word, emoji, category]) => ({ a, b, word, emoji, category }));
 
 const defaultProfile = {
-  version: 4,
+  version: 5,
   playerId: "",
   playerToken: "",
+  cloudProfileVersion: 0,
+  cloudPending: false,
+  cloudPendingFields: [],
   callsign: "",
   credits: 0,
   vault: [],
@@ -54,12 +63,14 @@ const defaultProfile = {
   dailyWishUsedDate: "",
   premium: false,
   theme: "void",
+  cosmetics: { theme: "void", board: "starlit", trail: "classic", sound: "cosmic" },
   recipeMastery: { version: 1, recipes: [] },
   masteryCelebrated: [],
   senseWallet: { version: 1, charges: 0, lastRefillDate: "", earned: 0, spent: 0 },
   senseFounderBonusDate: "",
   feedbackPreferences: { sound: true, haptics: true },
   rivalGhostEnabled: true,
+  firstOrbit: { seen: false, completed: false },
   weekly: { key: "", stage: 0, complete: false }
 };
 
@@ -85,6 +96,7 @@ const state = {
   timerId: null,
   remainingSeconds: 0,
   startedAt: 0,
+  finishedElapsedSeconds: 0,
   finished: false,
   startingRun: false,
   wished: false,
@@ -94,6 +106,7 @@ const state = {
   stars: [],
   resultAction: null,
   shareGame: null,
+  shareCard: null,
   installPrompt: null,
   run: null,
   assist: "none",
@@ -123,6 +136,15 @@ const state = {
   leaderboardScope: "daily",
   leaderboardDivision: "pure",
   sense: { words: [], timer: null, active: false },
+  recipeFeedback: { move: 0, timer: null, pendingTimer: null, submitted: false },
+  scoreSubmission: { runId: "", activeSaved: false, pendingSaved: false, inFlight: false, exitAction: null, exitLabel: "" },
+  recoveryKit: null,
+  cloudReady: false,
+  cloudSyncing: false,
+  cloudDirty: false,
+  cloudGeneration: 0,
+  cloudController: null,
+  cloudRevision: 0,
   ghost: { enabled: true, model: null, timerId: null, lastRelation: "", started: false, requestGeneration: 0, requestController: null }
 };
 
@@ -134,13 +156,15 @@ let activeBoardDragCleanup = null;
 let clearUndo = null;
 let clearUndoTimer = null;
 let runSaveTimer = null;
+let cloudSyncTimer = null;
+const pendingScoreRetryPromises = new Map();
 const ACTIVE_RUN_KEY = isStaticBeta ? "constellore-local-active-run-v1" : "constellore-active-run-v1";
+const LEGACY_PENDING_SCORES_KEY = "constellore-pending-scores-v1";
 
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
 const billingAdapter = () => globalThis.constelloreBilling || globalThis.wordforgeBilling;
 const adsAdapter = () => globalThis.constelloreAds || globalThis.wordforgeAds;
-const creditsAdapter = () => globalThis.constelloreCredits || globalThis.wordforgeCredits;
 const els = {
   startScreen: $("#startScreen"), gameScreen: $("#gameScreen"), targetMessage: $("#targetMessage"),
   board: $("#board"), boardItems: $("#boardItems"), boardGuide: $("#boardGuide"), cosmosCanvas: $("#cosmosCanvas"),
@@ -148,7 +172,7 @@ const els = {
   tapChainStatus: $("#tapChainStatus"), tapChainText: $("#tapChainText"), boardUndo: $("#boardUndo"),
   alchemyNote: $("#alchemyNote"), wordList: $("#wordList"), collectionCount: $("#collectionCount"),
   inventorySearch: $("#inventorySearch"), inventorySearchClear: $("#inventorySearchClear"), inventorySearchStatus: $("#inventorySearchStatus"),
-  modeName: $("#modeName"), targetWord: $("#targetWord"), lawPill: $("#lawPill"), movesValue: $("#movesValue"),
+  modeName: $("#modeName"), targetWord: $("#targetWord"), universePill: $("#universePill"), lawPill: $("#lawPill"), movesValue: $("#movesValue"),
   timerHud: $("#timerHud"), timerValue: $("#timerValue"), pathCount: $("#pathCount"),
   milestoneText: $("#milestoneText"), milestoneBar: $("#milestoneBar"), wishState: $("#wishState"),
   senseButton: $("#senseButton"), senseHudCount: $("#senseHudCount"), senseDialog: $("#senseDialog"),
@@ -165,6 +189,7 @@ const els = {
   resultStats: $("#resultStats"), resultPrimary: $("#resultPrimary"), resultRetry: $("#resultRetry"),
   resultShare: $("#resultShare"), rewardCard: $("#rewardCard"), rewardDust: $("#rewardDust"),
   rewardReason: $("#rewardReason"), masteryCollectionList: $("#masteryCollectionList"),
+  firstOrbitGuide: $("#firstOrbitGuide"), firstOrbitDialog: $("#firstOrbitDialog"), recipeFeedback: $("#recipeFeedback"),
   toast: $("#toast"), connectionBadge: $("#connectionBadge")
 };
 
@@ -182,7 +207,7 @@ function loadProfile() {
     return {
       ...structuredClone(defaultProfile),
       ...stored,
-      version: 4,
+      version: 5,
       vault: Array.isArray(stored.vault) ? stored.vault : [],
       discovered: Array.isArray(stored.discovered) ? [...new Set([...defaultProfile.discovered, ...stored.discovered])].slice(0, 1000) : [...defaultProfile.discovered],
       recipeMastery: sanitizeRecipeMasteryState(stored.recipeMastery),
@@ -190,6 +215,13 @@ function loadProfile() {
       senseWallet: sanitizeSenseWallet(stored.senseWallet),
       feedbackPreferences: sanitizeFeedbackPreferences(stored.feedbackPreferences),
       rivalGhostEnabled: stored.rivalGhostEnabled !== false,
+      firstOrbit: sanitizeFirstOrbitState(stored.firstOrbit),
+      cosmetics: sanitizeCosmeticLoadout(stored.cosmetics || { theme: stored.theme }, { founder: Boolean(stored.premium) || isStaticBeta }),
+      cloudProfileVersion: Math.max(0, Math.floor(Number(stored.cloudProfileVersion) || 0)),
+      cloudPending: Boolean(stored.cloudPending),
+      cloudPendingFields: Array.isArray(stored.cloudPendingFields)
+        ? [...new Set(stored.cloudPendingFields.filter((field) => ["all", "firstOrbit", "mastery", "progression", "settings"].includes(field)))].slice(0, 8)
+        : [],
       weekly: { ...defaultProfile.weekly, ...(stored.weekly || {}) }
     };
   } catch {
@@ -197,9 +229,15 @@ function loadProfile() {
   }
 }
 
-function saveProfile() {
+function saveProfile({ cloud = true, fields = ["all"] } = {}) {
+  if (cloud && !isStaticBeta) {
+    profile.cloudPending = true;
+    const pending = Array.isArray(profile.cloudPendingFields) ? profile.cloudPendingFields : [];
+    profile.cloudPendingFields = [...new Set([...pending, ...fields])].slice(0, 8);
+  }
   try { localStorage.setItem(PROFILE_KEY, JSON.stringify(profile)); } catch { /* Private mode can disable storage. */ }
   renderProfile();
+  if (cloud) scheduleCloudProfileSync();
 }
 
 function rankFor(stardust) {
@@ -304,7 +342,7 @@ function recordMasteryStep(step) {
     profile.senseWallet = grantSenseCharges(profile.senseWallet, 1).wallet;
     track("sense_earned", { source: "mastery", reward: 1 });
   }
-  saveProfile();
+  saveProfile({ fields: ["mastery"] });
   track("mastery_progressed", { stars: award.recipe.stars, completed: Boolean(newlyCompleted) });
   if (newlyCompleted) {
     showToast(`${newlyCompleted.title} collection complete · +1 Sense`);
@@ -316,11 +354,54 @@ function recordMasteryStep(step) {
   return { ...award, newlyCompleted };
 }
 
+const cosmeticClassNames = COSMETIC_CATALOG.map((item) => `${item.kind}-${item.id}`);
+
+function founderCosmeticsOwned() {
+  return Boolean(profile.premium || isStaticBeta);
+}
+
+function applyCosmeticLoadout() {
+  profile.cosmetics = sanitizeCosmeticLoadout(profile.cosmetics || { theme: profile.theme }, { founder: founderCosmeticsOwned() });
+  profile.theme = profile.cosmetics.theme;
+  document.body.classList.remove(...cosmeticClassNames);
+  document.body.classList.add(...cosmeticClasses(profile.cosmetics, { founder: founderCosmeticsOwned() }));
+  document.body.dataset.theme = profile.cosmetics.theme;
+}
+
+function renderCosmeticLoadout() {
+  const container = $("#cosmeticLoadout");
+  if (!container) return;
+  const groups = [
+    ["board", "Blackboard"],
+    ["trail", "Constellation trail"],
+    ["sound", "Sound pack"]
+  ];
+  container.replaceChildren(...groups.map(([kind, label]) => {
+    const section = document.createElement("section");
+    section.className = "cosmetic-group";
+    const heading = document.createElement("strong");
+    heading.textContent = label;
+    const options = document.createElement("div");
+    options.replaceChildren(...cosmeticOptions(kind, { founder: founderCosmeticsOwned() }).map((item) => {
+      const button = document.createElement("button");
+      const active = profile.cosmetics[kind] === item.id;
+      button.type = "button";
+      button.className = active ? "active" : "";
+      button.setAttribute("aria-pressed", String(active));
+      button.innerHTML = `<span>${escapeHtml(item.label)}</span><small>${active ? "ACTIVE" : item.owned ? "OWNED" : "PASS"}</small>`;
+      button.addEventListener("click", () => chooseCosmetic(kind, item.id, item.owned));
+      return button;
+    }));
+    section.append(heading, options);
+    return section;
+  }));
+}
+
 function renderProfile() {
   setupWeeklyState();
   setupDailyState();
   const rank = rankFor(profile.stardust);
-  document.body.dataset.theme = profile.theme || "void";
+  applyCosmeticLoadout();
   $("#profileLevel").textContent = rank.level;
   $("#profileDust").textContent = profile.stardust;
   $("#universeRank").textContent = rank.name;
@@ -335,9 +416,20 @@ function renderProfile() {
   $("#profileStreak").textContent = profile.dailyStreak;
   $("#profileShield").textContent = profile.streakShields;
   $("#profileCallsign").textContent = profile.callsign || "Offline Stargazer";
+  const cloudSection = $("#cloudAccountSection");
+  if (cloudSection) cloudSection.hidden = isStaticBeta;
+  if (!isStaticBeta) {
+    $("#cloudPlayerId").textContent = profile.playerId || "Creating…";
+    if (!state.cloudReady && !state.cloudSyncing) setCloudStatus(profile.playerId ? "Preparing cloud profile…" : "Connecting…");
+    $("#syncCloudProfile").disabled = !profile.playerId || state.cloudSyncing;
+    $("#restoreOwnership").disabled = !profile.playerId;
+    $("#rotateRecoveryKit").disabled = !profile.playerId;
+  }
   $("#profileCredits").textContent = profile.credits;
   $("#profileVaultCount").textContent = profile.vault.length;
   $("#profileMasteryStars").textContent = masterySummary().stars;
+  profile.firstOrbit = sanitizeFirstOrbitState(profile.firstOrbit);
+  $("#trainingReplayStatus").textContent = profile.firstOrbit.completed ? "Completed · replay anytime" : profile.firstOrbit.seen ? "Ready when you are" : "New · about 90 seconds";
   const senseCount = sanitizeSenseWallet(profile.senseWallet).charges;
   $("#profileSenseCount").textContent = senseCount;
   $("#senseDialogCount").textContent = senseCount;
@@ -359,13 +451,21 @@ function renderProfile() {
   els.rivalGhost.setAttribute("aria-label", profile.rivalGhostEnabled ? "Hide Rival Ghost pace" : "Show Rival Ghost pace");
   $("#marketBalance").textContent = profile.credits;
   $("#vaultCount").textContent = profile.vault.length;
-  $$('[data-theme]').forEach((button) => button.classList.toggle("active", button.dataset.theme === profile.theme));
+  $$('[data-theme]').forEach((button) => {
+    const active = button.dataset.theme === profile.cosmetics.theme;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-pressed", String(active));
+    const item = COSMETIC_CATALOG.find((entry) => entry.kind === "theme" && entry.id === button.dataset.theme);
+    button.querySelector("small").textContent = active ? "ACTIVE" : item?.entitlement === "free" || founderCosmeticsOwned() ? "OWNED" : "PASS";
+  });
+  renderCosmeticLoadout();
   renderMastery();
   updateWishButton();
 }
 
 function applyServerPlayer(player) {
-  if (!player) return;
+  if (!player) return false;
+  if (profile.playerId && player.id && profile.playerId !== player.id) return false;
   const founderActivated = Boolean(player.founderPass) && !profile.premium;
   profile.playerId = player.id || profile.playerId;
   profile.callsign = player.callsign || profile.callsign;
@@ -375,6 +475,7 @@ function applyServerPlayer(player) {
   profile.freeWishUsed = Boolean(player.freeWishUsed);
   profile.wishAvailable = player.wishAvailable !== false;
   profile.dailyWishUsedDate = player.dailyWishUsedDate || "";
+  if (Number.isInteger(player.cloudProfileVersion)) profile.cloudProfileVersion = Math.max(0, player.cloudProfileVersion);
   if (founderActivated) profile.streakShields += 1;
   if (profile.premium && profile.senseFounderBonusDate !== todayKey) {
     const bonus = grantSenseCharges(profile.senseWallet, 1, { cap: 5 });
@@ -382,8 +483,9 @@ function applyServerPlayer(player) {
     profile.senseFounderBonusDate = todayKey;
     if (bonus.granted) track("sense_earned", { source: "founder", reward: bonus.granted });
   }
-  saveProfile();
+  saveProfile({ cloud: founderActivated, fields: ["progression"] });
   renderWishVault();
+  return true;
 }
 
 function authHeaders(extra = {}) {
@@ -402,12 +504,349 @@ async function ensurePlayer() {
       const { player } = await fetchJson("/api/player", { headers: authHeaders() });
       applyServerPlayer(player);
       return player;
-    } catch { /* Register a replacement guest identity below. */ }
+    } catch (error) {
+      // Network and server failures must never strand a valid anonymous
+      // identity. Replace credentials only when the server explicitly rejects
+      // them; otherwise keep the account intact and let boot surface offline.
+      if (![401, 404].includes(error.status)) throw error;
+    }
   }
-  const { player, playerToken } = await fetchJson("/api/player/register", { method: "POST" });
-  profile.playerToken = playerToken;
-  applyServerPlayer(player);
-  return player;
+  const registration = await fetchJson("/api/player/register", { method: "POST" });
+  resetProfileForAccount({ playerId: registration.player.id, playerToken: registration.playerToken });
+  applyServerPlayer(registration.player);
+  if (registration.recoveryCode) {
+    state.recoveryKit = {
+      playerId: registration.player.id,
+      code: registration.recoveryCode,
+      version: registration.recoveryVersion || 1
+    };
+    requestAnimationFrame(showRecoveryKit);
+  }
+  return registration.player;
+}
+
+function cloudProfileSnapshot() {
+  const cosmetics = sanitizeCosmeticLoadout(profile.cosmetics || { theme: profile.theme }, { founder: founderCosmeticsOwned() });
+  const safeDate = (value) => /^\d{4}-\d{2}-\d{2}$/.test(String(value || "")) ? String(value) : "";
+  return {
+    theme: cosmetics.theme,
+    cosmetics,
+    firstOrbit: sanitizeFirstOrbitState(profile.firstOrbit),
+    rivalGhostEnabled: profile.rivalGhostEnabled !== false,
+    feedbackPreferences: sanitizeFeedbackPreferences(profile.feedbackPreferences),
+    discovered: [...new Set([...defaultProfile.discovered, ...profile.discovered.map(String)])].slice(0, 1000),
+    masteryCelebrated: [...new Set(profile.masteryCelebrated.map(String))].slice(0, 64),
+    progression: {
+      stardust: Math.min(1_000_000_000, Math.max(0, Math.floor(Number(profile.stardust) || 0))),
+      wins: Math.min(1_000_000, Math.max(0, Math.floor(Number(profile.wins) || 0))),
+      dailyStreak: Math.min(100_000, Math.max(0, Math.floor(Number(profile.dailyStreak) || 0))),
+      lastDailyDate: safeDate(profile.lastDailyDate),
+      dailyCompleted: safeDate(profile.dailyCompleted),
+      streakShields: Math.min(1_000, Math.max(0, Math.floor(Number(profile.streakShields) || 0)))
+    },
+    weekly: { key: String(profile.weekly?.key || ""), stage: Math.min(3, Math.max(0, Math.floor(Number(profile.weekly?.stage) || 0))), complete: Boolean(profile.weekly?.complete) },
+    recipeMastery: sanitizeRecipeMasteryState(profile.recipeMastery)
+  };
+}
+
+function resetProfileForAccount({ playerId = profile.playerId, playerToken = profile.playerToken, preserveServer = false } = {}) {
+  const serverState = preserveServer ? {
+    callsign: profile.callsign,
+    credits: profile.credits,
+    vault: [...profile.vault],
+    premium: profile.premium,
+    freeWishUsed: profile.freeWishUsed,
+    wishAvailable: profile.wishAvailable,
+    dailyWishUsedDate: profile.dailyWishUsedDate,
+    streakShields: profile.streakShields,
+    senseWallet: sanitizeSenseWallet(profile.senseWallet),
+    senseFounderBonusDate: profile.senseFounderBonusDate
+  } : {};
+  profile = {
+    ...structuredClone(defaultProfile),
+    ...serverState,
+    playerId: String(playerId || ""),
+    playerToken: String(playerToken || "")
+  };
+}
+
+function mergeCloudProfile(remote, { replace = false, preferLocalSettings = false, preferLocalProgression = false } = {}) {
+  if (!remote || typeof remote !== "object" || Array.isArray(remote)) return;
+  if (replace) resetProfileForAccount({ preserveServer: true });
+  if (Array.isArray(remote.discovered)) {
+    profile.discovered = [...new Set([...defaultProfile.discovered, ...(replace ? [] : profile.discovered), ...remote.discovered.map(String)])].slice(0, 1000);
+  }
+  if (remote.recipeMastery) {
+    profile.recipeMastery = sanitizeRecipeMasteryState(replace
+      ? remote.recipeMastery
+      : { version: 1, recipes: [...sanitizeRecipeMasteryState(profile.recipeMastery).recipes, ...sanitizeRecipeMasteryState(remote.recipeMastery).recipes] });
+  }
+  if (Array.isArray(remote.masteryCelebrated)) {
+    profile.masteryCelebrated = [...new Set([...(replace ? [] : profile.masteryCelebrated), ...remote.masteryCelebrated.map(String)])].slice(0, 64);
+  }
+  if (remote.progression && typeof remote.progression === "object" && !Array.isArray(remote.progression)) {
+    Object.assign(profile, reconcileCloudProgression(profile, remote.progression, { replace, preferLocal: preferLocalProgression }));
+  }
+  if (remote.firstOrbit) {
+    const incoming = sanitizeFirstOrbitState(remote.firstOrbit);
+    const local = sanitizeFirstOrbitState(profile.firstOrbit);
+    profile.firstOrbit = replace ? incoming : { seen: local.seen || incoming.seen, completed: local.completed || incoming.completed };
+  }
+  if (remote.feedbackPreferences && (replace || !preferLocalSettings)) profile.feedbackPreferences = sanitizeFeedbackPreferences(remote.feedbackPreferences);
+  if (typeof remote.rivalGhostEnabled === "boolean" && (replace || !preferLocalSettings)) profile.rivalGhostEnabled = remote.rivalGhostEnabled;
+  if (remote.weekly?.key === currentWeekKey()) {
+    const local = profile.weekly?.key === remote.weekly.key ? profile.weekly : { key: remote.weekly.key, stage: 0, complete: false };
+    profile.weekly = replace
+      ? { ...remote.weekly }
+      : { key: remote.weekly.key, stage: Math.max(Number(local.stage) || 0, Number(remote.weekly.stage) || 0), complete: Boolean(local.complete || remote.weekly.complete) };
+  }
+  if ((remote.cosmetics || remote.theme) && (replace || !preferLocalSettings)) {
+    profile.cosmetics = sanitizeCosmeticLoadout(remote.cosmetics || { theme: remote.theme }, { founder: founderCosmeticsOwned() });
+    profile.theme = profile.cosmetics.theme;
+  }
+}
+
+function setCloudStatus(message, error = false) {
+  const status = $("#cloudSyncStatus");
+  if (!status) return;
+  status.textContent = message;
+  status.classList.toggle("error", error);
+}
+
+async function syncCloudProfile({ manual = false, replaceRemote = false } = {}) {
+  if (isStaticBeta || !profile.playerId || !profile.playerToken) return null;
+  if (state.cloudSyncing) {
+    state.cloudDirty = true;
+    return null;
+  }
+  const playerId = profile.playerId;
+  const playerToken = profile.playerToken;
+  const generation = state.cloudGeneration;
+  const revision = state.cloudRevision;
+  const controller = new AbortController();
+  const sameIdentity = () => generation === state.cloudGeneration && profile.playerId === playerId && profile.playerToken === playerToken;
+  const identityHeaders = (extra = {}) => ({
+    ...extra,
+    "X-Constellore-Player": playerId,
+    "X-Constellore-Token": playerToken
+  });
+  state.cloudSyncing = true;
+  state.cloudController = controller;
+  state.cloudDirty = false;
+  let failed = false;
+  if (manual) setCloudStatus("Syncing your universe…");
+  try {
+    let remote = await fetchJson("/api/player/profile", { headers: identityHeaders(), signal: controller.signal });
+    if (!sameIdentity()) return null;
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      const pendingFields = new Set(Array.isArray(profile.cloudPendingFields) ? profile.cloudPendingFields : []);
+      const legacyPending = Boolean(profile.cloudPending && pendingFields.size === 0);
+      const localSettingsPending = !replaceRemote && Boolean(profile.cloudPending && (legacyPending || pendingFields.has("all") || pendingFields.has("settings")));
+      const localProgressionPending = !replaceRemote && Boolean(profile.cloudPending && (legacyPending || pendingFields.has("all") || pendingFields.has("progression")));
+      mergeCloudProfile(remote.profile, {
+        replace: replaceRemote && attempt === 0,
+        preferLocalSettings: localSettingsPending,
+        preferLocalProgression: localProgressionPending
+      });
+      if (!sameIdentity()) return null;
+      const snapshot = cloudProfileSnapshot();
+      if (JSON.stringify(snapshot) === JSON.stringify(remote.profile || {})) {
+        profile.cloudProfileVersion = remote.version;
+        if (state.cloudRevision === revision) {
+          profile.cloudPending = false;
+          profile.cloudPendingFields = [];
+        }
+        saveProfile({ cloud: false });
+        setCloudStatus(remote.updatedAt ? "Cloud profile up to date" : "Cloud profile ready");
+        if (manual) track("cloud_sync", { changed: false });
+        return remote;
+      }
+      try {
+        const updated = await fetchJson("/api/player/profile", {
+          method: "PUT",
+          headers: identityHeaders({ "Content-Type": "application/json" }),
+          body: JSON.stringify({ version: remote.version, profile: snapshot }),
+          signal: controller.signal
+        });
+        if (!sameIdentity()) return null;
+        profile.cloudProfileVersion = updated.version;
+        if (state.cloudRevision === revision) {
+          profile.cloudPending = false;
+          profile.cloudPendingFields = [];
+        }
+        saveProfile({ cloud: false });
+        setCloudStatus("Cloud profile synced");
+        if (manual) track("cloud_sync", { changed: true });
+        return updated;
+      } catch (error) {
+        if (!sameIdentity()) return null;
+        const current = error.code === "cloud_profile_conflict" ? error.payload?.details?.current : null;
+        if (!current || attempt === 1) throw error;
+        remote = current;
+      }
+    }
+  } catch (error) {
+    if (!sameIdentity()) return null;
+    failed = true;
+    state.cloudDirty = true;
+    setCloudStatus(error.message || "Cloud sync unavailable", true);
+    if (manual) showToast("Cloud sync could not finish. Your local progress is safe.");
+    return null;
+  } finally {
+    if (generation === state.cloudGeneration && state.cloudController === controller) {
+      state.cloudController = null;
+      state.cloudSyncing = false;
+      const syncButton = $("#syncCloudProfile");
+      if (syncButton) syncButton.disabled = !profile.playerId;
+      if (!failed && state.cloudDirty && state.cloudReady) {
+        clearTimeout(cloudSyncTimer);
+        cloudSyncTimer = setTimeout(() => { void syncCloudProfile(); }, 250);
+      }
+    }
+  }
+  return null;
+}
+
+function scheduleCloudProfileSync({ changed = true, delay = 1800 } = {}) {
+  if (isStaticBeta || !profile.playerId || !profile.playerToken) return;
+  if (changed) state.cloudRevision += 1;
+  state.cloudDirty = true;
+  if (!state.cloudReady || state.cloudSyncing) return;
+  clearTimeout(cloudSyncTimer);
+  cloudSyncTimer = setTimeout(() => { void syncCloudProfile(); }, delay);
+}
+
+async function restoreOwnership({ silent = false } = {}) {
+  if (isStaticBeta || !profile.playerId || !profile.playerToken) return null;
+  const playerId = profile.playerId;
+  const playerToken = profile.playerToken;
+  const generation = state.cloudGeneration;
+  const stillCurrent = () => generation === state.cloudGeneration && profile.playerId === playerId && profile.playerToken === playerToken;
+  try {
+    await billingAdapter()?.syncEntitlements?.();
+    if (!stillCurrent()) return null;
+    const result = await fetchJson("/api/player/restore", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Constellore-Player": playerId,
+        "X-Constellore-Token": playerToken
+      },
+      body: "{}"
+    });
+    if (!stillCurrent()) return null;
+    applyServerPlayer(result.player);
+    if (!silent) {
+      setCloudStatus("Ownership restored from the server");
+      showToast("Founder cosmetics, earned credits, and Vault words restored.");
+      track("ownership_restored", { products: result.entitlements?.products?.length || 0, words: result.entitlements?.vault?.length || 0 });
+    }
+    return result;
+  } catch (error) {
+    if (!silent) showToast(error.message);
+    return null;
+  }
+}
+
+async function initializeCloudServices() {
+  if (isStaticBeta) return;
+  await restoreOwnership({ silent: true });
+  const synced = await syncCloudProfile();
+  state.cloudReady = true;
+  if (synced) setCloudStatus("Cloud profile ready");
+  if (synced && state.cloudDirty) scheduleCloudProfileSync({ changed: false, delay: 250 });
+}
+
+function handleOnline() {
+  updateConnection();
+  if (!isStaticBeta && state.cloudReady && profile.playerId && profile.playerToken) scheduleCloudProfileSync({ changed: false, delay: 250 });
+  if (!isStaticBeta && profile.playerId && profile.playerToken) void retryPendingScoreUploads().then(announcePendingScoreRecovery);
+}
+
+function showRecoveryKit() {
+  if (!state.recoveryKit?.code || isStaticBeta) return;
+  $("#recoveryPlayerId").textContent = state.recoveryKit.playerId;
+  $("#recoveryCode").textContent = state.recoveryKit.code;
+  $("#copyRecoveryKit span").textContent = "Copy recovery kit";
+  if (els.profileDialog.open) els.profileDialog.close();
+  const dialog = $("#recoveryDialog");
+  if (!dialog.open) dialog.showModal();
+}
+
+async function copyRecoveryKit() {
+  if (!state.recoveryKit?.code) return;
+  const text = `Constellore Player ID: ${state.recoveryKit.playerId}\nRecovery code: ${state.recoveryKit.code}`;
+  try {
+    await navigator.clipboard.writeText(text);
+    $("#copyRecoveryKit span").textContent = "Recovery kit copied";
+  } catch {
+    window.prompt("Copy and store this recovery kit safely:", text);
+  }
+}
+
+function acknowledgeRecoveryKit() {
+  state.recoveryKit = null;
+  $("#recoveryPlayerId").textContent = "Cleared";
+  $("#recoveryCode").textContent = "Cleared from this screen";
+  $("#recoveryDialog").close();
+  if (!state.game && !sanitizeFirstOrbitState(profile.firstOrbit).seen) requestAnimationFrame(openFirstOrbitWelcome);
+}
+
+async function rotateRecoveryKit() {
+  try {
+    const result = await fetchJson("/api/player/recovery/rotate", {
+      method: "POST",
+      headers: authHeaders({ "Content-Type": "application/json" }),
+      body: "{}"
+    });
+    state.recoveryKit = { playerId: profile.playerId, code: result.recoveryCode, version: result.recoveryVersion };
+    track("recovery_rotated", { version: result.recoveryVersion });
+    showRecoveryKit();
+  } catch (error) {
+    showToast(error.message);
+  }
+}
+
+async function recoverAccount(event) {
+  event.preventDefault();
+  const playerId = $("#recoverPlayerId").value.trim();
+  const recoveryCode = $("#recoverCodeInput").value.trim();
+  const submit = event.currentTarget.querySelector("button[type=submit]");
+  const message = $("#recoverMessage");
+  submit.disabled = true;
+  message.textContent = "Recovering your universe…";
+  try {
+    const result = await fetchJson("/api/player/recover", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ playerId, recoveryCode })
+    });
+    state.cloudGeneration += 1;
+    state.cloudController?.abort();
+    state.cloudController = null;
+    state.cloudSyncing = false;
+    state.cloudDirty = false;
+    clearTimeout(cloudSyncTimer);
+    state.cloudReady = false;
+    resetProfileForAccount({ playerId: result.player.id, playerToken: result.playerToken });
+    clearActiveRunSnapshot();
+    applyServerPlayer(result.player);
+    state.recoveryKit = { playerId: result.player.id, code: result.recoveryCode, version: result.recoveryVersion };
+    await restoreOwnership({ silent: true });
+    await syncCloudProfile({ replaceRemote: true });
+    const dailySense = refillDailySense();
+    if (dailySense.refilled) saveProfile({ cloud: false });
+    state.cloudReady = true;
+    announcePendingScoreRecovery(await retryPendingScoreUploads());
+    message.textContent = "";
+    $("#recoverCodeInput").value = "";
+    track("account_recovered", { recoveryVersion: result.recoveryVersion });
+    showRecoveryKit();
+  } catch (error) {
+    message.textContent = error.message;
+  } finally {
+    submit.disabled = false;
+  }
 }
 
 async function loadConfig() {
@@ -499,17 +938,18 @@ function playFeedback(cue, { analytics = false } = {}) {
     documentHidden: document.hidden,
     reducedMotion: matchMedia("(prefers-reduced-motion: reduce)").matches
   });
-  if (policy.audio && context) {
+  const audio = transformFeedbackAudio(policy.audio, profile.cosmetics?.sound || "cosmic");
+  if (audio && context) {
     const start = context.currentTime + .005;
-    const slice = Math.max(.025, policy.audio.duration / 1000 / policy.audio.tones.length);
-    policy.audio.tones.forEach((frequency, index) => {
+    const slice = Math.max(.025, audio.duration / 1000 / audio.tones.length);
+    audio.tones.forEach((frequency, index) => {
       const oscillator = context.createOscillator();
       const gain = context.createGain();
       const at = start + slice * index;
-      oscillator.type = policy.audio.wave;
+      oscillator.type = audio.wave;
       oscillator.frequency.setValueAtTime(frequency, at);
       gain.gain.setValueAtTime(.0001, at);
-      gain.gain.exponentialRampToValueAtTime(policy.audio.gain, at + Math.min(.018, slice / 3));
+      gain.gain.exponentialRampToValueAtTime(audio.gain, at + Math.min(.018, slice / 3));
       gain.gain.exponentialRampToValueAtTime(.0001, at + slice);
       oscillator.connect(gain).connect(context.destination);
       oscillator.start(at);
@@ -519,7 +959,7 @@ function playFeedback(cue, { analytics = false } = {}) {
   if (policy.haptic) {
     try { navigator.vibrate(policy.haptic); } catch { /* Haptics are optional. */ }
   }
-  if (analytics && (policy.audio || policy.haptic)) {
+  if (analytics && (audio || policy.haptic)) {
     const kind = cue === "reject" ? "rejection" : cue === "twist" ? "twist" : cue === "target" ? "target" : cue === "mastery" ? "discovery" : cue === "place" || cue === "sense" || cue === "ghostPass" ? "ui" : "fusion";
     track("fusion_feedback_played", { kind });
   }
@@ -530,10 +970,110 @@ function toggleFeedbackPreference(kind) {
   if (kind === "sound") preferences.sound = !preferences.sound;
   if (kind === "haptics") preferences.haptics = !preferences.haptics;
   profile.feedbackPreferences = preferences;
-  saveProfile();
+  saveProfile({ fields: ["settings"] });
   track(kind === "sound" ? "audio_toggled" : "haptic_toggled", { enabled: preferences[kind] });
   if (kind === "sound" && preferences.sound) playFeedback("place");
   else if (kind === "haptics" && preferences.haptics) playFeedback("place");
+}
+
+function firstOrbitActive() {
+  return Boolean(state.game && state.mode === "training");
+}
+
+function firstOrbitWordActive(itemOrWord) {
+  if (!firstOrbitActive() || state.finished) return false;
+  const key = inventoryKey(itemOrWord);
+  return firstOrbitProgress(state.history).spotlightWords.some((word) => inventoryKey(word) === key);
+}
+
+function syncFirstOrbitGuide() {
+  const active = firstOrbitActive() && !state.finished;
+  els.gameScreen.classList.toggle("training-orbit", firstOrbitActive());
+  els.firstOrbitGuide.hidden = !active;
+  if (!active) return;
+  const progress = firstOrbitProgress(state.history);
+  const step = progress.step;
+  if (!step) return;
+  $("#firstOrbitStep").textContent = `STEP ${progress.index + 1} OF ${progress.total}`;
+  $("#firstOrbitGuideTitle").textContent = step.title;
+  $("#firstOrbitInstruction").textContent = step.instruction;
+  $("#firstOrbitTip").textContent = step.tip;
+  $("#firstOrbitProgressBar").style.width = `${progress.percent}%`;
+  const progressBar = els.firstOrbitGuide.querySelector("[role='progressbar']");
+  progressBar.setAttribute("aria-valuenow", String(progress.index));
+  for (const button of els.wordList.querySelectorAll(".inventory-word")) {
+    const highlighted = firstOrbitWordActive(button.dataset.word);
+    button.classList.toggle("tutorial-hot", highlighted);
+    if (highlighted) button.setAttribute("aria-describedby", "firstOrbitInstruction");
+    else button.removeAttribute("aria-describedby");
+  }
+  for (const button of els.boardItems.querySelectorAll(".board-word")) {
+    const node = state.nodes.find((entry) => String(entry.id) === button.dataset.id);
+    const highlighted = firstOrbitWordActive(node?.item);
+    button.classList.toggle("tutorial-hot", highlighted);
+    if (highlighted) button.setAttribute("aria-describedby", "firstOrbitInstruction");
+    else button.removeAttribute("aria-describedby");
+  }
+}
+
+function rememberFirstOrbitSeen() {
+  profile.firstOrbit = { ...sanitizeFirstOrbitState(profile.firstOrbit), seen: true };
+  saveProfile({ fields: ["firstOrbit"] });
+}
+
+function openFirstOrbitWelcome() {
+  if (state.game || els.firstOrbitDialog.open) return;
+  els.firstOrbitDialog.showModal();
+}
+
+function dismissFirstOrbitWelcome() {
+  rememberFirstOrbitSeen();
+  if (els.firstOrbitDialog.open) els.firstOrbitDialog.close();
+}
+
+function startFirstOrbit() {
+  if (state.startingRun) return;
+  rememberFirstOrbitSeen();
+  if (els.firstOrbitDialog.open) els.firstOrbitDialog.close();
+  if (els.profileDialog.open) els.profileDialog.close();
+  const startedAt = new Date().toISOString();
+  startWithGame({
+    mode: "training",
+    modeName: "First Orbit · Training",
+    target: "Wall",
+    emoji: "🧱",
+    starters: ["Earth", "Water", "Fire", "Air"],
+    seed: 101,
+    tier: 1,
+    timeLimit: null,
+    moveLimit: null,
+    law: null,
+    aiEnabled: false,
+    universe: selectUniverse(101),
+    scoreEligible: false,
+    training: true
+  }, {
+    id: `training-${sessionId}-${Date.now()}`,
+    token: "local-training",
+    ranked: false,
+    localOnly: true,
+    startedAt,
+    deadlineAt: null,
+    assist: "training",
+    assisted: true,
+    scoreEligible: false,
+    rewardEligible: false,
+    leaderboardEligible: false
+  });
+  syncFirstOrbitGuide();
+  requestAnimationFrame(() => els.wordList.querySelector(".inventory-word.tutorial-hot")?.focus({ preventScroll: true }));
+}
+
+function skipFirstOrbit() {
+  if (!firstOrbitActive()) return;
+  rememberFirstOrbitSeen();
+  returnHome();
+  showToast("Training skipped · replay it anytime from your profile.");
 }
 
 async function beginMode(mode, options = {}) {
@@ -611,7 +1151,7 @@ function snapshotItem(item) {
 }
 
 function buildActiveRunSnapshot({ completed = false } = {}) {
-  if (!state.game || !state.run || (state.finished && !completed) || state.reveal.active || state.reveal.pending) return null;
+  if (!state.game || !state.run || state.mode === "training" || (state.finished && !completed) || state.reveal.active || state.reveal.pending) return null;
   const boardRect = els.board.getBoundingClientRect();
   const width = Math.max(1, boardRect.width);
   const height = Math.max(1, boardRect.height);
@@ -659,20 +1199,38 @@ function flushRunSave() {
   runSaveTimer = null;
   const snapshot = buildActiveRunSnapshot();
   if (!snapshot) return;
-  try { localStorage.setItem(ACTIVE_RUN_KEY, JSON.stringify(snapshot)); } catch { /* Storage can be unavailable or full. */ }
+  writeActiveRunSnapshot(snapshot);
+}
+
+function writeActiveRunSnapshot(snapshot) {
+  if (!snapshot?.run?.id || !snapshot?.run?.token) return false;
+  try {
+    localStorage.setItem(ACTIVE_RUN_KEY, JSON.stringify(snapshot));
+    const confirmed = JSON.parse(localStorage.getItem(ACTIVE_RUN_KEY) || "null");
+    return confirmed?.run?.id === snapshot.run.id && confirmed?.run?.token === snapshot.run.token;
+  } catch {
+    return false;
+  }
 }
 
 function saveCompletedRunSnapshot() {
   clearTimeout(runSaveTimer);
   runSaveTimer = null;
   const snapshot = buildActiveRunSnapshot({ completed: true });
-  if (!snapshot) return;
-  try { localStorage.setItem(ACTIVE_RUN_KEY, JSON.stringify(snapshot)); } catch { /* Storage can be unavailable or full. */ }
+  if (!snapshot) return { activeSaved: false, pendingSaved: false };
+  // The compact, per-run credential is the critical durable copy. Write it
+  // before the larger visual snapshot so a nearly-full store preserves score
+  // recovery even when it cannot preserve the whole board.
+  const pendingSaved = rememberPendingScore(snapshot);
+  return {
+    activeSaved: writeActiveRunSnapshot(snapshot),
+    pendingSaved
+  };
 }
 
 function scheduleRunSave() {
   clearTimeout(runSaveTimer);
-  if (!state.game || !state.run || state.finished || state.reveal.active || state.reveal.pending) return;
+  if (!state.game || !state.run || state.mode === "training" || state.finished || state.reveal.active || state.reveal.pending) return;
   runSaveTimer = setTimeout(flushRunSave, 180);
 }
 
@@ -680,6 +1238,106 @@ function clearActiveRunSnapshot() {
   clearTimeout(runSaveTimer);
   runSaveTimer = null;
   try { localStorage.removeItem(ACTIVE_RUN_KEY); } catch { /* Storage can be unavailable. */ }
+}
+
+function migrateLegacyPendingScores() {
+  if (isStaticBeta) return;
+  try {
+    const parsed = JSON.parse(localStorage.getItem(LEGACY_PENDING_SCORES_KEY) || "[]");
+    if (!Array.isArray(parsed) || !parsed.length) return;
+    let migrated = true;
+    for (const entry of Array.isArray(parsed) ? parsed : []) {
+      if (!savePendingScoreRecord(localStorage, entry)) migrated = false;
+    }
+    if (migrated) localStorage.removeItem(LEGACY_PENDING_SCORES_KEY);
+  } catch { /* A blocked legacy store remains available for a later migration attempt. */ }
+}
+
+function readPendingScores() {
+  if (isStaticBeta) return [];
+  migrateLegacyPendingScores();
+  return listPendingScoreRecords(localStorage);
+}
+
+function rememberPendingScore(snapshot) {
+  if (isStaticBeta || !profile.playerId || !snapshot?.run?.id || !snapshot?.run?.token) return false;
+  return savePendingScoreRecord(localStorage, {
+    version: 1,
+    savedAt: snapshot.savedAt,
+    playerId: profile.playerId,
+    runId: snapshot.run.id,
+    runToken: snapshot.run.token,
+    mode: snapshot.game?.mode || "",
+    target: snapshot.game?.target || ""
+  });
+}
+
+function markPendingScoreUploaded(playerId, runId) {
+  removePendingScoreRecord(localStorage, playerId, runId);
+  try {
+    const active = JSON.parse(localStorage.getItem(ACTIVE_RUN_KEY) || "null");
+    if (active?.run?.id === runId) localStorage.removeItem(ACTIVE_RUN_KEY);
+  } catch { /* A malformed active snapshot is handled by normal restore cleanup. */ }
+}
+
+async function flushPendingScoreUploads(playerId, playerToken) {
+  if (isStaticBeta || !playerId || !playerToken) return { uploaded: 0, discarded: 0 };
+  let uploaded = 0;
+  let discarded = 0;
+  for (const pending of readPendingScores().filter((entry) => entry.playerId === playerId)) {
+    try {
+      const result = await fetchJson("/api/run/submit", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Constellore-Player": playerId,
+          "X-Constellore-Token": playerToken
+        },
+        body: JSON.stringify({ runId: pending.runId, runToken: pending.runToken })
+      });
+      if (!result.ranked) {
+        markPendingScoreUploaded(playerId, pending.runId);
+        discarded += 1;
+        continue;
+      }
+      markPendingScoreUploaded(playerId, pending.runId);
+      if (profile.playerId === playerId && profile.playerToken === playerToken) applyServerPlayer(result.player);
+      track("score_upload_recovered", { mode: pending.mode, target: pending.target });
+      uploaded += 1;
+    } catch (error) {
+      if (error.code === "already_submitted") {
+        markPendingScoreUploaded(playerId, pending.runId);
+        uploaded += 1;
+        continue;
+      }
+      if (["invalid_run", "run_expired", "run_missing", "target_missing", "assisted_run"].includes(error.code)) {
+        markPendingScoreUploaded(playerId, pending.runId);
+        track("score_upload_expired", { mode: pending.mode, target: pending.target, reason: error.code });
+        discarded += 1;
+        continue;
+      }
+      // Keep every ambiguous failure for the next reconnect. Server-side
+      // submissions are idempotent, so retrying can never duplicate a score.
+      break;
+    }
+  }
+  return { uploaded, discarded };
+}
+
+function retryPendingScoreUploads() {
+  const playerId = profile.playerId;
+  const playerToken = profile.playerToken;
+  if (!playerId || !playerToken) return Promise.resolve({ uploaded: 0, discarded: 0 });
+  const identity = `${playerId}:${playerToken}`;
+  if (pendingScoreRetryPromises.has(identity)) return pendingScoreRetryPromises.get(identity);
+  const promise = flushPendingScoreUploads(playerId, playerToken).finally(() => { pendingScoreRetryPromises.delete(identity); });
+  pendingScoreRetryPromises.set(identity, promise);
+  return promise;
+}
+
+function announcePendingScoreRecovery({ uploaded = 0, discarded = 0 } = {}) {
+  if (uploaded) showToast(`${uploaded} saved score${uploaded === 1 ? "" : "s"} reached the leaderboard.`);
+  else if (discarded) showToast(`${discarded} saved score${discarded === 1 ? "" : "s"} could no longer be verified.`);
 }
 
 function readActiveRunSnapshot() {
@@ -712,6 +1370,10 @@ function hydrateRestoredRun(payload, snapshot) {
   state.bendItem = snapshotItem(progress.bendItem);
   state.assist = payload.run?.assist || progress.assist || "none";
   state.scoringDisabled = payload.run?.scoreEligible === false || payload.game?.scoreEligible === false || Boolean(progress.scoringDisabled) || state.assist === "reveal";
+  const completedAt = Date.parse(progress.completedAt || "");
+  if (progress.completed && Number.isFinite(completedAt) && Number.isFinite(state.startedAt)) {
+    state.finishedElapsedSeconds = Math.max(1, Math.round((completedAt - state.startedAt) / 1000));
+  }
   state.inventoryQuery = String(snapshot?.visuals?.inventoryQuery || "").slice(0, 60);
   state.inventoryRecency = new Map(Array.isArray(snapshot?.visuals?.inventoryRecency)
     ? snapshot.visuals.inventoryRecency.slice(0, 500).filter((entry) => Array.isArray(entry) && typeof entry[0] === "string" && Number.isFinite(Number(entry[1]))).map(([word, clock]) => [word.slice(0, 80), Number(clock)])
@@ -738,7 +1400,7 @@ function hydrateRestoredRun(payload, snapshot) {
   const restoredWords = state.words.map((item) => item.word);
   const profileSize = profile.discovered.length;
   if (!state.scoringDisabled) profile.discovered = [...new Set([...profile.discovered, ...restoredWords])].slice(0, 1000);
-  if (profile.discovered.length !== profileSize) saveProfile();
+  if (profile.discovered.length !== profileSize) saveProfile({ fields: ["mastery"] });
   renderInventory();
   renderBoard();
   if (boardNodesOverlap()) tidyOrbit({ silent: true });
@@ -772,6 +1434,7 @@ async function restoreInterruptedRun(snapshot) {
 }
 
 function startWithGame(game, run, { restored = false } = {}) {
+  game.universe ||= selectUniverse(game.seed);
   cancelActiveTrayDrag();
   cancelActiveBoardDrag();
   dismissClearUndo();
@@ -780,7 +1443,8 @@ function startWithGame(game, run, { restored = false } = {}) {
   stopTimer();
   resetRevealPlayback();
   clearSenseGlow();
-  [els.revealDialog, els.resultDialog, els.leaderboardDialog, els.shareDialog, els.atlasDialog, els.senseDialog, els.wishDialog, els.paywallDialog, els.exchangeDialog, els.marketBuyDialog]
+  resetRecipeFeedback();
+  [els.revealDialog, els.resultDialog, els.leaderboardDialog, els.shareDialog, els.atlasDialog, els.senseDialog, els.wishDialog, els.paywallDialog, els.exchangeDialog, els.marketBuyDialog, els.firstOrbitDialog]
     .forEach((dialog) => { if (dialog?.open) dialog.close(); });
   state.game = game;
   state.run = run;
@@ -802,10 +1466,12 @@ function startWithGame(game, run, { restored = false } = {}) {
   state.inventoryRecency = new Map();
   state.inventoryFocusWord = "";
   state.finished = false;
+  state.scoreSubmission = { runId: "", activeSaved: false, pendingSaved: false, inFlight: false, exitAction: null, exitLabel: "" };
   state.wished = false;
   state.bendItem = null;
   state.rewardedWish = false;
   state.startedAt = run?.startedAt ? Date.parse(run.startedAt) : Date.now();
+  state.finishedElapsedSeconds = 0;
   state.remainingSeconds = run?.deadlineAt ? Math.max(0, Math.ceil((Date.parse(run.deadlineAt) - Date.now()) / 1000)) : game.timeLimit || 0;
   state.resultAction = null;
   clearTimeout(showAlchemy.timer);
@@ -814,18 +1480,25 @@ function startWithGame(game, run, { restored = false } = {}) {
   els.board.classList.remove("reveal-complete");
   els.startScreen.hidden = true;
   els.gameScreen.hidden = false;
+  els.gameScreen.classList.toggle("training-orbit", game.mode === "training");
+  els.board.scrollTop = 0;
+  els.board.scrollLeft = 0;
   els.modeName.textContent = game.modeName.toUpperCase();
   els.targetWord.textContent = game.target;
+  els.universePill.hidden = game.mode === "training";
+  els.universePill.textContent = game.mode === "training" ? "" : `${game.universe.icon} ${game.universe.name} · ${game.universe.season.name}`;
+  els.universePill.title = game.mode === "training" ? "" : `${game.universe.law.name}: ${game.universe.law.description}`;
   els.timerHud.hidden = !game.timeLimit;
-  els.lawPill.hidden = !game.law;
-  els.lawPill.textContent = game.law ? `${game.law.name}: ${game.law.description}` : "";
+  els.lawPill.hidden = !game.law && game.mode !== "training";
+  els.lawPill.textContent = game.mode === "training" ? "0 SCORE · NO REWARDS" : game.law ? `${game.law.name}: ${game.law.description}` : "";
   renderInventory();
   renderBoard();
   renderAtlas();
   updateHud();
   updateMilestone();
+  syncFirstOrbitGuide();
   requestAnimationFrame(startCosmos);
-  void startRivalGhost();
+  if (game.mode !== "training") void startRivalGhost();
   if (game.timeLimit) startTimer();
   scheduleRunSave();
   if (!restored) track("run_started", { mode: game.mode, target: game.target, stage: game.stage ?? null, aiEnabled: game.aiEnabled });
@@ -833,6 +1506,11 @@ function startWithGame(game, run, { restored = false } = {}) {
 
 function returnHome() {
   if (state.startingRun) return showToast("The next orbit is still being mapped.");
+  if (pendingScoreBlocksExit()) {
+    if (!els.resultDialog.open) els.resultDialog.showModal();
+    showToast("Upload or queue this score before starting another orbit.");
+    return;
+  }
   cancelActiveTrayDrag();
   cancelActiveBoardDrag();
   dismissClearUndo();
@@ -843,6 +1521,7 @@ function returnHome() {
   stopTimer();
   resetRevealPlayback();
   clearSenseGlow();
+  resetRecipeFeedback();
   stopRivalGhost();
   cancelAnimationFrame(state.cosmosFrame);
   state.cosmosFrame = null;
@@ -850,6 +1529,8 @@ function returnHome() {
   state.run = null;
   state.nodes = [];
   clearActiveRunSnapshot();
+  els.gameScreen.classList.remove("training-orbit");
+  els.firstOrbitGuide.hidden = true;
   els.gameScreen.hidden = true;
   els.startScreen.hidden = false;
   [els.resultDialog, els.atlasDialog, els.senseDialog, els.shareDialog, els.wishDialog, els.paywallDialog, els.exchangeDialog, els.marketBuyDialog, els.leaderboardDialog, els.revealDialog].forEach((dialog) => { if (dialog?.open) dialog.close(); });
@@ -858,8 +1539,22 @@ function returnHome() {
   requestAnimationFrame(() => els.startScreen.querySelector(".mode-grid [data-mode]:not(:disabled)")?.focus({ preventScroll: true }));
 }
 
+function pendingScoreBlocksExit() {
+  return Boolean(
+    state.finished
+    && state.run?.ranked
+    && !state.run.submitted
+    && state.scoreSubmission.runId === state.run.id
+    && !state.scoreSubmission.pendingSaved
+  );
+}
+
 async function retryGame() {
   if (!state.game || state.startingRun) return;
+  if (pendingScoreBlocksExit()) {
+    showToast("Upload or queue this score before starting another orbit.");
+    return;
+  }
   const mode = state.game.mode;
   const options = { seed: state.game.seed, target: ["reach", "challenge"].includes(mode) ? state.game.target : undefined };
   const resultActions = [els.resultPrimary, els.resultRetry, $("#resultLeaderboard"), els.resultShare, $("#resultReveal")];
@@ -964,7 +1659,7 @@ async function useConstellationSense() {
   state.assist = "sense";
   state.scoringDisabled = true;
   state.run = { ...state.run, ranked: false, assisted: true, scoreEligible: false, leaderboardEligible: false };
-  saveProfile();
+  saveProfile({ cloud: false });
   updateHud();
   scheduleRunSave();
   try {
@@ -977,7 +1672,7 @@ async function useConstellationSense() {
     state.assist = result.assist || "sense";
     state.scoringDisabled = result.scoringDisabled !== false;
     state.run = { ...state.run, ranked: false, assisted: true, scoreEligible: false, leaderboardEligible: false };
-    saveProfile();
+    saveProfile({ cloud: false });
     updateHud();
     scheduleRunSave();
     const candidates = result.words || result.candidates || [];
@@ -994,7 +1689,7 @@ async function useConstellationSense() {
       state.assist = priorAssist;
       state.scoringDisabled = priorScoringDisabled;
       state.run = priorRun;
-      saveProfile();
+      saveProfile({ cloud: false });
       updateHud();
       scheduleRunSave();
       $("#senseMessage").textContent = error.message;
@@ -1021,7 +1716,7 @@ function buySenseCharge() {
   }
   profile.stardust -= 90;
   profile.senseWallet = grantSenseCharges(wallet, 1).wallet;
-  saveProfile();
+  saveProfile({ fields: ["progression"] });
   $("#senseMessage").textContent = "One Sense charge joined your reserve.";
   playFeedback("place");
   track("sense_purchased", { cost: 90, chargesBefore: wallet.charges, chargesAfter: profile.senseWallet.charges });
@@ -1139,7 +1834,7 @@ function stopRivalGhost({ completed } = {}) {
 
 function toggleRivalGhost() {
   profile.rivalGhostEnabled = !profile.rivalGhostEnabled;
-  saveProfile();
+  saveProfile({ fields: ["settings"] });
   if (profile.rivalGhostEnabled) void startRivalGhost();
   else {
     stopRivalGhost();
@@ -1180,7 +1875,7 @@ function renderInventory() {
   const controls = visible.map((item) => {
     const button = document.createElement("button");
     button.type = "button";
-    button.className = `inventory-word${["wish", "market"].includes(item.source) ? " wish" : ""}${item.source === "twist" ? " twist" : ""}${item.ghost ? " reveal-ghost" : ""}${senseWordActive(item) ? " sense-hot" : ""}`;
+    button.className = `inventory-word${["wish", "market"].includes(item.source) ? " wish" : ""}${item.source === "twist" ? " twist" : ""}${item.ghost ? " reveal-ghost" : ""}${senseWordActive(item) ? " sense-hot" : ""}${firstOrbitWordActive(item) ? " tutorial-hot" : ""}`;
     button.dataset.word = inventoryKey(item);
     const revealLocked = state.reveal.active || state.reveal.pending;
     const unavailable = state.finished || revealLocked || item.ghost;
@@ -1236,6 +1931,7 @@ function renderBoard(newId = null) {
   syncCtrlHoverState(ctrlHover.snapshot());
   syncSelectedNodeState();
   updateBoardTools();
+  syncFirstOrbitGuide();
 }
 
 function syncSelectedNodeState() {
@@ -1434,7 +2130,7 @@ function releaseCtrlHover(event) {
 function createBoardNode(node, isNew) {
   const button = document.createElement("button");
   button.type = "button";
-  button.className = `board-word${isNew ? " appear" : ""}${["wish", "market"].includes(node.item.source) ? " wish" : ""}${node.item.source === "twist" || node.cosmicTwist ? " cosmic-twist" : ""}${node.item.ghost ? " reveal-ghost" : ""}${node.revealRole ? ` reveal-${node.revealRole}` : ""}${state.selectedNodeId === node.id ? " keyboard-selected" : ""}${senseWordActive(node.item) ? " sense-hot" : ""}`;
+  button.className = `board-word${isNew ? " appear" : ""}${["wish", "market"].includes(node.item.source) ? " wish" : ""}${node.item.source === "twist" || node.cosmicTwist ? " cosmic-twist" : ""}${node.item.ghost ? " reveal-ghost" : ""}${node.revealRole ? ` reveal-${node.revealRole}` : ""}${state.selectedNodeId === node.id ? " keyboard-selected" : ""}${senseWordActive(node.item) ? " sense-hot" : ""}${firstOrbitWordActive(node.item) ? " tutorial-hot" : ""}`;
   button.dataset.id = node.id;
   button.style.setProperty("--x", `${node.x}px`);
   button.style.setProperty("--y", `${node.y}px`);
@@ -1486,7 +2182,14 @@ async function selectNodeForTap(node) {
 
 async function activateTrayItem(item) {
   const selected = state.nodes.find((node) => node.id === state.selectedNodeId);
-  if (!selected) return placeFromTray(item);
+  if (!selected) {
+    const placed = placeFromTray(item);
+    if (!placed) return null;
+    state.selectedNodeId = placed.id;
+    syncSelectedNodeState();
+    showAlchemy(`${placed.item.word} armed · tap another word.`);
+    return placed;
+  }
   state.selectedNodeId = null;
   syncSelectedNodeState();
   const outcome = await combineTrayWithTarget(item, selected);
@@ -1501,9 +2204,22 @@ async function activateTrayItem(item) {
 function placeFromTray(item, point) {
   if (state.finished || state.reveal.active || state.reveal.pending || item.ghost) return;
   const rect = els.board.getBoundingClientRect();
+  const guideRect = firstOrbitActive() && !els.firstOrbitGuide.hidden ? els.firstOrbitGuide.getBoundingClientRect() : null;
+  const safeTop = guideRect ? clamp(guideRect.bottom - rect.top + 9, 7, Math.max(7, rect.height - 55)) : 7;
   const spread = state.nodes.length % 7;
-  const x = point ? point.x - rect.left - 55 : rect.width * .46 + (spread - 3) * 22;
-  const y = point ? point.y - rect.top - 22 : rect.height * .43 + ((state.nodes.length * 31) % 100) - 50;
+  let x = point ? point.x - rect.left - 55 : rect.width * .46 + (spread - 3) * 22;
+  let y = point ? point.y - rect.top - 22 : Math.max(safeTop, rect.height * .43 + ((state.nodes.length * 31) % 100) - 50);
+  if (!point) {
+    const occupied = [...els.boardItems.querySelectorAll(".board-word")].map((element) => {
+      const bounds = element.getBoundingClientRect();
+      return { left: bounds.left - rect.left, top: bounds.top - rect.top, width: bounds.width, height: bounds.height };
+    });
+    const estimatedWidth = clamp(56 + [...String(item.word || "")].length * 8.2, 82, 220);
+    const open = findOpenSpawn({ x, y }, { width: estimatedWidth, height: 44 }, occupied, {
+      left: 7, top: safeTop, width: Math.max(1, rect.width - 14), height: Math.max(1, rect.height - safeTop - 7)
+    });
+    if (open) ({ x, y } = open);
+  }
   touchInventory(item);
   renderInventory();
   const node = addNode(item, x, y);
@@ -1841,19 +2557,26 @@ async function combineNodes(a, b) {
   aElement?.classList.add("combining");
   bElement?.classList.add("combining");
   try {
-    const result = await fetchJson("/api/combine", {
-      method: "POST",
-      headers: authHeaders({ "Content-Type": "application/json" }),
-      body: JSON.stringify({
-        a: a.item.word,
-        b: b.item.word,
-        categoryA: a.item.category,
-        categoryB: b.item.category,
-        discovered: state.words.map((item) => item.word),
-        runId: state.run?.id,
-        runToken: state.run?.token
-      })
-    });
+    let result;
+    if (firstOrbitActive()) {
+      result = resolveFirstOrbitCombination(a.item.word, b.item.word, state.history);
+      if (!result) throw new Error(firstOrbitWrongPairMessage(state.history));
+      await wait(90);
+    } else {
+      result = await fetchJson("/api/combine", {
+        method: "POST",
+        headers: authHeaders({ "Content-Type": "application/json" }),
+        body: JSON.stringify({
+          a: a.item.word,
+          b: b.item.word,
+          categoryA: a.item.category,
+          categoryB: b.item.category,
+          discovered: state.words.map((item) => item.word),
+          runId: state.run?.id,
+          runToken: state.run?.token
+        })
+      });
+    }
     if (orbitGeneration !== state.orbitGeneration || !state.game) return null;
     aElement?.classList.remove("combining");
     bElement?.classList.remove("combining");
@@ -1873,7 +2596,7 @@ async function combineNodes(a, b) {
         state.newDiscoveries += 1;
         if (!state.scoringDisabled) {
           profile.discovered.push(result.word);
-          saveProfile();
+          saveProfile({ fields: ["mastery"] });
         }
       }
     } else if (result.twisted) {
@@ -1884,21 +2607,23 @@ async function combineNodes(a, b) {
     touchInventory(known, { focus: newToRun });
     renderInventory();
     if (result.division === "open" && state.assist === "none") state.assist = "open";
-    const historyStep = { a: a.item.word, b: b.item.word, word: result.word, emoji: result.emoji, category: result.category || known.category || "", source: result.source, newDiscovery: !globallyKnown, twisted: Boolean(result.twisted), canonicalWord: result.twist?.canonicalWord || "" };
+    const historyStep = { a: a.item.word, b: b.item.word, word: result.word, emoji: result.emoji, category: result.category || known.category || "", source: result.source, newDiscovery: !globallyKnown, twisted: Boolean(result.twisted), canonicalWord: result.twist?.canonicalWord || "", feedbackEligible: result.feedbackEligible === true };
     state.history.push(historyStep);
     recordMasteryStep(historyStep);
     state.trails.push({ ax: a.x + 44, ay: a.y + 20, bx: b.x + 44, by: b.y + 20, x: x + 44, y: y + 20 });
     state.nodes = state.nodes.filter((node) => node.id !== a.id && node.id !== b.id);
     const resultNode = addNode(known, x, y, { cosmicTwist: Boolean(result.twisted) });
+    const universeLabel = result.universeContext?.label ? ` · ${result.universeContext.label}` : "";
     showAlchemy(result.twisted
       ? `✦ COSMIC TWIST · ${a.item.word} + ${b.item.word} found ${result.emoji} ${result.word} instead of ${result.twist.canonicalWord}. Mix them again for ${result.twist.canonicalWord}.`
-      : `${a.item.word} + ${b.item.word} = ${result.emoji} ${result.word}`, false, Boolean(result.twisted));
+      : `${a.item.word} + ${b.item.word} = ${result.emoji} ${result.word}${universeLabel}`, false, Boolean(result.twisted));
     playFeedback(result.twisted ? "twist" : "success", { analytics: Boolean(result.twisted) });
     updateHud();
     updateMilestone();
     renderAtlas();
-    track("combination_completed", { mode: state.mode, a: a.item.word, b: b.item.word, result: result.word, source: result.source, newDiscovery: !globallyKnown, twisted: Boolean(result.twisted) });
     const won = Boolean(result.completed);
+    track("combination_completed", { mode: state.mode, a: a.item.word, b: b.item.word, result: result.word, source: result.source, newDiscovery: !globallyKnown, twisted: Boolean(result.twisted) });
+    if (!won && !firstOrbitActive() && historyStep.feedbackEligible) offerRecipeFeedback(historyStep, state.moves);
     if (won) setTimeout(() => finishGame(true), 480);
     else if (state.game.moveLimit && state.moves >= state.game.moveLimit) setTimeout(() => finishGame(false, "No moves remain in this orbit."), 350);
     return { node: resultNode, completed: won };
@@ -1925,7 +2650,66 @@ async function combineNodes(a, b) {
   }
 }
 
+function resetRecipeFeedback() {
+  clearTimeout(state.recipeFeedback.timer);
+  clearTimeout(state.recipeFeedback.pendingTimer);
+  state.recipeFeedback = { move: 0, timer: null, pendingTimer: null, submitted: false };
+  if (els.recipeFeedback) {
+    els.recipeFeedback.hidden = true;
+    els.recipeFeedback.querySelectorAll("button").forEach((button) => { button.disabled = false; });
+  }
+  const announcement = $("#recipeFeedbackAnnouncement");
+  if (announcement) announcement.textContent = "";
+}
+
+function scheduleRecipeFeedbackExpiry(delay = 7600) {
+  clearTimeout(state.recipeFeedback.timer);
+  state.recipeFeedback.timer = setTimeout(() => {
+    if (els.recipeFeedback?.contains(document.activeElement)) return scheduleRecipeFeedbackExpiry(3000);
+    resetRecipeFeedback();
+  }, delay);
+}
+
+function offerRecipeFeedback(step, move) {
+  if (isStaticBeta || !step?.feedbackEligible || !els.recipeFeedback || !state.run?.id || !state.run?.token || !Number.isInteger(move) || move < 1) return;
+  resetRecipeFeedback();
+  state.recipeFeedback.move = move;
+  $("#recipeFeedbackRecipe").textContent = `${step.a} + ${step.b} → ${step.word}`;
+  state.recipeFeedback.pendingTimer = setTimeout(() => {
+    if (!state.game || state.finished || state.recipeFeedback.move !== move) return;
+    els.recipeFeedback.hidden = false;
+    $("#recipeFeedbackAnnouncement").textContent = `Optional recipe rating: ${step.a} plus ${step.b} made ${step.word}.`;
+    scheduleRecipeFeedbackExpiry();
+  }, 1650);
+}
+
+async function submitRecipeFeedback(rating) {
+  if (state.recipeFeedback.submitted) return;
+  const request = createRecipeFeedbackRequest({
+    runId: state.run?.id,
+    runToken: state.run?.token,
+    move: state.recipeFeedback.move,
+    rating
+  });
+  if (!request) return resetRecipeFeedback();
+  state.recipeFeedback.submitted = true;
+  els.recipeFeedback.querySelectorAll("button").forEach((button) => { button.disabled = true; });
+  try {
+    await fetchJson("/api/recipe-feedback", {
+      method: "POST",
+      headers: authHeaders({ "Content-Type": "application/json" }),
+      body: JSON.stringify(request)
+    });
+    track("recipe_feedback_submitted", { rating });
+  } catch {
+    showToast("Recipe feedback will be available again on a later discovery.");
+  } finally {
+    resetRecipeFeedback();
+  }
+}
+
 function resetRevealPlayback({ keepConstellation = false } = {}) {
+  resetRecipeFeedback();
   const previous = state.reveal || {};
   previous.wake?.();
   state.reveal = {
@@ -2015,7 +2799,7 @@ async function confirmRevealPath() {
     stopTimer();
     if (mode === "daily") {
       profile.dailyCompleted = todayKey;
-      saveProfile();
+      saveProfile({ fields: ["progression"] });
     }
     const route = Array.isArray(payload.route) ? payload.route : [];
     if (els.revealDialog.open) els.revealDialog.close();
@@ -2327,24 +3111,35 @@ function finishGame(won, reason = "", { skipSubmit = false } = {}) {
   cancelTapChain();
   dismissClearUndo();
   state.finished = true;
+  syncFirstOrbitGuide();
   stopTimer();
   stopRivalGhost({ completed: won });
   if (won && !state.reveal.revealed) playFeedback("target", { analytics: true });
   updateMilestone(won);
-  const elapsed = Math.max(1, Math.round((Date.now() - state.startedAt) / 1000));
-  const assisted = Boolean(state.scoringDisabled || state.assist === "reveal");
+  const elapsed = state.finishedElapsedSeconds || Math.max(1, Math.round((Date.now() - state.startedAt) / 1000));
+  state.finishedElapsedSeconds = elapsed;
+  const training = firstOrbitActive();
+  const assisted = Boolean(training || state.scoringDisabled || state.assist === "reveal");
   const revealed = assisted && state.reveal.revealed;
   const pendingRankedSubmit = Boolean(won && !assisted && !skipSubmit && state.run?.ranked);
-  if (pendingRankedSubmit) saveCompletedRunSnapshot();
-  else clearActiveRunSnapshot();
+  if (pendingRankedSubmit) {
+    const saved = saveCompletedRunSnapshot();
+    state.scoreSubmission = { runId: state.run.id, ...saved, inFlight: false, exitAction: null, exitLabel: "" };
+  }
+  else {
+    state.scoreSubmission = { runId: "", activeSaved: false, pendingSaved: false, inFlight: false, exitAction: null, exitLabel: "" };
+    clearActiveRunSnapshot();
+  }
   let reward = null;
   state.resultAction = returnHome;
   $("#rankResultCard").hidden = isStaticBeta || !won || assisted;
   $("#resultLeaderboard").hidden = isStaticBeta || !won || assisted;
   $("#assistResultCard").hidden = !assisted;
-  if (assisted) $("#assistResultCard small").textContent = revealed
-    ? "One visual replay is available. It returns to mode selection and grants no progression."
-    : "Constellation Sense guided this study orbit. It grants no score, leaderboard place, rewards, or later discoveries.";
+  if (assisted) $("#assistResultCard small").textContent = training
+    ? "Training is never scored and grants no leaderboard place, Stardust, mastery, permanent discoveries, streak progress, or rewards."
+    : revealed
+      ? "One visual replay is available. It returns to mode selection and grants no progression."
+      : "Constellation Sense guided this study orbit. It grants no score, leaderboard place, rewards, or later discoveries.";
   $("#resultReveal").hidden = won || assisted || !state.run;
   if (won && !assisted) {
     reward = calculateReward();
@@ -2366,12 +3161,17 @@ function finishGame(won, reason = "", { skipSubmit = false } = {}) {
     }
     profile.stardust += reward.reward;
     profile.wins += 1;
-    saveProfile();
+    saveProfile({ fields: ["progression"] });
+  } else if (won && training) {
+    profile.firstOrbit = { seen: true, completed: true };
+    saveProfile({ fields: ["firstOrbit"] });
   } else if (won && revealed) {
     state.resultAction = replayRevealPathOnce;
   }
   els.resultEmoji.textContent = won ? state.game.emoji : state.mode === "quick" ? "⌛" : "◇";
-  els.resultKicker.textContent = revealed
+  els.resultKicker.textContent = training && won
+    ? "FIRST ORBIT COMPLETE · TRAINING"
+    : revealed
     ? "PATH REVEALED · ASSISTED"
     : won
     ? isStaticBeta
@@ -2380,9 +3180,11 @@ function finishGame(won, reason = "", { skipSubmit = false } = {}) {
         ? `STAGE ${state.game.stage + 1} COMPLETE`
         : "TARGET REACHED"
     : "ORBIT ENDED";
-  els.resultTitle.textContent = revealed ? `The cosmos revealed ${state.game.target}.` : won ? `You found ${state.game.target}.` : reason;
+  els.resultTitle.textContent = training && won ? "You built your first constellation." : revealed ? `The cosmos revealed ${state.game.target}.` : won ? `You found ${state.game.target}.` : reason;
   const timeStat = state.game.timeLimit || state.mode === "challenge" ? ` · ${formatTime(elapsed)} elapsed` : "";
-  els.resultStats.textContent = revealed
+  els.resultStats.textContent = training
+    ? `${state.history.length} guided combinations · ${formatTime(elapsed)} elapsed · 0 score`
+    : revealed
     ? `${state.reveal.route.length} combinations traced · 0 score · no discoveries saved`
     : `${state.words.length} discoveries · ${state.moves} moves${timeStat}${state.wished ? " · 1 Wish" : ""}`;
   els.rewardCard.hidden = !won || assisted;
@@ -2390,10 +3192,12 @@ function finishGame(won, reason = "", { skipSubmit = false } = {}) {
     els.rewardDust.textContent = reward.reward;
     els.rewardReason.textContent = reward.reason;
   }
-  els.resultPrimary.querySelector("span").textContent = revealed ? "Replay constellation once" : won && state.mode === "weekly" && !profile.weekly.complete ? "Continue expedition" : won ? "Choose another mode" : "Back to modes";
-  els.resultRetry.hidden = revealed ? false : assisted || (won && (state.mode === "daily" || state.mode === "weekly"));
+  els.resultPrimary.querySelector("span").textContent = training ? "Explore game modes" : revealed ? "Replay constellation once" : won && state.mode === "weekly" && !profile.weekly.complete ? "Continue expedition" : won ? "Choose another mode" : "Back to modes";
+  els.resultRetry.hidden = training || (revealed ? false : assisted || (won && (state.mode === "daily" || state.mode === "weekly")));
   els.resultRetry.textContent = revealed ? "Back to modes" : won ? "Replay this target" : "Try again";
-  els.resultShare.hidden = !won || assisted;
+  els.resultShare.hidden = !won || training;
+  const openRun = !assisted && (state.assist !== "none" || state.wished);
+  els.resultShare.querySelector("span").textContent = assisted ? "Share Study card" : openRun ? "Share Open card" : "Challenge a friend";
   els.resultDialog.showModal();
   if (won && !assisted && !skipSubmit) submitRankedScore();
   track(won ? "target_reached" : "run_failed", { mode: state.mode, target: state.game.target, moves: state.moves, seconds: elapsed, wished: state.wished, reward: reward?.reward || 0, assisted, revealed });
@@ -2412,6 +3216,24 @@ async function submitRankedScore() {
     $("#resultRankMessage").textContent = "Reach and friend challenges stay outside competitive ladders.";
     return;
   }
+  const submission = {
+    playerId: profile.playerId,
+    playerToken: profile.playerToken,
+    runId: state.run.id,
+    runToken: state.run.token,
+    mode: state.mode
+  };
+  if (state.scoreSubmission.runId === submission.runId && state.scoreSubmission.inFlight) return;
+  const locallyQueued = Boolean(state.scoreSubmission.runId === submission.runId && state.scoreSubmission.pendingSaved);
+  if (state.scoreSubmission.runId === submission.runId) {
+    state.scoreSubmission.exitAction ||= state.resultAction;
+    state.scoreSubmission.exitLabel ||= els.resultPrimary.querySelector("span").textContent;
+  }
+  state.scoreSubmission.inFlight = true;
+  if (!locallyQueued) {
+    els.resultPrimary.disabled = true;
+    els.resultRetry.hidden = true;
+  }
   const division = state.assist === "none" ? "pure" : "open";
   $("#resultDivision").textContent = `${division.toUpperCase()} - SERVER VERIFIED`;
   $("#resultRank").textContent = "#--";
@@ -2421,15 +3243,32 @@ async function submitRankedScore() {
   try {
     const result = await fetchJson("/api/run/submit", {
       method: "POST",
-      headers: authHeaders({ "Content-Type": "application/json" }),
-      body: JSON.stringify({ runId: state.run.id, runToken: state.run.token })
+      headers: {
+        "Content-Type": "application/json",
+        "X-Constellore-Player": submission.playerId,
+        "X-Constellore-Token": submission.playerToken
+      },
+      body: JSON.stringify({ runId: submission.runId, runToken: submission.runToken })
     });
     if (!result.ranked) throw new Error(result.reason || "This orbit is not ranked.");
+    markPendingScoreUploaded(submission.playerId, submission.runId);
+    const sameIdentity = profile.playerId === submission.playerId && profile.playerToken === submission.playerToken;
+    if (sameIdentity) applyServerPlayer(result.player);
+    if (state.run?.id !== submission.runId) {
+      showToast("Your saved score reached the leaderboard.");
+      return;
+    }
+    const retryExitAction = state.scoreSubmission.exitAction;
+    const retryExitLabel = state.scoreSubmission.exitLabel;
     state.run = { ...state.run, submitted: true };
-    clearActiveRunSnapshot();
-    applyServerPlayer(result.player);
+    state.scoreSubmission = { runId: submission.runId, activeSaved: false, pendingSaved: false, inFlight: false, exitAction: null, exitLabel: "" };
+    els.resultPrimary.querySelector("span").textContent = retryExitLabel || "Choose another mode";
+    state.resultAction = retryExitAction || returnHome;
+    els.resultPrimary.disabled = false;
+    els.resultRetry.hidden = state.mode === "daily" || state.mode === "weekly";
+    els.resultRetry.disabled = false;
     state.leaderboardDivision = result.placement.entry.division;
-    state.leaderboardScope = state.mode === "daily" ? "daily" : state.mode === "weekly" ? "weekly" : "sprint";
+    state.leaderboardScope = submission.mode === "daily" ? "daily" : submission.mode === "weekly" ? "weekly" : "sprint";
     $("#resultDivision").textContent = `${result.placement.entry.division.toUpperCase()} - SERVER VERIFIED`;
     $("#resultRank").textContent = `#${result.placement.rank}`;
     $("#resultScore").textContent = Number(result.placement.entry.score).toLocaleString();
@@ -2441,11 +3280,25 @@ async function submitRankedScore() {
         : result.alreadyRewarded
           ? "Score recorded. This challenge's credit reward was already claimed."
           : "Personal best recorded on the shared ladder.";
-    track("score_uploaded", { mode: state.mode, division: result.placement.entry.division, score: result.placement.entry.score, rank: result.placement.rank });
+    track("score_uploaded", { mode: submission.mode, division: result.placement.entry.division, score: result.placement.entry.score, rank: result.placement.rank });
   } catch (error) {
-    $("#resultScore").textContent = "PENDING";
-    $("#resultRankMessage").textContent = `${error.message} Your local run result is still saved.`;
+    if (state.run?.id === submission.runId) {
+      $("#resultScore").textContent = "PENDING";
+      if (state.scoreSubmission.pendingSaved) {
+        $("#resultRankMessage").textContent = `${error.message} Your local run result is still saved and will retry after reconnecting.`;
+      } else {
+        const recoveryNote = state.scoreSubmission.activeSaved
+          ? "The full orbit is recoverable, but its compact score credential could not be queued."
+          : "This browser could not save the result.";
+        $("#resultRankMessage").textContent = `${error.message} ${recoveryNote} Keep this screen open and retry the upload.`;
+        state.resultAction = submitRankedScore;
+        els.resultPrimary.querySelector("span").textContent = "Retry score upload";
+        els.resultPrimary.disabled = false;
+        els.resultRetry.hidden = true;
+      }
+    }
   } finally {
+    if (state.scoreSubmission.runId === submission.runId) state.scoreSubmission.inFlight = false;
     card.classList.remove("loading");
   }
 }
@@ -2622,37 +3475,10 @@ function sparklineSvg(values) {
 function renderCreditPacks() {
   const container = $("#creditPacks");
   if (!container) return;
-  if (!creditsAdapter()) {
-    const note = document.createElement("small");
-    note.className = "beta-credit-note";
-    note.textContent = config.testStoreEnabled ? "Store packs are disabled in local QA." : "Earn credits from verified runs during the free beta.";
-    container.replaceChildren(note);
-    return;
-  }
-  container.replaceChildren(...(config.creditPacks || []).map((pack) => {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "credit-pack";
-    button.innerHTML = `<strong>${Number(pack.credits).toLocaleString()} credits</strong><small>${escapeHtml(pack.price)}</small>`;
-    button.addEventListener("click", () => buyCreditPack(pack));
-    return button;
-  }));
-}
-
-async function buyCreditPack(pack) {
-  track("credit_pack_opened", { pack: pack.id });
-  const credits = creditsAdapter();
-  if (!credits?.purchase) return showToast("Connect App Store, Google Play, Steam, or Epic billing to buy credit packs.");
-  try {
-    const result = await credits.purchase(pack.id);
-    if (!result?.success) return;
-    await credits.syncWallet?.();
-    await ensurePlayer();
-    await loadMarket();
-    showToast("Star Credits added to your wallet.");
-  } catch {
-    showToast("The store could not complete that credit purchase.");
-  }
+  const note = document.createElement("small");
+  note.className = "beta-credit-note";
+  note.textContent = "Star Credits are earned from verified play. They are never sold for cash.";
+  container.replaceChildren(note);
 }
 
 async function openExchange(view = state.marketView) {
@@ -2676,7 +3502,7 @@ async function loadMarket() {
   state.market = await fetchJson("/api/market", { headers: authHeaders() });
   state.marketClockOffset = Date.parse(state.market.serverTime) - Date.now();
   profile.credits = state.market.balance;
-  saveProfile();
+  saveProfile({ cloud: false });
   renderMarket();
   startMarketClock();
 }
@@ -2829,7 +3655,7 @@ function renderLeaderboard(board) {
 }
 
 function resumeTimerIfNeeded() {
-  if (state.game?.timeLimit && !state.finished && !state.reveal.active && !state.reveal.pending && !els.gameScreen.hidden && !els.paywallDialog.open && !els.wishDialog.open && !els.atlasDialog.open && !els.senseDialog.open && !els.shareDialog.open && !els.profileDialog.open && !els.exchangeDialog.open && !els.marketBuyDialog.open && !els.leaderboardDialog.open && !els.revealDialog.open) startTimer();
+  if (state.game?.timeLimit && !state.finished && !state.reveal.active && !state.reveal.pending && !els.gameScreen.hidden && !els.paywallDialog.open && !els.wishDialog.open && !els.atlasDialog.open && !els.senseDialog.open && !els.shareDialog.open && !els.profileDialog.open && !els.exchangeDialog.open && !els.marketBuyDialog.open && !els.leaderboardDialog.open && !els.revealDialog.open && !$("#recoveryDialog").open) startTimer();
 }
 
 function renderAtlas() {
@@ -2874,15 +3700,48 @@ function challengeUrl(game) {
 
 function populateShare(game, completed = false) {
   state.shareGame = game;
+  const isCurrentRun = game === state.game;
+  const study = Boolean(isCurrentRun && state.scoringDisabled);
+  const openRun = Boolean(isCurrentRun && !study && (state.assist !== "none" || state.wished));
+  const challengeEligible = !study && !openRun;
+  const elapsed = isCurrentRun && state.startedAt
+    ? state.finished && state.finishedElapsedSeconds ? state.finishedElapsedSeconds : Math.max(0, Math.round((Date.now() - state.startedAt) / 1000))
+    : 0;
+  state.shareCard = buildConstellationCard({
+    target: game.target,
+    emoji: game.emoji,
+    moves: isCurrentRun ? state.moves : 0,
+    seconds: elapsed,
+    stars: isCurrentRun ? state.history.length : 0,
+    discoveries: isCurrentRun ? state.newDiscoveries : 0,
+    history: isCurrentRun ? state.history : [],
+    universe: game.universe || selectUniverse(game.seed),
+    seed: game.seed,
+    assist: study || openRun ? state.assist : "none",
+    scoringDisabled: isCurrentRun && state.scoringDisabled,
+    wished: isCurrentRun && state.wished,
+    training: game.mode === "training",
+    challengeUrl: challengeEligible ? challengeUrl(game) : ""
+  });
   $("#shareTarget").textContent = game.target;
-  $("#shareDescription").textContent = completed ? "Your path is set. Now see how a friend reaches the same word." : "Send the same target and compare your constellations.";
-  $("#shareStats").textContent = completed ? `${state.moves} moves · ${state.history.length} stars · ${state.wished ? "Wish used" : "pure path"}` : "Same universe. Different path.";
+  $("#shareTitle").textContent = study ? "Keep this study constellation." : openRun ? "Keep this Open constellation." : completed ? "Can they find it faster?" : "Invite them into this universe.";
+  $("#shareDescription").textContent = study
+    ? "This card is clearly marked Study and never links to a competitive challenge."
+    : openRun
+      ? "This card declares its Reality Bend as Open and never disguises it as a Pure challenge."
+      : completed ? "Your path is set. Now see how a friend reaches the same word." : "Send the same target and compare your constellations.";
+  $("#shareStats").textContent = `${state.shareCard.universe.name} · ${state.shareCard.division} · ${completed ? `${state.shareCard.moves} moves · ${state.shareCard.stars} stars` : "shared seed"}`;
+  const preview = $("#shareCardPreview");
+  preview.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(renderConstellationCardSvg(state.shareCard))}`;
+  preview.alt = `${state.shareCard.division.toLowerCase()} constellation card for ${state.shareCard.target}`;
+  $("#copyChallenge").hidden = !challengeEligible;
+  $("#shareEyebrow").textContent = study ? "CONSTELLATION CARD · STUDY" : openRun ? "CONSTELLATION CARD · OPEN" : "CONSTELLATION CARD · FRIEND CHALLENGE";
 }
 
 function openShare() {
   if (!state.game) return;
   if (state.startingRun) return showToast("The next orbit is still being mapped.");
-  if (state.reveal.active || state.reveal.pending || state.scoringDisabled) return showToast("Assisted paths are for study, not challenge links.");
+  if (state.reveal.active || state.reveal.pending) return showToast("Finish tracing the path before making its card.");
   stopTimer();
   populateShare(state.game, state.finished);
   $("#nativeShare").hidden = !navigator.share;
@@ -2902,7 +3761,7 @@ async function createChallengeFromHome() {
 }
 
 async function copyChallenge() {
-  if (!state.shareGame) return;
+  if (!state.shareGame || !state.shareCard?.challengeUrl) return;
   const url = challengeUrl(state.shareGame);
   try {
     await navigator.clipboard.writeText(url);
@@ -2914,8 +3773,33 @@ async function copyChallenge() {
 }
 
 async function nativeShare() {
-  if (!navigator.share || !state.shareGame) return;
-  try { await navigator.share({ title: `Find ${state.shareGame.target} in Constellore`, text: "Can you trace a faster constellation?", url: challengeUrl(state.shareGame) }); } catch { /* Share cancellation is expected. */ }
+  if (!navigator.share || !state.shareGame || !state.shareCard) return;
+  const svg = renderConstellationCardSvg(state.shareCard);
+  const file = typeof File === "function" ? new File([svg], constellationCardFilename(state.shareCard), { type: "image/svg+xml" }) : null;
+  const payload = {
+    title: `${state.shareCard.target} · Constellore`,
+    text: constellationCardShareText(state.shareCard),
+    ...(state.shareCard.challengeUrl ? { url: state.shareCard.challengeUrl } : {})
+  };
+  if (file && navigator.canShare?.({ files: [file] })) payload.files = [file];
+  try {
+    await navigator.share(payload);
+    track("card_shared", { division: state.shareCard.division, image: Boolean(payload.files) });
+  } catch { /* Share cancellation is expected. */ }
+}
+
+function downloadConstellationCard() {
+  if (!state.shareCard) return;
+  const blob = new Blob([renderConstellationCardSvg(state.shareCard)], { type: "image/svg+xml" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = constellationCardFilename(state.shareCard);
+  document.body.append(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 0);
+  track("card_downloaded", { division: state.shareCard.division });
 }
 
 function openProfile() {
@@ -2925,14 +3809,23 @@ function openProfile() {
 }
 
 function chooseTheme(theme) {
-  if (theme !== "void" && !profile.premium && !isStaticBeta) {
+  const item = COSMETIC_CATALOG.find((entry) => entry.kind === "theme" && entry.id === theme);
+  chooseCosmetic("theme", theme, Boolean(item && (item.entitlement === "free" || founderCosmeticsOwned())));
+}
+
+function chooseCosmetic(kind, id, owned = false) {
+  const item = COSMETIC_CATALOG.find((entry) => entry.kind === kind && entry.id === id);
+  if (!item) return;
+  if (!owned && item.entitlement !== "free") {
     els.profileDialog.close();
     return openPremium();
   }
-  profile.theme = theme;
-  saveProfile();
+  profile.cosmetics = sanitizeCosmeticLoadout({ ...profile.cosmetics, [kind]: id }, { founder: founderCosmeticsOwned() });
+  profile.theme = profile.cosmetics.theme;
+  saveProfile({ fields: ["settings"] });
   if (state.game) startCosmos();
-  track("theme_changed", { theme });
+  if (kind === "sound") playFeedback("place");
+  track("cosmetic_changed", { kind, id });
 }
 
 function startCosmos() {
@@ -2957,6 +3850,7 @@ function startCosmos() {
   const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
   const accent = getComputedStyle(document.body).getPropertyValue("--violet").trim() || "#aa8cff";
   const cyan = getComputedStyle(document.body).getPropertyValue("--cyan").trim() || "#69e6ff";
+  const trailStyle = profile.cosmetics?.trail || "classic";
   const draw = (time = 0) => {
     if (els.gameScreen.hidden) return;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -2970,17 +3864,19 @@ function startCosmos() {
       ctx.arc(star.x, star.y, star.r, 0, Math.PI * 2);
       ctx.fill();
     }
-    ctx.strokeStyle = accent;
-    ctx.fillStyle = accent;
-    ctx.lineWidth = .7;
-    for (const trail of state.trails) {
-      ctx.globalAlpha = .18;
+    ctx.strokeStyle = trailStyle === "comet" ? cyan : accent;
+    ctx.fillStyle = trailStyle === "prism" ? cyan : accent;
+    ctx.lineWidth = trailStyle === "comet" ? 1.45 : trailStyle === "prism" ? 1.05 : .7;
+    for (let trailIndex = 0; trailIndex < state.trails.length; trailIndex += 1) {
+      const trail = state.trails[trailIndex];
+      if (trailStyle === "prism") ctx.strokeStyle = trailIndex % 2 ? cyan : accent;
+      ctx.globalAlpha = trailStyle === "classic" ? .18 : .3;
       ctx.beginPath();
       ctx.moveTo(trail.ax, trail.ay);
       ctx.lineTo(trail.x, trail.y);
       ctx.lineTo(trail.bx, trail.by);
       ctx.stroke();
-      ctx.globalAlpha = .42;
+      ctx.globalAlpha = trailStyle === "classic" ? .42 : .66;
       ctx.beginPath();
       ctx.arc(trail.x, trail.y, 1.5, 0, Math.PI * 2);
       ctx.fill();
@@ -3101,7 +3997,7 @@ $("#useSense").addEventListener("click", useConstellationSense);
 $("#buySense").addEventListener("click", buySenseCharge);
 els.rivalGhost.addEventListener("click", toggleRivalGhost);
 els.board.addEventListener("pointerdown", (event) => {
-  if (event.target.closest?.(".board-word, .board-tools, .rival-ghost, .tap-chain-status, .board-undo, .reveal-controller")) return;
+  if (event.target.closest?.(".board-word, .board-tools, .rival-ghost, .tap-chain-status, .board-undo, .reveal-controller, .recipe-feedback")) return;
   cancelTapChain();
 });
 els.inventorySearch.addEventListener("input", (event) => {
@@ -3144,6 +4040,16 @@ $("#checkoutButton").addEventListener("click", checkoutPremium);
 $("#wishForm").addEventListener("submit", makeWish);
 $("#rewardWish").addEventListener("click", earnRewardedWish);
 $("#profileButton").addEventListener("click", openProfile);
+$("#syncCloudProfile").addEventListener("click", () => syncCloudProfile({ manual: true }));
+$("#restoreOwnership").addEventListener("click", () => restoreOwnership());
+$("#rotateRecoveryKit").addEventListener("click", rotateRecoveryKit);
+$("#recoverAccountForm").addEventListener("submit", recoverAccount);
+$("#copyRecoveryKit").addEventListener("click", copyRecoveryKit);
+$("#confirmRecoverySaved").addEventListener("click", acknowledgeRecoveryKit);
+$("#beginFirstOrbit").addEventListener("click", startFirstOrbit);
+$("#dismissFirstOrbit").addEventListener("click", dismissFirstOrbitWelcome);
+$("#replayFirstOrbit").addEventListener("click", startFirstOrbit);
+$("#skipFirstOrbit").addEventListener("click", skipFirstOrbit);
 $("#feedbackToggle").addEventListener("click", () => toggleFeedbackPreference("sound"));
 $("#soundPreference").addEventListener("click", () => toggleFeedbackPreference("sound"));
 $("#hapticPreference").addEventListener("click", () => toggleFeedbackPreference("haptics"));
@@ -3152,6 +4058,8 @@ $("#leaderboardButton").addEventListener("click", () => openLeaderboard());
 $("#viewLeaderboards").addEventListener("click", () => openLeaderboard());
 $("#browseExchange").addEventListener("click", () => openExchange("market"));
 $("#confirmMarketBuy").addEventListener("click", confirmMarketPurchase);
+$$('[data-recipe-rating]').forEach((button) => button.addEventListener("click", () => submitRecipeFeedback(button.dataset.recipeRating)));
+$("#dismissRecipeFeedback").addEventListener("click", resetRecipeFeedback);
 $("#marketSearch").addEventListener("input", () => {
   renderMarket();
   if ($("#marketSearch").value.trim()) track("market_searched", { length: $("#marketSearch").value.trim().length });
@@ -3170,6 +4078,7 @@ $("#leaderboardScope").addEventListener("change", (event) => {
 });
 $("#createChallenge").addEventListener("click", createChallengeFromHome);
 $("#copyChallenge").addEventListener("click", copyChallenge);
+$("#downloadCard").addEventListener("click", downloadConstellationCard);
 $("#nativeShare").addEventListener("click", nativeShare);
 $("#resultShare").addEventListener("click", () => {
   if (state.startingRun) return;
@@ -3198,12 +4107,19 @@ els.revealDialog.addEventListener("cancel", (event) => {
 });
 els.resultDialog.addEventListener("cancel", (event) => {
   if (state.startingRun) return event.preventDefault();
+  if (pendingScoreBlocksExit()) {
+    event.preventDefault();
+    showToast("Upload or queue this score before leaving the result.");
+    return;
+  }
   if (state.reveal.replayAvailable) {
     event.preventDefault();
     returnHome();
   }
 });
-[els.paywallDialog, els.wishDialog, els.atlasDialog, els.senseDialog, els.shareDialog, els.profileDialog, els.marketBuyDialog, els.leaderboardDialog, els.revealDialog].forEach((dialog) => dialog.addEventListener("close", () => setTimeout(resumeTimerIfNeeded, 0)));
+$("#recoveryDialog").addEventListener("cancel", (event) => event.preventDefault());
+[els.paywallDialog, els.wishDialog, els.atlasDialog, els.senseDialog, els.shareDialog, els.profileDialog, els.marketBuyDialog, els.leaderboardDialog, els.revealDialog, $("#recoveryDialog")].forEach((dialog) => dialog.addEventListener("close", () => setTimeout(resumeTimerIfNeeded, 0)));
+els.firstOrbitDialog.addEventListener("close", rememberFirstOrbitSeen);
 els.exchangeDialog.addEventListener("close", () => {
   clearInterval(state.marketTimer);
   state.marketTimer = null;
@@ -3227,7 +4143,14 @@ window.addEventListener("keydown", (event) => {
 window.addEventListener("keyup", releaseCtrlHover);
 window.addEventListener("blur", releaseCtrlHover);
 window.addEventListener("pagehide", flushRunSave);
-window.addEventListener("online", updateConnection);
+window.addEventListener("beforeunload", (event) => {
+  flushRunSave();
+  if (pendingScoreBlocksExit() && !state.scoreSubmission.activeSaved) {
+    event.preventDefault();
+    event.returnValue = "";
+  }
+});
+window.addEventListener("online", handleOnline);
 window.addEventListener("offline", updateConnection);
 document.addEventListener("visibilitychange", () => {
   if (document.hidden) {
@@ -3249,13 +4172,15 @@ $("#installButton").addEventListener("click", async () => {
 async function boot() {
   configureStaticBetaUi();
   const dailySense = refillDailySense();
-  if (dailySense.refilled) saveProfile();
+  if (dailySense.refilled) saveProfile({ cloud: false });
   else renderProfile();
   if (dailySense.granted) track("sense_earned", { source: "daily", reward: dailySense.granted });
   updateConnection();
   await loadConfig();
   try { await ensurePlayer(); }
   catch { showToast("Leaderboard and Word Exchange need a connection."); }
+  if (profile.playerId && profile.playerToken) await initializeCloudServices();
+  announcePendingScoreRecovery(await retryPendingScoreUploads());
   if ("serviceWorker" in navigator && window.top === window.self) {
     const serviceWorkerUrl = isStaticBeta ? "./service-worker.js" : "/play/service-worker.js";
     const serviceWorkerScope = isStaticBeta ? "./" : "/play/";
@@ -3269,6 +4194,7 @@ async function boot() {
     track("challenge_opened", { target: params.get("target") });
     void beginMode("challenge", { target: params.get("target"), seed: Number(params.get("seed")) || stableHash(params.get("target")) });
   }
+  if (!restored && !challengeRequested && !state.recoveryKit?.code && !sanitizeFirstOrbitState(profile.firstOrbit).seen) requestAnimationFrame(openFirstOrbitWelcome);
   if (window.parent !== window) window.parent.postMessage({ type: "constellore:ready", localOnly: isStaticBeta }, location.origin);
 }
 

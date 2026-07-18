@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { orderInventory, packOrbit, pickMagneticTarget } from "../public/frictionless.mjs";
+import { findOpenSpawn, orderInventory, packOrbit, pickMagneticTarget } from "../public/frictionless.mjs";
 
 const rect = (id, left, top, width = 40, height = 30) => ({ id, rect: { left, top, width, height } });
 
@@ -97,6 +97,17 @@ test("orbit packing supports explicit edges and rejects impossible or invalid la
   assert.equal(packOrbit([{ id: "same", width: 20, height: 20 }, { id: "same", width: 20, height: 20 }], bounds), null);
   assert.equal(packOrbit([{ id: "bad", width: 0, height: 20 }], bounds), null);
   assert.deepEqual(packOrbit([], bounds), []);
+});
+
+test("newly summoned words choose the nearest free in-bounds position", () => {
+  const occupied = [{ left: 90, top: 70, width: 100, height: 44 }];
+  const spawn = findOpenSpawn({ x: 100, y: 75 }, { width: 90, height: 44 }, occupied, { left: 8, top: 8, width: 320, height: 220 }, { gap: 10, step: 12 });
+  assert.ok(spawn);
+  assert.ok(spawn.x >= 8 && spawn.y >= 8);
+  assert.ok(spawn.x + 90 <= 328 && spawn.y + 44 <= 228);
+  assert.ok(spawn.x + 90 + 10 <= 90 || 190 + 10 <= spawn.x || spawn.y + 44 + 10 <= 70 || 114 + 10 <= spawn.y);
+  assert.deepEqual(findOpenSpawn({ x: -50, y: 500 }, { width: 90, height: 44 }, [], { width: 200, height: 100 }), { x: 0, y: 56 });
+  assert.equal(findOpenSpawn({}, { width: 300, height: 44 }, [], { width: 200, height: 100 }), null);
 });
 
 const words = [

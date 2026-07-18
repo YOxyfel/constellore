@@ -202,6 +202,7 @@ test("server runs reject impossible inputs and only complete through combination
   runs.canCombine(run, "Earth", "Water");
   runs.recordCombination(run, { word: "Mud", emoji: "🟤", source: "world" });
   assert.ok(run.completedAt);
+  assert.ok(run.expiresAt >= run.completedAt + 7 * 86400000, "completed ranked paths remain retryable throughout the client recovery window");
   const entry = runs.finalize(run, player.callsign);
   assert.equal(entry.division, "open");
   assert.equal(entry.moves, 1);
@@ -237,7 +238,8 @@ test("server runs retain a canonical restore ledger and the exact Reality Bend",
     newDiscovery: true,
     twisted: false,
     canonicalWord: "",
-    revealed: false
+    revealed: false,
+    feedbackEligible: true
   }]);
   assert.ok(progress.discovered.some((item) => item.word === "Moon"));
   progress.bendItem.word = "Tampered";

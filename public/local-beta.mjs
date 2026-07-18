@@ -9,6 +9,8 @@ import {
 } from "./local-world.mjs";
 import { cosmicTwistOptions, cosmicTwistSeedFor, selectCosmicTwist } from "./cosmic-twists.mjs";
 import { rankSenseCandidates } from "./engagement-features.mjs";
+import { annotateUniverseResult, selectUniverse, validateUniverseRoute } from "./universe-director.mjs";
+import { sanitizeRecipeRating } from "./recipe-feedback.mjs";
 
 const runs = new Map();
 const MAX_RESUME_DISCOVERIES = 1000;
@@ -43,6 +45,34 @@ function parseBody(options) {
 
 function publicPlayer() {
   return { ...player, vault: [] };
+}
+
+function directedLocalGame(mode, seed, target, stage) {
+  const game = buildLocalGame(mode, seed, target, stage);
+  return game ? { ...game, universe: selectUniverse(game.seed) } : null;
+}
+
+function canonicalRouteRecipes(route) {
+  if (!Array.isArray(route)) return [];
+  return route.map((step) => {
+    const a = canonicalLocalWord(step?.a);
+    const b = canonicalLocalWord(step?.b);
+    const result = a && b ? lookupLocalCombination(a, b) : null;
+    return result ? { a, b, ...result } : null;
+  }).filter(Boolean);
+}
+
+function verifiedLocalRoute(game) {
+  const route = game ? localRouteTo(game.target) : null;
+  if (!Array.isArray(route)) return null;
+  const canonicalRecipes = canonicalRouteRecipes(route);
+  const validation = validateUniverseRoute({
+    starters: game.starters,
+    target: game.target,
+    route,
+    recipes: canonicalRecipes
+  });
+  return validation.valid ? canonicalRecipes : null;
 }
 
 function requireRun(body) {
@@ -169,10 +199,12 @@ function restoreRun(body) {
   }
   const target = canonicalLocalTarget(snapshotGame.target);
   if (!target) fail("That saved destination is not mapped in local practice.", "resume_invalid", 422);
-  const game = buildLocalGame(mode, snapshotGame.seed, target, snapshotGame.stage);
+  const game = directedLocalGame(mode, snapshotGame.seed, target, snapshotGame.stage);
   if (!game || game.target.toLowerCase() !== target.toLowerCase()) {
     fail("The local universe could not reconstruct that orbit.", "resume_invalid", 422);
   }
+  const solutionRoute = verifiedLocalRoute(game);
+  if (!solutionRoute) fail("That saved orbit no longer has a verified local route.", "resume_invalid", 422);
 
   const startedValue = Date.parse(snapshotRun.startedAt);
   const startedAtMs = Number.isFinite(startedValue) && startedValue <= Date.now() + 60_000 ? startedValue : Date.now();
@@ -216,6 +248,8 @@ function restoreRun(body) {
     scoringDisabled: Boolean(progress.scoringDisabled || ["reveal", "sense"].includes(assist)),
     twistUsed: Boolean(twistEntry),
     twistedPairKey: twistEntry ? [twistEntry.a, twistEntry.b].map((word) => word.toLowerCase()).sort().join("+") : null,
+    solutionRoute,
+    feedbackMoves: new Set(),
     revealRoute: null
   };
   runs.set(run.id, run);
@@ -260,7 +294,7 @@ export async function localRequest(url, options = {}) {
   if (method === "POST" && path === "/api/analytics") return { ok: true, localOnly: true };
 
   if (method === "GET" && path === "/api/game") {
-    const game = buildLocalGame(requestUrl.searchParams.get("mode") || "challenge", requestUrl.searchParams.get("seed") || 0);
+    const game = directedLocalGame(requestUrl.searchParams.get("mode") || "challenge", requestUrl.searchParams.get("seed") || 0);
     return game;
   }
 
@@ -273,14 +307,16 @@ export async function localRequest(url, options = {}) {
       error.payload = { suggestions: localSuggestions() };
       throw error;
     }
-    return buildLocalGame("reach", 0, target);
+    return directedLocalGame("reach", 0, target);
   }
 
   if (method === "POST" && path === "/api/run/start") {
     const target = body.target ? canonicalLocalTarget(body.target) : "";
     if (body.target && !target) fail("That target is not mapped in local practice yet.", "local_target_unknown");
-    const game = buildLocalGame(body.mode, body.seed, target, body.stage);
+    const game = directedLocalGame(body.mode, body.seed, target, body.stage);
     if (!game) fail("The local universe could not map that orbit.");
+    const solutionRoute = verifiedLocalRoute(game);
+    if (!solutionRoute) fail("The local universe could not verify a route to that target.", "local_route_invalid", 409);
     const startedAt = new Date();
     const run = {
       id: localId("run"),
@@ -301,6 +337,8 @@ export async function localRequest(url, options = {}) {
       scoringDisabled: false,
       twistUsed: false,
       twistedPairKey: null,
+      solutionRoute,
+      feedbackMoves: new Set(),
       revealRoute: null
     };
     runs.set(run.id, run);
@@ -315,11 +353,24 @@ export async function localRequest(url, options = {}) {
     return resumeResponse(restoreRun(body));
   }
 
+  if (method === "POST" && path === "/api/recipe-feedback") {
+    const run = requireRun(body);
+    const move = Number(body.move);
+    const rating = sanitizeRecipeRating(body.rating);
+    if (!Number.isInteger(move) || move < 1 || !rating) fail("That recipe rating is not valid.", "invalid_recipe_feedback", 400);
+    const step = run.history[move - 1];
+    if (!step || step.revealed) fail("That discovery is not available for rating.", "recipe_feedback_missing", 409);
+    run.feedbackMoves ||= new Set();
+    if (run.feedbackMoves.has(move)) fail("That discovery was already rated.", "recipe_feedback_duplicate", 409);
+    run.feedbackMoves.add(move);
+    return { accepted: true, move, rating, localOnly: true };
+  }
+
   if (method === "POST" && path === "/api/run/sense") {
     const run = requireRun(body);
     if (run.completed) fail("This local orbit is already complete.", "run_complete", 409);
-    const route = localRouteTo(run.game.target);
-    if (!route) fail("No safe constellation signal is available for this target.", "sense_unavailable", 422);
+    const route = run.solutionRoute;
+    if (!Array.isArray(route)) fail("No safe constellation signal is available for this target.", "sense_unavailable", 422);
     const words = [...run.available].map((word) => localItemFor(word)).filter(Boolean);
     const candidates = rankSenseCandidates({
       words,
@@ -358,8 +409,8 @@ export async function localRequest(url, options = {}) {
     if (run.revealRoute) return revealedRun(run);
     if (run.completed) fail("This local orbit is already complete.", "run_complete", 409);
 
-    const route = localRouteTo(run.game.target);
-    if (!route) fail("The local cosmos could not reconstruct this answer.", "route_unavailable", 409);
+    const route = run.solutionRoute;
+    if (!Array.isArray(route)) fail("The local cosmos could not reconstruct this answer.", "route_unavailable", 409);
 
     run.revealRoute = structuredClone(route);
     run.assist = "reveal";
@@ -397,6 +448,13 @@ export async function localRequest(url, options = {}) {
       discovered: run.available
     });
     const result = twist || canonicalResult;
+    const annotation = annotateUniverseResult({
+      universe: run.game.universe,
+      a,
+      b,
+      result,
+      recipes: [{ a, b, ...canonicalResult }]
+    });
     if (twist) {
       run.twistUsed = true;
       run.twistedPairKey = [a, b].map((word) => word.toLowerCase()).sort().join("+");
@@ -415,6 +473,8 @@ export async function localRequest(url, options = {}) {
     run.completed ||= result.word.toLowerCase() === run.game.target.toLowerCase();
     return {
       ...result,
+      ...(annotation ? { universeContext: annotation.context } : {}),
+      feedbackEligible: false,
       completed: run.completed,
       ranked: false,
       localOnly: true,

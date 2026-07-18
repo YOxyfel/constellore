@@ -7,6 +7,35 @@ function clampInteger(value, minimum, maximum, fallback = minimum) {
   return Math.min(maximum, Math.max(minimum, Math.floor(number)));
 }
 
+function cleanCloudDate(value) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(String(value || "")) ? String(value) : "";
+}
+
+function sanitizeCloudProgression(raw) {
+  const source = raw && typeof raw === "object" && !Array.isArray(raw) ? raw : {};
+  return {
+    stardust: clampInteger(source.stardust, 0, 1_000_000_000, 0),
+    wins: clampInteger(source.wins, 0, 1_000_000, 0),
+    dailyStreak: clampInteger(source.dailyStreak, 0, 100_000, 0),
+    lastDailyDate: cleanCloudDate(source.lastDailyDate),
+    dailyCompleted: cleanCloudDate(source.dailyCompleted),
+    streakShields: clampInteger(source.streakShields, 0, 1_000, 0)
+  };
+}
+
+/**
+ * Spendable/resettable counters cannot use a max merge: doing so resurrects
+ * spent Stardust, used streak shields, and reset streaks. A device with a
+ * pending progression edit wins those fields; otherwise the cloud copy wins.
+ * Wins remain monotonic and can safely take the greater value.
+ */
+export function reconcileCloudProgression(local, remote, { replace = false, preferLocal = false } = {}) {
+  const localState = sanitizeCloudProgression(local);
+  const remoteState = sanitizeCloudProgression(remote);
+  if (replace || !preferLocal) return remoteState;
+  return { ...localState, wins: Math.max(localState.wins, remoteState.wins) };
+}
+
 function cleanWord(value) {
   return String(value ?? "").normalize("NFKC").replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim().slice(0, 80);
 }

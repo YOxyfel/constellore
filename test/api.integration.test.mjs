@@ -55,10 +55,14 @@ test("authenticated HTTP runs produce verified Pure and Open leaderboard scores"
   assert.ok(address && typeof address === "object");
   const baseUrl = `http://127.0.0.1:${address.port}`;
   const previousInterestOrigins = process.env.INTEREST_ALLOWED_ORIGINS;
+  const previousAdminToken = process.env.CONSTELLORE_ADMIN_TOKEN;
   process.env.INTEREST_ALLOWED_ORIGINS = "https://yoxyfel.github.io,https://constellore.example";
+  process.env.CONSTELLORE_ADMIN_TOKEN = "integration-admin-token-keep-private";
   t.after(() => {
     if (previousInterestOrigins === undefined) delete process.env.INTEREST_ALLOWED_ORIGINS;
     else process.env.INTEREST_ALLOWED_ORIGINS = previousInterestOrigins;
+    if (previousAdminToken === undefined) delete process.env.CONSTELLORE_ADMIN_TOKEN;
+    else process.env.CONSTELLORE_ADMIN_TOKEN = previousAdminToken;
   });
   let auth = {};
 
@@ -82,7 +86,7 @@ test("authenticated HTTP runs produce verified Pure and Open leaderboard scores"
 
   const serviceWorkerResponse = await fetch(`${baseUrl}/play/service-worker.js`);
   assert.equal(serviceWorkerResponse.status, 200);
-  assert.match(await serviceWorkerResponse.text(), /constellore-shell-v13/);
+  assert.match(await serviceWorkerResponse.text(), /constellore-shell-v15/);
   const moduleResponse = await fetch(`${baseUrl}/frictionless.mjs`);
   assert.equal(moduleResponse.status, 200);
   assert.match(moduleResponse.headers.get("content-type") || "", /^text\/javascript/);
@@ -138,7 +142,13 @@ test("authenticated HTTP runs produce verified Pure and Open leaderboard scores"
     body: { name: "theme_changed", sessionId: analyticsSession, properties: { theme: "aurora" } }
   });
   assert.equal(themeAnalytics.response.status, 202);
-  const analyticsSummary = await request("/api/analytics/summary?days=7", { authenticated: false });
+  const unauthorizedAnalyticsSummary = await request("/api/analytics/summary?days=7", { authenticated: false });
+  assert.equal(unauthorizedAnalyticsSummary.response.status, 401);
+  assert.equal(unauthorizedAnalyticsSummary.payload.code, "invalid_admin_token");
+  const analyticsSummary = await request("/api/analytics/summary?days=7", {
+    authenticated: false,
+    headers: { authorization: "Bearer integration-admin-token-keep-private" }
+  });
   assert.equal(analyticsSummary.response.status, 200);
   assert.equal(analyticsSummary.payload.privacy, "aggregate-only");
   assert.equal(analyticsSummary.payload.period.days, 7);
@@ -341,6 +351,7 @@ test("authenticated HTTP runs produce verified Pure and Open leaderboard scores"
       });
       assert.equal(finalCombination.response.status, 200);
       assert.equal(finalCombination.payload.word, step.word);
+      assert.equal(finalCombination.payload.feedbackEligible, true);
     }
     assert.equal(finalCombination.payload.completed, true);
     return { route, finalCombination };
@@ -348,6 +359,47 @@ test("authenticated HTTP runs produce verified Pure and Open leaderboard scores"
 
   const quickPlay = await play(quickStart);
   assert.equal(quickPlay.finalCombination.payload.division, "pure");
+  const unauthenticatedRecipeFeedback = await request("/api/recipe-feedback", {
+    method: "POST",
+    authenticated: false,
+    body: { runId: quickStart.payload.run.id, runToken: quickStart.payload.run.token, move: 1, rating: "logical" }
+  });
+  assert.equal(unauthenticatedRecipeFeedback.response.status, 401);
+  const recipeFeedback = await request("/api/recipe-feedback", {
+    method: "POST",
+    body: { runId: quickStart.payload.run.id, runToken: quickStart.payload.run.token, move: 1, rating: "logical" }
+  });
+  assert.equal(recipeFeedback.response.status, 202);
+  assert.deepEqual(recipeFeedback.payload, { accepted: true, move: 1, rating: "logical" });
+  const duplicateRecipeFeedback = await request("/api/recipe-feedback", {
+    method: "POST",
+    body: { runId: quickStart.payload.run.id, runToken: quickStart.payload.run.token, move: 1, rating: "bad" }
+  });
+  assert.equal(duplicateRecipeFeedback.response.status, 409);
+  assert.equal(duplicateRecipeFeedback.payload.code, "recipe_feedback_duplicate");
+  const forgedRecipeFeedback = await request("/api/recipe-feedback", {
+    method: "POST",
+    body: { runId: quickStart.payload.run.id, runToken: quickStart.payload.run.token, move: 999, rating: "surprising" }
+  });
+  assert.equal(forgedRecipeFeedback.response.status, 422);
+  assert.equal(forgedRecipeFeedback.payload.code, "recipe_feedback_move_unavailable");
+  const invalidRecipeFeedback = await request("/api/recipe-feedback", {
+    method: "POST",
+    body: { runId: quickStart.payload.run.id, runToken: quickStart.payload.run.token, move: 2, rating: "love it" }
+  });
+  assert.equal(invalidRecipeFeedback.response.status, 400);
+  assert.equal(invalidRecipeFeedback.payload.code, "invalid_recipe_feedback");
+  const recipeFeedbackSummary = await request("/api/admin/recipe-feedback?minimumVotes=1&limit=10", {
+    authenticated: false,
+    headers: { authorization: "Bearer integration-admin-token-keep-private" }
+  });
+  assert.equal(recipeFeedbackSummary.response.status, 200);
+  assert.equal(recipeFeedbackSummary.payload.privacy, "aggregate-only");
+  assert.equal(recipeFeedbackSummary.payload.totalVotes, 1);
+  assert.equal(recipeFeedbackSummary.payload.recipes.length, 1);
+  assert.equal(recipeFeedbackSummary.payload.recipes[0].ratings.logical, 1);
+  assert.equal(JSON.stringify(recipeFeedbackSummary.payload).includes(registration.payload.player.id), false);
+  assert.equal(JSON.stringify(recipeFeedbackSummary.payload).includes(quickStart.payload.run.id), false);
   const completedResume = await request("/api/run/resume", {
     method: "POST",
     body: { runId: quickStart.payload.run.id, runToken: quickStart.payload.run.token }
@@ -370,6 +422,15 @@ test("authenticated HTTP runs produce verified Pure and Open leaderboard scores"
   assert.equal(pureSubmit.payload.placement.entry.division, "pure");
   assert.equal(pureSubmit.payload.placement.entry.moves, quickPlay.route.length);
   assert.equal(pureSubmit.payload.creditReward, 4);
+  const retriedPureSubmit = await request("/api/run/submit", {
+    method: "POST",
+    body: { runId: quickStart.payload.run.id, runToken: quickStart.payload.run.token }
+  });
+  assert.equal(retriedPureSubmit.response.status, 200, "a lost success response must be safely retryable");
+  assert.equal(retriedPureSubmit.payload.ranked, true);
+  assert.equal(retriedPureSubmit.payload.recovered, true);
+  assert.equal(retriedPureSubmit.payload.creditReward, 0);
+  assert.equal(retriedPureSubmit.payload.alreadyRewarded, true);
   const submittedResume = await request("/api/run/resume", {
     method: "POST",
     body: { runId: quickStart.payload.run.id, runToken: quickStart.payload.run.token }
@@ -557,4 +618,44 @@ test("authenticated HTTP runs produce verified Pure and Open leaderboard scores"
   const twistContinuation = await twistCombine("Great Wall", "Earth");
   assert.equal(twistContinuation.response.status, 200);
   assert.ok(twistContinuation.payload.word, "the alternate discovery must remain a usable concept");
+
+  const feedbackIntegrityRun = await request("/api/run/start", { method: "POST", body: { mode: "reach", seed: 999, target: "Telescope" } });
+  assert.equal(feedbackIntegrityRun.response.status, 201);
+  const feedbackMix = (a, b) => request("/api/combine", {
+    method: "POST",
+    body: { a, b, runId: feedbackIntegrityRun.payload.run.id, runToken: feedbackIntegrityRun.payload.run.token }
+  });
+  assert.equal((await feedbackMix("Earth", "Water")).payload.word, "Mud");
+  assert.equal((await feedbackMix("Earth", "Water")).payload.word, "Mud");
+  const firstRecipeVote = await request("/api/recipe-feedback", {
+    method: "POST",
+    body: { runId: feedbackIntegrityRun.payload.run.id, runToken: feedbackIntegrityRun.payload.run.token, move: 1, rating: "logical" }
+  });
+  assert.equal(firstRecipeVote.response.status, 202);
+  const repeatedRecipeVote = await request("/api/recipe-feedback", {
+    method: "POST",
+    body: { runId: feedbackIntegrityRun.payload.run.id, runToken: feedbackIntegrityRun.payload.run.token, move: 2, rating: "bad" }
+  });
+  assert.equal(repeatedRecipeVote.response.status, 409);
+  assert.equal(repeatedRecipeVote.payload.code, "recipe_feedback_recipe_duplicate");
+
+  const privateWish = await request("/api/wish", {
+    method: "POST",
+    body: { word: "Yane Zhekov", runId: feedbackIntegrityRun.payload.run.id, runToken: feedbackIntegrityRun.payload.run.token }
+  });
+  assert.equal(privateWish.response.status, 200);
+  const privateMix = await feedbackMix("Yane Zhekov", "Earth");
+  assert.equal(privateMix.response.status, 200);
+  assert.equal(privateMix.payload.feedbackEligible, false);
+  const privateRecipeVote = await request("/api/recipe-feedback", {
+    method: "POST",
+    body: { runId: feedbackIntegrityRun.payload.run.id, runToken: feedbackIntegrityRun.payload.run.token, move: 3, rating: "surprising" }
+  });
+  assert.equal(privateRecipeVote.response.status, 422);
+  assert.equal(privateRecipeVote.payload.code, "recipe_feedback_private_recipe");
+  const privateSummary = await request("/api/admin/recipe-feedback?minimumVotes=1&limit=200", {
+    authenticated: false,
+    headers: { authorization: "Bearer integration-admin-token-keep-private" }
+  });
+  assert.equal(JSON.stringify(privateSummary.payload).includes("Yane Zhekov"), false);
 });

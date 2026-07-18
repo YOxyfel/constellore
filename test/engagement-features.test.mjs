@@ -8,11 +8,38 @@ import {
   ghostSnapshot,
   grantSenseCharges,
   rankSenseCandidates,
+  reconcileCloudProgression,
   refillSenseWallet,
   sanitizeFeedbackPreferences,
   sanitizeSenseWallet,
   spendSenseCharge
 } from "../public/engagement-features.mjs";
+
+test("cloud progression never resurrects spent balances or consumed shields", () => {
+  const localAfterSpend = {
+    stardust: 10,
+    wins: 4,
+    dailyStreak: 0,
+    lastDailyDate: "2026-07-18",
+    dailyCompleted: "2026-07-18",
+    streakShields: 0
+  };
+  const staleRemote = {
+    stardust: 100,
+    wins: 3,
+    dailyStreak: 8,
+    lastDailyDate: "2026-07-17",
+    dailyCompleted: "2026-07-17",
+    streakShields: 2
+  };
+
+  assert.deepEqual(reconcileCloudProgression(localAfterSpend, staleRemote, { preferLocal: true }), localAfterSpend);
+  assert.deepEqual(reconcileCloudProgression(localAfterSpend, { ...staleRemote, wins: 6 }, { preferLocal: true }), {
+    ...localAfterSpend,
+    wins: 6
+  });
+  assert.deepEqual(reconcileCloudProgression(localAfterSpend, staleRemote), staleRemote, "a clean device accepts the authoritative cloud copy");
+});
 
 test("Sense wallets sanitize hostile values and retain only bounded counters", () => {
   assert.deepEqual(sanitizeSenseWallet({

@@ -14,12 +14,20 @@ services:
         value: production
       - key: CONSTELLORE_DATA_PATH
         value: /var/data/constellore.json
+      - key: CONSTELLORE_BACKUP_DIR
+        value: /var/data/backups
+      - key: CONSTELLORE_BACKUP_KEEP
+        value: "7"
+      - key: CONSTELLORE_COMMERCE_FULFILLMENT_READY
+        value: "false"
+      - key: CONSTELLORE_ENABLE_TEST_STORE
+        value: "false"
       - key: REWARDED_ADS_ENABLED
         value: "false"
       - key: INTEREST_ALLOWED_ORIGINS
         value: https://yoxyfel.github.io
     # Free-to-play beta storage only. Do not use this JSON store for paid ownership.
-    # OPENAI_API_KEY and NEBULA_CHECKOUT_URL are intentionally absent.
+    # OPENAI_API_KEY, NEBULA_CHECKOUT_URL, and CONSTELLORE_ADMIN_TOKEN are intentionally absent.
     disk:
       name: constellore-beta-data
       mountPath: /var/data

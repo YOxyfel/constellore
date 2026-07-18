@@ -139,6 +139,41 @@ export function packOrbit(items, bounds) {
   return placements.sort((left, right) => left.index - right.index).map(({ index, ...placement }) => placement);
 }
 
+/**
+ * Finds the closest free top-left position for a newly summoned word. The
+ * search is deterministic, stays in bounds, and leaves existing chips where
+ * the player put them. If the board is too crowded, the clamped preferred
+ * position is returned and the normal Tidy Orbit escape hatch remains usable.
+ */
+export function findOpenSpawn(preferred, size, occupied, bounds, { gap = 10, step = 18 } = {}) {
+  const area = normalizedBounds({ ...bounds, gap });
+  const width = finiteNumber(size?.width);
+  const height = finiteNumber(size?.height);
+  const safeStep = finiteNumber(step);
+  if (!area || width == null || height == null || width <= 0 || height <= 0 || width > area.width || height > area.height || safeStep == null || safeStep < 4) return null;
+  const minimumX = area.left;
+  const minimumY = area.top;
+  const maximumX = area.right - width;
+  const maximumY = area.bottom - height;
+  const preferredX = Math.min(maximumX, Math.max(minimumX, finiteNumber(preferred?.x) ?? minimumX));
+  const preferredY = Math.min(maximumY, Math.max(minimumY, finiteNumber(preferred?.y) ?? minimumY));
+  const blockers = (Array.isArray(occupied) ? occupied : []).map(candidateRect).filter(Boolean);
+  const free = ({ x, y }) => blockers.every((rect) => x + width + area.gap <= rect.left
+    || rect.right + area.gap <= x
+    || y + height + area.gap <= rect.top
+    || rect.bottom + area.gap <= y);
+  const candidates = [{ x: preferredX, y: preferredY }];
+  for (let y = minimumY; y <= maximumY; y += safeStep) {
+    for (let x = minimumX; x <= maximumX; x += safeStep) candidates.push({ x, y });
+  }
+  if ((maximumX - minimumX) % safeStep) candidates.push({ x: maximumX, y: preferredY });
+  if ((maximumY - minimumY) % safeStep) candidates.push({ x: preferredX, y: maximumY });
+  candidates.sort((left, right) => (left.x - preferredX) ** 2 + (left.y - preferredY) ** 2
+    - ((right.x - preferredX) ** 2 + (right.y - preferredY) ** 2)
+    || left.y - right.y || left.x - right.x);
+  return candidates.find(free) || { x: preferredX, y: preferredY };
+}
+
 function normalizedWord(value) {
   return String(value ?? "").trim().toLocaleLowerCase();
 }

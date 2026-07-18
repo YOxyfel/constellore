@@ -16,7 +16,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/styles.css?v=1.9.0">
+  <link rel="stylesheet" href="/styles.css?v=2.0.0">
 </head>
 <body>
   <section class="start-screen" id="startScreen" aria-labelledby="startTitle">
@@ -119,7 +119,7 @@
       <button class="nav-icon" id="homeButton" type="button" aria-label="Return to mode selection">←</button>
       <div class="game-target">
         <span id="modeName">REACH</span>
-        <div><strong>Find <b id="targetWord">…</b></strong><small id="lawPill" hidden></small></div>
+        <div><strong>Find <b id="targetWord">…</b></strong><small id="universePill" hidden></small><small id="lawPill" hidden></small></div>
       </div>
       <div class="game-hud">
         <div id="timerHud" hidden><small>TIME</small><strong id="timerValue">01:30</strong></div>
@@ -142,6 +142,16 @@
           <span class="guide-copy guide-desktop">Drag or tap two words. Hold Ctrl and skim words to fuse.</span>
           <span class="guide-copy guide-mobile">Drag one word onto another, or tap two to fuse.</span>
         </div>
+        <section class="first-orbit-guide" id="firstOrbitGuide" aria-labelledby="firstOrbitGuideTitle" hidden>
+          <header>
+            <span><i aria-hidden="true">&#10022;</i> TRAINING ORBIT &middot; 0 SCORE</span>
+            <button id="skipFirstOrbit" type="button">Skip training</button>
+          </header>
+          <div class="first-orbit-step"><b id="firstOrbitStep">STEP 1 OF 3</b><span id="firstOrbitGuideTitle">Make your first discovery</span></div>
+          <p id="firstOrbitInstruction" aria-live="polite">Bring Earth and Water together to create Mud.</p>
+          <small id="firstOrbitTip">Drag one word onto the other, or tap both words.</small>
+          <div class="first-orbit-progress" role="progressbar" aria-label="First Orbit training progress" aria-valuemin="0" aria-valuemax="3" aria-valuenow="0"><i id="firstOrbitProgressBar"></i></div>
+        </section>
         <div class="board-tools" aria-label="Board tools">
           <button class="sense-tool" id="senseButton" type="button" aria-haspopup="dialog" aria-controls="senseDialog" aria-label="Open Constellation Sense"><span aria-hidden="true">✧</span><b>Sense</b><em id="senseHudCount">1</em></button>
           <button id="tidyBoard" type="button" aria-label="Tidy orbit; does not affect score"><span aria-hidden="true">✣</span><b>Tidy</b></button>
@@ -177,6 +187,16 @@
         </section>
         <div class="run-milestone" id="runMilestone"><span id="milestoneText">Your constellation begins here</span><i><em id="milestoneBar"></em></i></div>
         <div class="alchemy-note" id="alchemyNote" aria-live="polite"></div>
+        <section class="recipe-feedback" id="recipeFeedback" aria-labelledby="recipeFeedbackTitle" hidden>
+          <span><small id="recipeFeedbackTitle">HELP TUNE THE COSMOS</small><strong id="recipeFeedbackRecipe">Earth + Water → Mud</strong></span>
+          <div>
+            <button type="button" data-recipe-rating="logical" aria-label="Rate this recipe logical">Logical</button>
+            <button type="button" data-recipe-rating="surprising" aria-label="Rate this recipe surprising">Surprising</button>
+            <button type="button" data-recipe-rating="bad" aria-label="Rate this recipe bad">Bad</button>
+          </div>
+          <button class="recipe-feedback-dismiss" id="dismissRecipeFeedback" type="button" aria-label="Dismiss recipe rating">&times;</button>
+        </section>
+        <p class="sr-only" id="recipeFeedbackAnnouncement" aria-live="polite" aria-atomic="true"></p>
       </section>
 
       <aside class="inventory" aria-labelledby="inventoryTitle">
@@ -204,12 +224,13 @@
     <span class="modal-orb" aria-hidden="true">✧</span>
     <span class="eyebrow">FOUNDER'S PASS · LIFETIME</span>
     <h2>Bend the universe.</h2>
-    <p>A Wish is authorship, not an answer: bring one real concept into the cosmos each day and discover whether it changes your path.</p>
+    <p>A Wish is authorship, not an answer: bring one real concept into the cosmos each day, then make the universe unmistakably yours with permanent visual and sound loadouts.</p>
     <div class="price"><strong id="founderPrice">€6.99</strong><span>one time</span></div>
     <ul>
       <li>One personal Wish every UTC day, usable in any mode</li>
       <li>A second daily Constellation Sense charge</li>
       <li>Aurora and Solar cosmos themes</li>
+      <li>Nebula and Blueprint boards, Comet and Prism trails, and two sound packs</li>
       <li>One extra daily streak shield</li>
       <li>All future founder cosmetics</li>
     </ul>
@@ -242,7 +263,7 @@
       <div><span class="eyebrow">COSMIC WORD EXCHANGE</span><h2>Wish me a word.</h2></div>
       <div class="credit-balance"><span aria-hidden="true">◈</span><strong id="marketBalance">0</strong><small>STAR CREDITS</small></div>
     </div>
-    <p>Buy a permanent license for a known, useful word. Activate one owned word per run; that score enters the Open leaderboard.</p>
+    <p>Spend Star Credits earned in verified play on a permanent license for a useful word. Activating one always moves that run to the Open leaderboard.</p>
     <div class="market-toolbar">
       <label class="market-search" for="marketSearch"><span aria-hidden="true">⌕</span><input id="marketSearch" type="search" autocomplete="off" placeholder="Search useful words…"></label>
       <span class="market-refresh">REFRESH <b id="marketCountdown">00:60</b></span>
@@ -254,7 +275,7 @@
     <div id="marketMessage" class="market-message" role="status"></div>
     <div id="marketList" class="market-list" aria-live="polite"></div>
     <div class="market-footer">
-      <div><strong>Need Star Credits?</strong><span>Credit packs keep a fixed cash price. Credits never expire.</span></div>
+      <div><strong>Earn Star Credits</strong><span>Verified challenges award them. They are server-controlled, never sold for cash, and never expire.</span></div>
       <div id="creditPacks" class="credit-packs"></div>
     </div>
     <details class="market-rules">
@@ -354,6 +375,26 @@
     <span class="eyebrow">YOUR UNIVERSE</span>
     <h2 id="profileRankTitle">Stargazer I</h2>
     <div class="public-callsign"><span>PUBLIC CALLSIGN</span><strong id="profileCallsign">Mapping…</strong><small>Generated automatically for safer public rankings.</small></div>
+    <section class="cloud-account-card" id="cloudAccountSection" aria-labelledby="cloudAccountTitle">
+      <div class="cloud-account-head"><span><small>RECOVERABLE CLOUD PROFILE</small><strong id="cloudAccountTitle">Keep your universe</strong></span><b id="cloudSyncStatus" role="status" aria-live="polite" aria-atomic="true">Connecting…</b></div>
+      <div class="cloud-player-id"><span>PLAYER ID</span><code id="cloudPlayerId">Creating…</code></div>
+      <div class="cloud-account-actions">
+        <button id="syncCloudProfile" type="button">Sync now</button>
+        <button id="restoreOwnership" type="button">Restore ownership</button>
+        <button id="rotateRecoveryKit" type="button">Create new recovery kit</button>
+      </div>
+      <details>
+        <summary>Recover an existing universe</summary>
+        <form id="recoverAccountForm">
+          <label for="recoverPlayerId">Player ID</label>
+          <input id="recoverPlayerId" autocomplete="username" maxlength="80" required placeholder="Your saved player ID">
+          <label for="recoverCodeInput">Recovery code</label>
+          <input id="recoverCodeInput" autocomplete="off" maxlength="64" required placeholder="CF-0000-0000-…">
+          <p class="form-message" id="recoverMessage" aria-live="polite"></p>
+          <button class="secondary-action" type="submit"><span>Recover and rotate kit</span><span aria-hidden="true">→</span></button>
+        </form>
+      </details>
+    </section>
     <div class="profile-total"><span aria-hidden="true">✦</span><strong id="profileTotalDust">0</strong><small>STARDUST</small></div>
     <div class="profile-grid">
       <div><strong id="profileWords">4</strong><span>unique words</span></div>
@@ -365,6 +406,11 @@
       <div><strong id="profileMasteryStars">0</strong><span>recipe stars</span></div>
       <div><strong id="profileSenseCount">1</strong><span>Sense charges</span></div>
     </div>
+    <section class="training-replay-card" aria-labelledby="trainingReplayTitle">
+      <span aria-hidden="true">&#10022;</span>
+      <div><strong id="trainingReplayTitle">First Orbit training</strong><small id="trainingReplayStatus">Available to replay</small></div>
+      <button id="replayFirstOrbit" type="button">Replay</button>
+    </section>
     <fieldset class="feedback-picker">
       <legend>Feel the cosmos</legend>
       <button id="soundPreference" type="button" aria-pressed="true"><span aria-hidden="true">♪</span><b>Fusion sounds</b><small>ON</small></button>
@@ -376,12 +422,39 @@
       <button type="button" data-theme="aurora"><i class="theme-swatch aurora"></i><span>Aurora</span><small>PASS</small></button>
       <button type="button" data-theme="solar"><i class="theme-swatch solar"></i><span>Solar</span><small>PASS</small></button>
     </fieldset>
+    <fieldset class="cosmetic-picker">
+      <legend>Founder loadout</legend>
+      <div id="cosmeticLoadout"></div>
+      <small>Cosmetics never change recipes, score, time, moves, or leaderboard eligibility.</small>
+    </fieldset>
+  </dialog>
+
+  <dialog id="recoveryDialog" class="modal recovery-modal" aria-labelledby="recoveryTitle">
+    <span class="modal-orb" aria-hidden="true">✦</span>
+    <span class="eyebrow">ONE-TIME RECOVERY KIT</span>
+    <h2 id="recoveryTitle">Save this before continuing.</h2>
+    <p>This code is shown only now and is never stored in the game. Keep the Player ID and code together in a password manager or another private place.</p>
+    <div class="recovery-secret"><span>PLAYER ID</span><code id="recoveryPlayerId">Creating…</code><span>RECOVERY CODE</span><code id="recoveryCode">Creating…</code></div>
+    <button class="secondary-action modal-wide-action" id="copyRecoveryKit" type="button"><span>Copy recovery kit</span><span aria-hidden="true">⧉</span></button>
+    <button class="primary-action" id="confirmRecoverySaved" type="button"><span>I saved it — clear this screen</span><span aria-hidden="true">→</span></button>
+    <small class="prototype-note">Using this kit on another device rotates both the recovery code and sign-in token. The old copies stop working.</small>
+  </dialog>
+
+  <dialog id="firstOrbitDialog" class="modal first-orbit-modal" aria-labelledby="firstOrbitTitle">
+    <button class="modal-close" data-close="firstOrbitDialog" type="button" aria-label="Skip First Orbit for now">&times;</button>
+    <span class="modal-orb" aria-hidden="true">&#10022;</span>
+    <span class="eyebrow">YOUR FIRST ORBIT &middot; ABOUT 90 SECONDS</span>
+    <h2 id="firstOrbitTitle">Learn the cosmos by touching it.</h2>
+    <p>Trace three simple discoveries using the same drag-and-drop or tap controls as every other orbit. The guide reacts only after you make each combination yourself.</p>
+    <div class="training-fairness"><strong>TRAINING ORBIT &middot; 0 SCORE</strong><span>No leaderboard entry, Stardust, mastery stars, permanent discoveries, streak progress, or rewards.</span></div>
+    <button class="primary-action" id="beginFirstOrbit" type="button"><span>Begin First Orbit</span><span aria-hidden="true">&rarr;</span></button>
+    <button class="quiet-action" id="dismissFirstOrbit" type="button">Not now</button>
   </dialog>
 
   <dialog id="shareDialog" class="modal share-modal">
     <button class="modal-close" data-close="shareDialog" type="button" aria-label="Close">×</button>
     <span class="share-mark" aria-hidden="true">↗</span>
-    <span class="eyebrow">FRIEND CHALLENGE</span>
+    <span class="eyebrow" id="shareEyebrow">CONSTELLATION CARD · FRIEND CHALLENGE</span>
     <h2 id="shareTitle">Can they find it faster?</h2>
     <p id="shareDescription">Send the same target and compare your constellations.</p>
     <div class="share-card" id="shareCard">
@@ -389,6 +462,8 @@
       <strong id="shareTarget">Hidden target</strong>
       <span id="shareStats">Same universe. Different path.</span>
     </div>
+    <figure class="constellation-card-preview"><img id="shareCardPreview" alt="Constellation card preview"></figure>
+    <button class="secondary-action modal-wide-action" id="downloadCard" type="button"><span>Download constellation card</span><span aria-hidden="true">↓</span></button>
     <button class="primary-action" id="copyChallenge" type="button"><span>Copy challenge link</span><span aria-hidden="true">⧉</span></button>
     <button class="quiet-action" id="nativeShare" type="button" hidden>Share with another app</button>
   </dialog>
@@ -410,6 +485,6 @@
 
   <div class="connection-badge" id="connectionBadge" role="status" hidden>Offline — reconnect to forge new words</div>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
-  <script type="module" src="/app.js?v=1.6.0"></script>
+  <script type="module" src="/app.js?v=1.7.0"></script>
 </body>
 </html>

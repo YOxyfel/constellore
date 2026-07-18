@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { readdir, readFile, stat } from "node:fs/promises";
-import { dirname, join } from "node:path";
+import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
@@ -47,14 +47,14 @@ assert.match(gameApp, /await playRevealPath\(route, \{ replay: true \}\)/);
 assert.match(gameApp, /state\.reveal\.phase = "exiting"/);
 for (const expected of [
   'href="./manifest.webmanifest"',
-  'href="./styles.css?v=1.9.0"',
-  'src="./app.js?v=1.6.0"'
+  'href="./styles.css?v=2.0.0"',
+  'src="./app.js?v=1.7.0"'
 ]) assert.ok(gameHtml.includes(expected), `Missing ${expected} from the Pages game document.`);
 for (const forbidden of ['href="/manifest', 'href="/styles', 'href="/icon', 'src="/app']) {
   assert.ok(!gameHtml.includes(forbidden), `Root-absolute game path remains: ${forbidden}`);
 }
 
-for (const file of ["app.js", "ctrl-hover.mjs", "frictionless.mjs", "styles.css", "local-beta.mjs", "local-world.mjs", "cosmic-twists.mjs", "recipe-mastery.mjs", "engagement-features.mjs", "manifest.webmanifest", "service-worker.js", "icon.svg"]) {
+for (const file of ["app.js", "ctrl-hover.mjs", "frictionless.mjs", "styles.css", "local-beta.mjs", "local-world.mjs", "cosmic-twists.mjs", "recipe-mastery.mjs", "engagement-features.mjs", "first-orbit.mjs", "universe-director.mjs", "constellation-card.mjs", "cosmetic-economy.mjs", "recipe-feedback.mjs", "pending-scores.mjs", "manifest.webmanifest", "service-worker.js", "icon.svg"]) {
   assert.ok((await stat(join(output, "play", file))).size > 0, `${file} is missing or empty.`);
 }
 assert.match(gameServiceWorker, /cosmic-twists[.]mjs/);
@@ -62,6 +62,31 @@ assert.match(gameServiceWorker, /ctrl-hover[.]mjs/);
 assert.match(gameServiceWorker, /frictionless[.]mjs/);
 assert.match(gameServiceWorker, /recipe-mastery[.]mjs/);
 assert.match(gameServiceWorker, /engagement-features[.]mjs/);
+assert.match(gameServiceWorker, /first-orbit[.]mjs/);
+assert.match(gameServiceWorker, /universe-director[.]mjs/);
+assert.match(gameServiceWorker, /constellation-card[.]mjs/);
+assert.match(gameServiceWorker, /cosmetic-economy[.]mjs/);
+assert.match(gameServiceWorker, /recipe-feedback[.]mjs/);
+assert.match(gameServiceWorker, /pending-scores[.]mjs/);
+
+const playRoot = resolve(output, "play");
+const visitedModules = new Set();
+async function verifyLocalModuleGraph(modulePath) {
+  const resolvedModule = resolve(modulePath);
+  if (visitedModules.has(resolvedModule)) return;
+  visitedModules.add(resolvedModule);
+  const source = await readFile(resolvedModule, "utf8");
+  const imports = source.matchAll(/(?:\bfrom\s*|\bimport\s*\()\s*["'](\.[^"']+)["']/g);
+  for (const match of imports) {
+    const specifier = match[1].split(/[?#]/, 1)[0];
+    const dependency = resolve(dirname(resolvedModule), specifier);
+    const pathFromPlay = relative(playRoot, dependency);
+    assert.ok(pathFromPlay && !pathFromPlay.startsWith("..") && !isAbsolute(pathFromPlay), `Module import escapes the Pages play artifact: ${match[1]}`);
+    assert.ok((await stat(dependency)).size > 0, `Imported Pages module is missing or empty: ${pathFromPlay}`);
+    if (/\.(?:m?js)$/i.test(dependency)) await verifyLocalModuleGraph(dependency);
+  }
+}
+await verifyLocalModuleGraph(join(playRoot, "app.js"));
 
 const world = await import(`${pathToFileURL(join(output, "play", "local-world.mjs")).href}?verify=${Date.now()}`);
 assert.ok(world.localWorldSize >= 425);

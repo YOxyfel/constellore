@@ -28,11 +28,22 @@ test("tray drops share an immediate-combine path on mouse and touch", () => {
   assert.match(styles, /[.]tray-drag-ghost\s*\{/);
 });
 
+test("mobile training reserves playable board space in portrait and short landscape", () => {
+  assert.match(app, /const safeTop = guideRect/);
+  assert.match(app, /top: safeTop/);
+  assert.match(app, /els[.]board[.]scrollTop = 0/);
+  assert.match(styles, /[.]cosmos-board\s*\{[^}]*overflow:\s*clip/);
+  assert.match(styles, /@media \(max-width: 700px\) and \(max-height: 500px\) and \(min-width: 520px\)/);
+  assert.match(styles, /grid-template-columns:\s*minmax\(0,1fr\) minmax\(176px,28vw\)/);
+  assert.match(styles, /[.]nav-icon\s*\{\s*width:\s*44px;\s*height:\s*44px/);
+});
+
 test("tap chains are discoverable, cancellable, and work from the inventory", () => {
   assert.match(page, /id="tapChainStatus"[^>]+aria-live="polite"/);
   assert.match(page, /id="cancelTapChain"/);
   assert.match(app, /async function selectNodeForTap\(/);
   assert.match(app, /async function activateTrayItem\(item\)/);
+  assert.match(app, /const placed = placeFromTray\(item\)[\s\S]*state[.]selectedNodeId = placed[.]id/);
   assert.match(app, /combineTrayWithTarget\(item, selected\)/);
   assert.match(app, /cancelTapChain\(\{ announce: true \}\)/);
 });
@@ -57,11 +68,22 @@ test("inventory search and interrupted-run restore are wired into lifecycle pers
 
 test("completed ranked runs remain resumable until the verified upload succeeds", () => {
   assert.match(app, /function saveCompletedRunSnapshot\(\)/);
+  assert.match(app, /rememberPendingScore\(snapshot\)/);
+  assert.match(app, /from "[.]\/pending-scores[.]mjs/);
+  assert.match(app, /function retryPendingScoreUploads\(\)/);
+  assert.match(app, /handleOnline\(\)[\s\S]*retryPendingScoreUploads\(\)[.]then\(announcePendingScoreRecovery\)/);
+  assert.match(app, /account_recovered[\s\S]*retryPendingScoreUploads|retryPendingScoreUploads\(\)[\s\S]*account_recovered/);
   assert.match(app, /const pendingRankedSubmit = Boolean\(won && !assisted && !skipSubmit && state[.]run[?][.]ranked\)/);
-  assert.match(app, /if \(pendingRankedSubmit\) saveCompletedRunSnapshot\(\)/);
+  assert.match(app, /if \(pendingRankedSubmit\) \{[\s\S]*saveCompletedRunSnapshot\(\)/);
+  assert.match(app, /if \(state[.]scoreSubmission[.]pendingSaved\)/);
+  assert.match(app, /function pendingScoreBlocksExit\(\)[\s\S]*!state[.]scoreSubmission[.]pendingSaved/);
+  assert.match(app, /returnHome\(\)[\s\S]*pendingScoreBlocksExit\(\)/);
+  assert.match(app, /This browser could not save the result[.]/);
+  assert.match(app, /Retry score upload/);
   const submitSuccess = app.indexOf('if (!result.ranked) throw new Error');
-  const clearAfterSuccess = app.indexOf('clearActiveRunSnapshot();', submitSuccess);
-  assert.ok(submitSuccess >= 0 && clearAfterSuccess > submitSuccess, "the pending snapshot is cleared only after a verified response");
+  const clearAfterSuccess = app.indexOf('markPendingScoreUploaded(submission.playerId, submission.runId);', submitSuccess);
+  assert.ok(submitSuccess >= 0 && clearAfterSuccess > submitSuccess, "the pending score is cleared only after a verified response");
+  assert.match(app, /runId: submission[.]runId, runToken: submission[.]runToken/);
 });
 
 test("Sense fails closed on an ambiguous network response", () => {
@@ -71,6 +93,29 @@ test("Sense fails closed on an ambiguous network response", () => {
   assert.ok(localCommit > senseStart && localCommit < request, "the charge and fair-play forfeit commit before the request");
   assert.match(app.slice(senseStart, app.indexOf("function buySenseCharge", senseStart)), /confirmedBeforeForfeit/);
   assert.match(app.slice(senseStart, app.indexOf("function buySenseCharge", senseStart)), /this orbit remains assisted and the Sense charge stays spent/);
+});
+
+test("cloud sync preserves only genuinely pending local fields", () => {
+  assert.match(app, /cloudPendingFields/);
+  assert.match(app, /saveProfile\(\{ cloud: founderActivated, fields: \["progression"\] \}\)/);
+  assert.match(app, /preferLocalSettings: localSettingsPending/);
+  assert.match(app, /preferLocalProgression: localProgressionPending/);
+  assert.match(app, /state[.]cloudRevision === revision/);
+  assert.match(app, /scheduleCloudProfileSync\(\{ changed: false, delay: 250 \}\)/);
+});
+
+test("recipe feedback appears only for server-approved recipes and never in local-only Pages practice", () => {
+  assert.match(app, /feedbackEligible: result[.]feedbackEligible === true/);
+  assert.match(app, /historyStep[.]feedbackEligible\) offerRecipeFeedback/);
+  assert.match(app, /if \(isStaticBeta \|\| !step[?][.]feedbackEligible/);
+  assert.match(page, /id="recipeFeedbackAnnouncement"[^>]+aria-live="polite"/);
+  assert.match(page, /id="dismissRecipeFeedback"/);
+  assert.match(app, /contains\(document[.]activeElement\).*scheduleRecipeFeedbackExpiry/);
+});
+
+test("new cloud and onboarding status controls are announced and touch accessible", () => {
+  assert.match(page, /id="cloudSyncStatus"[^>]+role="status"[^>]+aria-live="polite"/);
+  assert.match(styles, /[.]first-orbit-modal [.]modal-close\s*\{\s*width:\s*44px;\s*height:\s*44px/);
 });
 
 test("Rival Ghost requests are cancelled and stale responses cannot start races", () => {

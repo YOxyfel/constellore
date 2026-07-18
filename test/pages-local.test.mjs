@@ -1,10 +1,21 @@
 import assert from "node:assert/strict";
-import { copyFile, mkdtemp, rm } from "node:fs/promises";
+import { copyFile, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import test from "node:test";
 import { generateLocalWorldData, lookupGeneratedCombination, writeLocalWorldModule } from "../scripts/build-local-world.mjs";
+
+async function preparePagesAdapter(directory) {
+  await writeLocalWorldModule(join(directory, "local-world.mjs"));
+  await Promise.all([
+    "local-beta.mjs",
+    "cosmic-twists.mjs",
+    "engagement-features.mjs",
+    "universe-director.mjs",
+    "recipe-feedback.mjs"
+  ].map((filename) => copyFile(new URL(`../public/${filename}`, import.meta.url), join(directory, filename))));
+}
 
 test("the compact Pages universe preserves important logical combinations", async () => {
   const data = await generateLocalWorldData();
@@ -52,10 +63,7 @@ test("every Pages mode target has a dependency-ordered route from the four start
 test("the Pages adapter completes a real local Telescope route without a server", async (context) => {
   const directory = await mkdtemp(join(tmpdir(), "constellore-pages-"));
   context.after(() => rm(directory, { recursive: true, force: true }));
-  await writeLocalWorldModule(join(directory, "local-world.mjs"));
-  await copyFile(new URL("../public/local-beta.mjs", import.meta.url), join(directory, "local-beta.mjs"));
-  await copyFile(new URL("../public/cosmic-twists.mjs", import.meta.url), join(directory, "cosmic-twists.mjs"));
-  await copyFile(new URL("../public/engagement-features.mjs", import.meta.url), join(directory, "engagement-features.mjs"));
+  await preparePagesAdapter(directory);
   const { localRequest } = await import(`${pathToFileURL(join(directory, "local-beta.mjs")).href}?test=${Date.now()}`);
 
   const registration = await localRequest("/api/player/register", { method: "POST" });
@@ -66,6 +74,11 @@ test("the Pages adapter completes a real local Telescope route without a server"
   });
   assert.equal(started.game.target, "Telescope");
   assert.equal(started.run.ranked, false);
+  assert.equal(started.game.universe.seedId.startsWith("cx1-"), true);
+  assert.ok(started.game.universe.season.id);
+  assert.ok(started.game.universe.law.id);
+  const gamePreview = await localRequest("/api/game?mode=reach&seed=7");
+  assert.deepEqual(gamePreview.universe, started.game.universe, "the same seed must select identical Pages universe presentation");
 
   const wished = await localRequest("/api/wish", {
     method: "POST",
@@ -78,7 +91,14 @@ test("the Pages adapter completes a real local Telescope route without a server"
     method: "POST",
     body: JSON.stringify({ a, b, runId: started.run.id, runToken: started.run.token })
   });
-  assert.equal((await combine("Air", "Fire")).word, "Energy");
+  const energy = await combine("Air", "Fire");
+  assert.equal(energy.word, "Energy");
+  assert.equal(energy.ranked, false);
+  assert.equal(energy.localOnly, true);
+  assert.equal(energy.feedbackEligible, false, "Pages practice must not claim that a discarded rating is uploadable");
+  assert.equal(energy.universeContext.seedId, started.game.universe.seedId);
+  assert.equal(energy.universeContext.universeId, started.game.universe.id);
+  assert.deepEqual(Object.keys(energy.universeContext).sort(), ["label", "lawId", "resonance", "seasonId", "seedId", "universeId"]);
   assert.equal((await combine("Air", "Energy")).word, "Light");
   assert.equal((await combine("Air", "Light")).word, "Sky");
   assert.equal((await combine("Earth", "Fire")).word, "Lava");
@@ -100,10 +120,7 @@ test("the Pages adapter completes a real local Telescope route without a server"
 test("the Pages adapter produces one contextual Cosmic Twist and keeps it playable", async (context) => {
   const directory = await mkdtemp(join(tmpdir(), "constellore-twist-"));
   context.after(() => rm(directory, { recursive: true, force: true }));
-  await writeLocalWorldModule(join(directory, "local-world.mjs"));
-  await copyFile(new URL("../public/local-beta.mjs", import.meta.url), join(directory, "local-beta.mjs"));
-  await copyFile(new URL("../public/cosmic-twists.mjs", import.meta.url), join(directory, "cosmic-twists.mjs"));
-  await copyFile(new URL("../public/engagement-features.mjs", import.meta.url), join(directory, "engagement-features.mjs"));
+  await preparePagesAdapter(directory);
   const { localRequest } = await import(`${pathToFileURL(join(directory, "local-beta.mjs")).href}?test=${Date.now()}`);
   const started = await localRequest("/api/run/start", {
     method: "POST",
@@ -121,21 +138,45 @@ test("the Pages adapter produces one contextual Cosmic Twist and keeps it playab
   assert.equal(twist.source, "twist");
   assert.equal(twist.twisted, true);
   assert.equal(twist.twist.canonicalWord, "Wall");
+  assert.equal(twist.universeContext, undefined, "a non-canonical Twist result must never receive canonical universe context");
 
   const retry = await combine("Brick", "Brick");
   assert.equal(retry.word, "Wall", "the same pair should return its canonical result after the one Twist");
   assert.equal(retry.twisted, undefined);
+  assert.equal(retry.universeContext.seedId, started.game.universe.seedId);
   const continued = await combine(twist.word, "Earth");
   assert.ok(continued.word, "a Cosmic Twist discovery should remain usable in later combinations");
+});
+
+test("the Pages adapter rejects a run whose local route disagrees with the canonical matrix", async (context) => {
+  const directory = await mkdtemp(join(tmpdir(), "constellore-invalid-route-"));
+  context.after(() => rm(directory, { recursive: true, force: true }));
+  await preparePagesAdapter(directory);
+  const worldPath = join(directory, "local-world.mjs");
+  const source = await readFile(worldPath, "utf8");
+  const routeReturn = "return visit(target) ? route : null;";
+  assert.ok(source.includes(routeReturn), "the fixture must find the generated route return");
+  await writeFile(worldPath, source.replace(
+    routeReturn,
+    'const complete = visit(target);\n  if (complete && route.length) route[route.length - 1] = { ...route[route.length - 1], word: "Invented Route Result" };\n  return complete ? route : null;'
+  ), "utf8");
+  const { localRequest } = await import(`${pathToFileURL(join(directory, "local-beta.mjs")).href}?test=${Date.now()}`);
+
+  const preview = await localRequest("/api/game?mode=reach&seed=7");
+  assert.ok(preview.universe?.seedId, "presentation metadata remains available before starting");
+  await assert.rejects(
+    localRequest("/api/run/start", {
+      method: "POST",
+      body: JSON.stringify({ mode: "reach", seed: 7, target: "Telescope" })
+    }),
+    (error) => error.code === "local_route_invalid" && error.status === 409
+  );
 });
 
 test("the Pages reveal endpoint is idempotent and permanently zero-score", async (context) => {
   const directory = await mkdtemp(join(tmpdir(), "constellore-reveal-"));
   context.after(() => rm(directory, { recursive: true, force: true }));
-  await writeLocalWorldModule(join(directory, "local-world.mjs"));
-  await copyFile(new URL("../public/local-beta.mjs", import.meta.url), join(directory, "local-beta.mjs"));
-  await copyFile(new URL("../public/cosmic-twists.mjs", import.meta.url), join(directory, "cosmic-twists.mjs"));
-  await copyFile(new URL("../public/engagement-features.mjs", import.meta.url), join(directory, "engagement-features.mjs"));
+  await preparePagesAdapter(directory);
   const { localRequest } = await import(`${pathToFileURL(join(directory, "local-beta.mjs")).href}?test=${Date.now()}`);
   const started = await localRequest("/api/run/start", {
     method: "POST",
@@ -151,6 +192,7 @@ test("the Pages reveal endpoint is idempotent and permanently zero-score", async
   assert.deepEqual(second, first);
   assert.equal(first.target, "Telescope");
   assert.equal(first.route.at(-1).word, "Telescope");
+  assert.ok(first.route.every((step) => step.source), "verified reveal routes retain their existing recipe source field");
   assert.equal(first.assisted, true);
   assert.equal(first.assist, "reveal");
   assert.equal(first.completed, true);
@@ -185,10 +227,7 @@ test("the Pages reveal endpoint is idempotent and permanently zero-score", async
 test("the Pages adapter safely reconstructs an unranked run after a module reload", async (context) => {
   const directory = await mkdtemp(join(tmpdir(), "constellore-resume-"));
   context.after(() => rm(directory, { recursive: true, force: true }));
-  await writeLocalWorldModule(join(directory, "local-world.mjs"));
-  await copyFile(new URL("../public/local-beta.mjs", import.meta.url), join(directory, "local-beta.mjs"));
-  await copyFile(new URL("../public/cosmic-twists.mjs", import.meta.url), join(directory, "cosmic-twists.mjs"));
-  await copyFile(new URL("../public/engagement-features.mjs", import.meta.url), join(directory, "engagement-features.mjs"));
+  await preparePagesAdapter(directory);
   const moduleUrl = pathToFileURL(join(directory, "local-beta.mjs")).href;
   const firstRuntime = await import(`${moduleUrl}?test=start-${Date.now()}`);
   const started = await firstRuntime.localRequest("/api/run/start", {
@@ -245,6 +284,7 @@ test("the Pages adapter safely reconstructs an unranked run after a module reloa
   });
   assert.equal(resumed.game.target, "Telescope");
   assert.equal(resumed.game.ranked, false);
+  assert.deepEqual(resumed.game.universe, started.game.universe, "resume must reconstruct universe metadata from the trusted game seed");
   assert.notEqual(resumed.game.moveLimit, 1, "client game rules must be rebuilt from the local catalog");
   assert.equal(resumed.run.ranked, false);
   assert.equal(resumed.run.localOnly, true);

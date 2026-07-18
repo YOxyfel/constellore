@@ -4,6 +4,7 @@ import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { GameStore, RunRegistry } from "../game-services.mjs";
+import { recipeFingerprint } from "../public/recipe-feedback.mjs";
 
 test("active runs and their existing HMAC credentials survive a store restart", async (context) => {
   const directory = await mkdtemp(join(tmpdir(), "constellore-runs-"));
@@ -24,6 +25,10 @@ test("active runs and their existing HMAC credentials survive a store restart", 
   run.solutionRecipes = new Map([["fire+mud", { a: "Mud", b: "Fire", word: "Brick", source: "world" }]]);
   firstRegistry.addBend(run, { word: "Moon", emoji: "moon", category: "nature", source: "market" }, "market");
   firstRegistry.recordCombination(run, { word: "Mud", emoji: "mud", category: "nature", source: "world" }, { a: "Earth", b: "Water" });
+  const ratedStep = run.history[0];
+  run.recipeFeedbackMoves.add(1);
+  run.recipeFeedbackRecipes.add(recipeFingerprint(ratedStep));
+  await firstStore.recordRecipeRating(ratedStep, "logical");
   await firstRegistry.persist(run);
 
   const serialized = await readFile(path, "utf8");
@@ -41,6 +46,9 @@ test("active runs and their existing HMAC credentials survive a store restart", 
   assert.deepEqual(progress.history.map(({ a, b, word }) => ({ a, b, word })), [{ a: "Earth", b: "Water", word: "Mud" }]);
   assert.ok(resumed.solutionRecipes instanceof Map);
   assert.equal(resumed.solutionRecipes.get("fire+mud").word, "Brick");
+  assert.equal(resumed.recipeFeedbackMoves.has(1), true);
+  assert.equal(resumed.recipeFeedbackRecipes.has(recipeFingerprint(ratedStep)), true);
+  assert.equal(secondStore.recipeRatingSummary({ minimumVotes: 1 }).totalVotes, 1);
 
   secondRegistry.canCombine(resumed, "Mud", "Fire");
   secondRegistry.recordCombination(resumed, { word: "Brick", source: "world" }, { a: "Mud", b: "Fire" });
@@ -72,6 +80,44 @@ test("expired durable runs are pruned from memory and disk", async (context) => 
 
   const finalStore = await new GameStore(path).init();
   assert.equal(started.run.runId in finalStore.data.runs, false);
+});
+
+test("a transient disk failure does not poison later persistence", async (context) => {
+  const directory = await mkdtemp(join(tmpdir(), "constellore-write-recovery-"));
+  context.after(async () => {
+    await rm(directory, { recursive: true, force: true });
+    await rm(`${directory}.${process.pid}.tmp`, { force: true });
+  });
+  const store = await new GameStore(":memory:").init();
+
+  store.path = directory;
+  await assert.rejects(store.persist(), "renaming a file over an existing directory must fail");
+
+  const recoveredPath = join(directory, "constellore.json");
+  store.path = recoveredPath;
+  store.data.demand.recovered = 1;
+  await store.persist();
+  const recovered = JSON.parse(await readFile(recoveredPath, "utf8"));
+  assert.equal(recovered.demand.recovered, 1, "the next queued write runs after the rejected write");
+});
+
+test("pre-upgrade completed ranked runs migrate out of the legacy expiry window", async () => {
+  const store = await new GameStore(":memory:").init();
+  const player = await store.registerPlayer();
+  const firstRegistry = new RunRegistry(store);
+  const started = firstRegistry.start(player.id, { mode: "quick", target: "Mud", tier: 1, starters: ["Earth", "Water", "Fire", "Air"] }, { ranked: true, challengeId: "quick:legacy" });
+  const legacyStartedAt = Date.now() - 2 * 60 * 60_000;
+  const legacyCompletedAt = legacyStartedAt + 10 * 60_000;
+  const snapshot = store.data.runs[started.run.runId];
+  snapshot.startedAt = legacyStartedAt;
+  snapshot.expiresAt = legacyStartedAt + 30 * 60_000;
+  snapshot.completedAt = legacyCompletedAt;
+  snapshot.ranked = true;
+
+  const migratedRegistry = new RunRegistry(store);
+  const migratedToken = store.sign(`run:${started.run.runId}:${player.id}:${legacyStartedAt}`);
+  const migrated = migratedRegistry.get(started.run.runId, player.id, migratedToken);
+  assert.ok(migrated.expiresAt >= legacyCompletedAt + 7 * 86400000);
 });
 
 test("product analytics persist useful aggregates without raw sessions or free-form words", async (context) => {

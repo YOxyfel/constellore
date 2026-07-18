@@ -1,6 +1,7 @@
 import { createHmac, randomBytes, randomUUID, timingSafeEqual } from "node:crypto";
-import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
-import { dirname } from "node:path";
+import { mkdir, readFile, readdir, rename, unlink, writeFile } from "node:fs/promises";
+import { dirname, join } from "node:path";
+import { emptyRecipeFeedback, normalizeRecipeFeedback, recipeFeedbackSummary, recordRecipeFeedback } from "./public/recipe-feedback.mjs";
 
 export const MARKET_CATALOG = Object.freeze([
   { id: "moon", word: "Moon", emoji: "🌙", category: "nature", usefulness: 5, basePrice: 180, reason: "Strong links to tides, night, eclipses, and space." },
@@ -41,6 +42,27 @@ export const MARKET_CATALOG = Object.freeze([
   { id: "river", word: "River", emoji: "🏞️", category: "nature", usefulness: 4, basePrice: 130, reason: "Flows into terrain, weather, travel, and ecosystems." }
 ]);
 
+// Every real-money item is deliberately creative rather than competitive.
+// Verified provider adapters may fulfill these products, but none can enter the
+// Pure division or alter a ranked score.
+export const CREATIVE_COMMERCE_CATALOG = Object.freeze([
+  Object.freeze({ id: "constellore_founders_pass", kind: "creative_pass", competitive: false, useDivision: "open" })
+]);
+
+const commerceProductById = new Map(CREATIVE_COMMERCE_CATALOG.map((product) => [product.id, product]));
+const COMMERCE_PROVIDERS = new Set(["apple", "google", "xsolla", "steam", "epic", "web", "test"]);
+const CLOUD_PROFILE_FIELDS = new Set(["cosmetics", "discovered", "feedbackPreferences", "firstOrbit", "masteryCelebrated", "progression", "recipeMastery", "rivalGhostEnabled", "theme", "weekly"]);
+const CLOUD_THEMES = new Set(["void", "aurora", "solar", "dark", "light", "system"]);
+const CLOUD_COSMETICS = new Map([
+  ["void", { kind: "theme", founder: false }], ["aurora", { kind: "theme", founder: true }], ["solar", { kind: "theme", founder: true }],
+  ["starlit", { kind: "board", founder: false }], ["nebula", { kind: "board", founder: true }], ["blueprint", { kind: "board", founder: true }],
+  ["classic", { kind: "trail", founder: false }], ["comet", { kind: "trail", founder: true }], ["prism", { kind: "trail", founder: true }],
+  ["cosmic", { kind: "sound", founder: false }], ["glass", { kind: "sound", founder: true }], ["analog", { kind: "sound", founder: true }]
+]);
+const RECOVERY_CODE_PATTERN = /^CF(?:-[0-9A-F]{4}){8}$/;
+const SAFE_BACKUP_PATTERN = /^constellore-safe-\d{8}T\d{9}Z\.json$/;
+const COMPLETED_RANKED_RUN_RETENTION_MS = 8 * 86400000;
+
 const catalogById = new Map(MARKET_CATALOG.map((item) => [item.id, item]));
 const adjectives = ["Amber", "Astral", "Bright", "Cinder", "Cosmic", "Distant", "Echo", "Frost", "Golden", "Hidden", "Ivory", "Lunar", "Neon", "Quiet", "Solar", "Velvet"];
 const nouns = ["Comet", "Drifter", "Ember", "Harbor", "Meteor", "Moon", "Nova", "Orbit", "Pioneer", "Raven", "Signal", "Sparrow", "Star", "Voyager", "Willow", "Wisp"];
@@ -56,7 +78,9 @@ export const ANALYTICS_EVENT_NAMES = Object.freeze([
   "market_opened", "market_searched", "word_purchased", "market_word_used", "credit_pack_opened", "answer_revealed",
   "board_tidied", "sense_opened", "sense_used", "sense_earned", "sense_purchase_started", "sense_purchased",
   "ghost_loaded", "ghost_race_started", "ghost_race_completed", "mastery_opened", "mastery_progressed",
-  "mastery_completed", "audio_toggled", "haptic_toggled", "fusion_feedback_played"
+  "mastery_completed", "audio_toggled", "haptic_toggled", "fusion_feedback_played", "cosmetic_changed",
+  "recipe_feedback_submitted", "card_shared", "card_downloaded", "cloud_sync", "ownership_restored",
+  "recovery_rotated", "account_recovered"
 ]);
 const analyticsEventNames = new Set(ANALYTICS_EVENT_NAMES);
 const analyticsEnumDimensions = new Map([
@@ -71,7 +95,7 @@ const analyticsEnumDimensions = new Map([
   ["reason", new Set(["abandoned", "moves", "time", "reveal", "completed", "unavailable"])],
   ["assist", new Set(["none", "ai", "market", "wish", "reveal", "sense"])],
   ["result", new Set(["won", "lost", "tied", "completed", "dismissed", "accepted", "cancelled"])],
-  ["kind", new Set(["fusion", "rejection", "discovery", "twist", "target", "ui", "music", "haptic"])],
+  ["kind", new Set(["fusion", "rejection", "discovery", "twist", "target", "ui", "music", "haptic", "theme", "board", "trail", "sound", "logical", "surprising", "bad"])],
   ["outcome", new Set(["accepted", "cancelled", "completed", "dismissed", "earned", "purchased"])],
   ["enabled", new Set(["true", "false"])],
   ["installed", new Set(["true", "false"])],
@@ -286,10 +310,161 @@ function betterEntry(next, current) {
   return !current || compareEntries(next, current) < 0;
 }
 
+function isRecord(value) {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function assertAllowedKeys(value, allowed, code = "invalid_cloud_profile") {
+  if (!isRecord(value) || Object.keys(value).some((key) => !allowed.has(key))) {
+    throw serviceError(400, "That cloud profile contains unsupported fields.", code);
+  }
+}
+
+function cleanCloudText(value, maximum = 80) {
+  const text = String(value ?? "").normalize("NFKC").replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim();
+  return text && text.length <= maximum ? text : null;
+}
+
+function sanitizeCloudProfile(raw, { founder = false } = {}) {
+  assertAllowedKeys(raw, CLOUD_PROFILE_FIELDS);
+  const profile = {};
+
+  if ("theme" in raw) {
+    if (!CLOUD_THEMES.has(raw.theme)) throw serviceError(400, "That cloud theme is not available.", "invalid_cloud_profile");
+    if (["aurora", "solar"].includes(raw.theme) && !founder) throw serviceError(403, "That theme requires the Founder's Pass.", "cosmetic_entitlement_required");
+    profile.theme = raw.theme;
+  }
+  if ("cosmetics" in raw) {
+    assertAllowedKeys(raw.cosmetics, new Set(["board", "sound", "theme", "trail"]));
+    const cosmetics = {};
+    for (const [slot, value] of Object.entries(raw.cosmetics)) {
+      const itemId = String(value || "").trim().toLowerCase();
+      const item = CLOUD_COSMETICS.get(itemId);
+      if (!item || item.kind !== slot || (item.founder && !founder)) throw serviceError(403, "That cosmetic is not owned by this account.", "cosmetic_entitlement_required");
+      cosmetics[slot] = itemId;
+    }
+    profile.cosmetics = cosmetics;
+  }
+  if ("firstOrbit" in raw) {
+    assertAllowedKeys(raw.firstOrbit, new Set(["completed", "seen"]));
+    if (typeof raw.firstOrbit.seen !== "boolean" || typeof raw.firstOrbit.completed !== "boolean" || (raw.firstOrbit.completed && !raw.firstOrbit.seen)) {
+      throw serviceError(400, "First Orbit progress is not valid.", "invalid_cloud_profile");
+    }
+    profile.firstOrbit = { seen: raw.firstOrbit.seen, completed: raw.firstOrbit.completed };
+  }
+  if ("rivalGhostEnabled" in raw) {
+    if (typeof raw.rivalGhostEnabled !== "boolean") throw serviceError(400, "Rival Ghost preference must be true or false.", "invalid_cloud_profile");
+    profile.rivalGhostEnabled = raw.rivalGhostEnabled;
+  }
+  if ("feedbackPreferences" in raw) {
+    const allowed = new Set(["haptics", "muted", "sound", "volume"]);
+    assertAllowedKeys(raw.feedbackPreferences, allowed);
+    const preferences = raw.feedbackPreferences;
+    for (const field of ["sound", "haptics", "muted"]) {
+      if (field in preferences && typeof preferences[field] !== "boolean") throw serviceError(400, "Feedback preferences must use true or false.", "invalid_cloud_profile");
+    }
+    if ("volume" in preferences && (!Number.isFinite(preferences.volume) || preferences.volume < 0 || preferences.volume > 1)) {
+      throw serviceError(400, "Feedback volume must be between zero and one.", "invalid_cloud_profile");
+    }
+    profile.feedbackPreferences = structuredClone(preferences);
+  }
+  if ("discovered" in raw) {
+    if (!Array.isArray(raw.discovered) || raw.discovered.length > 1_000) throw serviceError(400, "Cloud discoveries are too large.", "invalid_cloud_profile");
+    const unique = new Map();
+    for (const value of raw.discovered) {
+      const word = cleanCloudText(value);
+      if (!word) throw serviceError(400, "Cloud discoveries must be short words.", "invalid_cloud_profile");
+      const key = word.toLocaleLowerCase("en-US");
+      if (!unique.has(key)) unique.set(key, word);
+    }
+    profile.discovered = [...unique.values()];
+  }
+  if ("masteryCelebrated" in raw) {
+    if (!Array.isArray(raw.masteryCelebrated) || raw.masteryCelebrated.length > 64) throw serviceError(400, "Cloud mastery celebrations are too large.", "invalid_cloud_profile");
+    profile.masteryCelebrated = [...new Set(raw.masteryCelebrated.map((value) => {
+      const slug = String(value || "").trim().toLowerCase();
+      if (!/^[a-z0-9][a-z0-9_-]{0,31}$/.test(slug)) throw serviceError(400, "Cloud mastery collections must use safe identifiers.", "invalid_cloud_profile");
+      return slug;
+    }))];
+  }
+  if ("progression" in raw) {
+    const fields = new Set(["dailyCompleted", "dailyStreak", "lastDailyDate", "stardust", "streakShields", "wins"]);
+    assertAllowedKeys(raw.progression, fields);
+    const progression = raw.progression;
+    const integerBounds = { stardust: 1_000_000_000, wins: 1_000_000, dailyStreak: 100_000, streakShields: 1_000 };
+    for (const [field, maximum] of Object.entries(integerBounds)) {
+      if (!Number.isInteger(progression[field]) || progression[field] < 0 || progression[field] > maximum) {
+        throw serviceError(400, "Cloud progression counters are not valid.", "invalid_cloud_profile");
+      }
+    }
+    const safeDate = (value) => value === "" || /^\d{4}-\d{2}-\d{2}$/.test(value);
+    if (typeof progression.lastDailyDate !== "string" || typeof progression.dailyCompleted !== "string" || !safeDate(progression.lastDailyDate) || !safeDate(progression.dailyCompleted)) {
+      throw serviceError(400, "Cloud progression dates are not valid.", "invalid_cloud_profile");
+    }
+    profile.progression = {
+      stardust: progression.stardust,
+      wins: progression.wins,
+      dailyStreak: progression.dailyStreak,
+      lastDailyDate: progression.lastDailyDate,
+      dailyCompleted: progression.dailyCompleted,
+      streakShields: progression.streakShields
+    };
+  }
+  if ("weekly" in raw) {
+    assertAllowedKeys(raw.weekly, new Set(["complete", "key", "stage"]));
+    const { complete, key, stage } = raw.weekly;
+    if (typeof complete !== "boolean" || !Number.isInteger(stage) || stage < 0 || stage > 3 || (key && !/^\d{4}-W\d{2}$/.test(key))) {
+      throw serviceError(400, "Cloud weekly progress is not valid.", "invalid_cloud_profile");
+    }
+    profile.weekly = { key: String(key || ""), stage, complete };
+  }
+  if ("recipeMastery" in raw) {
+    assertAllowedKeys(raw.recipeMastery, new Set(["recipes", "version"]));
+    if (raw.recipeMastery.version !== 1 || !Array.isArray(raw.recipeMastery.recipes) || raw.recipeMastery.recipes.length > 1_000) {
+      throw serviceError(400, "Cloud recipe mastery is not valid.", "invalid_cloud_profile");
+    }
+    const recipeFields = new Set(["a", "b", "discoveries", "key", "proofs", "stars", "word"]);
+    const recipes = raw.recipeMastery.recipes.map((recipe) => {
+      assertAllowedKeys(recipe, recipeFields);
+      const a = cleanCloudText(recipe.a);
+      const b = cleanCloudText(recipe.b);
+      const word = cleanCloudText(recipe.word);
+      const key = cleanCloudText(recipe.key, 320);
+      if (!a || !b || !word || !key || !Array.isArray(recipe.proofs) || recipe.proofs.length > 3) throw serviceError(400, "A cloud mastery recipe is not valid.", "invalid_cloud_profile");
+      const proofs = recipe.proofs.map((proof) => String(proof || "").trim());
+      if (proofs.some((proof) => !/^p-[a-z0-9]{7}$/.test(proof)) || new Set(proofs).size !== proofs.length) throw serviceError(400, "Cloud mastery proofs are not valid.", "invalid_cloud_profile");
+      if (!Number.isInteger(recipe.stars) || recipe.stars !== proofs.length || !Number.isInteger(recipe.discoveries) || recipe.discoveries !== proofs.length) {
+        throw serviceError(400, "Cloud mastery star counts do not match their proofs.", "invalid_cloud_profile");
+      }
+      return { key, a, b, word, discoveries: proofs.length, stars: proofs.length, proofs };
+    });
+    profile.recipeMastery = { version: 1, recipes };
+  }
+
+  return profile;
+}
+
+function recoveryCode() {
+  return `CF-${randomBytes(16).toString("hex").toUpperCase().match(/.{4}/g).join("-")}`;
+}
+
+function normalizeRecoveryCode(value) {
+  const compact = String(value || "").trim().toUpperCase().replace(/[^0-9A-F]/g, "").replace(/^CF/, "");
+  if (!/^[0-9A-F]{32}$/.test(compact)) return "";
+  return `CF-${compact.match(/.{4}/g).join("-")}`;
+}
+
+function safeDigestEqual(left, right) {
+  if (typeof left !== "string" || typeof right !== "string") return false;
+  const expected = Buffer.from(left);
+  const received = Buffer.from(right);
+  return expected.length === received.length && timingSafeEqual(expected, received);
+}
+
 export class GameStore {
   constructor(path = ":memory:") {
     this.path = path;
-    this.data = { version: 4, secret: "", players: {}, scores: [], demand: {}, interest: emptyInterestData(), analytics: emptyAnalyticsData(), runs: {} };
+    this.data = { version: 6, secret: "", players: {}, scores: [], demand: {}, interest: emptyInterestData(), analytics: emptyAnalyticsData(), recipeFeedback: emptyRecipeFeedback(), runs: {}, commerceTransactions: {} };
     this.writeQueue = Promise.resolve();
   }
 
@@ -300,13 +475,15 @@ export class GameStore {
         if (parsed && typeof parsed === "object") this.data = {
           ...this.data,
           ...parsed,
-          version: 4,
+          version: 6,
           players: parsed.players || {},
           scores: parsed.scores || [],
           demand: parsed.demand || {},
           interest: normalizeInterestData(parsed.interest),
           analytics: normalizeAnalyticsData(parsed.analytics),
-          runs: parsed.runs && typeof parsed.runs === "object" && !Array.isArray(parsed.runs) ? parsed.runs : {}
+          recipeFeedback: normalizeRecipeFeedback(parsed.recipeFeedback),
+          runs: parsed.runs && typeof parsed.runs === "object" && !Array.isArray(parsed.runs) ? parsed.runs : {},
+          commerceTransactions: parsed.commerceTransactions && typeof parsed.commerceTransactions === "object" && !Array.isArray(parsed.commerceTransactions) ? parsed.commerceTransactions : {}
         };
       } catch (error) {
         if (error.code !== "ENOENT") throw error;
@@ -326,6 +503,42 @@ export class GameStore {
         player.forfeitedChallenges = {};
         playersMigrated = true;
       }
+      if (!player.licenses || typeof player.licenses !== "object" || Array.isArray(player.licenses)) {
+        player.licenses = {};
+        playersMigrated = true;
+      }
+      const credits = Math.max(0, Math.floor(Number(player.credits) || 0));
+      if (player.credits !== credits) {
+        player.credits = credits;
+        playersMigrated = true;
+      }
+      if (!player.cloudProfile || typeof player.cloudProfile !== "object" || Array.isArray(player.cloudProfile)) {
+        player.cloudProfile = { version: 0, data: {}, updatedAt: null };
+        playersMigrated = true;
+      }
+      if (!player.entitlements || typeof player.entitlements !== "object" || Array.isArray(player.entitlements)) {
+        player.entitlements = {};
+        playersMigrated = true;
+      }
+      if (!Number.isInteger(player.authVersion) || player.authVersion < 0) {
+        // Version zero preserves bearer compatibility for stores created before
+        // recoverable accounts were introduced.
+        player.authVersion = 0;
+        playersMigrated = true;
+      }
+      if (player.entitlements.founder_pass && !player.entitlements.constellore_founders_pass) {
+        player.entitlements.constellore_founders_pass = { ...player.entitlements.founder_pass, productId: "constellore_founders_pass" };
+        delete player.entitlements.founder_pass;
+        playersMigrated = true;
+      }
+      if (player.founderPass && !player.entitlements.constellore_founders_pass) {
+        player.entitlements.constellore_founders_pass = { productId: "constellore_founders_pass", kind: "creative_pass", active: true, source: "legacy", grantedAt: player.createdAt || new Date().toISOString() };
+        playersMigrated = true;
+      }
+      if (player.recovery && (!/^[A-Za-z0-9_-]{32,64}$/.test(player.recovery.digest || "") || !Number.isInteger(player.recovery.version))) {
+        delete player.recovery;
+        playersMigrated = true;
+      }
     }
     if (playersMigrated) await this.persist();
     return this;
@@ -342,8 +555,9 @@ export class GameStore {
     return expected.length === received.length && timingSafeEqual(expected, received);
   }
 
-  async registerPlayer() {
+  async registerPlayer({ withRecoveryCode = false } = {}) {
     const id = randomUUID();
+    const issuedRecoveryCode = recoveryCode();
     this.data.players[id] = {
       id,
       callsign: callsignFor(id),
@@ -356,20 +570,30 @@ export class GameStore {
       rewardedChallenges: {},
       forfeitedChallenges: {},
       weeklyActivity: { week: "", days: [], bonusClaimed: false },
+      cloudProfile: { version: 0, data: {}, updatedAt: null },
+      entitlements: {},
+      authVersion: 1,
+      recovery: {
+        digest: this.sign(`recovery:v1:${id}:${issuedRecoveryCode}`),
+        version: 1,
+        issuedAt: new Date().toISOString()
+      },
       createdAt: new Date().toISOString()
     };
     await this.persist();
-    return this.publicPlayer(id);
+    const player = this.publicPlayer(id);
+    return withRecoveryCode ? { player, recoveryCode: issuedRecoveryCode } : player;
   }
 
   authenticate(playerId, playerToken) {
     const player = this.data.players[playerId];
-    if (!player || !this.verify(`player:${playerId}`, playerToken)) return null;
+    if (!player || !this.verify(player.authVersion ? `player:${playerId}:v${player.authVersion}` : `player:${playerId}`, playerToken)) return null;
     return player;
   }
 
   tokenForPlayer(playerId) {
-    return this.sign(`player:${playerId}`);
+    const player = this.data.players[playerId];
+    return player ? this.sign(player.authVersion ? `player:${playerId}:v${player.authVersion}` : `player:${playerId}`) : "";
   }
 
   publicPlayer(playerId) {
@@ -383,8 +607,127 @@ export class GameStore {
       freeWishUsed: Boolean(player.freeWishUsed),
       wishAvailable: this.canUseWish(playerId),
       dailyWishUsedDate: player.dailyWishUsedDate || "",
+      cloudProfileVersion: Math.max(0, Math.floor(Number(player.cloudProfile?.version) || 0)),
       vault: MARKET_CATALOG.filter((item) => player.licenses[item.id]).map((item) => ({ ...item, owned: true }))
     };
+  }
+
+  recoveryDigest(playerId, code) {
+    const normalized = normalizeRecoveryCode(code);
+    return normalized && RECOVERY_CODE_PATTERN.test(normalized) ? this.sign(`recovery:v1:${playerId}:${normalized}`) : "";
+  }
+
+  async recoverPlayer(playerId, code) {
+    const id = String(playerId || "").trim();
+    const player = this.data.players[id];
+    const receivedDigest = this.recoveryDigest(id, code);
+    if (!player?.recovery?.digest || !safeDigestEqual(player.recovery.digest, receivedDigest)) {
+      throw serviceError(401, "That recovery kit is invalid or has already been used.", "invalid_recovery_code");
+    }
+    const nextCode = recoveryCode();
+    player.recovery = {
+      digest: this.sign(`recovery:v1:${id}:${nextCode}`),
+      version: Math.max(1, Number(player.recovery.version) || 1) + 1,
+      issuedAt: new Date().toISOString(),
+      rotatedAt: new Date().toISOString()
+    };
+    player.authVersion = Math.max(0, Number(player.authVersion) || 0) + 1;
+    await this.persist();
+    return {
+      player: this.publicPlayer(id),
+      playerToken: this.tokenForPlayer(id),
+      recoveryCode: nextCode,
+      recoveryVersion: player.recovery.version
+    };
+  }
+
+  async rotateRecovery(playerId) {
+    const player = this.data.players[playerId];
+    if (!player) throw serviceError(401, "Player not found.", "player_missing");
+    const nextCode = recoveryCode();
+    player.recovery = {
+      digest: this.sign(`recovery:v1:${playerId}:${nextCode}`),
+      version: Math.max(0, Number(player.recovery?.version) || 0) + 1,
+      issuedAt: new Date().toISOString(),
+      rotatedAt: new Date().toISOString()
+    };
+    await this.persist();
+    return { recoveryCode: nextCode, recoveryVersion: player.recovery.version };
+  }
+
+  async revokeRecovery(playerId) {
+    const player = this.data.players[playerId];
+    if (!player) throw serviceError(401, "Player not found.", "player_missing");
+    const nextVersion = Math.max(0, Number(player.recovery?.version) || 0) + 1;
+    player.recovery = { digest: "", version: nextVersion, revokedAt: new Date().toISOString() };
+    await this.persist();
+    return { revoked: true, recoveryVersion: nextVersion };
+  }
+
+  cloudProfile(playerId) {
+    const player = this.data.players[playerId];
+    if (!player) throw serviceError(401, "Player not found.", "player_missing");
+    const stored = player.cloudProfile && typeof player.cloudProfile === "object" ? player.cloudProfile : { version: 0, data: {}, updatedAt: null };
+    return { version: Math.max(0, Math.floor(Number(stored.version) || 0)), profile: structuredClone(stored.data || {}), updatedAt: stored.updatedAt || null };
+  }
+
+  async updateCloudProfile(playerId, expectedVersion, profile) {
+    const player = this.data.players[playerId];
+    if (!player) throw serviceError(401, "Player not found.", "player_missing");
+    if (!Number.isInteger(expectedVersion) || expectedVersion < 0) throw serviceError(400, "A valid cloud profile version is required.", "invalid_profile_version");
+    const current = this.cloudProfile(playerId);
+    if (expectedVersion !== current.version) {
+      throw serviceError(409, "The cloud profile changed on another device.", "cloud_profile_conflict", { current });
+    }
+    const data = sanitizeCloudProfile(profile, { founder: Boolean(player.founderPass) });
+    player.cloudProfile = { version: current.version + 1, data, updatedAt: new Date().toISOString() };
+    await this.persist();
+    return this.cloudProfile(playerId);
+  }
+
+  entitlementSnapshot(playerId) {
+    const player = this.data.players[playerId];
+    if (!player) throw serviceError(401, "Player not found.", "player_missing");
+    const products = Object.values(player.entitlements || {})
+      .filter((entitlement) => entitlement?.active && commerceProductById.has(entitlement.productId))
+      .map((entitlement) => {
+        const product = commerceProductById.get(entitlement.productId);
+        return { productId: product.id, kind: product.kind, active: true, competitive: false, useDivision: product.useDivision, grantedAt: entitlement.grantedAt || null };
+      });
+    const vault = MARKET_CATALOG.filter((item) => player.licenses[item.id]).map((item) => ({ id: item.id, word: item.word, owned: true, competitive: false, useDivision: "open" }));
+    return {
+      version: 1,
+      restoredAt: new Date().toISOString(),
+      balance: { starCredits: Math.max(0, Math.floor(Number(player.credits) || 0)) },
+      products,
+      vault,
+      policy: { rankedAdvantages: false, creativeAssistsUseDivision: "open" }
+    };
+  }
+
+  async fulfillVerifiedPurchase(playerId, { productId, provider, transactionId }, date = new Date()) {
+    const player = this.data.players[playerId];
+    const product = commerceProductById.get(String(productId || ""));
+    const safeProvider = String(provider || "").trim().toLowerCase();
+    const safeTransactionId = String(transactionId || "").trim();
+    if (!player) throw serviceError(401, "Player not found.", "player_missing");
+    if (!product || product.competitive !== false) throw serviceError(400, "That commerce product is not available.", "invalid_commerce_product");
+    if (!COMMERCE_PROVIDERS.has(safeProvider) || safeTransactionId.length < 8 || safeTransactionId.length > 200) throw serviceError(400, "A verified provider transaction is required.", "invalid_commerce_transaction");
+    const transactionDigest = this.sign(`commerce:v1:${safeProvider}:${safeTransactionId}`);
+    const previous = this.data.commerceTransactions[transactionDigest];
+    if (previous) {
+      if (previous.playerId !== playerId || previous.productId !== product.id) throw serviceError(409, "That provider transaction was already fulfilled.", "commerce_transaction_conflict");
+      return { restored: true, entitlements: this.entitlementSnapshot(playerId) };
+    }
+
+    const grantedAt = date.toISOString();
+    if (product.id === "constellore_founders_pass") {
+      player.founderPass = true;
+      player.entitlements.constellore_founders_pass = { productId: product.id, kind: product.kind, active: true, source: safeProvider, grantedAt };
+    }
+    this.data.commerceTransactions[transactionDigest] = { playerId, productId: product.id, provider: safeProvider, fulfilledAt: grantedAt };
+    await this.persist();
+    return { restored: false, entitlements: this.entitlementSnapshot(playerId) };
   }
 
   interestAggregate(campaign = INTEREST_CAMPAIGN) {
@@ -547,6 +890,27 @@ export class GameStore {
     };
   }
 
+  async recordRecipeRating(step, rating, date = new Date()) {
+    const recorded = recordRecipeFeedback(this.data.recipeFeedback, { step, rating, date });
+    if (!recorded.accepted) {
+      if (recorded.reason === "capacity") throw serviceError(503, "Recipe feedback is temporarily full.", "recipe_feedback_capacity");
+      throw serviceError(400, "That recipe rating is not valid.", "invalid_recipe_feedback");
+    }
+    this.data.recipeFeedback = recorded.state;
+    await this.persist();
+    return { accepted: true, fingerprint: recorded.fingerprint };
+  }
+
+  recipeRatingSummary({ minimumVotes = 3, limit = 50 } = {}) {
+    const feedback = normalizeRecipeFeedback(this.data.recipeFeedback);
+    return {
+      privacy: "aggregate-only",
+      totalVotes: feedback.totalVotes,
+      recipes: recipeFeedbackSummary(feedback, { minimumVotes, limit }),
+      updatedAt: feedback.updatedAt
+    };
+  }
+
   demandForMinute(wordId, minute) {
     const demand = this.data.demand[wordId] || { ema: 0, purchases: 0, activeMinute: minute, purchasesThisMinute: 0 };
     demand.ema = clamp(Number(demand.ema) || 0, 0, 1);
@@ -582,6 +946,8 @@ export class GameStore {
         ...item,
         price,
         owned: Boolean(player?.licenses[item.id]),
+        competitive: false,
+        useDivision: "open",
         changePercent: previous ? Number((((price - previous) / previous) * 100).toFixed(1)) : 0,
         trend,
         quoteId: `${quotePayload}.${this.sign(`quote:${quotePayload}`)}`,
@@ -626,7 +992,7 @@ export class GameStore {
     const demand = this.demandForMinute(quote.item.id, quote.minute);
     demand.purchasesThisMinute += 1;
     demand.purchases += 1;
-    const result = { item: { ...quote.item, owned: true }, balance: player.credits, price: quote.price };
+    const result = { item: { ...quote.item, owned: true, competitive: false, useDivision: "open" }, balance: player.credits, price: quote.price, competitive: false, useDivision: "open" };
     player.purchaseKeys[idempotencyKey] = { quoteId, result };
     await this.persist();
     return result;
@@ -640,6 +1006,14 @@ export class GameStore {
     const player = this.data.players[playerId];
     if (!player) return null;
     player.founderPass = Boolean(enabled);
+    player.entitlements ||= {};
+    if (enabled) {
+      player.entitlements.constellore_founders_pass ||= { productId: "constellore_founders_pass", kind: "creative_pass", active: true, source: "test", grantedAt: new Date().toISOString() };
+      player.entitlements.constellore_founders_pass.active = true;
+    } else if (player.entitlements.constellore_founders_pass) {
+      player.entitlements.constellore_founders_pass.active = false;
+      player.entitlements.constellore_founders_pass.revokedAt = new Date().toISOString();
+    }
     await this.persist();
     return this.publicPlayer(playerId);
   }
@@ -779,14 +1153,70 @@ export class GameStore {
     return { creditReward, weeklyBonus, alreadyRewarded: false };
   }
 
+  safeBackupSnapshot(date = new Date()) {
+    if (!(date instanceof Date) || Number.isNaN(date.getTime())) throw serviceError(400, "A valid backup date is required.", "invalid_backup_date");
+    const players = Object.fromEntries(Object.entries(this.data.players).map(([id, stored]) => {
+      const player = structuredClone(stored);
+      delete player.recovery;
+      delete player.purchaseKeys;
+      return [id, player];
+    }));
+    const analytics = normalizeAnalyticsData(this.data.analytics);
+    for (const day of Object.values(analytics.days)) day.sessionHashes = {};
+    const interest = normalizeInterestData(this.data.interest);
+    interest.records = {};
+    return {
+      format: "constellore-safe-backup",
+      version: 1,
+      generatedAt: date.toISOString(),
+      authenticationResetRequired: true,
+      data: {
+        version: this.data.version,
+        players,
+        scores: structuredClone(this.data.scores),
+        demand: structuredClone(this.data.demand),
+        interest,
+        analytics,
+        recipeFeedback: normalizeRecipeFeedback(this.data.recipeFeedback),
+        commerceTransactions: structuredClone(this.data.commerceTransactions || {})
+      }
+    };
+  }
+
+  async exportSafeBackup(directory, { keep = 7, date = new Date() } = {}) {
+    if (this.path === ":memory:") throw serviceError(409, "Backups require a durable store.", "backup_unavailable");
+    const safeDirectory = String(directory || "").trim();
+    if (!safeDirectory) throw serviceError(503, "A backup directory is not configured.", "backup_unavailable");
+    const retention = clamp(Math.floor(Number(keep) || 7), 1, 30);
+    await this.writeQueue;
+    await mkdir(safeDirectory, { recursive: true });
+    const stamp = date.toISOString().replace(/[-:.]/g, "");
+    const filename = `constellore-safe-${stamp}.json`;
+    const path = join(safeDirectory, filename);
+    const temporary = `${path}.${process.pid}.tmp`;
+    await writeFile(temporary, JSON.stringify(this.safeBackupSnapshot(date), null, 2), { encoding: "utf8", mode: 0o600 });
+    await rename(temporary, path);
+
+    const backups = (await readdir(safeDirectory))
+      .filter((entry) => SAFE_BACKUP_PATTERN.test(entry))
+      .sort()
+      .reverse();
+    await Promise.all(backups.slice(retention).map((entry) => unlink(join(safeDirectory, entry))));
+    return { filename, retained: Math.min(backups.length, retention), generatedAt: date.toISOString(), recoverySecretsIncluded: false, bearerTokensIncluded: false };
+  }
+
   persist() {
     if (this.path === ":memory:") return Promise.resolve();
-    this.writeQueue = this.writeQueue.then(async () => {
+    const write = async () => {
       await mkdir(dirname(this.path), { recursive: true });
       const temporary = `${this.path}.${process.pid}.tmp`;
       await writeFile(temporary, JSON.stringify(this.data, null, 2), "utf8");
       await rename(temporary, this.path);
-    });
+    };
+    // A failed write must reject its own caller without permanently poisoning
+    // the serialization queue. The next persistence attempt still runs after
+    // either outcome of the prior promise.
+    this.writeQueue = this.writeQueue.then(write, write);
     return this.writeQueue;
   }
 }
@@ -820,6 +1250,8 @@ function serializeRun(run) {
     usedBend: Boolean(run.usedBend),
     bendItem: run.bendItem ? structuredClone(run.bendItem) : null,
     history: run.history.map((step) => structuredClone(step)),
+    recipeFeedbackMoves: run.recipeFeedbackMoves instanceof Set ? [...run.recipeFeedbackMoves] : [],
+    recipeFeedbackRecipes: run.recipeFeedbackRecipes instanceof Set ? [...run.recipeFeedbackRecipes] : [],
     completedAt: run.completedAt,
     submitted: Boolean(run.submitted)
   };
@@ -831,6 +1263,8 @@ function hydrateRun(snapshot, players) {
   const playerId = String(snapshot.playerId || "");
   const startedAt = Number(snapshot.startedAt);
   const expiresAt = Number(snapshot.expiresAt);
+  const ranked = Boolean(snapshot.ranked);
+  const completedAt = snapshot.completedAt == null ? null : Number.isFinite(Number(snapshot.completedAt)) ? Number(snapshot.completedAt) : null;
   const game = snapshot.game;
   if (!/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(runId) || !players[playerId]) return null;
   if (!Number.isFinite(startedAt) || !Number.isFinite(expiresAt) || expiresAt <= startedAt) return null;
@@ -842,7 +1276,7 @@ function hydrateRun(snapshot, players) {
     discovered.set(item.word.trim().toLowerCase(), structuredClone(item));
   }
   for (const word of game.starters.slice(0, 32)) {
-    if (typeof word === "string" && word.trim() && !discovered.has(word.trim().toLowerCase())) discovered.set(word.trim().toLowerCase(), { word: word.trim() });
+    if (typeof word === "string" && word.trim() && !discovered.has(word.trim().toLowerCase())) discovered.set(word.trim().toLowerCase(), { word: word.trim(), source: "origin", feedbackEligible: true });
   }
 
   const solutionRecipes = new Map();
@@ -855,10 +1289,10 @@ function hydrateRun(snapshot, players) {
     runId,
     playerId,
     game: structuredClone(game),
-    ranked: Boolean(snapshot.ranked),
+    ranked,
     challengeId: String(snapshot.challengeId || `practice:${runId}`).slice(0, 160),
     startedAt,
-    expiresAt,
+    expiresAt: ranked && completedAt ? Math.max(expiresAt, completedAt + COMPLETED_RANKED_RUN_RETENTION_MS) : expiresAt,
     discovered,
     moves: nonnegativeCounter(snapshot.moves),
     assist: typeof snapshot.assist === "string" ? snapshot.assist.slice(0, 32) : "none",
@@ -874,7 +1308,14 @@ function hydrateRun(snapshot, players) {
     usedBend: Boolean(snapshot.usedBend),
     bendItem: snapshot.bendItem && typeof snapshot.bendItem === "object" && !Array.isArray(snapshot.bendItem) ? structuredClone(snapshot.bendItem) : null,
     history: Array.isArray(snapshot.history) ? structuredClone(snapshot.history.slice(0, 2_000)) : [],
-    completedAt: snapshot.completedAt == null ? null : Number.isFinite(Number(snapshot.completedAt)) ? Number(snapshot.completedAt) : null,
+    recipeFeedbackMoves: new Set((Array.isArray(snapshot.recipeFeedbackMoves) ? snapshot.recipeFeedbackMoves : [])
+      .map((move) => Math.floor(Number(move)))
+      .filter((move) => Number.isInteger(move) && move > 0 && move <= 2_000)),
+    recipeFeedbackRecipes: new Set((Array.isArray(snapshot.recipeFeedbackRecipes) ? snapshot.recipeFeedbackRecipes : [])
+      .map((fingerprint) => String(fingerprint))
+      .filter((fingerprint) => /^[a-z0-9]{7,16}$/.test(fingerprint))
+      .slice(0, 2_000)),
+    completedAt,
     submitted: Boolean(snapshot.submitted)
   };
 }
@@ -917,7 +1358,7 @@ export class RunRegistry {
       challengeId: challengeId || `practice:${runId}`,
       startedAt,
       expiresAt: startedAt + Math.max((game.timeLimit || 0) * 1000 + 10_000, 30 * 60_000),
-      discovered: new Map(game.starters.map((word) => [word.toLowerCase(), { word }])),
+      discovered: new Map(game.starters.map((word) => [word.toLowerCase(), { word, source: "origin", feedbackEligible: true }])),
       moves: 0,
       assist: scoringDisabled && String(forfeitReason).toLowerCase() === "sense" ? "sense" : scoringDisabled ? "reveal" : "none",
       scoringDisabled: Boolean(scoringDisabled),
@@ -930,6 +1371,8 @@ export class RunRegistry {
       usedBend: false,
       bendItem: null,
       history: [],
+      recipeFeedbackMoves: new Set(),
+      recipeFeedbackRecipes: new Set(),
       completedAt: null,
       submitted: false
     };
@@ -958,10 +1401,18 @@ export class RunRegistry {
       run.twistUsed = true;
       run.twistedPairKey = [a, b].map((word) => String(word).trim().toLowerCase()).sort().join("+");
     }
+    const ingredientA = run.discovered.get(String(a).trim().toLowerCase());
+    const ingredientB = run.discovered.get(String(b).trim().toLowerCase());
+    const safeIngredientSources = new Set(["origin", "world", "twist", "ai", "semantic"]);
+    const safeResultSources = new Set(["world", "twist", "ai", "semantic"]);
+    const ingredientFeedbackSafe = (item) => Boolean(item && item.feedbackEligible !== false && safeIngredientSources.has(String(item.source || "")));
+    const feedbackEligible = ingredientFeedbackSafe(ingredientA)
+      && ingredientFeedbackSafe(ingredientB)
+      && safeResultSources.has(String(result.source || "world"));
     const canonicalWord = (word) => run.discovered.get(String(word).trim().toLowerCase())?.word || String(word).trim();
     const newDiscovery = !run.discovered.has(result.word.toLowerCase());
     run.moves += 1;
-    run.history.push({
+    const historyEntry = {
       move: run.moves,
       a: canonicalWord(a),
       b: canonicalWord(b),
@@ -973,12 +1424,18 @@ export class RunRegistry {
       newDiscovery,
       twisted: Boolean(result.twisted),
       canonicalWord: result.twist?.canonicalWord || "",
-      revealed: false
-    });
-    run.discovered.set(result.word.toLowerCase(), result);
+      revealed: false,
+      feedbackEligible
+    };
+    run.history.push(historyEntry);
+    run.discovered.set(result.word.toLowerCase(), { ...result, feedbackEligible });
     if (result.source === "ai") run.assist = "ai";
-    if (result.word.toLowerCase() === run.game.target.toLowerCase()) run.completedAt = Date.now();
+    if (result.word.toLowerCase() === run.game.target.toLowerCase()) {
+      run.completedAt = Date.now();
+      if (run.ranked) run.expiresAt = Math.max(run.expiresAt, run.completedAt + COMPLETED_RANKED_RUN_RETENTION_MS);
+    }
     this.checkpoint(run);
+    return historyEntry;
   }
 
   reveal(run, route) {
@@ -1033,9 +1490,11 @@ export class RunRegistry {
   addBend(run, item, assist) {
     if (run.completedAt) throw serviceError(409, "This orbit is already complete.", "run_complete");
     if (run.usedBend) throw serviceError(409, "Only one Reality Bend may be used in a run.", "bend_used");
+    if (!["market", "wish"].includes(assist)) throw serviceError(400, "That Reality Bend is not available.", "invalid_bend_assist");
     run.usedBend = true;
     run.bendItem = structuredClone(item);
     run.assist = assist;
+    run.game = { ...run.game, division: "open", pureEligible: false };
     run.discovered.set(item.word.toLowerCase(), item);
     this.checkpoint(run);
   }
@@ -1091,10 +1550,11 @@ export class RunRegistry {
   }
 }
 
-export function serviceError(statusCode, message, code = "service_error") {
+export function serviceError(statusCode, message, code = "service_error", details = null) {
   const error = new Error(message);
   error.statusCode = statusCode;
   error.serviceCode = code;
+  if (details && typeof details === "object" && !Array.isArray(details)) error.details = details;
   return error;
 }
 

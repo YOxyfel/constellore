@@ -1,11 +1,14 @@
 import { createServer } from "node:http";
+import { createHash, timingSafeEqual } from "node:crypto";
 import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
-import { extname, join, normalize } from "node:path";
+import { basename, dirname, extname, join, normalize } from "node:path";
 import { fileURLToPath } from "node:url";
-import { ANALYTICS_EVENT_NAMES, GameStore, MARKET_CATALOG, RunRegistry, isoWeekKey, serviceError } from "./game-services.mjs";
+import { ANALYTICS_EVENT_NAMES, CREATIVE_COMMERCE_CATALOG, GameStore, MARKET_CATALOG, RunRegistry, isoWeekKey, serviceError } from "./game-services.mjs";
 import { cosmicTwistSeedFor, selectCosmicTwist } from "./public/cosmic-twists.mjs";
 import { rankSenseCandidates } from "./public/engagement-features.mjs";
+import { recipeFingerprint, sanitizeRecipeRating } from "./public/recipe-feedback.mjs";
+import { annotateUniverseResult, buildUniverseManifest, selectUniverse, validateUniverseRoute } from "./public/universe-director.mjs";
 
 const projectRoot = fileURLToPath(new URL(".", import.meta.url));
 const root = join(projectRoot, "public");
@@ -19,6 +22,8 @@ const storePath = process.env.CONSTELLORE_DATA_PATH || process.env.WORDFORGE_DAT
 const gameStore = await new GameStore(storePath).init();
 const runRegistry = new RunRegistry(gameStore);
 await runRegistry.flush();
+const backupDirectory = storePath === ":memory:" ? "" : (process.env.CONSTELLORE_BACKUP_DIR || join(dirname(storePath), "backups"));
+const backupRetention = Math.min(30, Math.max(1, Number(process.env.CONSTELLORE_BACKUP_KEEP) || 7));
 const STARTERS = ["Earth", "Water", "Fire", "Air"];
 const recipes = new Map();
 const dynamicRecipes = new Map();
@@ -749,6 +754,29 @@ export function solutionRoute(target, { includeDynamic = false } = {}) {
   return visit(known.get(targetKey)) ? route : null;
 }
 
+function trustedRecipeCatalog({ includeDynamic = false } = {}) {
+  const catalog = [...recipes.values()];
+  if (includeDynamic) {
+    for (const [key, recipe] of dynamicRecipes) if (!recipes.has(key)) catalog.push(recipe);
+  }
+  return catalog.map((recipe) => ({
+    ...recipe,
+    category: semanticCategoryFor(recipe.word) || null
+  }));
+}
+
+function verifiedServerRoute(game, { includeDynamic = false } = {}) {
+  const route = game ? solutionRoute(game.target, { includeDynamic }) : null;
+  if (!Array.isArray(route)) return null;
+  const validation = validateUniverseRoute({
+    starters: game.starters,
+    target: game.target,
+    route,
+    recipes: trustedRecipeCatalog({ includeDynamic })
+  });
+  return validation.valid ? { route, validation } : null;
+}
+
 export function isSensibleResult(result, a = "", b = "") {
   if (!result || typeof result.word !== "string" || typeof result.emoji !== "string" || typeof result.note !== "string") return false;
   const word = result.word.trim();
@@ -783,6 +811,12 @@ function gameFor(targetEntry, mode, extras = {}) {
     aiEnabled: Boolean(process.env.OPENAI_API_KEY),
     worldSize: reachableFromStarters().size
   };
+}
+
+function directedServerGame(game) {
+  if (!game) return null;
+  const seed = Number.isFinite(Number(game.seed)) ? Math.abs(Number(game.seed)) : 0;
+  return { ...game, seed, universe: selectUniverse(seed) };
 }
 
 export function buildGameForMode(mode, seed = 0, customTarget = "", stage = 0) {
@@ -932,10 +966,15 @@ const mime = {
 const requestWindows = new Map();
 const interestRequestWindows = new Map();
 const analyticsRequestWindows = new Map();
+const recoveryRequestWindows = new Map();
+const recipeFeedbackRequestWindows = new Map();
+const adminRequestWindows = new Map();
 const INTEREST_RATE_WINDOW_MS = 10 * 60_000;
 const INTEREST_RATE_LIMIT = 20;
 const INTEREST_RATE_MAX_KEYS = 5_000;
 const ANALYTICS_RATE_MAX_KEYS = 5_000;
+const RECOVERY_RATE_WINDOW_MS = 15 * 60_000;
+const RECOVERY_RATE_LIMIT = 10;
 const analyticsEvents = new Set(ANALYTICS_EVENT_NAMES);
 
 function rateLimited(request, limit = 180) {
@@ -962,6 +1001,49 @@ function analyticsRateLimited(request, limit = 240) {
   }
   current.count += 1;
   return current.count > limit;
+}
+
+function adminRateLimited(request, limit = 240) {
+  const key = gameStore.sign(`rate:admin:${request.socket.remoteAddress || "unknown"}`);
+  const now = Date.now();
+  const current = adminRequestWindows.get(key);
+  if (!current || now - current.startedAt > 60_000) {
+    for (const [storedKey, window] of adminRequestWindows) if (now - window.startedAt > 60_000) adminRequestWindows.delete(storedKey);
+    while (adminRequestWindows.size >= 1_000) adminRequestWindows.delete(adminRequestWindows.keys().next().value);
+    adminRequestWindows.set(key, { startedAt: now, count: 1 });
+    return false;
+  }
+  current.count += 1;
+  return current.count > limit;
+}
+
+function recoveryRateLimited(request, playerId) {
+  const now = Date.now();
+  for (const [key, window] of recoveryRequestWindows) if (now - window.startedAt > RECOVERY_RATE_WINDOW_MS) recoveryRequestWindows.delete(key);
+  while (recoveryRequestWindows.size >= 5_000) recoveryRequestWindows.delete(recoveryRequestWindows.keys().next().value);
+  const key = gameStore.sign(`rate:recovery:${request.socket.remoteAddress || "unknown"}:${String(playerId || "")}`);
+  const current = recoveryRequestWindows.get(key);
+  if (!current) {
+    recoveryRequestWindows.set(key, { startedAt: now, count: 1 });
+    return false;
+  }
+  current.count += 1;
+  return current.count > RECOVERY_RATE_LIMIT;
+}
+
+function recipeFeedbackRateLimited(request, playerId) {
+  const now = Date.now();
+  const windowMs = 60_000;
+  for (const [key, window] of recipeFeedbackRequestWindows) if (now - window.startedAt > windowMs) recipeFeedbackRequestWindows.delete(key);
+  while (recipeFeedbackRequestWindows.size >= 5_000) recipeFeedbackRequestWindows.delete(recipeFeedbackRequestWindows.keys().next().value);
+  const key = gameStore.sign(`rate:recipe-feedback:${request.socket.remoteAddress || "unknown"}:${playerId}`);
+  const current = recipeFeedbackRequestWindows.get(key);
+  if (!current) {
+    recipeFeedbackRequestWindows.set(key, { startedAt: now, count: 1 });
+    return false;
+  }
+  current.count += 1;
+  return current.count > 60;
 }
 
 function interestRateLimited(request, anonymousId) {
@@ -1032,22 +1114,55 @@ function requirePlayer(request) {
   return player;
 }
 
+function tokenDigest(value) {
+  return createHash("sha256").update(String(value || ""), "utf8").digest();
+}
+
+function timingSafeTokenEqual(expected, received) {
+  return timingSafeEqual(tokenDigest(expected), tokenDigest(received));
+}
+
+function requestAdminToken(request) {
+  const authorization = Array.isArray(request.headers.authorization) ? request.headers.authorization[0] : request.headers.authorization;
+  const bearer = /^Bearer\s+(.+)$/i.exec(String(authorization || "").trim());
+  const header = Array.isArray(request.headers["x-constellore-admin"]) ? request.headers["x-constellore-admin"][0] : request.headers["x-constellore-admin"];
+  return bearer?.[1]?.trim() || String(header || "").trim();
+}
+
+function requireAdmin(request) {
+  const configured = String(process.env.CONSTELLORE_ADMIN_TOKEN || "").trim();
+  if (Buffer.byteLength(configured, "utf8") < 24) throw serviceError(404, "Not found.", "admin_api_disabled");
+  if (!timingSafeTokenEqual(configured, requestAdminToken(request))) throw serviceError(401, "Administrator authentication is required.", "invalid_admin_token");
+}
+
+function hasExactKeys(value, keys) {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value)
+    && Object.keys(value).sort().join(",") === [...keys].sort().join(",");
+}
+
 function billingSettings() {
   let checkoutUrl = "";
   try {
     const candidate = new URL(process.env.NEBULA_CHECKOUT_URL || "");
     if (candidate.protocol === "https:" || (candidate.protocol === "http:" && ["localhost", "127.0.0.1"].includes(candidate.hostname))) checkoutUrl = candidate.toString();
   } catch { /* Billing remains disabled until a valid URL is configured. */ }
+  // A checkout URL alone must never collect money before a verified provider
+  // adapter is ready to write authoritative entitlements.
+  const fulfillmentReady = process.env.CONSTELLORE_COMMERCE_FULFILLMENT_READY === "true";
+  const billingEnabled = Boolean(checkoutUrl && fulfillmentReady);
   return {
-    checkoutUrl,
-    billingEnabled: Boolean(checkoutUrl),
-    testStoreEnabled: process.env.NODE_ENV !== "production" && !checkoutUrl,
-    creditPacks: [
-      { id: "star_credits_300", credits: 300, price: "€1.99" },
-      { id: "star_credits_900", credits: 900, price: "€4.99" },
-      { id: "star_credits_2000", credits: 2000, price: "€9.99" }
-    ]
+    checkoutUrl: billingEnabled ? checkoutUrl : "",
+    billingEnabled,
+    fulfillmentReady,
+    testStoreEnabled: process.env.NODE_ENV !== "production" && process.env.CONSTELLORE_ENABLE_TEST_STORE === "true" && !billingEnabled,
+    creditPacks: [],
+    products: CREATIVE_COMMERCE_CATALOG.map((product) => ({ ...product }))
   };
+}
+
+async function createSafeBackup() {
+  if (!backupDirectory) throw serviceError(409, "Backups require a durable store.", "backup_unavailable");
+  return gameStore.exportSafeBackup(backupDirectory, { keep: backupRetention });
 }
 
 function officialRunDetails(mode, requestedSeed, stage = 0, requestedTarget = "", custom = false) {
@@ -1060,7 +1175,7 @@ function officialRunDetails(mode, requestedSeed, stage = 0, requestedTarget = ""
   if (mode === "weekly") seed = stableHash(`weekly:${week}`);
   if (["quick", "moves"].includes(mode)) seed = stableHash(`${mode}:${today}`);
   const target = ["challenge", "reach"].includes(mode) ? requestedTarget : "";
-  const game = buildGameForMode(mode, seed, target, safeStage);
+  const game = directedServerGame(buildGameForMode(mode, seed, target, safeStage));
   if (!game) return null;
   const challengeId = mode === "daily" ? `daily:${today}`
     : mode === "weekly" ? `weekly:${week}:${safeStage}`
@@ -1154,14 +1269,17 @@ export const server = createServer(async (request, response) => {
       response.writeHead(308, { Location: "/play/", "Cache-Control": "no-cache" });
       return response.end();
     }
-    if (request.method === "GET" && url.pathname === "/healthz") return sendJson(response, 200, { ok: true, game: "Constellore", version: "1.6.0" });
+    if (request.method === "GET" && url.pathname === "/healthz") return sendJson(response, 200, { ok: true, game: "Constellore", version: "1.7.0" });
     if (request.method === "GET" && url.pathname === "/api/config") {
       const billing = billingSettings();
       return sendJson(response, 200, {
         billingEnabled: billing.billingEnabled,
         checkoutUrl: billing.checkoutUrl,
+        fulfillmentReady: billing.fulfillmentReady,
         testStoreEnabled: billing.testStoreEnabled,
         creditPacks: billing.creditPacks,
+        products: billing.products,
+        commercePolicy: { realMoney: "cosmetic-or-creative-only", rankedAdvantages: false, starCreditsSoldForCash: false },
         rewardedAdsEnabled: process.env.REWARDED_ADS_ENABLED === "true",
         founderPrice: process.env.NEBULA_PRICE || "€6.99",
         gameName: "Constellore",
@@ -1171,12 +1289,51 @@ export const server = createServer(async (request, response) => {
     }
     if (request.method === "POST" && url.pathname === "/api/player/register") {
       if (rateLimited(request, 20)) return sendJson(response, 429, { error: "Too many player registrations." });
-      const player = await gameStore.registerPlayer();
-      return sendJson(response, 201, { player, playerToken: gameStore.tokenForPlayer(player.id) });
+      const registration = await gameStore.registerPlayer({ withRecoveryCode: true });
+      return sendJson(response, 201, {
+        player: registration.player,
+        playerToken: gameStore.tokenForPlayer(registration.player.id),
+        recoveryCode: registration.recoveryCode,
+        recoveryVersion: 1
+      });
+    }
+    if (request.method === "POST" && url.pathname === "/api/player/recover") {
+      const body = await jsonBody(request, 2_048);
+      if (!hasExactKeys(body, ["playerId", "recoveryCode"])) throw serviceError(400, "Recovery requires only playerId and recoveryCode.", "invalid_recovery_request");
+      if (recoveryRateLimited(request, body.playerId)) return sendJson(response, 429, { error: "Too many recovery attempts.", code: "recovery_rate_limited" });
+      return sendJson(response, 200, await gameStore.recoverPlayer(body.playerId, body.recoveryCode));
     }
     if (request.method === "GET" && url.pathname === "/api/player") {
       const player = requirePlayer(request);
       return sendJson(response, 200, { player: gameStore.publicPlayer(player.id) });
+    }
+    if (request.method === "POST" && url.pathname === "/api/player/recovery/rotate") {
+      const player = requirePlayer(request);
+      const body = await jsonBody(request, 256);
+      if (!hasExactKeys(body, [])) throw serviceError(400, "Recovery rotation does not accept fields.", "invalid_recovery_request");
+      return sendJson(response, 200, await gameStore.rotateRecovery(player.id));
+    }
+    if (request.method === "POST" && url.pathname === "/api/player/recovery/revoke") {
+      const player = requirePlayer(request);
+      const body = await jsonBody(request, 256);
+      if (!hasExactKeys(body, [])) throw serviceError(400, "Recovery revocation does not accept fields.", "invalid_recovery_request");
+      return sendJson(response, 200, await gameStore.revokeRecovery(player.id));
+    }
+    if (request.method === "GET" && url.pathname === "/api/player/profile") {
+      const player = requirePlayer(request);
+      return sendJson(response, 200, gameStore.cloudProfile(player.id));
+    }
+    if (request.method === "PUT" && url.pathname === "/api/player/profile") {
+      const player = requirePlayer(request);
+      const body = await jsonBody(request, 1_000_000);
+      if (!hasExactKeys(body, ["profile", "version"])) throw serviceError(400, "Cloud profile updates require only profile and version.", "invalid_cloud_profile_request");
+      return sendJson(response, 200, await gameStore.updateCloudProfile(player.id, body.version, body.profile));
+    }
+    if (request.method === "POST" && url.pathname === "/api/player/restore") {
+      const player = requirePlayer(request);
+      const body = await jsonBody(request, 256);
+      if (!hasExactKeys(body, [])) throw serviceError(400, "Purchase restoration does not accept fields.", "invalid_restore_request");
+      return sendJson(response, 200, { player: gameStore.publicPlayer(player.id), entitlements: gameStore.entitlementSnapshot(player.id) });
     }
     if (request.method === "POST" && url.pathname === "/api/player/test-entitlement") {
       const player = requirePlayer(request);
@@ -1206,7 +1363,7 @@ export const server = createServer(async (request, response) => {
       const result = { ...item, source: "market", note: "Activated from your permanent Word Vault." };
       runRegistry.addBend(run, result, "market");
       await runRegistry.persist(run);
-      return sendJson(response, 200, { item: result, assist: run.assist });
+      return sendJson(response, 200, { item: result, assist: run.assist, division: "open", competitive: false });
     }
     if (request.method === "GET" && url.pathname === "/api/leaderboard") {
       const scope = ["daily", "weekly", "sprint", "all"].includes(url.searchParams.get("scope")) ? url.searchParams.get("scope") : "daily";
@@ -1224,7 +1381,7 @@ export const server = createServer(async (request, response) => {
       if (mode === "daily" && gameStore.hasScore(player.id, details.challengeId)) throw serviceError(409, "Today's ranked Word has already been completed.", "daily_complete");
       const priorForfeit = details.ranked ? gameStore.forfeitedChallenge(player.id, details.challengeId) : null;
       const ranked = details.ranked && !priorForfeit;
-      const game = {
+      const candidateGame = {
         ...details.game,
         ranked,
         scoringDisabled: Boolean(priorForfeit),
@@ -1232,10 +1389,14 @@ export const server = createServer(async (request, response) => {
         rewardEligible: !priorForfeit,
         leaderboardEligible: Boolean(ranked)
       };
-      const scopedSolutionRoute = !ranked
-        ? solutionRoute(game.target, { includeDynamic: !details.ranked })
-        : null;
-      if (!ranked && !scopedSolutionRoute) throw serviceError(422, "That target has no verified route yet.", "target_unavailable");
+      const verified = verifiedServerRoute(candidateGame, { includeDynamic: !details.ranked });
+      if (!verified) throw serviceError(422, "That target has no verified route yet.", "target_unavailable");
+      const universeManifest = buildUniverseManifest({ seed: candidateGame.seed, validation: verified.validation });
+      if (!universeManifest) throw serviceError(422, "That target has no verified universe manifest.", "target_unavailable");
+      const game = { ...candidateGame, universeManifest };
+      // Ranked solution steps are validated before acceptance but deliberately
+      // remain outside the run snapshot and every public response.
+      const scopedSolutionRoute = !ranked ? verified.route : null;
       const started = runRegistry.start(player.id, game, {
         ranked,
         challengeId: details.challengeId,
@@ -1354,11 +1515,55 @@ export const server = createServer(async (request, response) => {
         });
       }
       if (!run.ranked) return sendJson(response, 200, { ranked: false, reason: "Practice runs are not uploaded." });
+      if (run.submitted) {
+        const division = run.assist === "none" ? "pure" : "open";
+        const placement = gameStore.rankFor(run.challengeId, division, player.id);
+        if (placement) {
+          const reward = await gameStore.grantChallengeCredits(player.id, run.challengeId, run.game.mode === "daily" ? 10 : run.game.mode === "weekly" ? 8 : 4);
+          return sendJson(response, 200, { ranked: true, recovered: true, placement, ...reward, player: gameStore.publicPlayer(player.id) });
+        }
+        // A crash could persist the run's submitted bit just before its score.
+        // Re-open only that incomplete transaction so the verified path can be
+        // finalized instead of being lost forever.
+        run.submitted = false;
+        runRegistry.checkpoint(run);
+      }
       const entry = runRegistry.finalize(run, player.callsign);
       const placement = await gameStore.addScore(entry);
       const reward = await gameStore.grantChallengeCredits(player.id, run.challengeId, run.game.mode === "daily" ? 10 : run.game.mode === "weekly" ? 8 : 4);
       await runRegistry.flush();
       return sendJson(response, 201, { ranked: true, placement, ...reward, player: gameStore.publicPlayer(player.id) });
+    }
+    if (request.method === "POST" && url.pathname === "/api/recipe-feedback") {
+      const player = requirePlayer(request);
+      if (recipeFeedbackRateLimited(request, player.id)) return sendJson(response, 429, { error: "Too many recipe ratings. Let the cosmos settle.", code: "recipe_feedback_rate_limited" });
+      const body = await jsonBody(request, 2_048);
+      if (!hasExactKeys(body, ["runId", "runToken", "move", "rating"])) throw serviceError(400, "Recipe feedback requires only runId, runToken, move, and rating.", "invalid_recipe_feedback_request");
+      const move = Number(body.move);
+      const rating = sanitizeRecipeRating(body.rating);
+      if (!Number.isInteger(move) || move < 1 || !rating) throw serviceError(400, "Choose a valid recipe move and rating.", "invalid_recipe_feedback");
+      const run = runRegistry.get(body.runId, player.id, body.runToken);
+      const step = run.history.find((entry) => entry.move === move);
+      if (!step || step.revealed) throw serviceError(422, "Only a combination you actually made can be rated.", "recipe_feedback_move_unavailable");
+      if (!step.feedbackEligible) throw serviceError(422, "User-directed and assisted recipes are not stored in feedback.", "recipe_feedback_private_recipe");
+      const fingerprint = recipeFingerprint(step);
+      if (!fingerprint) throw serviceError(422, "That recipe cannot be rated.", "recipe_feedback_move_unavailable");
+      run.recipeFeedbackMoves ||= new Set();
+      run.recipeFeedbackRecipes ||= new Set();
+      if (run.recipeFeedbackMoves.has(move)) throw serviceError(409, "That combination has already been rated in this orbit.", "recipe_feedback_duplicate");
+      if (run.recipeFeedbackRecipes.has(fingerprint)) throw serviceError(409, "That recipe has already been rated in this orbit.", "recipe_feedback_recipe_duplicate");
+      run.recipeFeedbackMoves.add(move);
+      run.recipeFeedbackRecipes.add(fingerprint);
+      runRegistry.checkpoint(run);
+      try {
+        await gameStore.recordRecipeRating(step, rating);
+      } catch (error) {
+        run.recipeFeedbackMoves.delete(move);
+        run.recipeFeedbackRecipes.delete(fingerprint);
+        runRegistry.checkpoint(run);
+        throw error;
+      }
+      return sendJson(response, 202, { accepted: true, move, rating });
     }
     if (request.method === "GET" && url.pathname === "/api/game") {
       const requested = Number(url.searchParams.get("seed"));
@@ -1366,13 +1571,30 @@ export const server = createServer(async (request, response) => {
       const mode = url.searchParams.get("mode") || "reach";
       const target = url.searchParams.get("target") || "";
       const stage = Number(url.searchParams.get("stage") || 0);
-      const game = buildGameForMode(mode, seed, target, stage);
+      const game = directedServerGame(buildGameForMode(mode, seed, target, stage));
       if (!game) return sendJson(response, 422, { error: "That target has no verified route yet.", needsAi: !process.env.OPENAI_API_KEY });
       return sendJson(response, 200, game);
     }
     if (request.method === "GET" && url.pathname === "/api/analytics/summary") {
-      if (analyticsRateLimited(request, 240)) return sendJson(response, 429, { error: "Too many analytics requests." });
+      requireAdmin(request);
+      if (adminRateLimited(request, 240)) return sendJson(response, 429, { error: "Too many analytics requests." });
       return sendJson(response, 200, gameStore.analyticsSummary(url.searchParams.get("days") || 30));
+    }
+    if (request.method === "GET" && url.pathname === "/api/admin/recipe-feedback") {
+      requireAdmin(request);
+      if (adminRateLimited(request, 240)) return sendJson(response, 429, { error: "Too many analytics requests." });
+      return sendJson(response, 200, gameStore.recipeRatingSummary({
+        minimumVotes: url.searchParams.get("minimumVotes") || 3,
+        limit: url.searchParams.get("limit") || 50
+      }));
+    }
+    if (request.method === "POST" && url.pathname === "/api/admin/backup") {
+      requireAdmin(request);
+      if (adminRateLimited(request, 30)) return sendJson(response, 429, { error: "Too many backup requests." });
+      const body = await jsonBody(request, 256);
+      if (!hasExactKeys(body, [])) throw serviceError(400, "Backup requests do not accept fields.", "invalid_backup_request");
+      const result = await createSafeBackup();
+      return sendJson(response, 201, { ...result, filename: basename(result.filename) });
     }
     if (request.method === "POST" && url.pathname === "/api/analytics") {
       if (analyticsRateLimited(request, 240)) return sendJson(response, 429, { error: "Too many events." });
@@ -1395,16 +1617,16 @@ export const server = createServer(async (request, response) => {
       runRegistry.addBend(run, item, "wish");
       await gameStore.consumeWish(player.id);
       await runRegistry.flush();
-      return sendJson(response, 200, { ...item, player: gameStore.publicPlayer(player.id), assist: run.assist });
+      return sendJson(response, 200, { ...item, player: gameStore.publicPlayer(player.id), assist: run.assist, division: "open", competitive: false });
     }
     if (request.method === "POST" && url.pathname === "/api/custom-target") {
       if (rateLimited(request, 30)) return sendJson(response, 429, { error: "Too many routes requested. Try again shortly." });
       const { target } = await jsonBody(request);
       if (typeof target !== "string" || !isSafeTarget(target.trim())) return sendJson(response, 400, { error: "Use a short, recognizable word or phrase." });
-      const knownGame = buildGameForMode("reach", 0, target);
+      const knownGame = directedServerGame(buildGameForMode("reach", 0, target));
       if (knownGame) return sendJson(response, 200, knownGame);
       if (!process.env.OPENAI_API_KEY) return sendJson(response, 422, { error: "This target needs the AI route planner. Add an API key or choose a suggested target.", suggestions: targetCatalog.slice(0, 6).map((entry) => entry.target) });
-      const generatedGame = await createTargetRoute(target);
+      const generatedGame = directedServerGame(await createTargetRoute(target));
       if (!generatedGame) return sendJson(response, 422, { error: "The AI could not make a sensible, guaranteed route for that target. Try a more concrete noun." });
       return sendJson(response, 200, generatedGame);
     }
@@ -1424,7 +1646,14 @@ export const server = createServer(async (request, response) => {
       if (!run && !semanticCategoryFor(b) && allowedCategories.has(categoryB)) learnedSemanticGroups.set(b.trim().toLowerCase(), categoryB);
       const combinationKey = keyFor(a, b);
       let result = recipes.get(combinationKey) || null;
-      if (!result && !run?.ranked) result = run?.solutionRecipes?.get(combinationKey) || dynamicRecipes.get(combinationKey) || null;
+      let trustedContextRecipe = result;
+      if (!result && !run?.ranked) {
+        const scopedRecipe = run?.solutionRecipes?.get(combinationKey) || null;
+        result = scopedRecipe || dynamicRecipes.get(combinationKey) || null;
+        // Only a run-scoped dynamic recipe has already passed full target-route
+        // validation. Other AI/semantic results remain playable but unannotated.
+        trustedContextRecipe = scopedRecipe;
+      }
       if (!result && !run?.ranked) {
         try { result = await aiCombination(a, b, Array.isArray(discovered) ? discovered : []); }
         catch (error) { console.error(error.message); }
@@ -1434,6 +1663,7 @@ export const server = createServer(async (request, response) => {
       const { word, emoji, note, source } = result;
       const category = semanticCategoryFor(word) || registerWishConcept(word);
       let responseResult = { word, emoji, note, source, category };
+      let universeContext = null;
       if (run) {
         runRegistry.canCombine(run, a, b);
         const twist = selectCosmicTwist({
@@ -1451,10 +1681,27 @@ export const server = createServer(async (request, response) => {
           const twistCategory = registerSemanticConcept(twist.word, twist.category) || twist.category;
           responseResult = { ...twist, category: twistCategory };
         }
-        runRegistry.recordCombination(run, responseResult, { a, b });
+        if (trustedContextRecipe) {
+          const annotation = annotateUniverseResult({
+            universe: run.game.universe,
+            a,
+            b,
+            result: responseResult,
+            recipes: [{ a, b, ...trustedContextRecipe, category }]
+          });
+          universeContext = annotation?.context || null;
+        }
+        const historyEntry = runRegistry.recordCombination(run, responseResult, { a, b });
         await runRegistry.persist(run);
+        responseResult = { ...responseResult, feedbackEligible: Boolean(historyEntry?.feedbackEligible) };
       }
-      return sendJson(response, 200, { ...responseResult, completed: Boolean(run?.completedAt), ranked: Boolean(run?.ranked), division: run?.assist === "none" ? "pure" : "open" });
+      return sendJson(response, 200, {
+        ...responseResult,
+        ...(universeContext ? { universeContext } : {}),
+        completed: Boolean(run?.completedAt),
+        ranked: Boolean(run?.ranked),
+        division: run?.assist === "none" ? "pure" : "open"
+      });
     }
     if (!["GET", "HEAD"].includes(request.method)) return sendJson(response, 404, { error: "Not found" });
 
@@ -1478,17 +1725,26 @@ export const server = createServer(async (request, response) => {
     response.end(request.method === "HEAD" ? undefined : file);
   } catch (error) {
     if (error.code === "ENOENT") return sendJson(response, 404, { error: "Not found" });
-    if (error.statusCode) return sendJson(response, error.statusCode, { error: error.message, code: error.serviceCode || "request_error" });
+    if (error.statusCode) return sendJson(response, error.statusCode, { error: error.message, code: error.serviceCode || "request_error", ...(error.details ? { details: error.details } : {}) });
     console.error(error);
     sendJson(response, 500, { error: "Something went wrong in the cosmos." });
   }
 });
 
 function sendJson(response, status, value) {
-  response.writeHead(status, { "Content-Type": "application/json; charset=utf-8" });
+  response.writeHead(status, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" });
   response.end(JSON.stringify(value));
 }
 
 if (isMainModule) {
+  try {
+    await createSafeBackup();
+  } catch (error) {
+    console.error(`Safe backup could not be created: ${error.message}`);
+  }
+  const backupTimer = setInterval(() => {
+    void createSafeBackup().catch((error) => console.error(`Safe backup could not be created: ${error.message}`));
+  }, 24 * 60 * 60_000);
+  backupTimer.unref();
   server.listen(port, () => console.log(`Constellore by Oxyfel Games is running at http://localhost:${port}`));
 }
