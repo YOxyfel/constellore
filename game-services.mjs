@@ -48,9 +48,152 @@ const INTEREST_CAMPAIGN = "web-release";
 const INTEREST_SOURCES = new Set(["github-pages", "website", "local-practice", "game", "direct"]);
 const INTEREST_ACTIONS = new Set(["add", "remove"]);
 const anonymousInterestIdPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const ANALYTICS_RETENTION_DAYS = 90;
+export const ANALYTICS_EVENT_NAMES = Object.freeze([
+  "app_opened", "run_started", "run_restored", "combination_completed", "combination_rejected", "target_reached",
+  "run_failed", "wish_opened", "wish_used", "paywall_viewed", "checkout_started", "share_created",
+  "challenge_opened", "theme_changed", "pwa_installed", "leaderboard_opened", "score_uploaded",
+  "market_opened", "market_searched", "word_purchased", "market_word_used", "credit_pack_opened", "answer_revealed",
+  "board_tidied", "sense_opened", "sense_used", "sense_earned", "sense_purchase_started", "sense_purchased",
+  "ghost_loaded", "ghost_race_started", "ghost_race_completed", "mastery_opened", "mastery_progressed",
+  "mastery_completed", "audio_toggled", "haptic_toggled", "fusion_feedback_played"
+]);
+const analyticsEventNames = new Set(ANALYTICS_EVENT_NAMES);
+const analyticsEnumDimensions = new Map([
+  ["mode", new Set(["reach", "quick", "moves", "daily", "weekly", "challenge"])],
+  ["division", new Set(["pure", "open"])],
+  ["source", new Set(["world", "ai", "twist", "reveal", "market", "wish", "earned", "credits", "reward", "free", "daily", "founder", "mastery", "benchmark", "verified"])],
+  ["location", new Set(["home", "run", "result", "market", "mastery"])],
+  ["provider", new Set(["native", "web", "sandbox", "rewarded"])],
+  ["scope", new Set(["daily", "weekly", "sprint", "all"])],
+  ["theme", new Set(["void", "aurora", "solar", "dark", "light", "system"])],
+  ["entitlement", new Set(["pass", "reward", "free", "credits", "earned"])],
+  ["reason", new Set(["abandoned", "moves", "time", "reveal", "completed", "unavailable"])],
+  ["assist", new Set(["none", "ai", "market", "wish", "reveal", "sense"])],
+  ["result", new Set(["won", "lost", "tied", "completed", "dismissed", "accepted", "cancelled"])],
+  ["kind", new Set(["fusion", "rejection", "discovery", "twist", "target", "ui", "music", "haptic"])],
+  ["outcome", new Set(["accepted", "cancelled", "completed", "dismissed", "earned", "purchased"])],
+  ["enabled", new Set(["true", "false"])],
+  ["installed", new Set(["true", "false"])],
+  ["completed", new Set(["true", "false"])],
+  ["assisted", new Set(["true", "false"])],
+  ["revealed", new Set(["true", "false"])],
+  ["newDiscovery", new Set(["true", "false"])],
+  ["twisted", new Set(["true", "false"])]
+]);
+const analyticsSlugDimensions = new Set(["pack", "collection"]);
+const analyticsMetricNames = new Set(["credits", "cost", "reward", "score", "rank", "moves", "seconds", "steps", "words", "length", "stage", "progress", "stars", "deltaMs", "chargesBefore", "chargesAfter"]);
 
 function emptyInterestData() {
   return { version: 1, records: {}, totals: {}, updatedAt: null };
+}
+
+function emptyAnalyticsData() {
+  return { version: 1, totals: { events: {} }, days: {}, updatedAt: null };
+}
+
+function nonnegativeCounter(value) {
+  return Math.max(0, Math.floor(Number(value) || 0));
+}
+
+function normalizeAnalyticsCounters(value, allowedKeys = null) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  return Object.fromEntries(Object.entries(value)
+    .filter(([key]) => !allowedKeys || allowedKeys.has(key))
+    .map(([key, count]) => [String(key).slice(0, 64), nonnegativeCounter(count)])
+    .filter(([, count]) => count > 0));
+}
+
+function normalizeAnalyticsSegments(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  const segments = {};
+  for (const [eventName, dimensions] of Object.entries(value)) {
+    if (!analyticsEventNames.has(eventName) || !dimensions || typeof dimensions !== "object" || Array.isArray(dimensions)) continue;
+    for (const [dimension, values] of Object.entries(dimensions)) {
+      if (!analyticsEnumDimensions.has(dimension) && !analyticsSlugDimensions.has(dimension)) continue;
+      const counters = Object.fromEntries(Object.entries(normalizeAnalyticsCounters(values))
+        .filter(([value]) => analyticsDimensionValue(dimension, value) === value));
+      if (Object.keys(counters).length) ((segments[eventName] ||= {})[dimension] ||= Object.assign({}, counters));
+    }
+  }
+  return segments;
+}
+
+function normalizeAnalyticsMetrics(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  const metrics = {};
+  for (const [eventName, eventMetrics] of Object.entries(value)) {
+    if (!analyticsEventNames.has(eventName) || !eventMetrics || typeof eventMetrics !== "object" || Array.isArray(eventMetrics)) continue;
+    for (const [metric, aggregate] of Object.entries(eventMetrics)) {
+      if (!analyticsMetricNames.has(metric) || !aggregate || typeof aggregate !== "object" || Array.isArray(aggregate)) continue;
+      const count = nonnegativeCounter(aggregate.count);
+      const sum = Number(aggregate.sum);
+      const minimum = Number(aggregate.min);
+      const maximum = Number(aggregate.max);
+      if (!count || !Number.isFinite(sum) || !Number.isFinite(minimum) || !Number.isFinite(maximum)) continue;
+      ((metrics[eventName] ||= {})[metric] ||= { count, sum, min: minimum, max: maximum });
+    }
+  }
+  return metrics;
+}
+
+function normalizeAnalyticsData(value) {
+  const data = value && typeof value === "object" && !Array.isArray(value) ? value : {};
+  const days = {};
+  if (data.days && typeof data.days === "object" && !Array.isArray(data.days)) {
+    for (const [day, entry] of Object.entries(data.days)) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(day) || !entry || typeof entry !== "object" || Array.isArray(entry)) continue;
+      days[day] = {
+        events: normalizeAnalyticsCounters(entry.events, analyticsEventNames),
+        sessionHashes: entry.sessionHashes && typeof entry.sessionHashes === "object" && !Array.isArray(entry.sessionHashes)
+          ? Object.fromEntries(Object.keys(entry.sessionHashes).filter((digest) => /^[A-Za-z0-9_-]{32,64}$/.test(digest)).map((digest) => [digest, true]))
+          : {},
+        segments: normalizeAnalyticsSegments(entry.segments),
+        metrics: normalizeAnalyticsMetrics(entry.metrics)
+      };
+    }
+  }
+  return {
+    version: 1,
+    totals: { events: normalizeAnalyticsCounters(data.totals?.events, analyticsEventNames) },
+    days,
+    updatedAt: typeof data.updatedAt === "string" ? data.updatedAt : null
+  };
+}
+
+function analyticsDimensionValue(name, value) {
+  if (analyticsEnumDimensions.has(name)) {
+    const normalized = typeof value === "boolean" ? String(value) : String(value || "").trim().toLowerCase();
+    return analyticsEnumDimensions.get(name).has(normalized) ? normalized : null;
+  }
+  if (analyticsSlugDimensions.has(name)) {
+    const normalized = String(value || "").trim().toLowerCase();
+    return /^[a-z0-9][a-z0-9_-]{0,31}$/.test(normalized) ? normalized : null;
+  }
+  return null;
+}
+
+function mergeAnalyticsSegments(target, source) {
+  for (const [eventName, dimensions] of Object.entries(source || {})) {
+    for (const [dimension, values] of Object.entries(dimensions || {})) {
+      for (const [value, count] of Object.entries(values || {})) {
+        const counters = (((target[eventName] ||= {})[dimension] ||= {}));
+        counters[value] = (counters[value] || 0) + nonnegativeCounter(count);
+      }
+    }
+  }
+}
+
+function mergeAnalyticsMetrics(target, source) {
+  for (const [eventName, eventMetrics] of Object.entries(source || {})) {
+    for (const [metric, aggregate] of Object.entries(eventMetrics || {})) {
+      const current = ((target[eventName] ||= {})[metric] ||= { count: 0, sum: 0, min: Number.POSITIVE_INFINITY, max: Number.NEGATIVE_INFINITY });
+      current.count += nonnegativeCounter(aggregate.count);
+      current.sum += Number(aggregate.sum) || 0;
+      current.min = Math.min(current.min, Number(aggregate.min));
+      current.max = Math.max(current.max, Number(aggregate.max));
+    }
+  }
 }
 
 function normalizeInterestData(value) {
@@ -146,7 +289,7 @@ function betterEntry(next, current) {
 export class GameStore {
   constructor(path = ":memory:") {
     this.path = path;
-    this.data = { version: 3, secret: "", players: {}, scores: [], demand: {}, interest: emptyInterestData() };
+    this.data = { version: 4, secret: "", players: {}, scores: [], demand: {}, interest: emptyInterestData(), analytics: emptyAnalyticsData(), runs: {} };
     this.writeQueue = Promise.resolve();
   }
 
@@ -157,11 +300,13 @@ export class GameStore {
         if (parsed && typeof parsed === "object") this.data = {
           ...this.data,
           ...parsed,
-          version: 3,
+          version: 4,
           players: parsed.players || {},
           scores: parsed.scores || [],
           demand: parsed.demand || {},
-          interest: normalizeInterestData(parsed.interest)
+          interest: normalizeInterestData(parsed.interest),
+          analytics: normalizeAnalyticsData(parsed.analytics),
+          runs: parsed.runs && typeof parsed.runs === "object" && !Array.isArray(parsed.runs) ? parsed.runs : {}
         };
       } catch (error) {
         if (error.code !== "ENOENT") throw error;
@@ -300,6 +445,106 @@ export class GameStore {
       await this.persist();
     }
     return { campaign, interested, changed };
+  }
+
+  async recordAnalyticsEvent({ name, sessionId, properties = {} }, date = new Date()) {
+    if (!analyticsEventNames.has(name)) throw serviceError(400, "That analytics event is not available.", "invalid_analytics_event");
+    if (typeof sessionId !== "string" || !sessionId.trim() || sessionId.length > 64) throw serviceError(400, "A valid analytics session is required.", "invalid_analytics_session");
+    if (!(date instanceof Date) || Number.isNaN(date.getTime())) throw serviceError(400, "A valid analytics date is required.", "invalid_analytics_date");
+
+    const analytics = this.data.analytics = normalizeAnalyticsData(this.data.analytics);
+    const dayKey = date.toISOString().slice(0, 10);
+    const day = analytics.days[dayKey] ||= { events: {}, sessionHashes: {}, segments: {}, metrics: {} };
+    day.events[name] = (day.events[name] || 0) + 1;
+    analytics.totals.events[name] = (analytics.totals.events[name] || 0) + 1;
+    day.sessionHashes[this.sign(`analytics:v1:${dayKey}:${sessionId}`)] = true;
+
+    const safeProperties = properties && typeof properties === "object" && !Array.isArray(properties) ? properties : {};
+    for (const [property, value] of Object.entries(safeProperties).slice(0, 32)) {
+      const dimensionValue = analyticsDimensionValue(property, value);
+      if (dimensionValue !== null) {
+        const counters = (((day.segments[name] ||= {})[property] ||= {}));
+        counters[dimensionValue] = (counters[dimensionValue] || 0) + 1;
+      }
+      if (analyticsMetricNames.has(property)) {
+        const numeric = Number(value);
+        if (!Number.isFinite(numeric)) continue;
+        const bounded = clamp(numeric, -1_000_000_000, 1_000_000_000);
+        const aggregate = ((day.metrics[name] ||= {})[property] ||= { count: 0, sum: 0, min: bounded, max: bounded });
+        aggregate.count += 1;
+        aggregate.sum += bounded;
+        aggregate.min = Math.min(aggregate.min, bounded);
+        aggregate.max = Math.max(aggregate.max, bounded);
+      }
+    }
+
+    const oldestDay = new Date(date.getTime() - (ANALYTICS_RETENTION_DAYS - 1) * 86_400_000).toISOString().slice(0, 10);
+    for (const storedDay of Object.keys(analytics.days)) if (storedDay < oldestDay || storedDay > dayKey) delete analytics.days[storedDay];
+    analytics.updatedAt = date.toISOString();
+    await this.persist();
+    return { accepted: true, day: dayKey };
+  }
+
+  analyticsSummary(requestedDays = 30, date = new Date()) {
+    if (!(date instanceof Date) || Number.isNaN(date.getTime())) throw serviceError(400, "A valid analytics date is required.", "invalid_analytics_date");
+    const days = clamp(Math.floor(Number(requestedDays) || 30), 1, ANALYTICS_RETENTION_DAYS);
+    const through = date.toISOString().slice(0, 10);
+    const from = new Date(date.getTime() - (days - 1) * 86_400_000).toISOString().slice(0, 10);
+    const analytics = normalizeAnalyticsData(this.data.analytics);
+    const events = {};
+    const segments = {};
+    const metrics = {};
+    const daily = [];
+    let dailyUniqueSessions = 0;
+
+    for (const [dayKey, day] of Object.entries(analytics.days).sort(([left], [right]) => left.localeCompare(right))) {
+      if (dayKey < from || dayKey > through) continue;
+      const sessions = Object.keys(day.sessionHashes).length;
+      const eventCount = Object.values(day.events).reduce((sum, count) => sum + count, 0);
+      dailyUniqueSessions += sessions;
+      daily.push({ date: dayKey, sessions, events: eventCount });
+      for (const [name, count] of Object.entries(day.events)) events[name] = (events[name] || 0) + count;
+      mergeAnalyticsSegments(segments, day.segments);
+      mergeAnalyticsMetrics(metrics, day.metrics);
+    }
+
+    for (const eventMetrics of Object.values(metrics)) {
+      for (const aggregate of Object.values(eventMetrics)) aggregate.average = aggregate.count ? Number((aggregate.sum / aggregate.count).toFixed(2)) : 0;
+    }
+    const eventCount = (name) => events[name] || 0;
+    const conversionPercent = (completed, opened) => opened ? Number(((completed / opened) * 100).toFixed(1)) : 0;
+    const metricSum = (eventName, ...names) => names.reduce((sum, name) => sum + (metrics[eventName]?.[name]?.sum || 0), 0);
+    const funnels = {
+      play: { opened: eventCount("app_opened"), started: eventCount("run_started"), completed: eventCount("target_reached") },
+      wish: { opened: eventCount("wish_opened"), used: eventCount("wish_used"), conversionPercent: conversionPercent(eventCount("wish_used"), eventCount("wish_opened")) },
+      market: { opened: eventCount("market_opened"), purchased: eventCount("word_purchased"), conversionPercent: conversionPercent(eventCount("word_purchased"), eventCount("market_opened")) },
+      sense: { opened: eventCount("sense_opened"), used: eventCount("sense_used"), purchased: eventCount("sense_purchased"), useRatePercent: conversionPercent(eventCount("sense_used"), eventCount("sense_opened")) },
+      ghost: { started: eventCount("ghost_race_started"), completed: eventCount("ghost_race_completed"), completionPercent: conversionPercent(eventCount("ghost_race_completed"), eventCount("ghost_race_started")) },
+      mastery: { opened: eventCount("mastery_opened"), progressed: eventCount("mastery_progressed"), completed: eventCount("mastery_completed") }
+    };
+    funnels.play.startRatePercent = conversionPercent(funnels.play.started, funnels.play.opened);
+    funnels.play.completionPercent = conversionPercent(funnels.play.completed, funnels.play.started);
+    const economy = {
+      checkoutStarts: eventCount("checkout_started"),
+      wordPurchases: eventCount("word_purchased"),
+      wordCreditsSpent: metricSum("word_purchased", "credits", "cost"),
+      sensePurchases: eventCount("sense_purchased"),
+      senseStardustSpent: metricSum("sense_purchased", "cost")
+    };
+
+    return {
+      privacy: "aggregate-only",
+      period: { days, from, through },
+      dailyUniqueSessions,
+      events,
+      segments,
+      metrics,
+      funnels,
+      economy,
+      daily,
+      allTimeEvents: { ...analytics.totals.events },
+      updatedAt: analytics.updatedAt
+    };
   }
 
   demandForMinute(wordId, minute) {
@@ -546,10 +791,118 @@ export class GameStore {
   }
 }
 
+const RUN_SNAPSHOT_VERSION = 1;
+
+function serializeRun(run) {
+  return {
+    version: RUN_SNAPSHOT_VERSION,
+    runId: run.runId,
+    playerId: run.playerId,
+    game: structuredClone(run.game),
+    ranked: Boolean(run.ranked),
+    challengeId: run.challengeId,
+    startedAt: run.startedAt,
+    expiresAt: run.expiresAt,
+    discovered: [...run.discovered.values()].map((item) => structuredClone(item)),
+    moves: run.moves,
+    assist: run.assist,
+    scoringDisabled: Boolean(run.scoringDisabled),
+    forfeited: Boolean(run.forfeited),
+    forfeitReason: run.forfeitReason,
+    forfeitedAt: run.forfeitedAt,
+    revealRoute: run.revealRoute ? structuredClone(run.revealRoute) : null,
+    solutionRoute: run.solutionRoute ? structuredClone(run.solutionRoute) : null,
+    solutionRecipes: run.solutionRecipes instanceof Map
+      ? [...run.solutionRecipes.entries()].map(([key, result]) => [key, structuredClone(result)])
+      : [],
+    twistUsed: Boolean(run.twistUsed),
+    twistedPairKey: run.twistedPairKey,
+    usedBend: Boolean(run.usedBend),
+    bendItem: run.bendItem ? structuredClone(run.bendItem) : null,
+    history: run.history.map((step) => structuredClone(step)),
+    completedAt: run.completedAt,
+    submitted: Boolean(run.submitted)
+  };
+}
+
+function hydrateRun(snapshot, players) {
+  if (!snapshot || typeof snapshot !== "object" || Array.isArray(snapshot)) return null;
+  const runId = String(snapshot.runId || "");
+  const playerId = String(snapshot.playerId || "");
+  const startedAt = Number(snapshot.startedAt);
+  const expiresAt = Number(snapshot.expiresAt);
+  const game = snapshot.game;
+  if (!/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(runId) || !players[playerId]) return null;
+  if (!Number.isFinite(startedAt) || !Number.isFinite(expiresAt) || expiresAt <= startedAt) return null;
+  if (!game || typeof game !== "object" || Array.isArray(game) || typeof game.target !== "string" || !Array.isArray(game.starters)) return null;
+
+  const discovered = new Map();
+  for (const item of Array.isArray(snapshot.discovered) ? snapshot.discovered.slice(0, 2_000) : []) {
+    if (!item || typeof item !== "object" || Array.isArray(item) || typeof item.word !== "string" || !item.word.trim()) continue;
+    discovered.set(item.word.trim().toLowerCase(), structuredClone(item));
+  }
+  for (const word of game.starters.slice(0, 32)) {
+    if (typeof word === "string" && word.trim() && !discovered.has(word.trim().toLowerCase())) discovered.set(word.trim().toLowerCase(), { word: word.trim() });
+  }
+
+  const solutionRecipes = new Map();
+  for (const entry of Array.isArray(snapshot.solutionRecipes) ? snapshot.solutionRecipes.slice(0, 1_000) : []) {
+    if (!Array.isArray(entry) || entry.length !== 2 || typeof entry[0] !== "string" || !entry[1] || typeof entry[1] !== "object") continue;
+    solutionRecipes.set(entry[0], structuredClone(entry[1]));
+  }
+
+  return {
+    runId,
+    playerId,
+    game: structuredClone(game),
+    ranked: Boolean(snapshot.ranked),
+    challengeId: String(snapshot.challengeId || `practice:${runId}`).slice(0, 160),
+    startedAt,
+    expiresAt,
+    discovered,
+    moves: nonnegativeCounter(snapshot.moves),
+    assist: typeof snapshot.assist === "string" ? snapshot.assist.slice(0, 32) : "none",
+    scoringDisabled: Boolean(snapshot.scoringDisabled),
+    forfeited: Boolean(snapshot.forfeited),
+    forfeitReason: typeof snapshot.forfeitReason === "string" ? snapshot.forfeitReason.slice(0, 32) : null,
+    forfeitedAt: snapshot.forfeitedAt == null ? null : Number.isFinite(Number(snapshot.forfeitedAt)) ? Number(snapshot.forfeitedAt) : null,
+    revealRoute: Array.isArray(snapshot.revealRoute) ? structuredClone(snapshot.revealRoute.slice(0, 1_000)) : null,
+    solutionRoute: Array.isArray(snapshot.solutionRoute) ? structuredClone(snapshot.solutionRoute.slice(0, 1_000)) : null,
+    solutionRecipes,
+    twistUsed: Boolean(snapshot.twistUsed),
+    twistedPairKey: typeof snapshot.twistedPairKey === "string" ? snapshot.twistedPairKey.slice(0, 160) : null,
+    usedBend: Boolean(snapshot.usedBend),
+    bendItem: snapshot.bendItem && typeof snapshot.bendItem === "object" && !Array.isArray(snapshot.bendItem) ? structuredClone(snapshot.bendItem) : null,
+    history: Array.isArray(snapshot.history) ? structuredClone(snapshot.history.slice(0, 2_000)) : [],
+    completedAt: snapshot.completedAt == null ? null : Number.isFinite(Number(snapshot.completedAt)) ? Number(snapshot.completedAt) : null,
+    submitted: Boolean(snapshot.submitted)
+  };
+}
+
 export class RunRegistry {
   constructor(store) {
     this.store = store;
     this.runs = new Map();
+    this.store.data.runs ||= {};
+    for (const [runId, snapshot] of Object.entries(this.store.data.runs)) {
+      const run = hydrateRun(snapshot, this.store.data.players);
+      if (run && run.runId === runId) this.runs.set(runId, run);
+      else delete this.store.data.runs[runId];
+    }
+    this.cleanup();
+  }
+
+  checkpoint(run) {
+    this.store.data.runs[run.runId] = serializeRun(run);
+  }
+
+  persist(run = null) {
+    if (run) this.checkpoint(run);
+    return this.store.persist();
+  }
+
+  flush() {
+    return this.store.persist();
   }
 
   start(playerId, game, { ranked = false, challengeId = "", scoringDisabled = false, forfeitReason = "" } = {}) {
@@ -566,7 +919,7 @@ export class RunRegistry {
       expiresAt: startedAt + Math.max((game.timeLimit || 0) * 1000 + 10_000, 30 * 60_000),
       discovered: new Map(game.starters.map((word) => [word.toLowerCase(), { word }])),
       moves: 0,
-      assist: scoringDisabled ? "reveal" : "none",
+      assist: scoringDisabled && String(forfeitReason).toLowerCase() === "sense" ? "sense" : scoringDisabled ? "reveal" : "none",
       scoringDisabled: Boolean(scoringDisabled),
       forfeited: Boolean(scoringDisabled),
       forfeitReason: scoringDisabled ? String(forfeitReason || "reveal") : null,
@@ -581,6 +934,7 @@ export class RunRegistry {
       submitted: false
     };
     this.runs.set(runId, run);
+    this.checkpoint(run);
     return { run, token: this.store.sign(`run:${runId}:${playerId}:${startedAt}`) };
   }
 
@@ -624,6 +978,7 @@ export class RunRegistry {
     run.discovered.set(result.word.toLowerCase(), result);
     if (result.source === "ai") run.assist = "ai";
     if (result.word.toLowerCase() === run.game.target.toLowerCase()) run.completedAt = Date.now();
+    this.checkpoint(run);
   }
 
   reveal(run, route) {
@@ -658,7 +1013,21 @@ export class RunRegistry {
       run.moves += 1;
     }
     run.completedAt = Date.now();
+    this.checkpoint(run);
     return run.revealRoute;
+  }
+
+  sense(run) {
+    if (run.submitted) throw serviceError(409, "This score was already submitted.", "already_submitted");
+    if (run.completedAt) throw serviceError(409, "This orbit is already complete.", "run_complete");
+
+    run.assist = run.forfeitReason === "reveal" ? "reveal" : "sense";
+    run.scoringDisabled = true;
+    run.forfeited = true;
+    run.forfeitReason ||= "sense";
+    run.forfeitedAt ||= Date.now();
+    this.checkpoint(run);
+    return run;
   }
 
   addBend(run, item, assist) {
@@ -668,6 +1037,7 @@ export class RunRegistry {
     run.bendItem = structuredClone(item);
     run.assist = assist;
     run.discovered.set(item.word.toLowerCase(), item);
+    this.checkpoint(run);
   }
 
   progress(run) {
@@ -690,7 +1060,7 @@ export class RunRegistry {
     run.submitted = true;
     const elapsedMs = Math.max(1, run.completedAt - run.startedAt);
     const assisted = run.assist !== "none";
-    return {
+    const entry = {
       id: randomUUID(),
       runId: run.runId,
       playerId: run.playerId,
@@ -707,11 +1077,17 @@ export class RunRegistry {
       weeklyKey: isoWeekKey(new Date(run.startedAt)),
       createdAt: new Date().toISOString()
     };
+    this.checkpoint(run);
+    return entry;
   }
 
   cleanup() {
     const now = Date.now();
-    for (const [id, run] of this.runs) if (now > run.expiresAt + 60_000) this.runs.delete(id);
+    for (const [id, run] of this.runs) {
+      if (now <= run.expiresAt + 60_000) continue;
+      this.runs.delete(id);
+      delete this.store.data.runs[id];
+    }
   }
 }
 

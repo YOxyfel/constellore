@@ -8,6 +8,7 @@ import {
   lookupLocalCombination
 } from "./local-world.mjs";
 import { cosmicTwistOptions, cosmicTwistSeedFor, selectCosmicTwist } from "./cosmic-twists.mjs";
+import { rankSenseCandidates } from "./engagement-features.mjs";
 
 const runs = new Map();
 const MAX_RESUME_DISCOVERIES = 1000;
@@ -94,6 +95,7 @@ function restoredHistory(value) {
 }
 
 function publicRun(run) {
+  const scoreEligible = !run.scoringDisabled;
   return {
     id: run.id,
     token: run.token,
@@ -103,8 +105,8 @@ function publicRun(run) {
     deadlineAt: run.deadlineAt,
     assist: run.assist,
     scoringDisabled: Boolean(run.scoringDisabled),
-    scoreEligible: false,
-    rewardEligible: false,
+    scoreEligible,
+    rewardEligible: scoreEligible,
     leaderboardEligible: false
   };
 }
@@ -189,7 +191,7 @@ function restoreRun(body) {
   const history = restoredHistory(progress.history);
   for (const entry of history) available.add(entry.word.toLowerCase());
   const assistValue = String(progress.assist || snapshotRun.assist || "none").toLowerCase();
-  const assist = ["none", "wish", "reveal"].includes(assistValue) ? assistValue : wished ? "wish" : "none";
+  const assist = ["none", "wish", "reveal", "sense"].includes(assistValue) ? assistValue : wished ? "wish" : "none";
   const moveMaximum = game.moveLimit ? Math.max(game.moveLimit, history.length) : 10_000;
   const moves = Math.max(history.length, boundedInteger(progress.moves, history.length, moveMaximum));
   const targetFound = available.has(game.target.toLowerCase());
@@ -211,7 +213,7 @@ function restoreRun(body) {
     wished,
     bendItem,
     assist: assist === "none" && wished ? "wish" : assist,
-    scoringDisabled: Boolean(progress.scoringDisabled || assist === "reveal"),
+    scoringDisabled: Boolean(progress.scoringDisabled || ["reveal", "sense"].includes(assist)),
     twistUsed: Boolean(twistEntry),
     twistedPairKey: twistEntry ? [twistEntry.a, twistEntry.b].map((word) => word.toLowerCase()).sort().join("+") : null,
     revealRoute: null
@@ -305,19 +307,50 @@ export async function localRequest(url, options = {}) {
     return {
       player: publicPlayer(),
       game,
-      run: {
-        id: run.id,
-        token: run.token,
-        ranked: false,
-        localOnly: true,
-        startedAt: run.startedAt,
-        deadlineAt: run.deadlineAt
-      }
+      run: publicRun(run)
     };
   }
 
   if (method === "POST" && path === "/api/run/resume") {
     return resumeResponse(restoreRun(body));
+  }
+
+  if (method === "POST" && path === "/api/run/sense") {
+    const run = requireRun(body);
+    if (run.completed) fail("This local orbit is already complete.", "run_complete", 409);
+    const route = localRouteTo(run.game.target);
+    if (!route) fail("No safe constellation signal is available for this target.", "sense_unavailable", 422);
+    const words = [...run.available].map((word) => localItemFor(word)).filter(Boolean);
+    const candidates = rankSenseCandidates({
+      words,
+      target: run.game.target,
+      history: run.history,
+      route,
+      seed: run.game.seed,
+      limit: 3
+    }).map((candidate) => {
+      const discovered = localItemFor(candidate.word);
+      return {
+        word: discovered?.word || candidate.word,
+        emoji: discovered?.emoji || candidate.emoji || "",
+        category: discovered?.category || null,
+        signal: ["bright", "warm", "resonant"].includes(candidate.signal) ? candidate.signal : "warm"
+      };
+    }).slice(0, 3);
+    if (!candidates.length) fail("No safe constellation signal is available yet.", "sense_unavailable", 422);
+    run.assist = "sense";
+    run.scoringDisabled = true;
+    return {
+      candidates,
+      assisted: true,
+      assist: "sense",
+      scoringDisabled: true,
+      scoreEligible: false,
+      rewardEligible: false,
+      leaderboardEligible: false,
+      ranked: false,
+      localOnly: true
+    };
   }
 
   if (method === "POST" && path === "/api/run/reveal") {

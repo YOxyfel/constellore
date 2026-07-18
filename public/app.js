@@ -1,5 +1,7 @@
 import { createCtrlHoverController } from "./ctrl-hover.mjs?v=1.0.0";
 import { orderInventory, packOrbit, pickMagneticTarget } from "./frictionless.mjs?v=1.0.0";
+import { buildMasteryCollections, recordRecipeDiscovery, sanitizeRecipeMasteryState, summarizeMasteryCollections } from "./recipe-mastery.mjs?v=1.0.0";
+import { buildGhost, feedbackCuePolicy, ghostSnapshot, grantSenseCharges, refillSenseWallet, sanitizeFeedbackPreferences, sanitizeSenseWallet, spendSenseCharge } from "./engagement-features.mjs?v=1.0.0";
 
 const starterEmoji = { Earth: "🌍", Water: "💧", Fire: "🔥", Air: "💨" };
 const starterCategory = { Earth: "nature", Water: "force", Fire: "force", Air: "force" };
@@ -9,8 +11,32 @@ const LEGACY_PROFILE_KEYS = isStaticBeta ? [] : ["wordforge-profile-v3", "wordfo
 const todayKey = new Date().toISOString().slice(0, 10);
 const sessionId = globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
+const MASTERY_CATALOG = [
+  ["Earth", "Water", "Mud", "🟤", "nature"], ["Air", "Water", "Mist", "🌫️", "nature"],
+  ["Earth", "Fire", "Lava", "🌋", "nature"], ["Lava", "Water", "Stone", "🪨", "nature"],
+  ["Air", "Steam", "Cloud", "☁️", "nature"], ["Cloud", "Water", "Rain", "🌧️", "nature"],
+  ["Stone", "Stone", "Mountain", "⛰️", "nature"], ["Snow", "Water", "Ice", "🧊", "nature"],
+  ["Water", "Water", "Ocean", "🌊", "nature"], ["Sand", "Sand", "Desert", "🏜️", "nature"],
+  ["Earth", "Energy", "Life", "🌱", "life"], ["Earth", "Life", "Plant", "🌿", "life"],
+  ["Plant", "Water", "Tree", "🌳", "life"], ["Air", "Life", "Bird", "🐦", "life"],
+  ["Life", "Water", "Fish", "🐟", "life"], ["Tree", "Tree", "Forest", "🌲", "life"],
+  ["Field", "Plant", "Garden", "🪴", "life"], ["Earth", "Species", "Animal", "🐾", "life"],
+  ["Mud", "Fire", "Brick", "🧱", "structure"], ["Brick", "Brick", "Wall", "🧱", "structure"],
+  ["Wall", "Wall", "House", "🏠", "structure"], ["House", "House", "Village", "🏘️", "structure"],
+  ["Village", "Village", "City", "🏙️", "structure"], ["Fire", "Stone", "Metal", "🔩", "structure"],
+  ["Energy", "Metal", "Machine", "⚙️", "structure"], ["Clay", "Fire", "Pottery", "🏺", "structure"],
+  ["Fire", "Water", "Steam", "♨️", "force"], ["Air", "Energy", "Light", "✨", "force"],
+  ["Cloud", "Energy", "Storm", "⛈️", "force"], ["Energy", "Storm", "Lightning", "🌩️", "force"],
+  ["Fire", "Fire", "Inferno", "🔥", "force"], ["Air", "Air", "Wind", "🌬️", "force"],
+  ["Energy", "Energy", "Power", "🔋", "force"], ["Light", "Light", "Laser", "🔦", "force"],
+  ["Air", "Light", "Sky", "🌌", "celestial"], ["Light", "Sky", "Star", "⭐", "celestial"],
+  ["Glass", "Sky", "Telescope", "🔭", "celestial"], ["Machine", "Sky", "Rocket", "🚀", "celestial"],
+  ["Fire", "Light", "Sun", "☀️", "celestial"], ["Sky", "Sky", "Space", "🌌", "celestial"],
+  ["Star", "Star", "Galaxy", "🌌", "celestial"], ["Sky", "Star", "Constellation", "✨", "celestial"]
+].map(([a, b, word, emoji, category]) => ({ a, b, word, emoji, category }));
+
 const defaultProfile = {
-  version: 3,
+  version: 4,
   playerId: "",
   playerToken: "",
   callsign: "",
@@ -28,6 +54,12 @@ const defaultProfile = {
   dailyWishUsedDate: "",
   premium: false,
   theme: "void",
+  recipeMastery: { version: 1, recipes: [] },
+  masteryCelebrated: [],
+  senseWallet: { version: 1, charges: 0, lastRefillDate: "", earned: 0, spent: 0 },
+  senseFounderBonusDate: "",
+  feedbackPreferences: { sound: true, haptics: true },
+  rivalGhostEnabled: true,
   weekly: { key: "", stage: 0, complete: false }
 };
 
@@ -89,7 +121,9 @@ const state = {
   marketClockOffset: 0,
   selectedMarketItem: null,
   leaderboardScope: "daily",
-  leaderboardDivision: "pure"
+  leaderboardDivision: "pure",
+  sense: { words: [], timer: null, active: false },
+  ghost: { enabled: true, model: null, timerId: null, lastRelation: "", started: false, requestGeneration: 0, requestController: null }
 };
 
 let profile = loadProfile();
@@ -117,6 +151,8 @@ const els = {
   modeName: $("#modeName"), targetWord: $("#targetWord"), lawPill: $("#lawPill"), movesValue: $("#movesValue"),
   timerHud: $("#timerHud"), timerValue: $("#timerValue"), pathCount: $("#pathCount"),
   milestoneText: $("#milestoneText"), milestoneBar: $("#milestoneBar"), wishState: $("#wishState"),
+  senseButton: $("#senseButton"), senseHudCount: $("#senseHudCount"), senseDialog: $("#senseDialog"),
+  rivalGhost: $("#rivalGhost"), ghostCallsign: $("#ghostCallsign"), ghostStatus: $("#ghostStatus"), ghostPace: $("#ghostPace"),
   paywallDialog: $("#paywallDialog"), wishDialog: $("#wishDialog"), atlasDialog: $("#atlasDialog"),
   profileDialog: $("#profileDialog"), shareDialog: $("#shareDialog"), resultDialog: $("#resultDialog"),
   exchangeDialog: $("#exchangeDialog"), marketBuyDialog: $("#marketBuyDialog"), leaderboardDialog: $("#leaderboardDialog"),
@@ -128,7 +164,8 @@ const els = {
   resultEmoji: $("#resultEmoji"), resultKicker: $("#resultKicker"), resultTitle: $("#resultTitle"),
   resultStats: $("#resultStats"), resultPrimary: $("#resultPrimary"), resultRetry: $("#resultRetry"),
   resultShare: $("#resultShare"), rewardCard: $("#rewardCard"), rewardDust: $("#rewardDust"),
-  rewardReason: $("#rewardReason"), toast: $("#toast"), connectionBadge: $("#connectionBadge")
+  rewardReason: $("#rewardReason"), masteryCollectionList: $("#masteryCollectionList"),
+  toast: $("#toast"), connectionBadge: $("#connectionBadge")
 };
 
 const ctrlHover = createCtrlHoverController({
@@ -145,9 +182,14 @@ function loadProfile() {
     return {
       ...structuredClone(defaultProfile),
       ...stored,
-      version: 3,
+      version: 4,
       vault: Array.isArray(stored.vault) ? stored.vault : [],
       discovered: Array.isArray(stored.discovered) ? [...new Set([...defaultProfile.discovered, ...stored.discovered])].slice(0, 1000) : [...defaultProfile.discovered],
+      recipeMastery: sanitizeRecipeMasteryState(stored.recipeMastery),
+      masteryCelebrated: Array.isArray(stored.masteryCelebrated) ? [...new Set(stored.masteryCelebrated.map(String))].slice(0, 20) : [],
+      senseWallet: sanitizeSenseWallet(stored.senseWallet),
+      feedbackPreferences: sanitizeFeedbackPreferences(stored.feedbackPreferences),
+      rivalGhostEnabled: stored.rivalGhostEnabled !== false,
       weekly: { ...defaultProfile.weekly, ...(stored.weekly || {}) }
     };
   } catch {
@@ -197,6 +239,83 @@ function setupDailyState() {
   $("#dailyButton span").textContent = completed ? "Return tomorrow" : "Accept challenge";
 }
 
+function refillDailySense() {
+  const result = refillSenseWallet(profile.senseWallet, { date: todayKey, amount: 1, cap: 5 });
+  profile.senseWallet = result.wallet;
+  return result;
+}
+
+function masteryCollections() {
+  return buildMasteryCollections({
+    recipes: MASTERY_CATALOG,
+    history: state.history,
+    discovered: profile.discovered,
+    state: profile.recipeMastery,
+    limitPerCollection: 8
+  });
+}
+
+function masterySummary() {
+  return summarizeMasteryCollections(masteryCollections());
+}
+
+function masteryStarsForWord(word) {
+  return profile.recipeMastery.recipes.reduce((best, recipe) => recipe.word.toLowerCase() === String(word).toLowerCase() ? Math.max(best, recipe.stars) : best, 0);
+}
+
+function senseWordActive(itemOrWord) {
+  return state.sense.active && state.sense.words.includes(inventoryKey(itemOrWord));
+}
+
+function renderMastery() {
+  const collections = masteryCollections();
+  const summary = summarizeMasteryCollections(collections);
+  $("#masteryStars").textContent = summary.stars;
+  $("#masteryCollections").textContent = summary.completedCollections;
+  $("#profileMasteryStars").textContent = summary.stars;
+  els.masteryCollectionList.replaceChildren(...collections.map((collection) => {
+    const card = document.createElement("article");
+    card.className = `mastery-card${collection.progress.completed ? " complete" : ""}`;
+    const percent = collection.progress.masteryPercent;
+    const recipes = collection.entries.map((entry) => {
+      if (entry.locked) return `<li class="mastery-recipe locked" aria-label="${escapeHtml(entry.clue)}"><span aria-hidden="true">◇</span><strong>${escapeHtml(entry.silhouette)}</strong><small>UNDISCOVERED</small></li>`;
+      const stars = `${"★".repeat(entry.stars)}${"☆".repeat(Math.max(0, entry.maxStars - entry.stars))}`;
+      return `<li class="mastery-recipe"><span aria-label="${entry.stars} of ${entry.maxStars} stars">${stars}</span><strong>${escapeHtml(entry.emoji)} ${escapeHtml(entry.word)}</strong><small>${escapeHtml(entry.a)} + ${escapeHtml(entry.b)}</small></li>`;
+    }).join("");
+    card.innerHTML = `<header class="mastery-card-head"><span class="mastery-card-icon" aria-hidden="true">${escapeHtml(collection.icon)}</span><span><strong>${escapeHtml(collection.title)}</strong><small>${collection.progress.unlocked}/${collection.progress.total} recipes mapped</small></span><b>${collection.progress.stars}/${collection.progress.maxStars} ★</b></header><div class="mastery-track" style="--mastery-progress:${percent}%" aria-label="${percent}% mastery"><i></i></div><ul class="mastery-recipes">${recipes}</ul>`;
+    return card;
+  }));
+  return { collections, summary };
+}
+
+function recordMasteryStep(step) {
+  const award = recordRecipeDiscovery(profile.recipeMastery, {
+    ...step,
+    runId: state.run?.id || sessionId,
+    assisted: state.scoringDisabled || state.assist !== "none",
+    revealed: Boolean(step.revealed)
+  });
+  profile.recipeMastery = award.state;
+  if (!award.awardedStar) return award;
+  const snapshot = renderMastery();
+  const newlyCompleted = snapshot.collections.find((collection) => collection.progress.completed && !profile.masteryCelebrated.includes(collection.id));
+  if (newlyCompleted) {
+    profile.masteryCelebrated.push(newlyCompleted.id);
+    profile.senseWallet = grantSenseCharges(profile.senseWallet, 1).wallet;
+    track("sense_earned", { source: "mastery", reward: 1 });
+  }
+  saveProfile();
+  track("mastery_progressed", { stars: award.recipe.stars, completed: Boolean(newlyCompleted) });
+  if (newlyCompleted) {
+    showToast(`${newlyCompleted.title} collection complete · +1 Sense`);
+    track("mastery_completed", { collection: newlyCompleted.id });
+  } else {
+    showToast(`Recipe Mastery · ${award.recipe.word} ${"★".repeat(award.recipe.stars)}${"☆".repeat(3 - award.recipe.stars)}`);
+  }
+  setTimeout(() => playFeedback("mastery", { analytics: true }), 180);
+  return { ...award, newlyCompleted };
+}
+
 function renderProfile() {
   setupWeeklyState();
   setupDailyState();
@@ -218,9 +337,30 @@ function renderProfile() {
   $("#profileCallsign").textContent = profile.callsign || "Offline Stargazer";
   $("#profileCredits").textContent = profile.credits;
   $("#profileVaultCount").textContent = profile.vault.length;
+  $("#profileMasteryStars").textContent = masterySummary().stars;
+  const senseCount = sanitizeSenseWallet(profile.senseWallet).charges;
+  $("#profileSenseCount").textContent = senseCount;
+  $("#senseDialogCount").textContent = senseCount;
+  els.senseHudCount.textContent = senseCount;
+  $("#senseEarnNote").textContent = profile.premium ? "Founder: two charges return each UTC day." : "One charge returns each UTC day.";
+  $("#useSense").disabled = !state.game || state.finished || !senseCount;
+  $("#buySense").disabled = profile.stardust < 90 || senseCount >= 9;
+  const feedbackPreferences = sanitizeFeedbackPreferences(profile.feedbackPreferences);
+  profile.feedbackPreferences = feedbackPreferences;
+  for (const [id, enabled] of [["soundPreference", feedbackPreferences.sound], ["hapticPreference", feedbackPreferences.haptics]]) {
+    const button = document.getElementById(id);
+    button.setAttribute("aria-pressed", String(enabled));
+    button.querySelector("small").textContent = enabled ? "ON" : "OFF";
+  }
+  $("#feedbackToggle").setAttribute("aria-pressed", String(feedbackPreferences.sound));
+  $("#feedbackToggle").setAttribute("aria-label", feedbackPreferences.sound ? "Mute sound effects" : "Enable sound effects");
+  $("#feedbackToggle span").textContent = feedbackPreferences.sound ? "♪" : "×";
+  els.rivalGhost.setAttribute("aria-pressed", String(profile.rivalGhostEnabled));
+  els.rivalGhost.setAttribute("aria-label", profile.rivalGhostEnabled ? "Hide Rival Ghost pace" : "Show Rival Ghost pace");
   $("#marketBalance").textContent = profile.credits;
   $("#vaultCount").textContent = profile.vault.length;
   $$('[data-theme]').forEach((button) => button.classList.toggle("active", button.dataset.theme === profile.theme));
+  renderMastery();
   updateWishButton();
 }
 
@@ -236,6 +376,12 @@ function applyServerPlayer(player) {
   profile.wishAvailable = player.wishAvailable !== false;
   profile.dailyWishUsedDate = player.dailyWishUsedDate || "";
   if (founderActivated) profile.streakShields += 1;
+  if (profile.premium && profile.senseFounderBonusDate !== todayKey) {
+    const bonus = grantSenseCharges(profile.senseWallet, 1, { cap: 5 });
+    profile.senseWallet = bonus.wallet;
+    profile.senseFounderBonusDate = todayKey;
+    if (bonus.granted) track("sense_earned", { source: "founder", reward: bonus.granted });
+  }
   saveProfile();
   renderWishVault();
 }
@@ -295,6 +441,10 @@ async function fetchJson(url, options = {}, timeout = 20000) {
     return runtime.localRequest(url, options);
   }
   const controller = new AbortController();
+  const upstreamSignal = options.signal;
+  const abortFromUpstream = () => controller.abort();
+  if (upstreamSignal?.aborted) controller.abort();
+  else upstreamSignal?.addEventListener?.("abort", abortFromUpstream, { once: true });
   const timer = setTimeout(() => controller.abort(), timeout);
   try {
     const response = await fetch(url, { ...options, signal: controller.signal });
@@ -312,6 +462,7 @@ async function fetchJson(url, options = {}, timeout = 20000) {
     throw error;
   } finally {
     clearTimeout(timer);
+    upstreamSignal?.removeEventListener?.("abort", abortFromUpstream);
   }
 }
 
@@ -322,6 +473,67 @@ function track(name, properties = {}) {
     if (navigator.sendBeacon) navigator.sendBeacon("/api/analytics", new Blob([body], { type: "application/json" }));
     else fetch("/api/analytics", { method: "POST", headers: { "Content-Type": "application/json" }, body, keepalive: true }).catch(() => {});
   } catch { /* Analytics must never interrupt play. */ }
+}
+
+let feedbackAudioContext = null;
+
+function primeFeedbackAudio() {
+  const preferences = sanitizeFeedbackPreferences(profile.feedbackPreferences);
+  if (!preferences.sound) return null;
+  const AudioContextClass = globalThis.AudioContext || globalThis.webkitAudioContext;
+  if (!AudioContextClass) return null;
+  try {
+    feedbackAudioContext ||= new AudioContextClass();
+    if (feedbackAudioContext.state === "suspended") feedbackAudioContext.resume().catch(() => {});
+    return feedbackAudioContext;
+  } catch {
+    return null;
+  }
+}
+
+function playFeedback(cue, { analytics = false } = {}) {
+  const context = primeFeedbackAudio();
+  const policy = feedbackCuePolicy(cue, profile.feedbackPreferences, {
+    audioAvailable: Boolean(context),
+    hapticsAvailable: typeof navigator.vibrate === "function",
+    documentHidden: document.hidden,
+    reducedMotion: matchMedia("(prefers-reduced-motion: reduce)").matches
+  });
+  if (policy.audio && context) {
+    const start = context.currentTime + .005;
+    const slice = Math.max(.025, policy.audio.duration / 1000 / policy.audio.tones.length);
+    policy.audio.tones.forEach((frequency, index) => {
+      const oscillator = context.createOscillator();
+      const gain = context.createGain();
+      const at = start + slice * index;
+      oscillator.type = policy.audio.wave;
+      oscillator.frequency.setValueAtTime(frequency, at);
+      gain.gain.setValueAtTime(.0001, at);
+      gain.gain.exponentialRampToValueAtTime(policy.audio.gain, at + Math.min(.018, slice / 3));
+      gain.gain.exponentialRampToValueAtTime(.0001, at + slice);
+      oscillator.connect(gain).connect(context.destination);
+      oscillator.start(at);
+      oscillator.stop(at + slice + .01);
+    });
+  }
+  if (policy.haptic) {
+    try { navigator.vibrate(policy.haptic); } catch { /* Haptics are optional. */ }
+  }
+  if (analytics && (policy.audio || policy.haptic)) {
+    const kind = cue === "reject" ? "rejection" : cue === "twist" ? "twist" : cue === "target" ? "target" : cue === "mastery" ? "discovery" : cue === "place" || cue === "sense" || cue === "ghostPass" ? "ui" : "fusion";
+    track("fusion_feedback_played", { kind });
+  }
+}
+
+function toggleFeedbackPreference(kind) {
+  const preferences = sanitizeFeedbackPreferences(profile.feedbackPreferences);
+  if (kind === "sound") preferences.sound = !preferences.sound;
+  if (kind === "haptics") preferences.haptics = !preferences.haptics;
+  profile.feedbackPreferences = preferences;
+  saveProfile();
+  track(kind === "sound" ? "audio_toggled" : "haptic_toggled", { enabled: preferences[kind] });
+  if (kind === "sound" && preferences.sound) playFeedback("place");
+  else if (kind === "haptics" && preferences.haptics) playFeedback("place");
 }
 
 async function beginMode(mode, options = {}) {
@@ -398,8 +610,8 @@ function snapshotItem(item) {
   };
 }
 
-function buildActiveRunSnapshot() {
-  if (!state.game || !state.run || state.finished || state.reveal.active || state.reveal.pending) return null;
+function buildActiveRunSnapshot({ completed = false } = {}) {
+  if (!state.game || !state.run || (state.finished && !completed) || state.reveal.active || state.reveal.pending) return null;
   const boardRect = els.board.getBoundingClientRect();
   const width = Math.max(1, boardRect.width);
   const height = Math.max(1, boardRect.height);
@@ -418,7 +630,7 @@ function buildActiveRunSnapshot() {
     },
     progress: {
       moves: state.moves,
-      completed: false,
+      completed: Boolean(completed),
       submitted: false,
       discovered: state.words.slice(0, 1000).map(snapshotItem).filter(Boolean),
       history: state.history.slice(-500).map((step) => ({ ...step })),
@@ -446,6 +658,14 @@ function flushRunSave() {
   clearTimeout(runSaveTimer);
   runSaveTimer = null;
   const snapshot = buildActiveRunSnapshot();
+  if (!snapshot) return;
+  try { localStorage.setItem(ACTIVE_RUN_KEY, JSON.stringify(snapshot)); } catch { /* Storage can be unavailable or full. */ }
+}
+
+function saveCompletedRunSnapshot() {
+  clearTimeout(runSaveTimer);
+  runSaveTimer = null;
+  const snapshot = buildActiveRunSnapshot({ completed: true });
   if (!snapshot) return;
   try { localStorage.setItem(ACTIVE_RUN_KEY, JSON.stringify(snapshot)); } catch { /* Storage can be unavailable or full. */ }
 }
@@ -517,7 +737,7 @@ function hydrateRestoredRun(payload, snapshot) {
   }
   const restoredWords = state.words.map((item) => item.word);
   const profileSize = profile.discovered.length;
-  profile.discovered = [...new Set([...profile.discovered, ...restoredWords])].slice(0, 1000);
+  if (!state.scoringDisabled) profile.discovered = [...new Set([...profile.discovered, ...restoredWords])].slice(0, 1000);
   if (profile.discovered.length !== profileSize) saveProfile();
   renderInventory();
   renderBoard();
@@ -559,7 +779,8 @@ function startWithGame(game, run, { restored = false } = {}) {
   state.orbitGeneration += 1;
   stopTimer();
   resetRevealPlayback();
-  [els.revealDialog, els.resultDialog, els.leaderboardDialog, els.shareDialog, els.atlasDialog, els.wishDialog, els.paywallDialog, els.exchangeDialog, els.marketBuyDialog]
+  clearSenseGlow();
+  [els.revealDialog, els.resultDialog, els.leaderboardDialog, els.shareDialog, els.atlasDialog, els.senseDialog, els.wishDialog, els.paywallDialog, els.exchangeDialog, els.marketBuyDialog]
     .forEach((dialog) => { if (dialog?.open) dialog.close(); });
   state.game = game;
   state.run = run;
@@ -604,6 +825,7 @@ function startWithGame(game, run, { restored = false } = {}) {
   updateHud();
   updateMilestone();
   requestAnimationFrame(startCosmos);
+  void startRivalGhost();
   if (game.timeLimit) startTimer();
   scheduleRunSave();
   if (!restored) track("run_started", { mode: game.mode, target: game.target, stage: game.stage ?? null, aiEnabled: game.aiEnabled });
@@ -620,6 +842,8 @@ function returnHome() {
   if (state.game && !state.finished && state.history.length) track("run_failed", { mode: state.mode, reason: "abandoned", moves: state.moves });
   stopTimer();
   resetRevealPlayback();
+  clearSenseGlow();
+  stopRivalGhost();
   cancelAnimationFrame(state.cosmosFrame);
   state.cosmosFrame = null;
   state.game = null;
@@ -628,7 +852,7 @@ function returnHome() {
   clearActiveRunSnapshot();
   els.gameScreen.hidden = true;
   els.startScreen.hidden = false;
-  [els.resultDialog, els.atlasDialog, els.shareDialog, els.wishDialog, els.paywallDialog, els.exchangeDialog, els.marketBuyDialog, els.leaderboardDialog, els.revealDialog].forEach((dialog) => { if (dialog?.open) dialog.close(); });
+  [els.resultDialog, els.atlasDialog, els.senseDialog, els.shareDialog, els.wishDialog, els.paywallDialog, els.exchangeDialog, els.marketBuyDialog, els.leaderboardDialog, els.revealDialog].forEach((dialog) => { if (dialog?.open) dialog.close(); });
   renderProfile();
   window.scrollTo({ top: 0, behavior: "smooth" });
   requestAnimationFrame(() => els.startScreen.querySelector(".mode-grid [data-mode]:not(:disabled)")?.focus({ preventScroll: true }));
@@ -688,6 +912,246 @@ function updateMilestone(won = false) {
   els.milestoneText.textContent = state.history.length ? `${state.history.length} stars traced · ${state.newDiscoveries} new to your universe` : "Your constellation begins here";
 }
 
+function clearSenseGlow() {
+  clearTimeout(state.sense.timer);
+  state.sense.timer = null;
+  state.sense.active = false;
+  state.sense.words = [];
+  document.querySelectorAll(".sense-hot").forEach((element) => element.classList.remove("sense-hot"));
+}
+
+function applySenseGlow(words) {
+  clearSenseGlow();
+  state.sense.words = [...new Set((Array.isArray(words) ? words : []).map((entry) => inventoryKey(entry)).filter(Boolean))].slice(0, 3);
+  state.sense.active = state.sense.words.length > 0;
+  renderInventory();
+  renderBoard();
+  if (!state.sense.active) return;
+  state.sense.timer = setTimeout(clearSenseGlow, 10_000);
+}
+
+function openSense() {
+  if (!state.game || state.finished) return;
+  if (state.startingRun || state.reveal.active || state.reveal.pending || state.busyPairs.size) return showToast("Let the current constellation settle first.");
+  stopTimer();
+  $("#senseMessage").textContent = "";
+  renderProfile();
+  els.senseDialog.showModal();
+  track("sense_opened", { mode: state.mode });
+}
+
+async function useConstellationSense() {
+  if (!state.run || state.finished || state.reveal.active || state.reveal.pending) return;
+  const preview = spendSenseCharge(profile.senseWallet);
+  if (!preview.spent) {
+    $("#senseMessage").textContent = "No Sense charges remain. Earn one tomorrow or buy one with Stardust.";
+    return;
+  }
+  const button = $("#useSense");
+  const label = button.querySelector("span");
+  const original = label.textContent;
+  const runId = state.run.id;
+  const priorWallet = sanitizeSenseWallet(profile.senseWallet);
+  const priorAssist = state.assist;
+  const priorScoringDisabled = state.scoringDisabled;
+  const priorRun = { ...state.run };
+  button.disabled = true;
+  label.textContent = "Listening to the cosmos…";
+  $("#senseMessage").textContent = "";
+  // Sense forfeits fair-play rewards. Commit that locally before the request so
+  // a lost success response cannot leave an apparently score-eligible orbit.
+  profile.senseWallet = preview.wallet;
+  state.assist = "sense";
+  state.scoringDisabled = true;
+  state.run = { ...state.run, ranked: false, assisted: true, scoreEligible: false, leaderboardEligible: false };
+  saveProfile();
+  updateHud();
+  scheduleRunSave();
+  try {
+    const result = await fetchJson("/api/run/sense", {
+      method: "POST",
+      headers: authHeaders({ "Content-Type": "application/json" }),
+      body: JSON.stringify({ runId, runToken: priorRun.token })
+    });
+    if (state.run?.id !== runId) return;
+    state.assist = result.assist || "sense";
+    state.scoringDisabled = result.scoringDisabled !== false;
+    state.run = { ...state.run, ranked: false, assisted: true, scoreEligible: false, leaderboardEligible: false };
+    saveProfile();
+    updateHud();
+    scheduleRunSave();
+    const candidates = result.words || result.candidates || [];
+    applySenseGlow(candidates);
+    els.senseDialog.close();
+    const names = candidates.map((entry) => entry.word).filter(Boolean).join(", ");
+    showAlchemy(names ? `CONSTELLATION SENSE · ${names} resonate for ten seconds.` : "CONSTELLATION SENSE · Follow the brightest recent discoveries.");
+    playFeedback("sense", { analytics: true });
+    track("sense_used", { mode: state.mode, words: candidates.length });
+  } catch (error) {
+    const confirmedBeforeForfeit = Number(error.status) >= 400 && Number(error.status) < 500;
+    if (confirmedBeforeForfeit && state.run?.id === runId) {
+      profile.senseWallet = priorWallet;
+      state.assist = priorAssist;
+      state.scoringDisabled = priorScoringDisabled;
+      state.run = priorRun;
+      saveProfile();
+      updateHud();
+      scheduleRunSave();
+      $("#senseMessage").textContent = error.message;
+    } else {
+      $("#senseMessage").textContent = "The signal response was interrupted. To protect fair play, this orbit remains assisted and the Sense charge stays spent.";
+      scheduleRunSave();
+    }
+  } finally {
+    label.textContent = original;
+    renderProfile();
+  }
+}
+
+function buySenseCharge() {
+  const wallet = sanitizeSenseWallet(profile.senseWallet);
+  track("sense_purchase_started", { cost: 90, chargesBefore: wallet.charges });
+  if (wallet.charges >= 9) {
+    $("#senseMessage").textContent = "Your Sense reserve is already full.";
+    return;
+  }
+  if (profile.stardust < 90) {
+    $("#senseMessage").textContent = `You need ${90 - profile.stardust} more Stardust.`;
+    return;
+  }
+  profile.stardust -= 90;
+  profile.senseWallet = grantSenseCharges(wallet, 1).wallet;
+  saveProfile();
+  $("#senseMessage").textContent = "One Sense charge joined your reserve.";
+  playFeedback("place");
+  track("sense_purchased", { cost: 90, chargesBefore: wallet.charges, chargesAfter: profile.senseWallet.charges });
+}
+
+function ghostStepEstimate() {
+  return Math.max(5, Number(state.game?.tier || 2) * 3 + 1);
+}
+
+function ghostTimeline({ elapsedMs, moves }) {
+  const steps = ghostStepEstimate();
+  return Array.from({ length: steps + 1 }, (_, index) => {
+    const progress = index / steps;
+    return {
+      elapsedMs: Math.round(elapsedMs * progress),
+      progress,
+      moves: Math.round(moves * progress),
+      milestone: index
+    };
+  });
+}
+
+async function startRivalGhost() {
+  stopRivalGhost();
+  if (!state.game || state.finished) return;
+  if (!profile.rivalGhostEnabled) {
+    els.rivalGhost.hidden = false;
+    els.rivalGhost.setAttribute("aria-pressed", "false");
+    els.rivalGhost.setAttribute("aria-label", "Show Rival Ghost pace");
+    els.ghostCallsign.textContent = "RIVAL GHOST";
+    els.ghostStatus.textContent = "Ghost hidden · tap to race";
+    els.ghostPace.textContent = "OFF";
+    return;
+  }
+  const generation = state.orbitGeneration;
+  const requestGeneration = state.ghost.requestGeneration;
+  const requestController = new AbortController();
+  state.ghost.requestController = requestController;
+  els.rivalGhost.hidden = false;
+  els.ghostCallsign.textContent = "RIVAL GHOST";
+  els.ghostStatus.textContent = "Mapping an asynchronous pace…";
+  els.ghostPace.textContent = "—";
+  let rival = null;
+  let source = "benchmark";
+  if (!isStaticBeta) {
+    try {
+      const board = await fetchJson("/api/leaderboard?scope=all&division=pure&limit=100", { headers: authHeaders(), signal: requestController.signal });
+      rival = (board.entries || []).find((entry) => entry.target?.toLowerCase() === state.game.target.toLowerCase() && entry.callsign !== profile.callsign)
+        || null;
+      if (rival) source = "verified";
+    } catch { /* A projected scout keeps the feature available offline. */ }
+  }
+  if (state.ghost.requestController === requestController) state.ghost.requestController = null;
+  if (generation !== state.orbitGeneration || requestGeneration !== state.ghost.requestGeneration || !profile.rivalGhostEnabled || !state.game || state.finished) return;
+  const fallbackTime = Math.max(42_000, Math.min(150_000, (48 + Number(state.game.tier || 2) * 13) * 1000));
+  const elapsedMs = Math.max(10_000, Number(rival?.elapsedMs) || fallbackTime);
+  const moves = Math.max(4, Number(rival?.moves) || ghostStepEstimate() + 2);
+  state.ghost.model = buildGhost(ghostTimeline({ elapsedMs, moves }), { label: rival?.callsign || "Cosmos Scout" });
+  state.ghost.lastRelation = "";
+  state.ghost.started = true;
+  renderRivalGhost();
+  state.ghost.timerId = setInterval(renderRivalGhost, 500);
+  track("ghost_loaded", { mode: state.mode, source, deltaMs: elapsedMs, moves });
+  track("ghost_race_started", { mode: state.mode, source });
+}
+
+function renderRivalGhost() {
+  if (!state.game || !state.ghost.model || state.finished) return;
+  els.rivalGhost.hidden = false;
+  els.rivalGhost.setAttribute("aria-pressed", String(profile.rivalGhostEnabled));
+  els.rivalGhost.setAttribute("aria-label", profile.rivalGhostEnabled ? "Hide Rival Ghost pace" : "Show Rival Ghost pace");
+  els.ghostCallsign.textContent = state.ghost.model.label.toUpperCase();
+  if (!profile.rivalGhostEnabled) {
+    els.ghostStatus.textContent = "Ghost hidden · tap to race";
+    els.ghostPace.textContent = "OFF";
+    return;
+  }
+  const estimated = ghostStepEstimate();
+  const playerProgress = Math.min(.98, state.history.length / estimated);
+  const snapshot = ghostSnapshot(state.ghost.model, {
+    elapsedMs: Math.max(0, Date.now() - state.startedAt),
+    playerProgress,
+    playerMoves: state.moves,
+    tolerance: 1 / estimated * .55
+  });
+  const rivalStars = Math.min(estimated, Math.floor(snapshot.projectedProgress * estimated));
+  const gap = Math.max(1, Math.abs(state.history.length - rivalStars));
+  els.ghostPace.textContent = `${rivalStars}/${estimated} · ${formatTime(Math.round(snapshot.elapsedMs / 1000))}`;
+  els.ghostStatus.textContent = snapshot.complete && state.history.length < estimated
+    ? "Rival reached the target"
+    : snapshot.relation === "ahead"
+      ? `You lead by ${gap} star${gap === 1 ? "" : "s"}`
+      : snapshot.relation === "behind"
+        ? `Rival leads by ${gap} star${gap === 1 ? "" : "s"}`
+        : "Neck and neck";
+  if (snapshot.relation === "ahead" && state.ghost.lastRelation && state.ghost.lastRelation !== "ahead") playFeedback("ghostPass");
+  state.ghost.lastRelation = snapshot.relation;
+}
+
+function stopRivalGhost({ completed } = {}) {
+  state.ghost.requestGeneration += 1;
+  state.ghost.requestController?.abort();
+  state.ghost.requestController = null;
+  clearInterval(state.ghost.timerId);
+  state.ghost.timerId = null;
+  if (state.ghost.started && typeof completed === "boolean") {
+    const result = state.ghost.lastRelation === "ahead" ? "won" : state.ghost.lastRelation === "behind" ? "lost" : "tied";
+    track("ghost_race_completed", { mode: state.mode, completed, result, moves: state.moves });
+  }
+  state.ghost.started = false;
+  state.ghost.model = null;
+  state.ghost.lastRelation = "";
+  els.rivalGhost.hidden = true;
+}
+
+function toggleRivalGhost() {
+  profile.rivalGhostEnabled = !profile.rivalGhostEnabled;
+  saveProfile();
+  if (profile.rivalGhostEnabled) void startRivalGhost();
+  else {
+    stopRivalGhost();
+    els.rivalGhost.hidden = false;
+    els.rivalGhost.setAttribute("aria-pressed", "false");
+    els.rivalGhost.setAttribute("aria-label", "Show Rival Ghost pace");
+    els.ghostCallsign.textContent = "RIVAL GHOST";
+    els.ghostStatus.textContent = "Ghost hidden · tap to race";
+    els.ghostPace.textContent = "OFF";
+  }
+}
+
 function inventoryKey(itemOrWord) {
   return String(typeof itemOrWord === "object" ? itemOrWord?.word : itemOrWord || "").trim().toLocaleLowerCase();
 }
@@ -716,7 +1180,7 @@ function renderInventory() {
   const controls = visible.map((item) => {
     const button = document.createElement("button");
     button.type = "button";
-    button.className = `inventory-word${["wish", "market"].includes(item.source) ? " wish" : ""}${item.source === "twist" ? " twist" : ""}${item.ghost ? " reveal-ghost" : ""}`;
+    button.className = `inventory-word${["wish", "market"].includes(item.source) ? " wish" : ""}${item.source === "twist" ? " twist" : ""}${item.ghost ? " reveal-ghost" : ""}${senseWordActive(item) ? " sense-hot" : ""}`;
     button.dataset.word = inventoryKey(item);
     const revealLocked = state.reveal.active || state.reveal.pending;
     const unavailable = state.finished || revealLocked || item.ghost;
@@ -725,7 +1189,8 @@ function renderInventory() {
     button.setAttribute("aria-label", item.ghost ? `${item.word}, temporary revealed word. Not saved or playable.` : unavailable ? `${item.word}. Unavailable while this orbit is locked.` : `Add ${item.word} to the cosmos. Drag onto a board word to combine immediately.`);
     if (!unavailable) button.title = `Drag ${item.word} onto a board word to combine`;
     const tag = item.ghost ? "REVEALED" : item.source === "twist" ? "TWIST" : item.source === "wish" ? "WISH" : item.source === "market" ? "VAULT" : item.source?.startsWith("ai") ? "AI" : "";
-    button.innerHTML = `<span class="emoji">${escapeHtml(item.emoji)}</span><span class="word">${escapeHtml(item.word)}</span>${tag ? `<span class="source-tag">${tag}</span>` : ""}`;
+    const masteryStars = masteryStarsForWord(item.word);
+    button.innerHTML = `<span class="emoji">${escapeHtml(item.emoji)}</span><span class="word">${escapeHtml(item.word)}</span>${tag ? `<span class="source-tag">${tag}</span>` : ""}${masteryStars ? `<span class="mastery-tag" aria-label="${masteryStars} recipe mastery stars">★${masteryStars}</span>` : ""}`;
     let suppressClickUntil = 0;
     button.addEventListener("click", (event) => {
       if (performance.now() < suppressClickUntil) {
@@ -808,6 +1273,7 @@ function updateBoardTools() {
   const locked = !state.game || state.finished || state.startingRun || state.reveal.active || state.reveal.pending || state.busyPairs.size > 0;
   els.tidyBoard.disabled = locked || state.nodes.length < 2;
   els.resetBoard.disabled = locked || state.nodes.length === 0;
+  els.senseButton.disabled = locked;
 }
 
 function clearBoardWithUndo() {
@@ -968,7 +1434,7 @@ function releaseCtrlHover(event) {
 function createBoardNode(node, isNew) {
   const button = document.createElement("button");
   button.type = "button";
-  button.className = `board-word${isNew ? " appear" : ""}${["wish", "market"].includes(node.item.source) ? " wish" : ""}${node.item.source === "twist" || node.cosmicTwist ? " cosmic-twist" : ""}${node.item.ghost ? " reveal-ghost" : ""}${node.revealRole ? ` reveal-${node.revealRole}` : ""}${state.selectedNodeId === node.id ? " keyboard-selected" : ""}`;
+  button.className = `board-word${isNew ? " appear" : ""}${["wish", "market"].includes(node.item.source) ? " wish" : ""}${node.item.source === "twist" || node.cosmicTwist ? " cosmic-twist" : ""}${node.item.ghost ? " reveal-ghost" : ""}${node.revealRole ? ` reveal-${node.revealRole}` : ""}${state.selectedNodeId === node.id ? " keyboard-selected" : ""}${senseWordActive(node.item) ? " sense-hot" : ""}`;
   button.dataset.id = node.id;
   button.style.setProperty("--x", `${node.x}px`);
   button.style.setProperty("--y", `${node.y}px`);
@@ -1040,7 +1506,9 @@ function placeFromTray(item, point) {
   const y = point ? point.y - rect.top - 22 : rect.height * .43 + ((state.nodes.length * 31) % 100) - 50;
   touchInventory(item);
   renderInventory();
-  return addNode(item, x, y);
+  const node = addNode(item, x, y);
+  playFeedback("place");
+  return node;
 }
 
 function traySourceFor(item, target) {
@@ -1362,6 +1830,7 @@ async function combineNodes(a, b) {
   const orbitGeneration = state.orbitGeneration;
   state.busyPairs.add(a.id);
   state.busyPairs.add(b.id);
+  playFeedback("combineStart");
   updateBoardTools();
   const aElement = els.boardItems.querySelector(`[data-id="${a.id}"]`);
   const bElement = els.boardItems.querySelector(`[data-id="${b.id}"]`);
@@ -1401,9 +1870,11 @@ async function combineNodes(a, b) {
       state.words.push(result);
       known = result;
       if (!globallyKnown) {
-        profile.discovered.push(result.word);
         state.newDiscoveries += 1;
-        saveProfile();
+        if (!state.scoringDisabled) {
+          profile.discovered.push(result.word);
+          saveProfile();
+        }
       }
     } else if (result.twisted) {
       Object.assign(known, result);
@@ -1412,19 +1883,21 @@ async function combineNodes(a, b) {
     touchInventory(b.item);
     touchInventory(known, { focus: newToRun });
     renderInventory();
-    state.history.push({ a: a.item.word, b: b.item.word, word: result.word, emoji: result.emoji, source: result.source, newDiscovery: !globallyKnown, twisted: Boolean(result.twisted), canonicalWord: result.twist?.canonicalWord || "" });
+    if (result.division === "open" && state.assist === "none") state.assist = "open";
+    const historyStep = { a: a.item.word, b: b.item.word, word: result.word, emoji: result.emoji, category: result.category || known.category || "", source: result.source, newDiscovery: !globallyKnown, twisted: Boolean(result.twisted), canonicalWord: result.twist?.canonicalWord || "" };
+    state.history.push(historyStep);
+    recordMasteryStep(historyStep);
     state.trails.push({ ax: a.x + 44, ay: a.y + 20, bx: b.x + 44, by: b.y + 20, x: x + 44, y: y + 20 });
     state.nodes = state.nodes.filter((node) => node.id !== a.id && node.id !== b.id);
     const resultNode = addNode(known, x, y, { cosmicTwist: Boolean(result.twisted) });
     showAlchemy(result.twisted
       ? `✦ COSMIC TWIST · ${a.item.word} + ${b.item.word} found ${result.emoji} ${result.word} instead of ${result.twist.canonicalWord}. Mix them again for ${result.twist.canonicalWord}.`
       : `${a.item.word} + ${b.item.word} = ${result.emoji} ${result.word}`, false, Boolean(result.twisted));
-    if (navigator.vibrate) navigator.vibrate(result.twisted ? [18, 35, 28, 35, 18] : 18);
+    playFeedback(result.twisted ? "twist" : "success", { analytics: Boolean(result.twisted) });
     updateHud();
     updateMilestone();
     renderAtlas();
     track("combination_completed", { mode: state.mode, a: a.item.word, b: b.item.word, result: result.word, source: result.source, newDiscovery: !globallyKnown, twisted: Boolean(result.twisted) });
-    if (result.division === "open" && state.assist === "none") state.assist = "open";
     const won = Boolean(result.completed);
     if (won) setTimeout(() => finishGame(true), 480);
     else if (state.game.moveLimit && state.moves >= state.game.moveLimit) setTimeout(() => finishGame(false, "No moves remain in this orbit."), 350);
@@ -1438,6 +1911,7 @@ async function combineNodes(a, b) {
       setTimeout(() => element?.classList.remove("rejected"), 380);
     }
     showAlchemy(error.message, true);
+    playFeedback("reject");
     track("combination_rejected", { mode: state.mode, a: a.item.word, b: b.item.word });
     return null;
   } finally {
@@ -1738,7 +2212,7 @@ async function playRevealPath(route, { replay = false } = {}) {
     }
     updateRevealController(index + 1, route[index + 1]);
     if (matchMedia("(prefers-reduced-motion: reduce)").matches) startCosmos();
-    if (navigator.vibrate) navigator.vibrate([10, 18, 10]);
+    playFeedback("success");
     if (!await revealDelay(620, generation)) return;
   }
 
@@ -1852,18 +2326,25 @@ function finishGame(won, reason = "", { skipSubmit = false } = {}) {
   cancelActiveBoardDrag();
   cancelTapChain();
   dismissClearUndo();
-  clearActiveRunSnapshot();
   state.finished = true;
   stopTimer();
+  stopRivalGhost({ completed: won });
+  if (won && !state.reveal.revealed) playFeedback("target", { analytics: true });
   updateMilestone(won);
   const elapsed = Math.max(1, Math.round((Date.now() - state.startedAt) / 1000));
   const assisted = Boolean(state.scoringDisabled || state.assist === "reveal");
   const revealed = assisted && state.reveal.revealed;
+  const pendingRankedSubmit = Boolean(won && !assisted && !skipSubmit && state.run?.ranked);
+  if (pendingRankedSubmit) saveCompletedRunSnapshot();
+  else clearActiveRunSnapshot();
   let reward = null;
   state.resultAction = returnHome;
   $("#rankResultCard").hidden = isStaticBeta || !won || assisted;
   $("#resultLeaderboard").hidden = isStaticBeta || !won || assisted;
   $("#assistResultCard").hidden = !assisted;
+  if (assisted) $("#assistResultCard small").textContent = revealed
+    ? "One visual replay is available. It returns to mode selection and grants no progression."
+    : "Constellation Sense guided this study orbit. It grants no score, leaderboard place, rewards, or later discoveries.";
   $("#resultReveal").hidden = won || assisted || !state.run;
   if (won && !assisted) {
     reward = calculateReward();
@@ -1944,6 +2425,8 @@ async function submitRankedScore() {
       body: JSON.stringify({ runId: state.run.id, runToken: state.run.token })
     });
     if (!result.ranked) throw new Error(result.reason || "This orbit is not ranked.");
+    state.run = { ...state.run, submitted: true };
+    clearActiveRunSnapshot();
     applyServerPlayer(result.player);
     state.leaderboardDivision = result.placement.entry.division;
     state.leaderboardScope = state.mode === "daily" ? "daily" : state.mode === "weekly" ? "weekly" : "sprint";
@@ -2346,7 +2829,7 @@ function renderLeaderboard(board) {
 }
 
 function resumeTimerIfNeeded() {
-  if (state.game?.timeLimit && !state.finished && !state.reveal.active && !state.reveal.pending && !els.gameScreen.hidden && !els.paywallDialog.open && !els.wishDialog.open && !els.atlasDialog.open && !els.shareDialog.open && !els.profileDialog.open && !els.exchangeDialog.open && !els.marketBuyDialog.open && !els.leaderboardDialog.open && !els.revealDialog.open) startTimer();
+  if (state.game?.timeLimit && !state.finished && !state.reveal.active && !state.reveal.pending && !els.gameScreen.hidden && !els.paywallDialog.open && !els.wishDialog.open && !els.atlasDialog.open && !els.senseDialog.open && !els.shareDialog.open && !els.profileDialog.open && !els.exchangeDialog.open && !els.marketBuyDialog.open && !els.leaderboardDialog.open && !els.revealDialog.open) startTimer();
 }
 
 function renderAtlas() {
@@ -2359,14 +2842,25 @@ function renderAtlas() {
     item.innerHTML = `<span class="atlas-star">${escapeHtml(step.emoji)}</span><small>STAR ${String(index + 1).padStart(2, "0")}${step.newDiscovery ? " · NEW" : ""}${step.twisted ? " · COSMIC TWIST" : ""}</small><strong>${escapeHtml(step.word)}</strong><span>${escapeHtml(step.a)} + ${escapeHtml(step.b)}${step.twisted ? ` · expected ${escapeHtml(step.canonicalWord)}` : ""}</span>`;
     return item;
   }));
+  renderMastery();
 }
 
-function openAtlas() {
-  if (!state.game) return;
+function selectAtlasTab(view = "orbit") {
+  const mastery = view === "mastery";
+  $("#orbitAtlasTab").setAttribute("aria-selected", String(!mastery));
+  $("#masteryAtlasTab").setAttribute("aria-selected", String(mastery));
+  $("#orbitAtlasPanel").hidden = mastery;
+  $("#masteryAtlasPanel").hidden = !mastery;
+  if (mastery) track("mastery_opened", { location: state.game ? "run" : "home" });
+}
+
+function openAtlas(view = "orbit") {
+  if (!state.game && view !== "mastery") return;
   if (state.startingRun) return showToast("The next orbit is still being mapped.");
   if (state.reveal.active || state.reveal.pending) return showToast("Pause the Cosmos Reveal before opening the atlas.");
   stopTimer();
   renderAtlas();
+  selectAtlasTab(view);
   els.atlasDialog.showModal();
 }
 
@@ -2602,8 +3096,12 @@ els.resetBoard.addEventListener("click", clearBoardWithUndo);
 els.tidyBoard.addEventListener("click", tidyOrbit);
 $("#undoBoardClear").addEventListener("click", undoBoardClear);
 $("#cancelTapChain").addEventListener("click", () => cancelTapChain({ announce: true }));
+els.senseButton.addEventListener("click", openSense);
+$("#useSense").addEventListener("click", useConstellationSense);
+$("#buySense").addEventListener("click", buySenseCharge);
+els.rivalGhost.addEventListener("click", toggleRivalGhost);
 els.board.addEventListener("pointerdown", (event) => {
-  if (event.target.closest?.(".board-word, .board-tools, .tap-chain-status, .board-undo, .reveal-controller")) return;
+  if (event.target.closest?.(".board-word, .board-tools, .rival-ghost, .tap-chain-status, .board-undo, .reveal-controller")) return;
   cancelTapChain();
 });
 els.inventorySearch.addEventListener("input", (event) => {
@@ -2623,7 +3121,17 @@ els.inventorySearchClear.addEventListener("click", () => {
   els.inventorySearch.focus();
   scheduleRunSave();
 });
-$("#atlasButton").addEventListener("click", openAtlas);
+$("#atlasButton").addEventListener("click", () => openAtlas("orbit"));
+$("#viewMastery").addEventListener("click", () => openAtlas("mastery"));
+$("#orbitAtlasTab").addEventListener("click", () => selectAtlasTab("orbit"));
+$("#masteryAtlasTab").addEventListener("click", () => selectAtlasTab("mastery"));
+[$("#orbitAtlasTab"), $("#masteryAtlasTab")].forEach((tab) => tab.addEventListener("keydown", (event) => {
+  if (!["ArrowLeft", "ArrowRight"].includes(event.key)) return;
+  event.preventDefault();
+  const next = tab.id === "orbitAtlasTab" ? $("#masteryAtlasTab") : $("#orbitAtlasTab");
+  selectAtlasTab(next.id === "masteryAtlasTab" ? "mastery" : "orbit");
+  next.focus();
+}));
 $("#shareRunButton").addEventListener("click", openShare);
 $("#revealPathButton").addEventListener("click", openRevealPath);
 $("#confirmReveal").addEventListener("click", confirmRevealPath);
@@ -2636,6 +3144,9 @@ $("#checkoutButton").addEventListener("click", checkoutPremium);
 $("#wishForm").addEventListener("submit", makeWish);
 $("#rewardWish").addEventListener("click", earnRewardedWish);
 $("#profileButton").addEventListener("click", openProfile);
+$("#feedbackToggle").addEventListener("click", () => toggleFeedbackPreference("sound"));
+$("#soundPreference").addEventListener("click", () => toggleFeedbackPreference("sound"));
+$("#hapticPreference").addEventListener("click", () => toggleFeedbackPreference("haptics"));
 $("#marketButton").addEventListener("click", () => openExchange("market"));
 $("#leaderboardButton").addEventListener("click", () => openLeaderboard());
 $("#viewLeaderboards").addEventListener("click", () => openLeaderboard());
@@ -2692,7 +3203,7 @@ els.resultDialog.addEventListener("cancel", (event) => {
     returnHome();
   }
 });
-[els.paywallDialog, els.wishDialog, els.atlasDialog, els.shareDialog, els.profileDialog, els.marketBuyDialog, els.leaderboardDialog, els.revealDialog].forEach((dialog) => dialog.addEventListener("close", () => setTimeout(resumeTimerIfNeeded, 0)));
+[els.paywallDialog, els.wishDialog, els.atlasDialog, els.senseDialog, els.shareDialog, els.profileDialog, els.marketBuyDialog, els.leaderboardDialog, els.revealDialog].forEach((dialog) => dialog.addEventListener("close", () => setTimeout(resumeTimerIfNeeded, 0)));
 els.exchangeDialog.addEventListener("close", () => {
   clearInterval(state.marketTimer);
   state.marketTimer = null;
@@ -2705,6 +3216,7 @@ window.addEventListener("resize", () => {
     startCosmos();
   });
 });
+document.addEventListener("pointerdown", primeFeedbackAudio, { once: true, passive: true });
 window.addEventListener("keydown", activateCtrlHover);
 window.addEventListener("keydown", (event) => {
   if (event.key === "Escape" && state.selectedNodeId != null && !event.defaultPrevented) {
@@ -2736,7 +3248,10 @@ $("#installButton").addEventListener("click", async () => {
 
 async function boot() {
   configureStaticBetaUi();
-  renderProfile();
+  const dailySense = refillDailySense();
+  if (dailySense.refilled) saveProfile();
+  else renderProfile();
+  if (dailySense.granted) track("sense_earned", { source: "daily", reward: dailySense.granted });
   updateConnection();
   await loadConfig();
   try { await ensurePlayer(); }

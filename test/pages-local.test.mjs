@@ -55,6 +55,7 @@ test("the Pages adapter completes a real local Telescope route without a server"
   await writeLocalWorldModule(join(directory, "local-world.mjs"));
   await copyFile(new URL("../public/local-beta.mjs", import.meta.url), join(directory, "local-beta.mjs"));
   await copyFile(new URL("../public/cosmic-twists.mjs", import.meta.url), join(directory, "cosmic-twists.mjs"));
+  await copyFile(new URL("../public/engagement-features.mjs", import.meta.url), join(directory, "engagement-features.mjs"));
   const { localRequest } = await import(`${pathToFileURL(join(directory, "local-beta.mjs")).href}?test=${Date.now()}`);
 
   const registration = await localRequest("/api/player/register", { method: "POST" });
@@ -102,6 +103,7 @@ test("the Pages adapter produces one contextual Cosmic Twist and keeps it playab
   await writeLocalWorldModule(join(directory, "local-world.mjs"));
   await copyFile(new URL("../public/local-beta.mjs", import.meta.url), join(directory, "local-beta.mjs"));
   await copyFile(new URL("../public/cosmic-twists.mjs", import.meta.url), join(directory, "cosmic-twists.mjs"));
+  await copyFile(new URL("../public/engagement-features.mjs", import.meta.url), join(directory, "engagement-features.mjs"));
   const { localRequest } = await import(`${pathToFileURL(join(directory, "local-beta.mjs")).href}?test=${Date.now()}`);
   const started = await localRequest("/api/run/start", {
     method: "POST",
@@ -133,6 +135,7 @@ test("the Pages reveal endpoint is idempotent and permanently zero-score", async
   await writeLocalWorldModule(join(directory, "local-world.mjs"));
   await copyFile(new URL("../public/local-beta.mjs", import.meta.url), join(directory, "local-beta.mjs"));
   await copyFile(new URL("../public/cosmic-twists.mjs", import.meta.url), join(directory, "cosmic-twists.mjs"));
+  await copyFile(new URL("../public/engagement-features.mjs", import.meta.url), join(directory, "engagement-features.mjs"));
   const { localRequest } = await import(`${pathToFileURL(join(directory, "local-beta.mjs")).href}?test=${Date.now()}`);
   const started = await localRequest("/api/run/start", {
     method: "POST",
@@ -185,12 +188,23 @@ test("the Pages adapter safely reconstructs an unranked run after a module reloa
   await writeLocalWorldModule(join(directory, "local-world.mjs"));
   await copyFile(new URL("../public/local-beta.mjs", import.meta.url), join(directory, "local-beta.mjs"));
   await copyFile(new URL("../public/cosmic-twists.mjs", import.meta.url), join(directory, "cosmic-twists.mjs"));
+  await copyFile(new URL("../public/engagement-features.mjs", import.meta.url), join(directory, "engagement-features.mjs"));
   const moduleUrl = pathToFileURL(join(directory, "local-beta.mjs")).href;
   const firstRuntime = await import(`${moduleUrl}?test=start-${Date.now()}`);
   const started = await firstRuntime.localRequest("/api/run/start", {
     method: "POST",
     body: JSON.stringify({ mode: "reach", seed: 7, target: "Telescope" })
   });
+  assert.equal(started.run.ranked, false);
+  assert.equal(started.run.scoreEligible, true, "a clean local orbit remains score-eligible for local results");
+  assert.equal(started.run.rewardEligible, true);
+  const cleanResume = await firstRuntime.localRequest("/api/run/resume", {
+    method: "POST",
+    body: JSON.stringify({ runId: started.run.id, runToken: started.run.token })
+  });
+  assert.equal(cleanResume.run.scoreEligible, true, "resuming must not silently forfeit a clean local orbit");
+  assert.equal(cleanResume.run.rewardEligible, true);
+  assert.deepEqual(Object.keys(cleanResume.run).sort(), Object.keys(started.run).sort(), "start and resume expose one public run shape");
   const mud = await firstRuntime.localRequest("/api/combine", {
     method: "POST",
     body: JSON.stringify({ a: "Earth", b: "Water", runId: started.run.id, runToken: started.run.token })
@@ -234,7 +248,8 @@ test("the Pages adapter safely reconstructs an unranked run after a module reloa
   assert.notEqual(resumed.game.moveLimit, 1, "client game rules must be rebuilt from the local catalog");
   assert.equal(resumed.run.ranked, false);
   assert.equal(resumed.run.localOnly, true);
-  assert.equal(resumed.run.scoreEligible, false);
+  assert.equal(resumed.run.scoreEligible, true, "a Wish remains progression-eligible in the Open division after reconstruction");
+  assert.equal(resumed.run.rewardEligible, true);
   assert.equal(resumed.run.leaderboardEligible, false);
   assert.equal(resumed.progress.moves, 1);
   assert.equal(resumed.progress.completed, false);

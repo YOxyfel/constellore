@@ -40,6 +40,7 @@ The Launch Wishlist has two honest deployment modes. Static Pages shows the repo
 - **Frictionless controls** - drag a tray word directly onto a board word, tap two board words, or hold Ctrl on desktop and skim across words to build a serial fusion chain without clicking.
 - **Constellation Atlas** - every successful step is recorded as a readable path.
 - **Ask the Cosmos** - reveal a target's complete answer as an animated constellation; the run becomes permanently Assisted with zero score, rewards, streak credit, or saved reveal discoveries.
+- **Living constellations** - use non-spoiler Sense glows, race an anonymous Rival Ghost, complete Recipe Mastery collections, and enable optional cosmic sound and haptics.
 - **Personal Universe** - unique discoveries, Stardust, ranks, wins, streaks, and themes persist locally.
 
 All built-in targets are verified as reachable from Earth, Water, Fire, and Air. The local semantic system covers the full reachable concept matrix. Nonsense, repeated fragments, and malformed Wishes are rejected.

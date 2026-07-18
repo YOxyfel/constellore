@@ -16,7 +16,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/styles.css?v=1.8.0">
+  <link rel="stylesheet" href="/styles.css?v=1.9.0">
 </head>
 <body>
   <section class="start-screen" id="startScreen" aria-labelledby="startTitle">
@@ -105,6 +105,7 @@
         <div><span class="eyebrow">PLAY TOGETHER, APART</span><p>Official runs upload verified scores. Pure paths and Reality-Bent paths never share a ladder.</p></div>
         <div class="social-actions">
           <button class="secondary-action" id="viewLeaderboards" type="button"><span>View leaderboards</span><span aria-hidden="true">≋</span></button>
+          <button class="secondary-action" id="viewMastery" type="button"><span>Recipe Mastery</span><span aria-hidden="true">✦</span></button>
           <button class="secondary-action" id="createChallenge" type="button"><span>Challenge a friend</span><span aria-hidden="true">↗</span></button>
         </div>
       </div>
@@ -124,6 +125,7 @@
         <div id="timerHud" hidden><small>TIME</small><strong id="timerValue">01:30</strong></div>
         <div id="movesHud"><small>MOVES</small><strong id="movesValue">0</strong></div>
         <button class="nav-icon nav-atlas" id="atlasButton" type="button" aria-label="Open constellation path"><span aria-hidden="true">⌁</span><b id="pathCount">0</b></button>
+        <button class="nav-icon feedback-toggle" id="feedbackToggle" type="button" aria-label="Mute sound effects" aria-pressed="true"><span aria-hidden="true">♪</span></button>
         <button class="reveal-trigger" id="revealPathButton" type="button" aria-haspopup="dialog" aria-controls="revealDialog" aria-label="Reveal answer path; forfeits all scoring"><span aria-hidden="true">&#10023;</span><b>REVEAL</b></button>
         <button class="nav-icon nav-share" id="shareRunButton" type="button" aria-label="Share this challenge">↗</button>
       </div>
@@ -137,12 +139,19 @@
         <div class="board-guide" id="boardGuide">
           <span class="guide-orbit" aria-hidden="true"></span>
           <strong>Summon an element</strong>
-          <span>Drag or tap two words. On desktop, hold Ctrl and skim words to fuse.</span>
+          <span class="guide-copy guide-desktop">Drag or tap two words. Hold Ctrl and skim words to fuse.</span>
+          <span class="guide-copy guide-mobile">Drag one word onto another, or tap two to fuse.</span>
         </div>
         <div class="board-tools" aria-label="Board tools">
+          <button class="sense-tool" id="senseButton" type="button" aria-haspopup="dialog" aria-controls="senseDialog" aria-label="Open Constellation Sense"><span aria-hidden="true">✧</span><b>Sense</b><em id="senseHudCount">1</em></button>
           <button id="tidyBoard" type="button" aria-label="Tidy orbit; does not affect score"><span aria-hidden="true">✣</span><b>Tidy</b></button>
           <button id="resetBoard" type="button" aria-label="Clear the board"><span aria-hidden="true">↻</span><b>Clear</b></button>
         </div>
+        <button class="rival-ghost" id="rivalGhost" type="button" aria-label="Hide Rival Ghost pace" aria-pressed="true" hidden>
+          <span class="ghost-orb" aria-hidden="true">◌</span>
+          <span><small id="ghostCallsign">COSMOS SCOUT</small><strong id="ghostStatus">Mapping a rival…</strong></span>
+          <b id="ghostPace">0 · 0</b>
+        </button>
         <div id="boardItems" class="board-items"></div>
         <div class="drop-pair-preview" id="dropPairPreview" aria-hidden="true" hidden></div>
         <div class="tap-chain-status" id="tapChainStatus" role="status" aria-live="polite" hidden>
@@ -199,6 +208,7 @@
     <div class="price"><strong id="founderPrice">€6.99</strong><span>one time</span></div>
     <ul>
       <li>One personal Wish every UTC day, usable in any mode</li>
+      <li>A second daily Constellation Sense charge</li>
       <li>Aurora and Solar cosmos themes</li>
       <li>One extra daily streak shield</li>
       <li>All future founder cosmetics</li>
@@ -292,11 +302,35 @@
 
   <dialog id="atlasDialog" class="modal atlas-modal">
     <button class="modal-close" data-close="atlasDialog" type="button" aria-label="Close">×</button>
-    <span class="eyebrow">CONSTELLATION PATH</span>
-    <h2>Your trail through the cosmos.</h2>
-    <p id="atlasEmpty">Every successful combination will leave a star here.</p>
-    <ol class="atlas-path" id="atlasPath"></ol>
-    <div class="atlas-summary" id="atlasSummary" hidden><span><b id="atlasDiscoveries">0</b> discoveries</span><span><b id="atlasMoves">0</b> moves</span></div>
+    <span class="eyebrow">THE LIVING ATLAS</span>
+    <h2>Every recipe leaves a star.</h2>
+    <div class="atlas-tabs segment-control" role="tablist" aria-label="Atlas view">
+      <button id="orbitAtlasTab" type="button" role="tab" aria-selected="true" aria-controls="orbitAtlasPanel">This orbit</button>
+      <button id="masteryAtlasTab" type="button" role="tab" aria-selected="false" aria-controls="masteryAtlasPanel">Mastery</button>
+    </div>
+    <section id="orbitAtlasPanel" role="tabpanel" aria-labelledby="orbitAtlasTab">
+      <p id="atlasEmpty">Every successful combination will leave a star here.</p>
+      <ol class="atlas-path" id="atlasPath"></ol>
+      <div class="atlas-summary" id="atlasSummary" hidden><span><b id="atlasDiscoveries">0</b> discoveries</span><span><b id="atlasMoves">0</b> moves</span></div>
+    </section>
+    <section id="masteryAtlasPanel" role="tabpanel" aria-labelledby="masteryAtlasTab" hidden>
+      <div class="mastery-overview"><span><b id="masteryStars">0</b> recipe stars</span><span><b id="masteryCollections">0</b> collections complete</span></div>
+      <p class="mastery-intro">Repeat meaningful recipes to map themed collections. Undiscovered recipes remain silhouettes, never answer spoilers.</p>
+      <div class="mastery-collections" id="masteryCollectionList"></div>
+    </section>
+  </dialog>
+
+  <dialog id="senseDialog" class="modal sense-modal" aria-labelledby="senseTitle">
+    <button class="modal-close" data-close="senseDialog" type="button" aria-label="Close">×</button>
+    <span class="modal-orb sense-orb" aria-hidden="true">✧</span>
+    <span class="eyebrow">CONSTELLATION SENSE</span>
+    <h2 id="senseTitle">Feel where the path is warm.</h2>
+    <p>Sense makes a few promising words shimmer for ten seconds. It never names a recipe or reveals the answer.</p>
+    <div class="sense-balance"><span>AVAILABLE</span><strong><b id="senseDialogCount">1</b> SENSE</strong><small id="senseEarnNote">One charge returns each UTC day.</small></div>
+    <div class="sense-fairness"><span>ASSISTED ORBIT</span><p>Using Sense turns score, leaderboard placement, and progression rewards off for this run.</p></div>
+    <button class="primary-action" id="useSense" type="button"><span>Use one Sense</span><span aria-hidden="true">✧</span></button>
+    <button class="secondary-action sense-buy" id="buySense" type="button"><span>Buy a charge</span><strong>90 ✦</strong></button>
+    <p class="form-message" id="senseMessage" aria-live="polite"></p>
   </dialog>
 
   <dialog id="revealDialog" class="modal reveal-modal" aria-labelledby="revealTitle" aria-describedby="revealDescription">
@@ -328,7 +362,14 @@
       <div><strong id="profileShield">1</strong><span>streak shields</span></div>
       <div><strong id="profileCredits">0</strong><span>Star Credits</span></div>
       <div><strong id="profileVaultCount">0</strong><span>owned words</span></div>
+      <div><strong id="profileMasteryStars">0</strong><span>recipe stars</span></div>
+      <div><strong id="profileSenseCount">1</strong><span>Sense charges</span></div>
     </div>
+    <fieldset class="feedback-picker">
+      <legend>Feel the cosmos</legend>
+      <button id="soundPreference" type="button" aria-pressed="true"><span aria-hidden="true">♪</span><b>Fusion sounds</b><small>ON</small></button>
+      <button id="hapticPreference" type="button" aria-pressed="true"><span aria-hidden="true">≋</span><b>Haptic pulses</b><small>ON</small></button>
+    </fieldset>
     <fieldset class="theme-picker">
       <legend>Cosmos theme</legend>
       <button type="button" data-theme="void"><i class="theme-swatch void"></i><span>Deep Void</span><small>OWNED</small></button>
@@ -369,6 +410,6 @@
 
   <div class="connection-badge" id="connectionBadge" role="status" hidden>Offline — reconnect to forge new words</div>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
-  <script type="module" src="/app.js?v=1.5.5"></script>
+  <script type="module" src="/app.js?v=1.6.0"></script>
 </body>
 </html>

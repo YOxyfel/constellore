@@ -47,19 +47,21 @@ assert.match(gameApp, /await playRevealPath\(route, \{ replay: true \}\)/);
 assert.match(gameApp, /state\.reveal\.phase = "exiting"/);
 for (const expected of [
   'href="./manifest.webmanifest"',
-  'href="./styles.css?v=1.8.0"',
-  'src="./app.js?v=1.5.5"'
+  'href="./styles.css?v=1.9.0"',
+  'src="./app.js?v=1.6.0"'
 ]) assert.ok(gameHtml.includes(expected), `Missing ${expected} from the Pages game document.`);
 for (const forbidden of ['href="/manifest', 'href="/styles', 'href="/icon', 'src="/app']) {
   assert.ok(!gameHtml.includes(forbidden), `Root-absolute game path remains: ${forbidden}`);
 }
 
-for (const file of ["app.js", "ctrl-hover.mjs", "frictionless.mjs", "styles.css", "local-beta.mjs", "local-world.mjs", "cosmic-twists.mjs", "manifest.webmanifest", "service-worker.js", "icon.svg"]) {
+for (const file of ["app.js", "ctrl-hover.mjs", "frictionless.mjs", "styles.css", "local-beta.mjs", "local-world.mjs", "cosmic-twists.mjs", "recipe-mastery.mjs", "engagement-features.mjs", "manifest.webmanifest", "service-worker.js", "icon.svg"]) {
   assert.ok((await stat(join(output, "play", file))).size > 0, `${file} is missing or empty.`);
 }
 assert.match(gameServiceWorker, /cosmic-twists[.]mjs/);
 assert.match(gameServiceWorker, /ctrl-hover[.]mjs/);
 assert.match(gameServiceWorker, /frictionless[.]mjs/);
+assert.match(gameServiceWorker, /recipe-mastery[.]mjs/);
+assert.match(gameServiceWorker, /engagement-features[.]mjs/);
 
 const world = await import(`${pathToFileURL(join(output, "play", "local-world.mjs")).href}?verify=${Date.now()}`);
 assert.ok(world.localWorldSize >= 425);

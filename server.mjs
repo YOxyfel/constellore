@@ -3,8 +3,9 @@ import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { extname, join, normalize } from "node:path";
 import { fileURLToPath } from "node:url";
-import { GameStore, MARKET_CATALOG, RunRegistry, isoWeekKey, serviceError } from "./game-services.mjs";
+import { ANALYTICS_EVENT_NAMES, GameStore, MARKET_CATALOG, RunRegistry, isoWeekKey, serviceError } from "./game-services.mjs";
 import { cosmicTwistSeedFor, selectCosmicTwist } from "./public/cosmic-twists.mjs";
+import { rankSenseCandidates } from "./public/engagement-features.mjs";
 
 const projectRoot = fileURLToPath(new URL(".", import.meta.url));
 const root = join(projectRoot, "public");
@@ -17,6 +18,7 @@ const localStorePath = existsSync(constelloreStorePath) || !existsSync(legacySto
 const storePath = process.env.CONSTELLORE_DATA_PATH || process.env.WORDFORGE_DATA_PATH || (isMainModule ? localStorePath : ":memory:");
 const gameStore = await new GameStore(storePath).init();
 const runRegistry = new RunRegistry(gameStore);
+await runRegistry.flush();
 const STARTERS = ["Earth", "Water", "Fire", "Air"];
 const recipes = new Map();
 const dynamicRecipes = new Map();
@@ -929,15 +931,12 @@ const mime = {
 
 const requestWindows = new Map();
 const interestRequestWindows = new Map();
+const analyticsRequestWindows = new Map();
 const INTEREST_RATE_WINDOW_MS = 10 * 60_000;
 const INTEREST_RATE_LIMIT = 20;
 const INTEREST_RATE_MAX_KEYS = 5_000;
-const analyticsEvents = new Set([
-  "app_opened", "run_started", "combination_completed", "combination_rejected", "target_reached",
-  "run_failed", "wish_opened", "wish_used", "paywall_viewed", "checkout_started", "share_created",
-  "challenge_opened", "theme_changed", "pwa_installed", "leaderboard_opened", "score_uploaded",
-  "market_opened", "market_searched", "word_purchased", "market_word_used", "credit_pack_opened", "answer_revealed"
-]);
+const ANALYTICS_RATE_MAX_KEYS = 5_000;
+const analyticsEvents = new Set(ANALYTICS_EVENT_NAMES);
 
 function rateLimited(request, limit = 180) {
   const key = request.socket.remoteAddress || "unknown";
@@ -945,6 +944,20 @@ function rateLimited(request, limit = 180) {
   const current = requestWindows.get(key);
   if (!current || now - current.startedAt > 60_000) {
     requestWindows.set(key, { startedAt: now, count: 1 });
+    return false;
+  }
+  current.count += 1;
+  return current.count > limit;
+}
+
+function analyticsRateLimited(request, limit = 240) {
+  const key = gameStore.sign(`rate:analytics:${request.socket.remoteAddress || "unknown"}`);
+  const now = Date.now();
+  const current = analyticsRequestWindows.get(key);
+  if (!current || now - current.startedAt > 60_000) {
+    for (const [storedKey, window] of analyticsRequestWindows) if (now - window.startedAt > 60_000) analyticsRequestWindows.delete(storedKey);
+    while (analyticsRequestWindows.size >= ANALYTICS_RATE_MAX_KEYS) analyticsRequestWindows.delete(analyticsRequestWindows.keys().next().value);
+    analyticsRequestWindows.set(key, { startedAt: now, count: 1 });
     return false;
   }
   current.count += 1;
@@ -1141,7 +1154,7 @@ export const server = createServer(async (request, response) => {
       response.writeHead(308, { Location: "/play/", "Cache-Control": "no-cache" });
       return response.end();
     }
-    if (request.method === "GET" && url.pathname === "/healthz") return sendJson(response, 200, { ok: true, game: "Constellore", version: "1.5.5" });
+    if (request.method === "GET" && url.pathname === "/healthz") return sendJson(response, 200, { ok: true, game: "Constellore", version: "1.6.0" });
     if (request.method === "GET" && url.pathname === "/api/config") {
       const billing = billingSettings();
       return sendJson(response, 200, {
@@ -1192,6 +1205,7 @@ export const server = createServer(async (request, response) => {
       if (!item || !gameStore.ownsLicense(player.id, wordId)) throw serviceError(403, "You do not own that word.", "license_missing");
       const result = { ...item, source: "market", note: "Activated from your permanent Word Vault." };
       runRegistry.addBend(run, result, "market");
+      await runRegistry.persist(run);
       return sendJson(response, 200, { item: result, assist: run.assist });
     }
     if (request.method === "GET" && url.pathname === "/api/leaderboard") {
@@ -1233,6 +1247,7 @@ export const server = createServer(async (request, response) => {
         started.run.solutionRoute = scopedSolutionRoute.map((step) => ({ ...step }));
         started.run.solutionRecipes = new Map(scopedSolutionRoute.map((step) => [keyFor(step.a, step.b), { ...step }]));
       }
+      await runRegistry.persist(started.run);
       return sendJson(response, 201, { game, run: publicRun(started.run, started.token), player: gameStore.publicPlayer(player.id) });
     }
     if (request.method === "POST" && url.pathname === "/api/run/resume") {
@@ -1246,6 +1261,47 @@ export const server = createServer(async (request, response) => {
         player: gameStore.publicPlayer(player.id)
       });
     }
+    if (request.method === "POST" && url.pathname === "/api/run/sense") {
+      if (rateLimited(request, 60)) return sendJson(response, 429, { error: "The constellation needs a moment." });
+      const player = requirePlayer(request);
+      const { runId, runToken } = await jsonBody(request);
+      const run = runRegistry.get(runId, player.id, runToken);
+      if (run.submitted) throw serviceError(409, "This score was already submitted.", "already_submitted");
+      if (run.completedAt) throw serviceError(409, "This orbit is already complete.", "run_complete");
+      const route = run.solutionRoute || solutionRoute(run.game.target, { includeDynamic: !run.ranked });
+      if (!route) throw serviceError(422, "No safe constellation signal is available for this target.", "sense_unavailable");
+      const candidates = rankSenseCandidates({
+        words: [...run.discovered.values()],
+        target: run.game.target,
+        history: run.history,
+        route,
+        seed: run.game.seed,
+        limit: 3
+      }).map((candidate) => {
+        const discovered = run.discovered.get(candidate.word.toLowerCase());
+        return {
+          word: discovered?.word || candidate.word,
+          emoji: discovered?.emoji || candidate.emoji || "",
+          category: discovered?.category || null,
+          signal: ["bright", "warm", "resonant"].includes(candidate.signal) ? candidate.signal : "warm"
+        };
+      }).slice(0, 3);
+      if (!candidates.length) throw serviceError(422, "No safe constellation signal is available yet.", "sense_unavailable");
+
+      runRegistry.sense(run);
+      if (run.ranked) await gameStore.forfeitChallenge(player.id, run.challengeId, { reason: "sense", runId: run.runId });
+      await runRegistry.persist(run);
+      return sendJson(response, 200, {
+        candidates,
+        assisted: true,
+        assist: run.assist,
+        scoringDisabled: true,
+        scoreEligible: false,
+        rewardEligible: false,
+        leaderboardEligible: false,
+        ranked: false
+      });
+    }
     if (request.method === "POST" && url.pathname === "/api/run/reveal") {
       if (rateLimited(request, 30)) return sendJson(response, 429, { error: "Too many answer paths requested." });
       const player = requirePlayer(request);
@@ -1256,6 +1312,7 @@ export const server = createServer(async (request, response) => {
 
       const revealedRoute = runRegistry.reveal(run, route);
       if (run.ranked) await gameStore.forfeitChallenge(player.id, run.challengeId, { reason: "reveal", runId: run.runId });
+      await runRegistry.persist(run);
       return sendJson(response, 200, {
         assisted: true,
         assist: "reveal",
@@ -1274,14 +1331,16 @@ export const server = createServer(async (request, response) => {
       const player = requirePlayer(request);
       const { runId, runToken } = await jsonBody(request);
       const run = runRegistry.get(runId, player.id, runToken);
-      const challengeForfeited = run.ranked && gameStore.hasForfeitedChallenge(player.id, run.challengeId);
-      if (run.scoringDisabled || run.forfeited || challengeForfeited) {
-        run.assist = "reveal";
+      const challengeForfeit = run.ranked ? gameStore.forfeitedChallenge(player.id, run.challengeId) : null;
+      if (run.scoringDisabled || run.forfeited || challengeForfeit) {
+        const forfeitReason = run.forfeitReason || challengeForfeit?.reason || "reveal";
+        run.assist = run.assist === "none" ? (forfeitReason === "sense" ? "sense" : "reveal") : run.assist;
         run.scoringDisabled = true;
         run.forfeited = true;
-        run.forfeitReason ||= "reveal";
+        run.forfeitReason ||= forfeitReason;
         run.forfeitedAt ||= Date.now();
         run.submitted = true;
+        await runRegistry.persist(run);
         return sendJson(response, 200, {
           ranked: false,
           assisted: true,
@@ -1290,7 +1349,7 @@ export const server = createServer(async (request, response) => {
           score: 0,
           creditReward: 0,
           weeklyBonus: 0,
-          reason: "Reveal Path forfeited this orbit's score and rewards.",
+          reason: run.assist === "sense" ? "Constellation Sense forfeited this orbit's score and rewards." : "Reveal Path forfeited this orbit's score and rewards.",
           player: gameStore.publicPlayer(player.id)
         });
       }
@@ -1298,6 +1357,7 @@ export const server = createServer(async (request, response) => {
       const entry = runRegistry.finalize(run, player.callsign);
       const placement = await gameStore.addScore(entry);
       const reward = await gameStore.grantChallengeCredits(player.id, run.challengeId, run.game.mode === "daily" ? 10 : run.game.mode === "weekly" ? 8 : 4);
+      await runRegistry.flush();
       return sendJson(response, 201, { ranked: true, placement, ...reward, player: gameStore.publicPlayer(player.id) });
     }
     if (request.method === "GET" && url.pathname === "/api/game") {
@@ -1310,17 +1370,16 @@ export const server = createServer(async (request, response) => {
       if (!game) return sendJson(response, 422, { error: "That target has no verified route yet.", needsAi: !process.env.OPENAI_API_KEY });
       return sendJson(response, 200, game);
     }
+    if (request.method === "GET" && url.pathname === "/api/analytics/summary") {
+      if (analyticsRateLimited(request, 240)) return sendJson(response, 429, { error: "Too many analytics requests." });
+      return sendJson(response, 200, gameStore.analyticsSummary(url.searchParams.get("days") || 30));
+    }
     if (request.method === "POST" && url.pathname === "/api/analytics") {
-      if (rateLimited(request, 240)) return sendJson(response, 429, { error: "Too many events." });
+      if (analyticsRateLimited(request, 240)) return sendJson(response, 429, { error: "Too many events." });
       const event = await jsonBody(request);
-      if (!analyticsEvents.has(event.name) || typeof event.sessionId !== "string" || event.sessionId.length > 64) return sendJson(response, 400, { error: "Invalid event." });
-      const safeEvent = {
-        name: event.name,
-        sessionId: event.sessionId,
-        at: new Date().toISOString(),
-        properties: event.properties && typeof event.properties === "object" ? Object.fromEntries(Object.entries(event.properties).slice(0, 16).map(([key, value]) => [String(key).slice(0, 32), typeof value === "string" ? value.slice(0, 80) : typeof value === "number" || typeof value === "boolean" || value === null ? value : String(value).slice(0, 80)])) : {}
-      };
-      console.info(JSON.stringify({ type: "analytics", ...safeEvent }));
+      if (!analyticsEvents.has(event.name)) return sendJson(response, 400, { error: "Invalid event.", code: "invalid_analytics_event" });
+      const recorded = await gameStore.recordAnalyticsEvent(event);
+      console.info(JSON.stringify({ type: "analytics_aggregate", name: event.name, day: recorded.day }));
       return sendJson(response, 202, { accepted: true });
     }
     if (request.method === "POST" && url.pathname === "/api/wish") {
@@ -1335,6 +1394,7 @@ export const server = createServer(async (request, response) => {
       const item = { word: clean.replace(/\b\p{L}/gu, (letter) => letter.toUpperCase()), emoji: emojiForWord(clean), source: "wish", category, note: "Bent into this universe by a Wish." };
       runRegistry.addBend(run, item, "wish");
       await gameStore.consumeWish(player.id);
+      await runRegistry.flush();
       return sendJson(response, 200, { ...item, player: gameStore.publicPlayer(player.id), assist: run.assist });
     }
     if (request.method === "POST" && url.pathname === "/api/custom-target") {
@@ -1392,6 +1452,7 @@ export const server = createServer(async (request, response) => {
           responseResult = { ...twist, category: twistCategory };
         }
         runRegistry.recordCombination(run, responseResult, { a, b });
+        await runRegistry.persist(run);
       }
       return sendJson(response, 200, { ...responseResult, completed: Boolean(run?.completedAt), ranked: Boolean(run?.ranked), division: run?.assist === "none" ? "pure" : "open" });
     }

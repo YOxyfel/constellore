@@ -82,7 +82,7 @@ test("authenticated HTTP runs produce verified Pure and Open leaderboard scores"
 
   const serviceWorkerResponse = await fetch(`${baseUrl}/play/service-worker.js`);
   assert.equal(serviceWorkerResponse.status, 200);
-  assert.match(await serviceWorkerResponse.text(), /constellore-shell-v12/);
+  assert.match(await serviceWorkerResponse.text(), /constellore-shell-v13/);
   const moduleResponse = await fetch(`${baseUrl}/frictionless.mjs`);
   assert.equal(moduleResponse.status, 200);
   assert.match(moduleResponse.headers.get("content-type") || "", /^text\/javascript/);
@@ -111,6 +111,54 @@ test("authenticated HTTP runs produce verified Pure and Open leaderboard scores"
     const payload = await response.json();
     return { response, payload };
   };
+
+  const analyticsSession = "integration-private-session";
+  const senseAnalytics = await request("/api/analytics", {
+    method: "POST",
+    authenticated: false,
+    body: { name: "sense_used", sessionId: analyticsSession, properties: { mode: "quick", source: "daily", chargesBefore: 2, chargesAfter: 1, target: "Private Target" } }
+  });
+  assert.equal(senseAnalytics.response.status, 202);
+  assert.deepEqual(senseAnalytics.payload, { accepted: true });
+  const tidyAnalytics = await request("/api/analytics", {
+    method: "POST",
+    authenticated: false,
+    body: { name: "board_tidied", sessionId: analyticsSession, properties: { mode: "quick", words: 8 } }
+  });
+  assert.equal(tidyAnalytics.response.status, 202);
+  const sensePurchaseAnalytics = await request("/api/analytics", {
+    method: "POST",
+    authenticated: false,
+    body: { name: "sense_purchased", sessionId: analyticsSession, properties: { cost: 90 } }
+  });
+  assert.equal(sensePurchaseAnalytics.response.status, 202);
+  const themeAnalytics = await request("/api/analytics", {
+    method: "POST",
+    authenticated: false,
+    body: { name: "theme_changed", sessionId: analyticsSession, properties: { theme: "aurora" } }
+  });
+  assert.equal(themeAnalytics.response.status, 202);
+  const analyticsSummary = await request("/api/analytics/summary?days=7", { authenticated: false });
+  assert.equal(analyticsSummary.response.status, 200);
+  assert.equal(analyticsSummary.payload.privacy, "aggregate-only");
+  assert.equal(analyticsSummary.payload.period.days, 7);
+  assert.equal(analyticsSummary.payload.events.sense_used, 1);
+  assert.equal(analyticsSummary.payload.events.board_tidied, 1);
+  assert.equal(analyticsSummary.payload.segments.sense_used.mode.quick, 1);
+  assert.equal(analyticsSummary.payload.metrics.sense_used.chargesBefore.sum, 2);
+  assert.equal(analyticsSummary.payload.segments.theme_changed.theme.aurora, 1);
+  assert.equal(analyticsSummary.payload.economy.senseStardustSpent, 90);
+  assert.equal("senseCreditsSpent" in analyticsSummary.payload.economy, false);
+  assert.equal(JSON.stringify(analyticsSummary.payload).includes(analyticsSession), false);
+  assert.equal(JSON.stringify(analyticsSummary.payload).includes("Private Target"), false);
+
+  const invalidAnalytics = await request("/api/analytics", {
+    method: "POST",
+    authenticated: false,
+    body: { name: "player_email_collected", sessionId: analyticsSession, properties: {} }
+  });
+  assert.equal(invalidAnalytics.response.status, 400);
+  assert.equal(invalidAnalytics.payload.code, "invalid_analytics_event");
 
   const allowedOrigin = "https://yoxyfel.github.io";
   const preflight = await fetch(`${baseUrl}/api/interest`, {

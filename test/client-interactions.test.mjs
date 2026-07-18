@@ -55,6 +55,36 @@ test("inventory search and interrupted-run restore are wired into lifecycle pers
   assert.match(app, /clearActiveRunSnapshot\(\)/);
 });
 
+test("completed ranked runs remain resumable until the verified upload succeeds", () => {
+  assert.match(app, /function saveCompletedRunSnapshot\(\)/);
+  assert.match(app, /const pendingRankedSubmit = Boolean\(won && !assisted && !skipSubmit && state[.]run[?][.]ranked\)/);
+  assert.match(app, /if \(pendingRankedSubmit\) saveCompletedRunSnapshot\(\)/);
+  const submitSuccess = app.indexOf('if (!result.ranked) throw new Error');
+  const clearAfterSuccess = app.indexOf('clearActiveRunSnapshot();', submitSuccess);
+  assert.ok(submitSuccess >= 0 && clearAfterSuccess > submitSuccess, "the pending snapshot is cleared only after a verified response");
+});
+
+test("Sense fails closed on an ambiguous network response", () => {
+  const senseStart = app.indexOf("async function useConstellationSense()");
+  const localCommit = app.indexOf("profile.senseWallet = preview.wallet", senseStart);
+  const request = app.indexOf('await fetchJson("/api/run/sense"', senseStart);
+  assert.ok(localCommit > senseStart && localCommit < request, "the charge and fair-play forfeit commit before the request");
+  assert.match(app.slice(senseStart, app.indexOf("function buySenseCharge", senseStart)), /confirmedBeforeForfeit/);
+  assert.match(app.slice(senseStart, app.indexOf("function buySenseCharge", senseStart)), /this orbit remains assisted and the Sense charge stays spent/);
+});
+
+test("Rival Ghost requests are cancelled and stale responses cannot start races", () => {
+  assert.match(app, /requestController = new AbortController\(\)/);
+  assert.match(app, /state[.]ghost[.]requestController[?][.]abort\(\)/);
+  assert.match(app, /requestGeneration !== state[.]ghost[.]requestGeneration/);
+  assert.match(app, /!profile[.]rivalGhostEnabled/);
+});
+
+test("all haptics pass through the feedback preference policy", () => {
+  assert.equal((app.match(/navigator[.]vibrate/g) || []).length, 2, "one capability check and one centralized vibration call should remain");
+  assert.doesNotMatch(app, /navigator[.]vibrate\(\[10, 18, 10\]\)/);
+});
+
 test("Ctrl hover fusion is wired to board words and lifecycle cleanup", () => {
   assert.match(app, /createCtrlHoverController/);
   assert.match(app, /addEventListener\("pointerenter", \(event\) => handleCtrlHoverEnter/);

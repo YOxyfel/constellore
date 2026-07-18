@@ -1,5 +1,5 @@
-const CACHE = "constellore-shell-v12";
-const SHELL = ["/play/", "/styles.css?v=1.8.0", "/app.js?v=1.5.5", "/ctrl-hover.mjs?v=1.0.0", "/frictionless.mjs?v=1.0.0", "/manifest.webmanifest", "/icon.svg"];
+const CACHE = "constellore-shell-v13";
+const SHELL = ["/play/", "/styles.css?v=1.9.0", "/app.js?v=1.6.0", "/ctrl-hover.mjs?v=1.0.0", "/frictionless.mjs?v=1.0.0", "/recipe-mastery.mjs?v=1.0.0", "/engagement-features.mjs?v=1.0.0", "/manifest.webmanifest", "/icon.svg"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(SHELL)).then(() => self.skipWaiting()));
