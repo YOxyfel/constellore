@@ -48,7 +48,7 @@ assert.match(gameApp, /state\.reveal\.phase = "exiting"/);
 for (const expected of [
   'href="./manifest.webmanifest"',
   'href="./styles.css?v=2.0.0"',
-  'src="./app.js?v=1.7.0"'
+  'src="./app.js?v=1.7.1"'
 ]) assert.ok(gameHtml.includes(expected), `Missing ${expected} from the Pages game document.`);
 for (const forbidden of ['href="/manifest', 'href="/styles', 'href="/icon', 'src="/app']) {
   assert.ok(!gameHtml.includes(forbidden), `Root-absolute game path remains: ${forbidden}`);
@@ -68,6 +68,8 @@ assert.match(gameServiceWorker, /constellation-card[.]mjs/);
 assert.match(gameServiceWorker, /cosmetic-economy[.]mjs/);
 assert.match(gameServiceWorker, /recipe-feedback[.]mjs/);
 assert.match(gameServiceWorker, /pending-scores[.]mjs/);
+assert.match(gameServiceWorker, /engagement-features[.]mjs[?]v=1[.]0[.]1/);
+assert.match(gameApp, /engagement-features[.]mjs[?]v=1[.]0[.]1/);
 
 const playRoot = resolve(output, "play");
 const visitedModules = new Set();
