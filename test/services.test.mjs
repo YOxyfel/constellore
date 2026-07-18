@@ -207,6 +207,64 @@ test("server runs reject impossible inputs and only complete through combination
   assert.equal(entry.moves, 1);
 });
 
+test("server runs retain a canonical restore ledger and the exact Reality Bend", async () => {
+  const store = await new GameStore(":memory:").init();
+  const player = await store.registerPlayer();
+  const runs = new RunRegistry(store);
+  const game = { mode: "reach", target: "Forest", tier: 1, starters: ["Earth", "Water", "Fire", "Air"] };
+  const started = runs.start(player.id, game);
+  const run = runs.get(started.run.runId, player.id, started.token);
+  const bend = { word: "Moon", emoji: "🌙", category: "nature", source: "market", note: "Vault word." };
+
+  runs.addBend(run, bend, "market");
+  runs.recordCombination(run, { word: "Mud", emoji: "🟤", category: "nature", source: "world", note: "Water softens earth." }, { a: "earth", b: "WATER" });
+
+  const progress = runs.progress(run);
+  assert.equal(progress.moves, 1);
+  assert.equal(progress.completed, false);
+  assert.equal(progress.submitted, false);
+  assert.equal(progress.usedBend, true);
+  assert.deepEqual(progress.bendItem, bend);
+  assert.deepEqual(progress.history, [{
+    move: 1,
+    a: "Earth",
+    b: "Water",
+    word: "Mud",
+    emoji: "🟤",
+    category: "nature",
+    note: "Water softens earth.",
+    source: "world",
+    newDiscovery: true,
+    twisted: false,
+    canonicalWord: "",
+    revealed: false
+  }]);
+  assert.ok(progress.discovered.some((item) => item.word === "Moon"));
+  progress.bendItem.word = "Tampered";
+  progress.history[0].word = "Tampered";
+  assert.equal(run.bendItem.word, "Moon", "restore payloads must not mutate authoritative run state");
+  assert.equal(run.history[0].word, "Mud");
+});
+
+test("revealed routes are recorded in authoritative restore history once", async () => {
+  const store = await new GameStore(":memory:").init();
+  const player = await store.registerPlayer();
+  const runs = new RunRegistry(store);
+  const game = { mode: "reach", target: "Mud", tier: 1, starters: ["Earth", "Water", "Fire", "Air"] };
+  const started = runs.start(player.id, game);
+  const run = runs.get(started.run.runId, player.id, started.token);
+  const route = [{ a: "Earth", b: "Water", word: "Mud", emoji: "🟤", category: "nature", note: "Water softens earth." }];
+
+  runs.reveal(run, route);
+  runs.reveal(run, route);
+  const progress = runs.progress(run);
+  assert.equal(progress.moves, 1);
+  assert.equal(progress.completed, true);
+  assert.equal(progress.history.length, 1);
+  assert.equal(progress.history[0].source, "reveal");
+  assert.equal(progress.history[0].revealed, true);
+});
+
 test("server runs authoritatively allow at most one Cosmic Twist without marking assistance", async () => {
   const store = await new GameStore(":memory:").init();
   const player = await store.registerPlayer();

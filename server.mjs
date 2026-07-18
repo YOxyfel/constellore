@@ -914,6 +914,7 @@ const mime = {
   ".html": "text/html; charset=utf-8",
   ".css": "text/css; charset=utf-8",
   ".js": "text/javascript; charset=utf-8",
+  ".mjs": "text/javascript; charset=utf-8",
   ".json": "application/json; charset=utf-8",
   ".webmanifest": "application/manifest+json; charset=utf-8",
   ".svg": "image/svg+xml",
@@ -1071,6 +1072,15 @@ function publicRun(run, token) {
   };
 }
 
+function originItem(word) {
+  return {
+    word,
+    emoji: emojiByWord[word] || emojiForWord(word),
+    category: semanticCategoryFor(word) || null,
+    source: "origin"
+  };
+}
+
 async function jsonBody(request, maximumBytes = 50_000) {
   let body = "";
   let bytes = 0;
@@ -1131,7 +1141,7 @@ export const server = createServer(async (request, response) => {
       response.writeHead(308, { Location: "/play/", "Cache-Control": "no-cache" });
       return response.end();
     }
-    if (request.method === "GET" && url.pathname === "/healthz") return sendJson(response, 200, { ok: true, game: "Constellore", version: "1.5.4" });
+    if (request.method === "GET" && url.pathname === "/healthz") return sendJson(response, 200, { ok: true, game: "Constellore", version: "1.5.5" });
     if (request.method === "GET" && url.pathname === "/api/config") {
       const billing = billingSettings();
       return sendJson(response, 200, {
@@ -1218,11 +1228,23 @@ export const server = createServer(async (request, response) => {
         scoringDisabled: Boolean(priorForfeit),
         forfeitReason: priorForfeit?.reason
       });
+      for (const word of game.starters) started.run.discovered.set(word.toLowerCase(), originItem(word));
       if (scopedSolutionRoute) {
         started.run.solutionRoute = scopedSolutionRoute.map((step) => ({ ...step }));
         started.run.solutionRecipes = new Map(scopedSolutionRoute.map((step) => [keyFor(step.a, step.b), { ...step }]));
       }
       return sendJson(response, 201, { game, run: publicRun(started.run, started.token), player: gameStore.publicPlayer(player.id) });
+    }
+    if (request.method === "POST" && url.pathname === "/api/run/resume") {
+      const player = requirePlayer(request);
+      const { runId, runToken } = await jsonBody(request);
+      const run = runRegistry.get(runId, player.id, runToken);
+      return sendJson(response, 200, {
+        game: run.game,
+        run: publicRun(run, runToken),
+        progress: runRegistry.progress(run),
+        player: gameStore.publicPlayer(player.id)
+      });
     }
     if (request.method === "POST" && url.pathname === "/api/run/reveal") {
       if (rateLimited(request, 30)) return sendJson(response, 429, { error: "Too many answer paths requested." });
@@ -1390,7 +1412,7 @@ export const server = createServer(async (request, response) => {
     if (!filePath.startsWith(base)) return sendJson(response, 403, { error: "Forbidden" });
     const file = await readFile(filePath);
     const extension = extname(filePath);
-    const cacheControl = extension === ".html" || extension === ".js" || isPlayServiceWorker ? "no-cache" : "public, max-age=300";
+    const cacheControl = extension === ".html" || extension === ".js" || extension === ".mjs" || isPlayServiceWorker ? "no-cache" : "public, max-age=300";
     response.writeHead(200, { "Content-Type": mime[extension] || "application/octet-stream", "Cache-Control": cacheControl, "Content-Length": file.length });
     response.end(request.method === "HEAD" ? undefined : file);
   } catch (error) {

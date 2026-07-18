@@ -1,4 +1,5 @@
 import { createCtrlHoverController } from "./ctrl-hover.mjs?v=1.0.0";
+import { orderInventory, packOrbit, pickMagneticTarget } from "./frictionless.mjs?v=1.0.0";
 
 const starterEmoji = { Earth: "🌍", Water: "💧", Fire: "🔥", Air: "💨" };
 const starterCategory = { Earth: "nature", Water: "force", Fire: "force", Air: "force" };
@@ -44,12 +45,18 @@ const state = {
   orbitGeneration: 0,
   busyPairs: new Set(),
   selectedNodeId: null,
+  inventoryQuery: "",
+  inventoryClock: 0,
+  inventoryRecency: new Map(),
+  inventoryFocusWord: "",
+  inventoryVisibleCount: 0,
   timerId: null,
   remainingSeconds: 0,
   startedAt: 0,
   finished: false,
   startingRun: false,
   wished: false,
+  bendItem: null,
   rewardedWish: false,
   cosmosFrame: null,
   stars: [],
@@ -89,6 +96,11 @@ let profile = loadProfile();
 let config = { billingEnabled: false, checkoutUrl: "", testStoreEnabled: false, creditPacks: [], rewardedAdsEnabled: false, founderPrice: "€6.99", aiEnabled: false };
 let localRuntimePromise;
 let activeTrayDragCleanup = null;
+let activeBoardDragCleanup = null;
+let clearUndo = null;
+let clearUndoTimer = null;
+let runSaveTimer = null;
+const ACTIVE_RUN_KEY = isStaticBeta ? "constellore-local-active-run-v1" : "constellore-active-run-v1";
 
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
@@ -98,7 +110,10 @@ const creditsAdapter = () => globalThis.constelloreCredits || globalThis.wordfor
 const els = {
   startScreen: $("#startScreen"), gameScreen: $("#gameScreen"), targetMessage: $("#targetMessage"),
   board: $("#board"), boardItems: $("#boardItems"), boardGuide: $("#boardGuide"), cosmosCanvas: $("#cosmosCanvas"),
+  tidyBoard: $("#tidyBoard"), resetBoard: $("#resetBoard"), dropPairPreview: $("#dropPairPreview"),
+  tapChainStatus: $("#tapChainStatus"), tapChainText: $("#tapChainText"), boardUndo: $("#boardUndo"),
   alchemyNote: $("#alchemyNote"), wordList: $("#wordList"), collectionCount: $("#collectionCount"),
+  inventorySearch: $("#inventorySearch"), inventorySearchClear: $("#inventorySearchClear"), inventorySearchStatus: $("#inventorySearchStatus"),
   modeName: $("#modeName"), targetWord: $("#targetWord"), lawPill: $("#lawPill"), movesValue: $("#movesValue"),
   timerHud: $("#timerHud"), timerValue: $("#timerValue"), pathCount: $("#pathCount"),
   milestoneText: $("#milestoneText"), milestoneBar: $("#milestoneBar"), wishState: $("#wishState"),
@@ -334,7 +349,7 @@ async function beginMode(mode, options = {}) {
     showToast(error.message);
   } finally {
     state.startingRun = false;
-    if (state.game) updateHud();
+    if (state.game) { updateHud(); updateBoardTools(); }
     if (button) button.disabled = (mode === "daily" && profile.dailyCompleted === todayKey) || (mode === "weekly" && profile.weekly.complete);
     if (label && original) label.textContent = original;
   }
@@ -367,13 +382,179 @@ async function beginCustomTarget(event) {
     els.targetMessage.textContent = error.message;
   } finally {
     state.startingRun = false;
-    if (state.game) updateHud();
+    if (state.game) { updateHud(); updateBoardTools(); }
     submit.disabled = false;
   }
 }
 
-function startWithGame(game, run) {
+function snapshotItem(item) {
+  if (!item?.word || item.ghost) return null;
+  return {
+    word: String(item.word).slice(0, 80),
+    emoji: String(item.emoji || "✦").slice(0, 24),
+    category: item.category == null ? null : String(item.category).slice(0, 40),
+    source: String(item.source || "world").slice(0, 40),
+    note: String(item.note || "").slice(0, 180)
+  };
+}
+
+function buildActiveRunSnapshot() {
+  if (!state.game || !state.run || state.finished || state.reveal.active || state.reveal.pending) return null;
+  const boardRect = els.board.getBoundingClientRect();
+  const width = Math.max(1, boardRect.width);
+  const height = Math.max(1, boardRect.height);
+  const bendItem = state.bendItem || state.words.find((item) => ["wish", "market"].includes(item.source));
+  return {
+    version: 1,
+    savedAt: new Date().toISOString(),
+    game: structuredClone(state.game),
+    run: {
+      id: state.run.id,
+      token: state.run.token,
+      startedAt: state.run.startedAt,
+      deadlineAt: state.run.deadlineAt,
+      assist: state.assist,
+      scoreEligible: state.run.scoreEligible !== false && !state.scoringDisabled
+    },
+    progress: {
+      moves: state.moves,
+      completed: false,
+      submitted: false,
+      discovered: state.words.slice(0, 1000).map(snapshotItem).filter(Boolean),
+      history: state.history.slice(-500).map((step) => ({ ...step })),
+      usedBend: state.wished,
+      usedWish: state.wished,
+      bendItem: snapshotItem(bendItem),
+      assist: state.assist,
+      scoringDisabled: state.scoringDisabled
+    },
+    visuals: {
+      nodes: state.nodes.slice(0, 180).filter((node) => !node.revealRole && !node.item.ghost).map((node) => ({
+        word: node.item.word,
+        x: clamp(node.x / width, 0, 1),
+        y: clamp(node.y / height, 0, 1),
+        z: Number(node.z) || 0,
+        cosmicTwist: Boolean(node.cosmicTwist)
+      })),
+      inventoryQuery: state.inventoryQuery,
+      inventoryRecency: [...state.inventoryRecency.entries()].sort((left, right) => right[1] - left[1]).slice(0, 500)
+    }
+  };
+}
+
+function flushRunSave() {
+  clearTimeout(runSaveTimer);
+  runSaveTimer = null;
+  const snapshot = buildActiveRunSnapshot();
+  if (!snapshot) return;
+  try { localStorage.setItem(ACTIVE_RUN_KEY, JSON.stringify(snapshot)); } catch { /* Storage can be unavailable or full. */ }
+}
+
+function scheduleRunSave() {
+  clearTimeout(runSaveTimer);
+  if (!state.game || !state.run || state.finished || state.reveal.active || state.reveal.pending) return;
+  runSaveTimer = setTimeout(flushRunSave, 180);
+}
+
+function clearActiveRunSnapshot() {
+  clearTimeout(runSaveTimer);
+  runSaveTimer = null;
+  try { localStorage.removeItem(ACTIVE_RUN_KEY); } catch { /* Storage can be unavailable. */ }
+}
+
+function readActiveRunSnapshot() {
+  try {
+    const snapshot = JSON.parse(localStorage.getItem(ACTIVE_RUN_KEY) || "null");
+    const savedAt = Date.parse(snapshot?.savedAt);
+    if (snapshot?.version !== 1 || !snapshot?.run?.id || !snapshot?.run?.token || !snapshot?.game || !Number.isFinite(savedAt) || Date.now() - savedAt > 7 * 86400000) {
+      if (snapshot) clearActiveRunSnapshot();
+      return null;
+    }
+    return snapshot;
+  } catch {
+    clearActiveRunSnapshot();
+    return null;
+  }
+}
+
+function hydrateRestoredRun(payload, snapshot) {
+  const progress = payload.progress || {};
+  const authoritativeWords = Array.isArray(progress.discovered) ? progress.discovered.map(snapshotItem).filter(Boolean) : [];
+  const byWord = new Map(authoritativeWords.map((item) => [inventoryKey(item), item]));
+  for (const starter of payload.game.starters || []) {
+    const key = inventoryKey(starter);
+    if (!byWord.has(key)) byWord.set(key, { word: starter, emoji: starterEmoji[starter] || "✦", category: starterCategory[starter] || null, source: "origin" });
+  }
+  state.words = [...byWord.values()];
+  state.history = Array.isArray(progress.history) ? progress.history.slice(-500).map((step) => ({ ...step })) : [];
+  state.moves = Math.max(0, Number(progress.moves) || 0);
+  state.wished = Boolean(progress.usedBend || progress.usedWish || progress.wished);
+  state.bendItem = snapshotItem(progress.bendItem);
+  state.assist = payload.run?.assist || progress.assist || "none";
+  state.scoringDisabled = payload.run?.scoreEligible === false || payload.game?.scoreEligible === false || Boolean(progress.scoringDisabled) || state.assist === "reveal";
+  state.inventoryQuery = String(snapshot?.visuals?.inventoryQuery || "").slice(0, 60);
+  state.inventoryRecency = new Map(Array.isArray(snapshot?.visuals?.inventoryRecency)
+    ? snapshot.visuals.inventoryRecency.slice(0, 500).filter((entry) => Array.isArray(entry) && typeof entry[0] === "string" && Number.isFinite(Number(entry[1]))).map(([word, clock]) => [word.slice(0, 80), Number(clock)])
+    : []);
+  state.inventoryClock = Math.max(0, ...state.inventoryRecency.values());
+  const boardRect = els.board.getBoundingClientRect();
+  state.nodes = [];
+  state.nextId = 1;
+  state.topZ = 10;
+  if (snapshot?.run?.id === payload.run?.id && Array.isArray(snapshot?.visuals?.nodes)) {
+    for (const savedNode of snapshot.visuals.nodes.slice(0, 180)) {
+      const item = byWord.get(inventoryKey(savedNode?.word));
+      if (!item) continue;
+      state.nodes.push({
+        id: state.nextId++,
+        item,
+        x: clamp(Number(savedNode.x) * boardRect.width || 8, 8, Math.max(8, boardRect.width - 155)),
+        y: clamp(Number(savedNode.y) * boardRect.height || 8, 8, Math.max(8, boardRect.height - 54)),
+        z: ++state.topZ,
+        cosmicTwist: Boolean(savedNode.cosmicTwist)
+      });
+    }
+  }
+  const restoredWords = state.words.map((item) => item.word);
+  const profileSize = profile.discovered.length;
+  profile.discovered = [...new Set([...profile.discovered, ...restoredWords])].slice(0, 1000);
+  if (profile.discovered.length !== profileSize) saveProfile();
+  renderInventory();
+  renderBoard();
+  if (boardNodesOverlap()) tidyOrbit({ silent: true });
+  renderAtlas();
+  updateHud();
+  updateMilestone(Boolean(progress.completed));
+  scheduleRunSave();
+}
+
+async function restoreInterruptedRun(snapshot) {
+  if (!snapshot) return false;
+  try {
+    const payload = await fetchJson("/api/run/resume", {
+      method: "POST",
+      headers: authHeaders({ "Content-Type": "application/json" }),
+      body: JSON.stringify({ runId: snapshot.run.id, runToken: snapshot.run.token, snapshot })
+    });
+    applyServerPlayer(payload.player);
+    startWithGame(payload.game, payload.run, { restored: true });
+    hydrateRestoredRun(payload, snapshot);
+    showToast(`Restored your path to ${payload.game.target}.`);
+    track("run_restored", { mode: payload.game.mode, target: payload.game.target, moves: state.moves });
+    if (payload.progress?.completed) requestAnimationFrame(() => finishGame(true, "", { skipSubmit: Boolean(payload.progress.submitted) }));
+    else if (payload.run?.deadlineAt && Date.parse(payload.run.deadlineAt) <= Date.now()) requestAnimationFrame(() => finishGame(false, "Time slipped beyond your orbit."));
+    return true;
+  } catch (error) {
+    if (["invalid_run", "run_expired", "run_missing", "resume_mismatch", "resume_invalid"].includes(error.code) || [401, 404, 409, 410, 422].includes(error.status)) clearActiveRunSnapshot();
+    else showToast("Your saved orbit is safe; reconnect to restore it.");
+    return false;
+  }
+}
+
+function startWithGame(game, run, { restored = false } = {}) {
   cancelActiveTrayDrag();
+  cancelActiveBoardDrag();
+  dismissClearUndo();
   ctrlHover.reset({ abandonPending: true });
   state.orbitGeneration += 1;
   stopTimer();
@@ -395,8 +576,13 @@ function startWithGame(game, run) {
   state.topZ = 10;
   state.busyPairs.clear();
   state.selectedNodeId = null;
+  state.inventoryQuery = "";
+  state.inventoryClock = 0;
+  state.inventoryRecency = new Map();
+  state.inventoryFocusWord = "";
   state.finished = false;
   state.wished = false;
+  state.bendItem = null;
   state.rewardedWish = false;
   state.startedAt = run?.startedAt ? Date.parse(run.startedAt) : Date.now();
   state.remainingSeconds = run?.deadlineAt ? Math.max(0, Math.ceil((Date.parse(run.deadlineAt) - Date.now()) / 1000)) : game.timeLimit || 0;
@@ -419,12 +605,16 @@ function startWithGame(game, run) {
   updateMilestone();
   requestAnimationFrame(startCosmos);
   if (game.timeLimit) startTimer();
-  track("run_started", { mode: game.mode, target: game.target, stage: game.stage ?? null, aiEnabled: game.aiEnabled });
+  scheduleRunSave();
+  if (!restored) track("run_started", { mode: game.mode, target: game.target, stage: game.stage ?? null, aiEnabled: game.aiEnabled });
 }
 
 function returnHome() {
   if (state.startingRun) return showToast("The next orbit is still being mapped.");
   cancelActiveTrayDrag();
+  cancelActiveBoardDrag();
+  dismissClearUndo();
+  cancelTapChain();
   ctrlHover.reset({ abandonPending: true });
   state.orbitGeneration += 1;
   if (state.game && !state.finished && state.history.length) track("run_failed", { mode: state.mode, reason: "abandoned", moves: state.moves });
@@ -435,6 +625,7 @@ function returnHome() {
   state.game = null;
   state.run = null;
   state.nodes = [];
+  clearActiveRunSnapshot();
   els.gameScreen.hidden = true;
   els.startScreen.hidden = false;
   [els.resultDialog, els.atlasDialog, els.shareDialog, els.wishDialog, els.paywallDialog, els.exchangeDialog, els.marketBuyDialog, els.leaderboardDialog, els.revealDialog].forEach((dialog) => { if (dialog?.open) dialog.close(); });
@@ -477,7 +668,7 @@ function stopTimer() {
 function updateHud() {
   if (!state.game) return;
   els.movesValue.textContent = state.game.moveLimit ? `${state.moves}/${state.game.moveLimit}` : String(state.moves);
-  els.collectionCount.textContent = state.words.length;
+  els.collectionCount.textContent = state.inventoryQuery ? `${state.inventoryVisibleCount}/${state.words.length}` : state.words.length;
   els.pathCount.textContent = state.history.length;
   if (state.game.timeLimit) els.timerValue.textContent = formatTime(state.remainingSeconds);
   if (els.revealPathButton) {
@@ -497,11 +688,36 @@ function updateMilestone(won = false) {
   els.milestoneText.textContent = state.history.length ? `${state.history.length} stars traced · ${state.newDiscoveries} new to your universe` : "Your constellation begins here";
 }
 
+function inventoryKey(itemOrWord) {
+  return String(typeof itemOrWord === "object" ? itemOrWord?.word : itemOrWord || "").trim().toLocaleLowerCase();
+}
+
+function recentInventoryWords() {
+  return [...state.inventoryRecency.entries()]
+    .sort((left, right) => right[1] - left[1])
+    .map(([word]) => word);
+}
+
+function touchInventory(itemOrWord, { focus = false } = {}) {
+  const key = inventoryKey(itemOrWord);
+  if (!key) return;
+  state.inventoryClock += 1;
+  state.inventoryRecency.set(key, state.inventoryClock);
+  if (focus) state.inventoryFocusWord = key;
+}
+
 function renderInventory() {
-  els.wordList.replaceChildren(...state.words.map((item) => {
+  const visible = orderInventory(state.words, {
+    starters: state.game?.starters || ["Earth", "Water", "Fire", "Air"],
+    recent: recentInventoryWords(),
+    query: state.inventoryQuery
+  });
+  state.inventoryVisibleCount = visible.length;
+  const controls = visible.map((item) => {
     const button = document.createElement("button");
     button.type = "button";
     button.className = `inventory-word${["wish", "market"].includes(item.source) ? " wish" : ""}${item.source === "twist" ? " twist" : ""}${item.ghost ? " reveal-ghost" : ""}`;
+    button.dataset.word = inventoryKey(item);
     const revealLocked = state.reveal.active || state.reveal.pending;
     const unavailable = state.finished || revealLocked || item.ghost;
     button.draggable = false;
@@ -516,13 +732,35 @@ function renderInventory() {
         event.preventDefault();
         return;
       }
-      placeFromTray(item);
+      void activateTrayItem(item);
     });
     button.addEventListener("pointerdown", (event) => startTrayPointerDrag(event, item, button, () => {
       suppressClickUntil = performance.now() + 650;
     }));
     return button;
-  }));
+  });
+  if (!visible.length) {
+    const empty = document.createElement("p");
+    empty.className = "inventory-empty";
+    empty.textContent = state.inventoryQuery ? `No discoveries match “${state.inventoryQuery}”.` : "Your discoveries will gather here.";
+    controls.push(empty);
+  }
+  els.wordList.replaceChildren(...controls);
+  els.inventorySearch.value = state.inventoryQuery;
+  els.inventorySearchClear.hidden = !state.inventoryQuery;
+  els.inventorySearchStatus.textContent = state.inventoryQuery
+    ? `${visible.length} of ${state.words.length} discovered words shown.`
+    : `${state.words.length} discovered words.`;
+  const focusKey = state.inventoryFocusWord;
+  if (focusKey) {
+    const focusElement = [...els.wordList.querySelectorAll(".inventory-word")].find((button) => button.dataset.word === focusKey);
+    if (focusElement) {
+      focusElement.classList.add("new-discovery");
+      requestAnimationFrame(() => focusElement.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" }));
+      setTimeout(() => focusElement.classList.remove("new-discovery"), 1000);
+    }
+    state.inventoryFocusWord = "";
+  }
   updateHud();
 }
 
@@ -531,6 +769,152 @@ function renderBoard(newId = null) {
   els.boardGuide.classList.toggle("hidden", state.nodes.length > 0);
   els.boardGuide.setAttribute("aria-hidden", String(state.nodes.length > 0));
   syncCtrlHoverState(ctrlHover.snapshot());
+  syncSelectedNodeState();
+  updateBoardTools();
+}
+
+function syncSelectedNodeState() {
+  let selected = state.nodes.find((node) => node.id === state.selectedNodeId);
+  if (!selected || selected.revealRole || selected.item.ghost || state.busyPairs.has(selected.id)) {
+    state.selectedNodeId = null;
+    selected = null;
+  }
+  for (const element of els.boardItems.querySelectorAll(".board-word")) {
+    const active = selected && String(selected.id) === element.dataset.id;
+    element.classList.toggle("keyboard-selected", Boolean(active));
+    element.setAttribute("aria-pressed", String(Boolean(active)));
+  }
+  els.tapChainStatus.hidden = !selected;
+  els.board.classList.toggle("tap-chain-active", Boolean(selected));
+  if (selected) els.tapChainText.textContent = `${selected.item.word} armed · tap another word`;
+}
+
+function cancelTapChain({ announce = false } = {}) {
+  if (state.selectedNodeId == null) return false;
+  state.selectedNodeId = null;
+  syncSelectedNodeState();
+  if (announce) showAlchemy("Tap chain cancelled.");
+  return true;
+}
+
+function dismissClearUndo() {
+  clearTimeout(clearUndoTimer);
+  clearUndoTimer = null;
+  clearUndo = null;
+  els.boardUndo.hidden = true;
+}
+
+function updateBoardTools() {
+  const locked = !state.game || state.finished || state.startingRun || state.reveal.active || state.reveal.pending || state.busyPairs.size > 0;
+  els.tidyBoard.disabled = locked || state.nodes.length < 2;
+  els.resetBoard.disabled = locked || state.nodes.length === 0;
+}
+
+function clearBoardWithUndo() {
+  if (state.startingRun || state.reveal.active || state.reveal.pending) return showToast("The cosmos is tracing this path.");
+  if (state.busyPairs.size) return showToast("Let the current combination resolve first.");
+  if (!state.nodes.length) return;
+  cancelActiveTrayDrag();
+  cancelActiveBoardDrag();
+  ctrlHover.reset();
+  cancelTapChain();
+  dismissClearUndo();
+  clearUndo = {
+    runId: state.run?.id || "",
+    generation: state.orbitGeneration,
+    nodes: structuredClone(state.nodes)
+  };
+  state.nodes = [];
+  renderBoard();
+  els.boardUndo.hidden = false;
+  clearUndoTimer = setTimeout(dismissClearUndo, 6000);
+  scheduleRunSave();
+  showAlchemy("The board is clear. Your discoveries remain.");
+}
+
+function undoBoardClear() {
+  if (!clearUndo || clearUndo.generation !== state.orbitGeneration || clearUndo.runId !== (state.run?.id || "") || state.busyPairs.size) return dismissClearUndo();
+  const snapshot = clearUndo.nodes;
+  dismissClearUndo();
+  state.nodes = snapshot;
+  state.nextId = Math.max(state.nextId, ...state.nodes.map((node) => Number(node.id) + 1).filter(Number.isFinite), 1);
+  state.topZ = Math.max(state.topZ, ...state.nodes.map((node) => Number(node.z)).filter(Number.isFinite), 10);
+  renderBoard();
+  scheduleRunSave();
+  showAlchemy("Board restored · score unchanged.");
+}
+
+function tidyOrbit(options = {}) {
+  if (els.tidyBoard.disabled) return;
+  cancelActiveTrayDrag();
+  cancelActiveBoardDrag();
+  ctrlHover.reset();
+  cancelTapChain();
+  dismissClearUndo();
+  const boardRect = els.board.getBoundingClientRect();
+  const measured = state.nodes.map((node) => {
+    const rect = els.boardItems.querySelector(`[data-id="${node.id}"]`)?.getBoundingClientRect();
+    return rect ? { id: node.id, width: rect.width, height: rect.height } : null;
+  }).filter(Boolean);
+  if (measured.length !== state.nodes.length) return showToast("The orbit is still settling. Try again.");
+  const padding = boardRect.width < 500 ? 10 : 18;
+  const top = boardRect.width < 500 ? 64 : 72;
+  const bottom = boardRect.width < 500 ? 70 : 64;
+  const packed = packOrbit(measured, {
+    left: padding,
+    top,
+    width: Math.max(1, boardRect.width - padding * 2),
+    height: Math.max(1, boardRect.height - top - bottom),
+    gap: 10
+  });
+  if (!packed) return showToast("These words need a little more room to tidy safely.");
+  const byId = new Map(packed.map((entry) => [String(entry.id), entry]));
+  for (const node of state.nodes) {
+    const placement = byId.get(String(node.id));
+    const element = els.boardItems.querySelector(`[data-id="${node.id}"]`);
+    if (!placement || !element) continue;
+    node.x = placement.x;
+    node.y = placement.y;
+    node.z = ++state.topZ;
+    element.classList.add("tidying");
+    element.style.setProperty("--x", `${node.x}px`);
+    element.style.setProperty("--y", `${node.y}px`);
+    element.style.zIndex = node.z;
+    setTimeout(() => element.classList.remove("tidying"), 280);
+  }
+  scheduleRunSave();
+  if (!options?.silent) {
+    showAlchemy("Orbit tidied · score unchanged.");
+    track("board_tidied", { mode: state.mode, words: state.nodes.length });
+  }
+}
+
+function boardNodesOverlap(gap = 2) {
+  const rectangles = [...els.boardItems.querySelectorAll(".board-word")].map((element) => element.getBoundingClientRect());
+  for (let left = 0; left < rectangles.length; left += 1) {
+    for (let right = left + 1; right < rectangles.length; right += 1) {
+      const a = rectangles[left];
+      const b = rectangles[right];
+      if (!(a.right + gap <= b.left || b.right + gap <= a.left || a.bottom + gap <= b.top || b.bottom + gap <= a.top)) return true;
+    }
+  }
+  return false;
+}
+
+function constrainBoardNodes() {
+  if (!state.game || els.gameScreen.hidden) return;
+  const boardRect = els.board.getBoundingClientRect();
+  for (const node of state.nodes) {
+    const element = els.boardItems.querySelector(`[data-id="${node.id}"]`);
+    if (!element) continue;
+    const rect = element.getBoundingClientRect();
+    node.x = clamp(node.x, 5, Math.max(5, boardRect.width - rect.width - 5));
+    node.y = clamp(node.y, 5, Math.max(5, boardRect.height - rect.height - 5));
+    element.style.setProperty("--x", `${node.x}px`);
+    element.style.setProperty("--y", `${node.y}px`);
+  }
+  if (boardNodesOverlap()) tidyOrbit({ silent: true });
+  scheduleRunSave();
 }
 
 function ctrlHoverAvailable() {
@@ -560,13 +944,7 @@ function handleCtrlHoverEnter(node, event = {}) {
   if (!ctrlHoverAvailable()) return;
   const action = ctrlHover.enter(node.id);
   if (action.type === "ignored") return;
-  if (state.selectedNodeId != null) {
-    state.selectedNodeId = null;
-    els.boardItems.querySelectorAll(".keyboard-selected").forEach((element) => {
-      element.classList.remove("keyboard-selected");
-      element.setAttribute("aria-pressed", "false");
-    });
-  }
+  cancelTapChain();
   if (action.type === "armed") showAlchemy(`CTRL FUSION · ${action.node.item.word} remembered — hover another word.`);
   else if (action.type === "combining") showAlchemy(`CTRL FUSION · Combining ${action.source.item.word} + ${action.target.item.word}…`);
   else if (action.type === "queued") showAlchemy(`CTRL FUSION · ${action.node.item.word} is next.`);
@@ -610,28 +988,48 @@ function createBoardNode(node, isNew) {
   button.addEventListener("keydown", (event) => {
     if (event.key === "Enter" || event.key === " ") {
       event.preventDefault();
-      selectNodeForKeyboard(node);
+      void selectNodeForTap(node);
     }
   });
   return button;
 }
 
-function selectNodeForKeyboard(node) {
+async function selectNodeForTap(node) {
   if (state.finished || state.reveal.active || state.reveal.pending || ctrlHover.snapshot().active) return;
   if (!state.selectedNodeId) {
     state.selectedNodeId = node.id;
-    renderBoard();
-    showAlchemy(`${node.item.word} selected. Choose another word.`);
+    syncSelectedNodeState();
+    showAlchemy(`${node.item.word} armed · tap another word.`);
     return;
   }
   if (state.selectedNodeId === node.id) {
-    state.selectedNodeId = null;
-    renderBoard();
+    cancelTapChain({ announce: true });
     return;
   }
   const first = state.nodes.find((entry) => entry.id === state.selectedNodeId);
   state.selectedNodeId = null;
-  if (first) combineNodes(first, node);
+  syncSelectedNodeState();
+  if (!first) return void selectNodeForTap(node);
+  const outcome = await combineNodes(first, node);
+  if (!outcome && getCtrlHoverNode(node.id)) {
+    state.selectedNodeId = node.id;
+    syncSelectedNodeState();
+    showAlchemy(`${node.item.word} remains armed · try another word.`);
+  }
+}
+
+async function activateTrayItem(item) {
+  const selected = state.nodes.find((node) => node.id === state.selectedNodeId);
+  if (!selected) return placeFromTray(item);
+  state.selectedNodeId = null;
+  syncSelectedNodeState();
+  const outcome = await combineTrayWithTarget(item, selected);
+  if (!outcome && getCtrlHoverNode(selected.id)) {
+    state.selectedNodeId = selected.id;
+    syncSelectedNodeState();
+    showAlchemy(`${selected.item.word} remains armed · try another word.`);
+  }
+  return outcome;
 }
 
 function placeFromTray(item, point) {
@@ -640,45 +1038,13 @@ function placeFromTray(item, point) {
   const spread = state.nodes.length % 7;
   const x = point ? point.x - rect.left - 55 : rect.width * .46 + (spread - 3) * 22;
   const y = point ? point.y - rect.top - 22 : rect.height * .43 + ((state.nodes.length * 31) % 100) - 50;
+  touchInventory(item);
+  renderInventory();
   return addNode(item, x, y);
 }
 
-function cancelActiveTrayDrag() {
-  activeTrayDragCleanup?.();
-  activeTrayDragCleanup = null;
-}
-
-function pointInsideBoard(point) {
-  const rect = els.board.getBoundingClientRect();
-  return point.x >= rect.left && point.x <= rect.right && point.y >= rect.top && point.y <= rect.bottom;
-}
-
-function boardNodeAtPoint(clientX, clientY) {
-  const elements = document.elementsFromPoint?.(clientX, clientY) || [document.elementFromPoint(clientX, clientY)].filter(Boolean);
-  const button = elements.map((element) => element.closest?.(".board-word")).find((element) => element && els.boardItems.contains(element));
-  if (!button || button.disabled) return null;
-  const node = state.nodes.find((entry) => String(entry.id) === button.dataset.id);
-  if (!node || node.revealRole || node.item.ghost || state.busyPairs.has(node.id)) return null;
-  return node;
-}
-
-function setDropTarget(target) {
-  clearDropTargets();
-  if (target) els.boardItems.querySelector(`[data-id="${target.id}"]`)?.classList.add("drop-target");
-}
-
-function dropTrayItem(item, point) {
-  if (state.finished || state.reveal.active || state.reveal.pending || item.ghost || !pointInsideBoard(point)) return;
-  const target = boardNodeAtPoint(point.x, point.y);
-  if (!target) {
-    placeFromTray(item, point);
-    return;
-  }
-  state.selectedNodeId = null;
-  const targetElement = els.boardItems.querySelector(`[data-id="${target.id}"]`);
-  targetElement?.classList.remove("keyboard-selected");
-  targetElement?.setAttribute("aria-pressed", "false");
-  const traySource = {
+function traySourceFor(item, target) {
+  return {
     id: `tray-${state.nextId++}`,
     item,
     x: target.x,
@@ -686,12 +1052,125 @@ function dropTrayItem(item, point) {
     z: ++state.topZ,
     traySource: true
   };
-  void combineNodes(traySource, target);
+}
+
+function combineTrayWithTarget(item, target) {
+  cancelTapChain();
+  const targetElement = els.boardItems.querySelector(`[data-id="${target.id}"]`);
+  targetElement?.classList.remove("keyboard-selected");
+  targetElement?.setAttribute("aria-pressed", "false");
+  return combineNodes(traySourceFor(item, target), target);
+}
+
+function cancelActiveTrayDrag() {
+  activeTrayDragCleanup?.();
+  activeTrayDragCleanup = null;
+}
+
+function cancelActiveBoardDrag() {
+  activeBoardDragCleanup?.();
+  activeBoardDragCleanup = null;
+}
+
+function pointInsideBoard(point) {
+  const rect = els.board.getBoundingClientRect();
+  return point.x >= rect.left && point.x <= rect.right && point.y >= rect.top && point.y <= rect.bottom;
+}
+
+function dragThreshold(pointerType) {
+  return pointerType === "touch" ? 12 : pointerType === "pen" ? 8 : 5;
+}
+
+function eligibleDropCandidates(excludeId = null) {
+  return state.nodes.flatMap((node) => {
+    if (String(node.id) === String(excludeId) || node.revealRole || node.item.ghost || state.busyPairs.has(node.id)) return [];
+    const element = els.boardItems.querySelector(`[data-id="${node.id}"]`);
+    if (!element || element.disabled) return [];
+    return [{ node, element, rect: element.getBoundingClientRect() }];
+  });
+}
+
+function rectEdgeDistance(point, rect) {
+  return Math.hypot(Math.max(rect.left - point.x, 0, point.x - rect.right), Math.max(rect.top - point.y, 0, point.y - rect.bottom));
+}
+
+function resolveDropCandidate({ point, sourceElement = null, excludeId = null, pointerType = "mouse" }) {
+  const candidates = eligibleDropCandidates(excludeId);
+  if (!candidates.length) return { selected: null, ambiguous: false, contenders: [] };
+  const sourceRect = sourceElement?.getBoundingClientRect();
+  const anchor = sourceRect
+    ? { x: sourceRect.left + sourceRect.width / 2, y: sourceRect.top + sourceRect.height / 2 }
+    : { x: point.x, y: point.y };
+  const direct = pickMagneticTarget(candidates, anchor, { radius: 0, ambiguityGap: 0 });
+  if (direct.selected) return { selected: direct.selected.node, ambiguous: false, contenders: [direct.selected.node], exact: true };
+  if (direct.ambiguous) {
+    const contenders = candidates.filter(({ rect }) => rectEdgeDistance(anchor, rect) === 0).map(({ node }) => node);
+    return { selected: null, ambiguous: true, contenders, exact: true };
+  }
+  if (sourceRect) {
+    const sourceArea = Math.max(1, sourceRect.width * sourceRect.height);
+    const overlapping = candidates.map((candidate) => {
+      const rect = candidate.rect;
+      const area = Math.max(0, Math.min(sourceRect.right, rect.right) - Math.max(sourceRect.left, rect.left))
+        * Math.max(0, Math.min(sourceRect.bottom, rect.bottom) - Math.max(sourceRect.top, rect.top));
+      return { candidate, ratio: area / sourceArea };
+    }).filter((entry) => entry.ratio > .25).sort((left, right) => right.ratio - left.ratio);
+    if (overlapping.length) {
+      if (overlapping[1] && overlapping[0].ratio - overlapping[1].ratio < .1) {
+        return { selected: null, ambiguous: true, contenders: overlapping.slice(0, 2).map((entry) => entry.candidate.node) };
+      }
+      return { selected: overlapping[0].candidate.node, ambiguous: false, contenders: [overlapping[0].candidate.node] };
+    }
+  }
+  const radius = pointerType === "touch" || pointerType === "pen" ? 48 : 30;
+  const magnetic = pickMagneticTarget(candidates, anchor, { radius, ambiguityGap: 12 });
+  if (magnetic.selected) return { selected: magnetic.selected.node, ambiguous: false, contenders: [magnetic.selected.node], magnetic: true };
+  const contenders = magnetic.ambiguous
+    ? candidates.map((candidate) => ({ candidate, distance: rectEdgeDistance(anchor, candidate.rect) }))
+      .filter((entry) => entry.distance <= radius).sort((left, right) => left.distance - right.distance).slice(0, 2).map((entry) => entry.candidate.node)
+    : [];
+  return { selected: null, ambiguous: magnetic.ambiguous, contenders };
+}
+
+function setDropTarget(resolution, sourceItem) {
+  clearDropTargets();
+  if (!resolution) return;
+  for (const contender of resolution.contenders || []) {
+    els.boardItems.querySelector(`[data-id="${contender.id}"]`)?.classList.add(resolution.ambiguous ? "drop-ambiguous" : "drop-target");
+  }
+  if (!resolution.selected && !resolution.ambiguous) return;
+  const target = resolution.selected;
+  const targetElement = target && els.boardItems.querySelector(`[data-id="${target.id}"]`);
+  const boardRect = els.board.getBoundingClientRect();
+  const targetRect = targetElement?.getBoundingClientRect();
+  els.dropPairPreview.textContent = resolution.ambiguous
+    ? "Move closer to choose a word"
+    : `${sourceItem?.word || "Word"} + ${target.item.word} → ?`;
+  els.dropPairPreview.classList.toggle("ambiguous", resolution.ambiguous);
+  els.dropPairPreview.hidden = false;
+  els.dropPairPreview.style.setProperty("--preview-x", `${targetRect ? targetRect.left + targetRect.width / 2 - boardRect.left : boardRect.width / 2}px`);
+  els.dropPairPreview.style.setProperty("--preview-y", `${targetRect ? Math.max(62, targetRect.top - boardRect.top - 6) : 78}px`);
+}
+
+function dropTrayItem(item, point, pointerType = "mouse") {
+  if (state.finished || state.reveal.active || state.reveal.pending || item.ghost || !pointInsideBoard(point)) return;
+  const resolution = resolveDropCandidate({ point, pointerType });
+  if (resolution.ambiguous) {
+    showAlchemy("Move closer to choose a word.", true);
+    return;
+  }
+  if (!resolution.selected) {
+    placeFromTray(item, point);
+    return;
+  }
+  void combineTrayWithTarget(item, resolution.selected);
 }
 
 function startTrayPointerDrag(event, item, element, suppressClick) {
-  if (event.button !== 0 || state.finished || state.reveal.active || state.reveal.pending || item.ghost) return;
+  if (event.button !== 0 || (!event.isPrimary && event.pointerType !== "mouse") || state.finished || state.reveal.active || state.reveal.pending || item.ghost) return;
   cancelActiveTrayDrag();
+  const pointerId = event.pointerId;
+  const pointerType = event.pointerType || "mouse";
   const startX = event.clientX;
   const startY = event.clientY;
   let lastPoint = { x: startX, y: startY };
@@ -701,6 +1180,7 @@ function startTrayPointerDrag(event, item, element, suppressClick) {
   let cleaned = false;
 
   const update = (moveEvent) => {
+    if (moveEvent.pointerId !== pointerId) return;
     const samples = typeof moveEvent.getCoalescedEvents === "function" ? moveEvent.getCoalescedEvents() : [];
     const point = samples.at(-1) || moveEvent;
     lastPoint = { x: point.clientX, y: point.clientY };
@@ -714,6 +1194,8 @@ function startTrayPointerDrag(event, item, element, suppressClick) {
         : dx < -8 && Math.abs(dx) > Math.abs(dy) * .65;
       if (!moved || !headingTowardBoard) return;
       dragging = true;
+      cancelTapChain();
+      dismissClearUndo();
       element.classList.add("pointer-dragging");
       ghost = document.createElement("div");
       ghost.className = "tray-drag-ghost";
@@ -724,7 +1206,7 @@ function startTrayPointerDrag(event, item, element, suppressClick) {
     moveEvent.preventDefault();
     ghost.style.left = `${lastPoint.x}px`;
     ghost.style.top = `${lastPoint.y}px`;
-    setDropTarget(boardNodeAtPoint(lastPoint.x, lastPoint.y));
+    setDropTarget(resolveDropCandidate({ point: lastPoint, pointerType }), item);
   };
 
   const cleanup = () => {
@@ -740,13 +1222,15 @@ function startTrayPointerDrag(event, item, element, suppressClick) {
     if (activeTrayDragCleanup === cleanup) activeTrayDragCleanup = null;
   };
   const end = (upEvent) => {
+    if (upEvent.pointerId !== pointerId) return;
     lastPoint = { x: upEvent.clientX, y: upEvent.clientY };
     if (moved) suppressClick();
     const shouldDrop = dragging && pointInsideBoard(lastPoint);
     cleanup();
-    if (shouldDrop) dropTrayItem(item, lastPoint);
+    if (shouldDrop) dropTrayItem(item, lastPoint, pointerType);
   };
-  const cancel = () => {
+  const cancel = (cancelEvent) => {
+    if (cancelEvent?.pointerId != null && cancelEvent.pointerId !== pointerId) return;
     if (moved) suppressClick();
     cleanup();
   };
@@ -760,6 +1244,7 @@ function startTrayPointerDrag(event, item, element, suppressClick) {
 }
 
 function addNode(item, x, y, options = {}) {
+  dismissClearUndo();
   const bounds = els.board.getBoundingClientRect();
   const node = {
     id: state.nextId++, item,
@@ -770,6 +1255,7 @@ function addNode(item, x, y, options = {}) {
   };
   state.nodes.push(node);
   renderBoard(node.id);
+  scheduleRunSave();
   return node;
 }
 
@@ -778,8 +1264,11 @@ function startNodeDrag(event, node, element) {
     event.preventDefault();
     return;
   }
-  if (event.button !== 0 || state.finished || state.reveal.active || state.reveal.pending || node.revealRole || node.item.ghost || state.busyPairs.has(node.id)) return;
+  if (event.button !== 0 || (!event.isPrimary && event.pointerType !== "mouse") || state.finished || state.reveal.active || state.reveal.pending || node.revealRole || node.item.ghost || state.busyPairs.has(node.id)) return;
   event.preventDefault();
+  cancelActiveBoardDrag();
+  const pointerId = event.pointerId;
+  const pointerType = event.pointerType || "mouse";
   const boardRect = els.board.getBoundingClientRect();
   const nodeRect = element.getBoundingClientRect();
   const nodeWidth = nodeRect.width;
@@ -793,13 +1282,19 @@ function startNodeDrag(event, node, element) {
   node.z = ++state.topZ;
   element.style.zIndex = node.z;
   element.classList.remove("appear");
-  element.classList.add("dragging");
   element.setPointerCapture(event.pointerId);
 
   const updatePosition = (moveEvent, highlight = true) => {
+    if (moveEvent.pointerId !== pointerId) return;
     const samples = typeof moveEvent.getCoalescedEvents === "function" ? moveEvent.getCoalescedEvents() : [];
     const point = samples.at(-1) || moveEvent;
-    if (Math.hypot(point.clientX - startX, point.clientY - startY) > 5) moved = true;
+    if (!moved && Math.hypot(point.clientX - startX, point.clientY - startY) > dragThreshold(pointerType)) {
+      moved = true;
+      element.classList.add("dragging");
+      cancelTapChain();
+      dismissClearUndo();
+    }
+    if (!moved) return;
     node.x = clamp(point.clientX - boardRect.left - offsetX, 5, boardRect.width - nodeWidth - 5);
     node.y = clamp(point.clientY - boardRect.top - offsetY, 5, boardRect.height - nodeHeight - 5);
     element.style.setProperty("--x", `${node.x}px`);
@@ -807,7 +1302,7 @@ function startNodeDrag(event, node, element) {
     if (highlight && !highlightFrame) {
       highlightFrame = requestAnimationFrame(() => {
         highlightFrame = 0;
-        markDropTarget(node, element);
+        markDropTarget(node, element, pointerType);
       });
     }
   };
@@ -821,58 +1316,53 @@ function startNodeDrag(event, node, element) {
     element.removeEventListener("lostpointercapture", cancel);
     element.classList.remove("dragging");
     clearDropTargets();
+    if (activeBoardDragCleanup === cleanup) activeBoardDragCleanup = null;
   };
   const end = (upEvent) => {
+    if (upEvent.pointerId !== pointerId) return;
     updatePosition(upEvent, false);
-    const target = findCollision(node, element);
+    const resolution = moved ? resolveDropCandidate({ point: { x: upEvent.clientX, y: upEvent.clientY }, sourceElement: element, excludeId: node.id, pointerType }) : null;
     cleanup();
-    if (target) combineNodes(node, target);
-    else if (!moved) selectNodeForKeyboard(node);
+    if (resolution?.selected) void combineNodes(node, resolution.selected);
+    else if (resolution?.ambiguous) showAlchemy("Move closer to choose a word.", true);
+    else if (!moved) void selectNodeForTap(node);
+    else scheduleRunSave();
   };
-  const cancel = () => cleanup();
+  const cancel = (cancelEvent) => {
+    if (cancelEvent?.pointerId != null && cancelEvent.pointerId !== pointerId) return;
+    cleanup();
+  };
+  activeBoardDragCleanup = cleanup;
   window.addEventListener("pointermove", move);
   window.addEventListener("pointerup", end);
   window.addEventListener("pointercancel", cancel);
   element.addEventListener("lostpointercapture", cancel);
 }
 
-function findCollision(source, sourceElement) {
-  const sourceRect = sourceElement.getBoundingClientRect();
-  const centerX = sourceRect.left + sourceRect.width / 2;
-  const centerY = sourceRect.top + sourceRect.height / 2;
-  let best = null;
-  let bestOverlap = 0;
-  for (const target of state.nodes) {
-    if (target.id === source.id || state.busyPairs.has(target.id)) continue;
-    const element = els.boardItems.querySelector(`[data-id="${target.id}"]`);
-    if (!element) continue;
-    const rect = element.getBoundingClientRect();
-    const inside = centerX >= rect.left && centerX <= rect.right && centerY >= rect.top && centerY <= rect.bottom;
-    const overlap = Math.max(0, Math.min(sourceRect.right, rect.right) - Math.max(sourceRect.left, rect.left)) * Math.max(0, Math.min(sourceRect.bottom, rect.bottom) - Math.max(sourceRect.top, rect.top));
-    if ((inside || overlap > sourceRect.width * sourceRect.height * .25) && overlap >= bestOverlap) {
-      best = target;
-      bestOverlap = overlap;
-    }
-  }
-  return best;
-}
-
-function markDropTarget(source, element) {
-  clearDropTargets();
-  const target = findCollision(source, element);
-  if (target) els.boardItems.querySelector(`[data-id="${target.id}"]`)?.classList.add("drop-target");
+function markDropTarget(source, element, pointerType) {
+  const rect = element.getBoundingClientRect();
+  setDropTarget(resolveDropCandidate({
+    point: { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 },
+    sourceElement: element,
+    excludeId: source.id,
+    pointerType
+  }), source.item);
 }
 
 function clearDropTargets() {
-  els.boardItems.querySelectorAll(".drop-target").forEach((element) => element.classList.remove("drop-target"));
+  els.boardItems.querySelectorAll(".drop-target, .drop-ambiguous").forEach((element) => element.classList.remove("drop-target", "drop-ambiguous"));
+  els.dropPairPreview.hidden = true;
+  els.dropPairPreview.classList.remove("ambiguous");
 }
 
 async function combineNodes(a, b) {
   if (state.finished || state.reveal.active || state.reveal.pending || state.busyPairs.has(a.id) || state.busyPairs.has(b.id)) return;
   if (state.game.moveLimit && state.moves >= state.game.moveLimit) return finishGame(false, "No moves remain in this orbit.");
+  dismissClearUndo();
   const orbitGeneration = state.orbitGeneration;
   state.busyPairs.add(a.id);
   state.busyPairs.add(b.id);
+  updateBoardTools();
   const aElement = els.boardItems.querySelector(`[data-id="${a.id}"]`);
   const bElement = els.boardItems.querySelector(`[data-id="${b.id}"]`);
   const x = (a.x + b.x) / 2;
@@ -904,8 +1394,10 @@ async function combineNodes(a, b) {
     if (orbitGeneration !== state.orbitGeneration || !state.game) return null;
     state.moves += 1;
     let known = state.words.find((item) => item.word.toLowerCase() === result.word.toLowerCase());
+    const newToRun = !known;
     const globallyKnown = profile.discovered.some((word) => word.toLowerCase() === result.word.toLowerCase());
     if (!known) {
+      result.discoveredAt ||= new Date().toISOString();
       state.words.push(result);
       known = result;
       if (!globallyKnown) {
@@ -913,11 +1405,13 @@ async function combineNodes(a, b) {
         state.newDiscoveries += 1;
         saveProfile();
       }
-      renderInventory();
     } else if (result.twisted) {
       Object.assign(known, result);
-      renderInventory();
     }
+    touchInventory(a.item);
+    touchInventory(b.item);
+    touchInventory(known, { focus: newToRun });
+    renderInventory();
     state.history.push({ a: a.item.word, b: b.item.word, word: result.word, emoji: result.emoji, source: result.source, newDiscovery: !globallyKnown, twisted: Boolean(result.twisted), canonicalWord: result.twist?.canonicalWord || "" });
     state.trails.push({ ax: a.x + 44, ay: a.y + 20, bx: b.x + 44, by: b.y + 20, x: x + 44, y: y + 20 });
     state.nodes = state.nodes.filter((node) => node.id !== a.id && node.id !== b.id);
@@ -953,6 +1447,7 @@ async function combineNodes(a, b) {
     }
     aElement?.classList.remove("combining");
     bElement?.classList.remove("combining");
+    updateBoardTools();
   }
 }
 
@@ -1042,6 +1537,7 @@ async function confirmRevealPath() {
     state.assist = "reveal";
     state.scoringDisabled = true;
     state.run = { ...state.run, ranked: false, scoreEligible: false, assisted: true };
+    clearActiveRunSnapshot();
     stopTimer();
     if (mode === "daily") {
       profile.dailyCompleted = todayKey;
@@ -1349,9 +1845,14 @@ function updateDailyStreak() {
   profile.dailyCompleted = todayKey;
 }
 
-function finishGame(won, reason = "") {
+function finishGame(won, reason = "", { skipSubmit = false } = {}) {
   if (state.finished) return;
   ctrlHover.reset({ abandonPending: true });
+  cancelActiveTrayDrag();
+  cancelActiveBoardDrag();
+  cancelTapChain();
+  dismissClearUndo();
+  clearActiveRunSnapshot();
   state.finished = true;
   stopTimer();
   updateMilestone(won);
@@ -1413,7 +1914,7 @@ function finishGame(won, reason = "") {
   els.resultRetry.textContent = revealed ? "Back to modes" : won ? "Replay this target" : "Try again";
   els.resultShare.hidden = !won || assisted;
   els.resultDialog.showModal();
-  if (won && !assisted) submitRankedScore();
+  if (won && !assisted && !skipSubmit) submitRankedScore();
   track(won ? "target_reached" : "run_failed", { mode: state.mode, target: state.game.target, moves: state.moves, seconds: elapsed, wished: state.wished, reward: reward?.reward || 0, assisted, revealed });
 }
 
@@ -1550,6 +2051,7 @@ async function makeWish(event) {
     });
     state.words.push(item);
     state.wished = true;
+    state.bendItem = item;
     state.assist = item.assist || "wish";
     applyServerPlayer(item.player);
     renderInventory();
@@ -1609,6 +2111,7 @@ async function activateMarketWord(wordId) {
     });
     state.words.push(result.item);
     state.wished = true;
+    state.bendItem = result.item;
     state.assist = result.assist || "market";
     renderInventory();
     renderWishVault();
@@ -2095,14 +2598,30 @@ function escapeHtml(value) { return String(value).replace(/[&<>'"]/g, (character
 $$('[data-mode]').forEach((button) => button.addEventListener("click", () => beginMode(button.dataset.mode)));
 $("#customTargetForm").addEventListener("submit", beginCustomTarget);
 $("#homeButton").addEventListener("click", returnHome);
-$("#resetBoard").addEventListener("click", () => {
-  if (state.startingRun || state.reveal.active || state.reveal.pending) return showToast("The cosmos is tracing this path.");
-  if (state.busyPairs.size) return showToast("Let the current combination resolve first.");
-  ctrlHover.reset();
-  state.nodes = [];
-  state.selectedNodeId = null;
-  renderBoard();
-  showAlchemy("The board is clear. Your discoveries remain.");
+els.resetBoard.addEventListener("click", clearBoardWithUndo);
+els.tidyBoard.addEventListener("click", tidyOrbit);
+$("#undoBoardClear").addEventListener("click", undoBoardClear);
+$("#cancelTapChain").addEventListener("click", () => cancelTapChain({ announce: true }));
+els.board.addEventListener("pointerdown", (event) => {
+  if (event.target.closest?.(".board-word, .board-tools, .tap-chain-status, .board-undo, .reveal-controller")) return;
+  cancelTapChain();
+});
+els.inventorySearch.addEventListener("input", (event) => {
+  state.inventoryQuery = event.currentTarget.value.trimStart().slice(0, 60);
+  renderInventory();
+  scheduleRunSave();
+});
+els.inventorySearch.addEventListener("keydown", (event) => {
+  if (event.key !== "Escape" || !state.inventoryQuery) return;
+  event.preventDefault();
+  state.inventoryQuery = "";
+  renderInventory();
+});
+els.inventorySearchClear.addEventListener("click", () => {
+  state.inventoryQuery = "";
+  renderInventory();
+  els.inventorySearch.focus();
+  scheduleRunSave();
 });
 $("#atlasButton").addEventListener("click", openAtlas);
 $("#shareRunButton").addEventListener("click", openShare);
@@ -2179,14 +2698,30 @@ els.exchangeDialog.addEventListener("close", () => {
   state.marketTimer = null;
   setTimeout(resumeTimerIfNeeded, 0);
 });
-window.addEventListener("resize", () => { if (!els.gameScreen.hidden) startCosmos(); });
+window.addEventListener("resize", () => {
+  if (els.gameScreen.hidden) return;
+  requestAnimationFrame(() => {
+    constrainBoardNodes();
+    startCosmos();
+  });
+});
 window.addEventListener("keydown", activateCtrlHover);
+window.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && state.selectedNodeId != null && !event.defaultPrevented) {
+    event.preventDefault();
+    cancelTapChain({ announce: true });
+  }
+});
 window.addEventListener("keyup", releaseCtrlHover);
 window.addEventListener("blur", releaseCtrlHover);
+window.addEventListener("pagehide", flushRunSave);
 window.addEventListener("online", updateConnection);
 window.addEventListener("offline", updateConnection);
 document.addEventListener("visibilitychange", () => {
-  if (document.hidden) releaseCtrlHover();
+  if (document.hidden) {
+    releaseCtrlHover();
+    flushRunSave();
+  }
   else wakeRevealPlayback();
 });
 window.addEventListener("beforeinstallprompt", (event) => { event.preventDefault(); state.installPrompt = event; $("#installButton").hidden = false; });
@@ -2213,11 +2748,16 @@ async function boot() {
   }
   track("app_opened", { installed: matchMedia("(display-mode: standalone)").matches });
   const params = new URLSearchParams(location.search);
-  if (params.get("challenge") === "1" && params.get("target")) {
+  const challengeRequested = params.get("challenge") === "1" && params.get("target");
+  const restored = challengeRequested ? false : await restoreInterruptedRun(readActiveRunSnapshot());
+  if (!restored && challengeRequested) {
     track("challenge_opened", { target: params.get("target") });
-    beginMode("challenge", { target: params.get("target"), seed: Number(params.get("seed")) || stableHash(params.get("target")) });
+    void beginMode("challenge", { target: params.get("target"), seed: Number(params.get("seed")) || stableHash(params.get("target")) });
   }
   if (window.parent !== window) window.parent.postMessage({ type: "constellore:ready", localOnly: isStaticBeta }, location.origin);
 }
 
-boot();
+boot().catch((error) => {
+  console.error("Constellore could not finish booting.", error);
+  showToast("The cosmos could not finish loading. Refresh to try again.");
+});

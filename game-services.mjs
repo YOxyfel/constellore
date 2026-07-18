@@ -575,6 +575,8 @@ export class RunRegistry {
       twistUsed: false,
       twistedPairKey: null,
       usedBend: false,
+      bendItem: null,
+      history: [],
       completedAt: null,
       submitted: false
     };
@@ -602,7 +604,23 @@ export class RunRegistry {
       run.twistUsed = true;
       run.twistedPairKey = [a, b].map((word) => String(word).trim().toLowerCase()).sort().join("+");
     }
+    const canonicalWord = (word) => run.discovered.get(String(word).trim().toLowerCase())?.word || String(word).trim();
+    const newDiscovery = !run.discovered.has(result.word.toLowerCase());
     run.moves += 1;
+    run.history.push({
+      move: run.moves,
+      a: canonicalWord(a),
+      b: canonicalWord(b),
+      word: result.word,
+      emoji: result.emoji || "",
+      category: result.category || null,
+      note: result.note || "",
+      source: result.source || "world",
+      newDiscovery,
+      twisted: Boolean(result.twisted),
+      canonicalWord: result.twist?.canonicalWord || "",
+      revealed: false
+    });
     run.discovered.set(result.word.toLowerCase(), result);
     if (result.source === "ai") run.assist = "ai";
     if (result.word.toLowerCase() === run.game.target.toLowerCase()) run.completedAt = Date.now();
@@ -620,8 +638,25 @@ export class RunRegistry {
     run.forfeitReason = "reveal";
     run.forfeitedAt ||= Date.now();
     run.revealRoute = route.map((step) => ({ ...step }));
-    for (const step of run.revealRoute) run.discovered.set(step.word.toLowerCase(), { ...step });
-    run.moves += run.revealRoute.length;
+    for (const step of run.revealRoute) {
+      const newDiscovery = !run.discovered.has(step.word.toLowerCase());
+      run.history.push({
+        move: run.moves + 1,
+        a: step.a,
+        b: step.b,
+        word: step.word,
+        emoji: step.emoji || "",
+        category: step.category || null,
+        note: step.note || "",
+        source: "reveal",
+        newDiscovery,
+        twisted: false,
+        canonicalWord: "",
+        revealed: true
+      });
+      run.discovered.set(step.word.toLowerCase(), { ...step, source: "reveal" });
+      run.moves += 1;
+    }
     run.completedAt = Date.now();
     return run.revealRoute;
   }
@@ -630,8 +665,22 @@ export class RunRegistry {
     if (run.completedAt) throw serviceError(409, "This orbit is already complete.", "run_complete");
     if (run.usedBend) throw serviceError(409, "Only one Reality Bend may be used in a run.", "bend_used");
     run.usedBend = true;
+    run.bendItem = structuredClone(item);
     run.assist = assist;
     run.discovered.set(item.word.toLowerCase(), item);
+  }
+
+  progress(run) {
+    return {
+      moves: run.moves,
+      completed: Boolean(run.completedAt),
+      completedAt: run.completedAt ? new Date(run.completedAt).toISOString() : null,
+      submitted: Boolean(run.submitted),
+      discovered: [...run.discovered.values()].map((item) => structuredClone(item)),
+      history: run.history.map((step) => structuredClone(step)),
+      usedBend: Boolean(run.usedBend),
+      bendItem: run.bendItem ? structuredClone(run.bendItem) : null
+    };
   }
 
   finalize(run, callsign) {

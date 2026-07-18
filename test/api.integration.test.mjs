@@ -82,7 +82,10 @@ test("authenticated HTTP runs produce verified Pure and Open leaderboard scores"
 
   const serviceWorkerResponse = await fetch(`${baseUrl}/play/service-worker.js`);
   assert.equal(serviceWorkerResponse.status, 200);
-  assert.match(await serviceWorkerResponse.text(), /constellore-shell-v11/);
+  assert.match(await serviceWorkerResponse.text(), /constellore-shell-v12/);
+  const moduleResponse = await fetch(`${baseUrl}/frictionless.mjs`);
+  assert.equal(moduleResponse.status, 200);
+  assert.match(moduleResponse.headers.get("content-type") || "", /^text\/javascript/);
 
   const manifestResponse = await fetch(`${baseUrl}/manifest.webmanifest`);
   assert.equal(manifestResponse.status, 200);
@@ -234,6 +237,35 @@ test("authenticated HTTP runs produce verified Pure and Open leaderboard scores"
   assert.equal(quickStart.payload.run.ranked, true);
   assert.ok(quickStart.payload.run.deadlineAt);
 
+  const unauthenticatedResume = await request("/api/run/resume", {
+    method: "POST",
+    authenticated: false,
+    body: { runId: quickStart.payload.run.id, runToken: quickStart.payload.run.token }
+  });
+  assert.equal(unauthenticatedResume.response.status, 401);
+
+  const invalidResume = await request("/api/run/resume", {
+    method: "POST",
+    body: { runId: quickStart.payload.run.id, runToken: `${quickStart.payload.run.token}invalid` }
+  });
+  assert.equal(invalidResume.response.status, 401);
+
+  const initialResume = await request("/api/run/resume", {
+    method: "POST",
+    body: { runId: quickStart.payload.run.id, runToken: quickStart.payload.run.token }
+  });
+  assert.equal(initialResume.response.status, 200);
+  assert.equal(initialResume.payload.game.target, quickStart.payload.game.target);
+  assert.equal(initialResume.payload.run.id, quickStart.payload.run.id);
+  assert.equal(initialResume.payload.progress.moves, 0);
+  assert.equal(initialResume.payload.progress.completed, false);
+  assert.equal(initialResume.payload.progress.submitted, false);
+  assert.equal(initialResume.payload.progress.history.length, 0);
+  assert.equal(initialResume.payload.progress.usedBend, false);
+  assert.equal(initialResume.payload.progress.bendItem, null);
+  assert.deepEqual(initialResume.payload.progress.discovered.map((item) => item.word), starters);
+  assert.ok(initialResume.payload.progress.discovered.every((item) => item.emoji && item.category && item.source === "origin"));
+
   const impossible = await request("/api/combine", {
     method: "POST",
     body: {
@@ -268,6 +300,18 @@ test("authenticated HTTP runs produce verified Pure and Open leaderboard scores"
 
   const quickPlay = await play(quickStart);
   assert.equal(quickPlay.finalCombination.payload.division, "pure");
+  const completedResume = await request("/api/run/resume", {
+    method: "POST",
+    body: { runId: quickStart.payload.run.id, runToken: quickStart.payload.run.token }
+  });
+  assert.equal(completedResume.response.status, 200);
+  assert.equal(completedResume.payload.progress.completed, true);
+  assert.equal(completedResume.payload.progress.submitted, false);
+  assert.equal(completedResume.payload.progress.moves, quickPlay.route.length);
+  assert.deepEqual(
+    completedResume.payload.progress.history.map(({ a, b, word }) => ({ a, b, word })),
+    quickPlay.route
+  );
   const pureSubmit = await request("/api/run/submit", {
     method: "POST",
     body: { runId: quickStart.payload.run.id, runToken: quickStart.payload.run.token }
@@ -278,6 +322,12 @@ test("authenticated HTTP runs produce verified Pure and Open leaderboard scores"
   assert.equal(pureSubmit.payload.placement.entry.division, "pure");
   assert.equal(pureSubmit.payload.placement.entry.moves, quickPlay.route.length);
   assert.equal(pureSubmit.payload.creditReward, 4);
+  const submittedResume = await request("/api/run/resume", {
+    method: "POST",
+    body: { runId: quickStart.payload.run.id, runToken: quickStart.payload.run.token }
+  });
+  assert.equal(submittedResume.response.status, 200);
+  assert.equal(submittedResume.payload.progress.submitted, true);
 
   const pureBoard = await request("/api/leaderboard?scope=all&division=pure");
   assert.equal(pureBoard.response.status, 200);
@@ -321,6 +371,15 @@ test("authenticated HTTP runs produce verified Pure and Open leaderboard scores"
   assert.equal(activation.response.status, 200);
   assert.equal(activation.payload.item.word, "Moon");
   assert.equal(activation.payload.assist, "market");
+
+  const bendResume = await request("/api/run/resume", {
+    method: "POST",
+    body: { runId: movesStart.payload.run.id, runToken: movesStart.payload.run.token }
+  });
+  assert.equal(bendResume.response.status, 200);
+  assert.equal(bendResume.payload.progress.usedBend, true);
+  assert.equal(bendResume.payload.progress.bendItem.word, "Moon");
+  assert.ok(bendResume.payload.progress.discovered.some((item) => item.word === "Moon"));
 
   const movesPlay = await play(movesStart);
   assert.equal(movesPlay.finalCombination.payload.division, "open");

@@ -7,9 +7,11 @@ import {
   localSuggestions,
   lookupLocalCombination
 } from "./local-world.mjs";
-import { cosmicTwistSeedFor, selectCosmicTwist } from "./cosmic-twists.mjs";
+import { cosmicTwistOptions, cosmicTwistSeedFor, selectCosmicTwist } from "./cosmic-twists.mjs";
 
 const runs = new Map();
+const MAX_RESUME_DISCOVERIES = 1000;
+const MAX_RESUME_HISTORY = 500;
 const player = {
   id: "local-stargazer",
   callsign: "Local Stargazer",
@@ -45,6 +47,176 @@ function publicPlayer() {
 function requireRun(body) {
   const run = runs.get(body.runId);
   if (!run || run.token !== body.runToken) fail("This local orbit expired. Start it again.", "run_missing", 404);
+  return run;
+}
+
+function isRecord(value) {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function boundedInteger(value, fallback = 0, maximum = 10_000) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return fallback;
+  return Math.min(maximum, Math.max(0, Math.trunc(parsed)));
+}
+
+function restoredItem(value) {
+  const requestedWord = typeof value === "string" ? value : value?.word;
+  const canonicalWord = canonicalLocalWord(requestedWord);
+  return canonicalWord ? localItemFor(canonicalWord) : null;
+}
+
+function restoredHistory(value) {
+  if (!Array.isArray(value)) return [];
+  const history = [];
+  for (const entry of value.slice(0, MAX_RESUME_HISTORY)) {
+    if (!isRecord(entry)) continue;
+    const a = canonicalLocalWord(entry.a);
+    const b = canonicalLocalWord(entry.b);
+    const item = restoredItem(entry);
+    if (!a || !b || !item) continue;
+    const canonicalResult = lookupLocalCombination(a, b);
+    const twisted = Boolean(entry.twisted || entry.source === "twist");
+    if (!twisted && canonicalResult?.word.toLowerCase() !== item.word.toLowerCase()) continue;
+    if (twisted && !cosmicTwistOptions(a, b).some((option) => option.word.toLowerCase() === item.word.toLowerCase())) continue;
+    history.push({
+      a,
+      b,
+      word: item.word,
+      emoji: item.emoji,
+      category: item.category,
+      source: twisted ? "twist" : String(entry.source || canonicalResult.source || "local-catalog").slice(0, 32),
+      ...(twisted ? { twisted: true, canonicalWord: canonicalResult?.word || "" } : {}),
+      ...(entry.revealed ? { revealed: true } : {})
+    });
+  }
+  return history;
+}
+
+function publicRun(run) {
+  return {
+    id: run.id,
+    token: run.token,
+    ranked: false,
+    localOnly: true,
+    startedAt: run.startedAt,
+    deadlineAt: run.deadlineAt,
+    assist: run.assist,
+    scoringDisabled: Boolean(run.scoringDisabled),
+    scoreEligible: false,
+    rewardEligible: false,
+    leaderboardEligible: false
+  };
+}
+
+function publicProgress(run) {
+  return {
+    moves: run.moves,
+    completed: Boolean(run.completed),
+    submitted: Boolean(run.submitted),
+    discovered: [...run.available].map((word) => localItemFor(word)).filter(Boolean),
+    history: structuredClone(run.history),
+    usedBend: Boolean(run.wished),
+    usedWish: Boolean(run.wished),
+    wished: Boolean(run.wished),
+    bendItem: run.bendItem ? { ...run.bendItem } : null,
+    assist: run.assist,
+    scoringDisabled: Boolean(run.scoringDisabled)
+  };
+}
+
+function resumeResponse(run) {
+  return {
+    player: publicPlayer(),
+    game: structuredClone(run.game),
+    run: publicRun(run),
+    progress: publicProgress(run)
+  };
+}
+
+function restoreRun(body) {
+  const runId = String(body.runId || "").trim();
+  const runToken = String(body.runToken || "").trim();
+  if (!runId || !runToken || runId.length > 256 || runToken.length > 256) {
+    fail("This local orbit could not be restored.", "run_missing", 404);
+  }
+
+  const existing = runs.get(runId);
+  if (existing) {
+    if (existing.token !== runToken) fail("This local orbit could not be restored.", "run_missing", 404);
+    return existing;
+  }
+
+  const snapshot = body.snapshot;
+  const snapshotRun = snapshot?.run;
+  const snapshotGame = snapshot?.game;
+  const progress = snapshot?.progress;
+  if (!isRecord(snapshot) || !isRecord(snapshotRun) || !isRecord(snapshotGame) || !isRecord(progress)) {
+    fail("This local orbit expired. Start it again.", "run_missing", 404);
+  }
+
+  const snapshotRunId = String(snapshotRun.id || snapshotRun.runId || "").trim();
+  const snapshotRunToken = String(snapshotRun.token || snapshotRun.runToken || "").trim();
+  if (snapshotRunId !== runId || snapshotRunToken !== runToken) {
+    fail("That saved orbit does not match this local run.", "resume_mismatch", 409);
+  }
+
+  const mode = String(snapshotGame.mode || "").trim().toLowerCase();
+  if (!["reach", "quick", "moves", "daily", "weekly", "challenge"].includes(mode)) {
+    fail("That saved local mode is not available.", "resume_invalid", 422);
+  }
+  const target = canonicalLocalTarget(snapshotGame.target);
+  if (!target) fail("That saved destination is not mapped in local practice.", "resume_invalid", 422);
+  const game = buildLocalGame(mode, snapshotGame.seed, target, snapshotGame.stage);
+  if (!game || game.target.toLowerCase() !== target.toLowerCase()) {
+    fail("The local universe could not reconstruct that orbit.", "resume_invalid", 422);
+  }
+
+  const startedValue = Date.parse(snapshotRun.startedAt);
+  const startedAtMs = Number.isFinite(startedValue) && startedValue <= Date.now() + 60_000 ? startedValue : Date.now();
+  const startedAt = new Date(startedAtMs).toISOString();
+  const available = new Set(game.starters.map((word) => word.toLowerCase()));
+  if (Array.isArray(progress.discovered)) {
+    for (const value of progress.discovered.slice(0, MAX_RESUME_DISCOVERIES)) {
+      const item = restoredItem(value);
+      if (item) available.add(item.word.toLowerCase());
+    }
+  }
+
+  const bendItem = restoredItem(progress.bendItem);
+  const wished = Boolean(progress.usedBend || progress.usedWish || progress.wished);
+  if (bendItem) available.add(bendItem.word.toLowerCase());
+  const history = restoredHistory(progress.history);
+  for (const entry of history) available.add(entry.word.toLowerCase());
+  const assistValue = String(progress.assist || snapshotRun.assist || "none").toLowerCase();
+  const assist = ["none", "wish", "reveal"].includes(assistValue) ? assistValue : wished ? "wish" : "none";
+  const moveMaximum = game.moveLimit ? Math.max(game.moveLimit, history.length) : 10_000;
+  const moves = Math.max(history.length, boundedInteger(progress.moves, history.length, moveMaximum));
+  const targetFound = available.has(game.target.toLowerCase());
+  const completed = Boolean(progress.completed && targetFound);
+  const twistEntry = history.find((entry) => entry.twisted);
+  const run = {
+    id: runId,
+    token: runToken,
+    ranked: false,
+    localOnly: true,
+    game,
+    startedAt,
+    deadlineAt: game.timeLimit ? new Date(startedAtMs + game.timeLimit * 1000).toISOString() : null,
+    available,
+    history,
+    moves,
+    completed,
+    submitted: Boolean(progress.submitted && completed),
+    wished,
+    bendItem,
+    assist: assist === "none" && wished ? "wish" : assist,
+    scoringDisabled: Boolean(progress.scoringDisabled || assist === "reveal"),
+    twistUsed: Boolean(twistEntry),
+    twistedPairKey: twistEntry ? [twistEntry.a, twistEntry.b].map((word) => word.toLowerCase()).sort().join("+") : null,
+    revealRoute: null
+  };
+  runs.set(run.id, run);
   return run;
 }
 
@@ -117,9 +289,12 @@ export async function localRequest(url, options = {}) {
       startedAt: startedAt.toISOString(),
       deadlineAt: game.timeLimit ? new Date(startedAt.getTime() + game.timeLimit * 1000).toISOString() : null,
       available: new Set(game.starters.map((word) => word.toLowerCase())),
+      history: [],
       moves: 0,
       completed: false,
+      submitted: false,
       wished: false,
+      bendItem: null,
       assist: "none",
       scoringDisabled: false,
       twistUsed: false,
@@ -141,6 +316,10 @@ export async function localRequest(url, options = {}) {
     };
   }
 
+  if (method === "POST" && path === "/api/run/resume") {
+    return resumeResponse(restoreRun(body));
+  }
+
   if (method === "POST" && path === "/api/run/reveal") {
     const run = requireRun(body);
     if (run.revealRoute) return revealedRun(run);
@@ -153,7 +332,11 @@ export async function localRequest(url, options = {}) {
     run.assist = "reveal";
     run.scoringDisabled = true;
     run.completed = true;
-    for (const step of route) run.available.add(step.word.toLowerCase());
+    for (const step of route) {
+      run.available.add(step.word.toLowerCase());
+      run.history.push({ ...step, source: "reveal", revealed: true });
+    }
+    run.moves += route.length;
     return revealedRun(run);
   }
 
@@ -187,6 +370,15 @@ export async function localRequest(url, options = {}) {
     }
     run.moves += 1;
     run.available.add(result.word.toLowerCase());
+    run.history.push({
+      a,
+      b,
+      word: result.word,
+      emoji: result.emoji,
+      category: result.category,
+      source: result.source,
+      ...(result.twisted ? { twisted: true, canonicalWord: result.twist?.canonicalWord || canonicalResult.word } : {})
+    });
     run.completed ||= result.word.toLowerCase() === run.game.target.toLowerCase();
     return {
       ...result,
@@ -205,6 +397,7 @@ export async function localRequest(url, options = {}) {
     if (!item) fail("Practice Wishes must use a word mapped in the local universe.", "local_wish_unknown");
     run.wished = true;
     run.assist = "wish";
+    run.bendItem = { ...item };
     run.available.add(item.word.toLowerCase());
     return { ...item, assist: "wish", player: publicPlayer(), localOnly: true };
   }

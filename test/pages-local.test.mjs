@@ -178,3 +178,92 @@ test("the Pages reveal endpoint is idempotent and permanently zero-score", async
     /already complete/i
   );
 });
+
+test("the Pages adapter safely reconstructs an unranked run after a module reload", async (context) => {
+  const directory = await mkdtemp(join(tmpdir(), "constellore-resume-"));
+  context.after(() => rm(directory, { recursive: true, force: true }));
+  await writeLocalWorldModule(join(directory, "local-world.mjs"));
+  await copyFile(new URL("../public/local-beta.mjs", import.meta.url), join(directory, "local-beta.mjs"));
+  await copyFile(new URL("../public/cosmic-twists.mjs", import.meta.url), join(directory, "cosmic-twists.mjs"));
+  const moduleUrl = pathToFileURL(join(directory, "local-beta.mjs")).href;
+  const firstRuntime = await import(`${moduleUrl}?test=start-${Date.now()}`);
+  const started = await firstRuntime.localRequest("/api/run/start", {
+    method: "POST",
+    body: JSON.stringify({ mode: "reach", seed: 7, target: "Telescope" })
+  });
+  const mud = await firstRuntime.localRequest("/api/combine", {
+    method: "POST",
+    body: JSON.stringify({ a: "Earth", b: "Water", runId: started.run.id, runToken: started.run.token })
+  });
+  assert.equal(mud.word, "Mud");
+  const wished = await firstRuntime.localRequest("/api/wish", {
+    method: "POST",
+    body: JSON.stringify({ word: "Moon", runId: started.run.id, runToken: started.run.token })
+  });
+
+  const snapshot = {
+    game: { ...started.game, moveLimit: 1, ranked: true },
+    run: { ...started.run, ranked: true },
+    progress: {
+      moves: 1,
+      completed: false,
+      submitted: true,
+      usedWish: true,
+      bendItem: wished,
+      discovered: [
+        ...started.game.starters.map((word) => ({ word })),
+        mud,
+        wished,
+        { word: "Definitely Not A Local Word" }
+      ],
+      history: [
+        { a: "Earth", b: "Water", ...mud },
+        { a: "Earth", b: "Air", word: "Ocean", source: "twist", twisted: true },
+        { a: "Earth", b: "Air", word: "Definitely Not A Local Word" }
+      ]
+    }
+  };
+
+  const secondRuntime = await import(`${moduleUrl}?test=reload-${Date.now()}`);
+  const resumed = await secondRuntime.localRequest("/api/run/resume", {
+    method: "POST",
+    body: JSON.stringify({ runId: started.run.id, runToken: started.run.token, snapshot })
+  });
+  assert.equal(resumed.game.target, "Telescope");
+  assert.equal(resumed.game.ranked, false);
+  assert.notEqual(resumed.game.moveLimit, 1, "client game rules must be rebuilt from the local catalog");
+  assert.equal(resumed.run.ranked, false);
+  assert.equal(resumed.run.localOnly, true);
+  assert.equal(resumed.run.scoreEligible, false);
+  assert.equal(resumed.run.leaderboardEligible, false);
+  assert.equal(resumed.progress.moves, 1);
+  assert.equal(resumed.progress.completed, false);
+  assert.equal(resumed.progress.submitted, false, "an incomplete snapshot cannot be marked submitted");
+  assert.equal(resumed.progress.usedBend, true);
+  assert.equal(resumed.progress.bendItem.word, "Moon");
+  assert.deepEqual(resumed.progress.history.map((step) => step.word), ["Mud"]);
+  assert.ok(resumed.progress.discovered.some((item) => item.word === "Mud"));
+  assert.ok(resumed.progress.discovered.some((item) => item.word === "Moon"));
+  assert.ok(!resumed.progress.discovered.some((item) => item.word === "Definitely Not A Local Word"));
+
+  const brick = await secondRuntime.localRequest("/api/combine", {
+    method: "POST",
+    body: JSON.stringify({ a: "Mud", b: "Fire", runId: started.run.id, runToken: started.run.token })
+  });
+  assert.equal(brick.word, "Brick", "restored discoveries should remain playable");
+  const resumedFromMemory = await secondRuntime.localRequest("/api/run/resume", {
+    method: "POST",
+    body: JSON.stringify({ runId: started.run.id, runToken: started.run.token })
+  });
+  assert.equal(resumedFromMemory.progress.moves, 2);
+  assert.equal(resumedFromMemory.progress.history.at(-1).word, "Brick");
+
+  const thirdRuntime = await import(`${moduleUrl}?test=mismatch-${Date.now()}`);
+  await assert.rejects(
+    thirdRuntime.localRequest("/api/run/resume", {
+      method: "POST",
+      body: JSON.stringify({ runId: started.run.id, runToken: started.run.token, snapshot: { ...snapshot, run: { ...snapshot.run, id: "other-run" } } })
+    }),
+    (error) => error.code === "resume_mismatch"
+  );
+});

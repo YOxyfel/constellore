@@ -16,7 +16,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/styles.css?v=1.7.2">
+  <link rel="stylesheet" href="/styles.css?v=1.8.0">
 </head>
 <body>
   <section class="start-screen" id="startScreen" aria-labelledby="startTitle">
@@ -126,7 +126,6 @@
         <button class="nav-icon nav-atlas" id="atlasButton" type="button" aria-label="Open constellation path"><span aria-hidden="true">⌁</span><b id="pathCount">0</b></button>
         <button class="reveal-trigger" id="revealPathButton" type="button" aria-haspopup="dialog" aria-controls="revealDialog" aria-label="Reveal answer path; forfeits all scoring"><span aria-hidden="true">&#10023;</span><b>REVEAL</b></button>
         <button class="nav-icon nav-share" id="shareRunButton" type="button" aria-label="Share this challenge">↗</button>
-        <button class="nav-icon" id="resetBoard" type="button" aria-label="Clear the board">↻</button>
       </div>
     </header>
 
@@ -138,9 +137,22 @@
         <div class="board-guide" id="boardGuide">
           <span class="guide-orbit" aria-hidden="true"></span>
           <strong>Summon an element</strong>
-          <span>Drag one word onto another. On desktop, hold Ctrl and skim words to fuse.</span>
+          <span>Drag or tap two words. On desktop, hold Ctrl and skim words to fuse.</span>
+        </div>
+        <div class="board-tools" aria-label="Board tools">
+          <button id="tidyBoard" type="button" aria-label="Tidy orbit; does not affect score"><span aria-hidden="true">✣</span><b>Tidy</b></button>
+          <button id="resetBoard" type="button" aria-label="Clear the board"><span aria-hidden="true">↻</span><b>Clear</b></button>
         </div>
         <div id="boardItems" class="board-items"></div>
+        <div class="drop-pair-preview" id="dropPairPreview" aria-hidden="true" hidden></div>
+        <div class="tap-chain-status" id="tapChainStatus" role="status" aria-live="polite" hidden>
+          <span id="tapChainText">Word armed · tap another word</span>
+          <button id="cancelTapChain" type="button">Cancel</button>
+        </div>
+        <div class="board-undo" id="boardUndo" role="status" hidden>
+          <span>Board cleared</span>
+          <button id="undoBoardClear" type="button">Undo</button>
+        </div>
         <section class="reveal-controller" id="revealController" aria-label="Revealed path controls" hidden>
           <div class="reveal-status">
             <span class="reveal-pulse" aria-hidden="true">&#10023;</span>
@@ -163,6 +175,13 @@
           <div><span class="eyebrow">DISCOVERED</span><h2 id="inventoryTitle">Your universe</h2></div>
           <span id="collectionCount">4</span>
         </div>
+        <div class="inventory-search" role="search">
+          <span aria-hidden="true">⌕</span>
+          <label class="sr-only" for="inventorySearch">Find a discovered word</label>
+          <input id="inventorySearch" type="search" placeholder="Find a word…" aria-controls="wordList" autocomplete="off" spellcheck="false">
+          <button id="inventorySearchClear" type="button" aria-label="Clear word search" hidden>×</button>
+        </div>
+        <p class="sr-only" id="inventorySearchStatus" aria-live="polite"></p>
         <div id="wordList" class="word-list"></div>
         <button class="wish-button" id="wishWord" type="button" aria-label="Make a Wish">
           <span><i aria-hidden="true">✧</i><b>Make a Wish</b></span><small id="wishState">FIRST FREE</small>
@@ -350,6 +369,6 @@
 
   <div class="connection-badge" id="connectionBadge" role="status" hidden>Offline — reconnect to forge new words</div>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
-  <script type="module" src="/app.js?v=1.4.6"></script>
+  <script type="module" src="/app.js?v=1.5.5"></script>
 </body>
 </html>
