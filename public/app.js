@@ -1,3 +1,5 @@
+import { createCtrlHoverController } from "./ctrl-hover.mjs?v=1.0.0";
+
 const starterEmoji = { Earth: "🌍", Water: "💧", Fire: "🔥", Air: "💨" };
 const starterCategory = { Earth: "nature", Water: "force", Fire: "force", Air: "force" };
 const isStaticBeta = document.body.dataset.runtime === "local-practice";
@@ -39,6 +41,7 @@ const state = {
   newDiscoveries: 0,
   nextId: 1,
   topZ: 10,
+  orbitGeneration: 0,
   busyPairs: new Set(),
   selectedNodeId: null,
   timerId: null,
@@ -112,6 +115,12 @@ const els = {
   resultShare: $("#resultShare"), rewardCard: $("#rewardCard"), rewardDust: $("#rewardDust"),
   rewardReason: $("#rewardReason"), toast: $("#toast"), connectionBadge: $("#connectionBadge")
 };
+
+const ctrlHover = createCtrlHoverController({
+  getNode: getCtrlHoverNode,
+  combine: combineNodes,
+  onChange: syncCtrlHoverState
+});
 
 function loadProfile() {
   try {
@@ -365,6 +374,8 @@ async function beginCustomTarget(event) {
 
 function startWithGame(game, run) {
   cancelActiveTrayDrag();
+  ctrlHover.reset({ abandonPending: true });
+  state.orbitGeneration += 1;
   stopTimer();
   resetRevealPlayback();
   [els.revealDialog, els.resultDialog, els.leaderboardDialog, els.shareDialog, els.atlasDialog, els.wishDialog, els.paywallDialog, els.exchangeDialog, els.marketBuyDialog]
@@ -414,6 +425,8 @@ function startWithGame(game, run) {
 function returnHome() {
   if (state.startingRun) return showToast("The next orbit is still being mapped.");
   cancelActiveTrayDrag();
+  ctrlHover.reset({ abandonPending: true });
+  state.orbitGeneration += 1;
   if (state.game && !state.finished && state.history.length) track("run_failed", { mode: state.mode, reason: "abandoned", moves: state.moves });
   stopTimer();
   resetRevealPlayback();
@@ -517,6 +530,61 @@ function renderBoard(newId = null) {
   els.boardItems.replaceChildren(...state.nodes.map((node) => createBoardNode(node, node.id === newId)));
   els.boardGuide.classList.toggle("hidden", state.nodes.length > 0);
   els.boardGuide.setAttribute("aria-hidden", String(state.nodes.length > 0));
+  syncCtrlHoverState(ctrlHover.snapshot());
+}
+
+function ctrlHoverAvailable() {
+  return Boolean(state.game && !els.gameScreen.hidden && !state.finished && !state.startingRun && !state.reveal.active && !state.reveal.pending);
+}
+
+function getCtrlHoverNode(id) {
+  if (!ctrlHoverAvailable()) return null;
+  const node = state.nodes.find((entry) => String(entry.id) === String(id));
+  if (!node || node.revealRole || node.item.ghost || state.busyPairs.has(node.id)) return null;
+  return node;
+}
+
+function syncCtrlHoverState(hoverState) {
+  if (!els.board || !els.boardItems) return;
+  els.board.classList.toggle("ctrl-hover-active", hoverState.active && ctrlHoverAvailable());
+  for (const element of els.boardItems.querySelectorAll(".board-word")) {
+    const id = element.dataset.id;
+    element.classList.toggle("ctrl-hover-source", [hoverState.anchorId, hoverState.sourceId].some((value) => value != null && String(value) === id));
+    element.classList.toggle("ctrl-hover-target", hoverState.targetId != null && String(hoverState.targetId) === id);
+    element.classList.toggle("ctrl-hover-queued", hoverState.queuedId != null && String(hoverState.queuedId) === id);
+  }
+}
+
+function handleCtrlHoverEnter(node, event = {}) {
+  if (event.ctrlKey && !ctrlHover.snapshot().active) ctrlHover.setActive(true);
+  if (!ctrlHoverAvailable()) return;
+  const action = ctrlHover.enter(node.id);
+  if (action.type === "ignored") return;
+  if (state.selectedNodeId != null) {
+    state.selectedNodeId = null;
+    els.boardItems.querySelectorAll(".keyboard-selected").forEach((element) => {
+      element.classList.remove("keyboard-selected");
+      element.setAttribute("aria-pressed", "false");
+    });
+  }
+  if (action.type === "armed") showAlchemy(`CTRL FUSION · ${action.node.item.word} remembered — hover another word.`);
+  else if (action.type === "combining") showAlchemy(`CTRL FUSION · Combining ${action.source.item.word} + ${action.target.item.word}…`);
+  else if (action.type === "queued") showAlchemy(`CTRL FUSION · ${action.node.item.word} is next.`);
+}
+
+function activateCtrlHover(event) {
+  if (event.key !== "Control" || event.repeat || !ctrlHoverAvailable()) return;
+  if (!ctrlHover.setActive(true)) return;
+  const hovered = els.boardItems.querySelector(".board-word:hover");
+  const node = hovered ? getCtrlHoverNode(hovered.dataset.id) : null;
+  if (node) handleCtrlHoverEnter(node, { buttons: 0, ctrlKey: true, pointerType: "mouse" });
+  else showAlchemy("CTRL FUSION · Hover a word to remember it.");
+}
+
+function releaseCtrlHover(event) {
+  if (event?.key && event.key !== "Control") return;
+  const changed = ctrlHover.setActive(false);
+  if (changed && els.alchemyNote.textContent.startsWith("CTRL FUSION")) els.alchemyNote.classList.remove("show");
 }
 
 function createBoardNode(node, isNew) {
@@ -538,6 +606,7 @@ function createBoardNode(node, isNew) {
   button.setAttribute("aria-pressed", String(state.selectedNodeId === node.id));
   button.innerHTML = `<span class="emoji">${escapeHtml(node.item.emoji)}</span><span>${escapeHtml(node.item.word)}</span>`;
   button.addEventListener("pointerdown", (event) => startNodeDrag(event, node, button));
+  button.addEventListener("pointerenter", (event) => handleCtrlHoverEnter(node, event));
   button.addEventListener("keydown", (event) => {
     if (event.key === "Enter" || event.key === " ") {
       event.preventDefault();
@@ -548,7 +617,7 @@ function createBoardNode(node, isNew) {
 }
 
 function selectNodeForKeyboard(node) {
-  if (state.finished || state.reveal.active || state.reveal.pending) return;
+  if (state.finished || state.reveal.active || state.reveal.pending || ctrlHover.snapshot().active) return;
   if (!state.selectedNodeId) {
     state.selectedNodeId = node.id;
     renderBoard();
@@ -705,6 +774,10 @@ function addNode(item, x, y, options = {}) {
 }
 
 function startNodeDrag(event, node, element) {
+  if (ctrlHover.snapshot().active) {
+    event.preventDefault();
+    return;
+  }
   if (event.button !== 0 || state.finished || state.reveal.active || state.reveal.pending || node.revealRole || node.item.ghost || state.busyPairs.has(node.id)) return;
   event.preventDefault();
   const boardRect = els.board.getBoundingClientRect();
@@ -797,12 +870,17 @@ function clearDropTargets() {
 async function combineNodes(a, b) {
   if (state.finished || state.reveal.active || state.reveal.pending || state.busyPairs.has(a.id) || state.busyPairs.has(b.id)) return;
   if (state.game.moveLimit && state.moves >= state.game.moveLimit) return finishGame(false, "No moves remain in this orbit.");
+  const orbitGeneration = state.orbitGeneration;
   state.busyPairs.add(a.id);
   state.busyPairs.add(b.id);
   const aElement = els.boardItems.querySelector(`[data-id="${a.id}"]`);
   const bElement = els.boardItems.querySelector(`[data-id="${b.id}"]`);
   const x = (a.x + b.x) / 2;
   const y = (a.y + b.y) / 2;
+  aElement?.classList.remove("appear");
+  bElement?.classList.remove("appear");
+  aElement?.classList.add("combining");
+  bElement?.classList.add("combining");
   try {
     const result = await fetchJson("/api/combine", {
       method: "POST",
@@ -817,9 +895,13 @@ async function combineNodes(a, b) {
         runToken: state.run?.token
       })
     });
+    if (orbitGeneration !== state.orbitGeneration || !state.game) return null;
+    aElement?.classList.remove("combining");
+    bElement?.classList.remove("combining");
     aElement?.classList.add("merging");
     bElement?.classList.add("merging");
     await wait(170);
+    if (orbitGeneration !== state.orbitGeneration || !state.game) return null;
     state.moves += 1;
     let known = state.words.find((item) => item.word.toLowerCase() === result.word.toLowerCase());
     const globallyKnown = profile.discovered.some((word) => word.toLowerCase() === result.word.toLowerCase());
@@ -839,7 +921,7 @@ async function combineNodes(a, b) {
     state.history.push({ a: a.item.word, b: b.item.word, word: result.word, emoji: result.emoji, source: result.source, newDiscovery: !globallyKnown, twisted: Boolean(result.twisted), canonicalWord: result.twist?.canonicalWord || "" });
     state.trails.push({ ax: a.x + 44, ay: a.y + 20, bx: b.x + 44, by: b.y + 20, x: x + 44, y: y + 20 });
     state.nodes = state.nodes.filter((node) => node.id !== a.id && node.id !== b.id);
-    addNode(known, x, y, { cosmicTwist: Boolean(result.twisted) });
+    const resultNode = addNode(known, x, y, { cosmicTwist: Boolean(result.twisted) });
     showAlchemy(result.twisted
       ? `✦ COSMIC TWIST · ${a.item.word} + ${b.item.word} found ${result.emoji} ${result.word} instead of ${result.twist.canonicalWord}. Mix them again for ${result.twist.canonicalWord}.`
       : `${a.item.word} + ${b.item.word} = ${result.emoji} ${result.word}`, false, Boolean(result.twisted));
@@ -850,20 +932,27 @@ async function combineNodes(a, b) {
     track("combination_completed", { mode: state.mode, a: a.item.word, b: b.item.word, result: result.word, source: result.source, newDiscovery: !globallyKnown, twisted: Boolean(result.twisted) });
     if (result.division === "open" && state.assist === "none") state.assist = "open";
     const won = Boolean(result.completed);
-    state.busyPairs.delete(a.id);
-    state.busyPairs.delete(b.id);
     if (won) setTimeout(() => finishGame(true), 480);
     else if (state.game.moveLimit && state.moves >= state.game.moveLimit) setTimeout(() => finishGame(false, "No moves remain in this orbit."), 350);
+    return { node: resultNode, completed: won };
   } catch (error) {
-    state.busyPairs.delete(a.id);
-    state.busyPairs.delete(b.id);
+    if (orbitGeneration !== state.orbitGeneration || !state.game) return null;
     for (const element of [aElement, bElement]) {
+      element?.classList.remove("combining");
       element?.classList.remove("merging");
       element?.classList.add("rejected");
       setTimeout(() => element?.classList.remove("rejected"), 380);
     }
     showAlchemy(error.message, true);
     track("combination_rejected", { mode: state.mode, a: a.item.word, b: b.item.word });
+    return null;
+  } finally {
+    if (orbitGeneration === state.orbitGeneration) {
+      state.busyPairs.delete(a.id);
+      state.busyPairs.delete(b.id);
+    }
+    aElement?.classList.remove("combining");
+    bElement?.classList.remove("combining");
   }
 }
 
@@ -903,6 +992,7 @@ function resetRevealPlayback({ keepConstellation = false } = {}) {
 function openRevealPath() {
   if (!state.game || !state.run || state.startingRun || state.reveal.revealed || state.reveal.active || state.reveal.pending) return;
   if (state.busyPairs.size) return showToast("Let the current combination resolve before revealing the path.");
+  ctrlHover.reset();
   stopTimer();
   $("#revealTitle").textContent = `Reveal the path to ${state.game.target}?`;
   const warnings = {
@@ -1074,6 +1164,7 @@ function moveRevealNode(node, x, y) {
 async function playRevealPath(route, { replay = false } = {}) {
   const generation = state.reveal.generation + 1;
   const runId = state.run?.id;
+  ctrlHover.reset({ abandonPending: true });
   if (!replay) state.finished = false;
   state.nodes = [];
   state.selectedNodeId = null;
@@ -1260,6 +1351,7 @@ function updateDailyStreak() {
 
 function finishGame(won, reason = "") {
   if (state.finished) return;
+  ctrlHover.reset({ abandonPending: true });
   state.finished = true;
   stopTimer();
   updateMilestone(won);
@@ -2005,6 +2097,8 @@ $("#customTargetForm").addEventListener("submit", beginCustomTarget);
 $("#homeButton").addEventListener("click", returnHome);
 $("#resetBoard").addEventListener("click", () => {
   if (state.startingRun || state.reveal.active || state.reveal.pending) return showToast("The cosmos is tracing this path.");
+  if (state.busyPairs.size) return showToast("Let the current combination resolve first.");
+  ctrlHover.reset();
   state.nodes = [];
   state.selectedNodeId = null;
   renderBoard();
@@ -2086,9 +2180,15 @@ els.exchangeDialog.addEventListener("close", () => {
   setTimeout(resumeTimerIfNeeded, 0);
 });
 window.addEventListener("resize", () => { if (!els.gameScreen.hidden) startCosmos(); });
+window.addEventListener("keydown", activateCtrlHover);
+window.addEventListener("keyup", releaseCtrlHover);
+window.addEventListener("blur", releaseCtrlHover);
 window.addEventListener("online", updateConnection);
 window.addEventListener("offline", updateConnection);
-document.addEventListener("visibilitychange", () => { if (!document.hidden) wakeRevealPlayback(); });
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden) releaseCtrlHover();
+  else wakeRevealPlayback();
+});
 window.addEventListener("beforeinstallprompt", (event) => { event.preventDefault(); state.installPrompt = event; $("#installButton").hidden = false; });
 $("#installButton").addEventListener("click", async () => {
   if (!state.installPrompt) return;

@@ -135,11 +135,12 @@ gameHtml = gameHtml
   .replace("<body>", '<body data-runtime="local-practice">')
   .replaceAll('href="/manifest.webmanifest"', 'href="./manifest.webmanifest"')
   .replaceAll('href="/icon.svg"', 'href="./icon.svg"')
-  .replaceAll('href="/styles.css?v=1.7.1"', 'href="./styles.css?v=1.7.1"')
-  .replaceAll('src="/app.js?v=1.4.5"', 'src="./app.js?v=1.4.5"');
+  .replaceAll('href="/styles.css?v=1.7.2"', 'href="./styles.css?v=1.7.2"')
+  .replaceAll('src="/app.js?v=1.4.6"', 'src="./app.js?v=1.4.6"');
 await writeFile(join(playOutput, "index.html"), gameHtml, "utf8");
 await copyFile(join(root, "public", "styles.css"), join(playOutput, "styles.css"));
 await copyFile(join(root, "public", "app.js"), join(playOutput, "app.js"));
+await copyFile(join(root, "public", "ctrl-hover.mjs"), join(playOutput, "ctrl-hover.mjs"));
 await copyFile(join(root, "public", "local-beta.mjs"), join(playOutput, "local-beta.mjs"));
 await copyFile(join(root, "public", "cosmic-twists.mjs"), join(playOutput, "cosmic-twists.mjs"));
 await copyFile(join(root, "public", "icon.svg"), join(playOutput, "icon.svg"));
@@ -153,9 +154,9 @@ manifest.scope = "./";
 manifest.icons = manifest.icons.map((icon) => ({ ...icon, src: "./icon.svg" }));
 await writeFile(join(playOutput, "manifest.webmanifest"), `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
 
-const serviceWorker = `const CACHE = "constellore-pages-practice-v9";
+const serviceWorker = `const CACHE = "constellore-pages-practice-v10";
 const BASE = new URL("./", self.location.href);
-const SHELL = ["./", "./styles.css?v=1.7.1", "./app.js?v=1.4.5", "./local-beta.mjs", "./local-world.mjs", "./cosmic-twists.mjs", "./manifest.webmanifest", "./icon.svg"].map((path) => new URL(path, BASE).href);
+const SHELL = ["./", "./styles.css?v=1.7.2", "./app.js?v=1.4.6", "./ctrl-hover.mjs?v=1.0.0", "./local-beta.mjs", "./local-world.mjs", "./cosmic-twists.mjs", "./manifest.webmanifest", "./icon.svg"].map((path) => new URL(path, BASE).href);
 self.addEventListener("install", (event) => event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(SHELL)).then(() => self.skipWaiting())));
 self.addEventListener("activate", (event) => event.waitUntil(caches.keys().then((keys) => Promise.all(keys.filter((key) => key !== CACHE).map((key) => caches.delete(key)))).then(() => self.clients.claim())));
 self.addEventListener("fetch", (event) => {

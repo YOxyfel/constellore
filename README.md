@@ -37,6 +37,7 @@ The Launch Wishlist has two honest deployment modes. Static Pages shows the repo
 - **Weekly Expedition** - three deterministic stages shared by all players that week.
 - **Friend Challenge** - a shareable URL that preserves the target and seed for asynchronous play.
 - **Cosmic Twists** - a 12% contextual alternate discovery after the opening moves, capped at one per casual Reach or Friend Challenge orbit. The target and competitive modes remain luck-free, and repeating the pair restores its canonical result.
+- **Frictionless controls** - drag a tray word directly onto a board word, tap two board words, or hold Ctrl on desktop and skim across words to build a serial fusion chain without clicking.
 - **Constellation Atlas** - every successful step is recorded as a readable path.
 - **Ask the Cosmos** - reveal a target's complete answer as an animated constellation; the run becomes permanently Assisted with zero score, rewards, streak credit, or saved reveal discoveries.
 - **Personal Universe** - unique discoveries, Stardust, ranks, wins, streaks, and themes persist locally.

@@ -157,6 +157,11 @@ button:disabled { cursor: not-allowed; }
 .board-word.dragging { transition: border-color .14s, box-shadow .14s, filter .14s, opacity .16s; will-change: transform; }
 .board-word.dragging, .board-word.keyboard-selected { cursor: grabbing; border-color: var(--violet); box-shadow: 0 0 26px color-mix(in srgb, var(--violet) 28%, transparent); }
 .board-word.drop-target { border-color: var(--cyan); box-shadow: 0 0 0 4px rgba(105,230,255,.1), 0 0 30px rgba(105,230,255,.35); }
+.cosmos-board.ctrl-hover-active .board-word:not(:disabled) { cursor: crosshair; }
+.board-word.ctrl-hover-source { border-color: color-mix(in srgb, var(--violet) 78%, white); box-shadow: 0 0 0 4px var(--violet-soft), 0 0 34px color-mix(in srgb, var(--violet) 42%, transparent); }
+.board-word.ctrl-hover-target { border-color: var(--cyan); box-shadow: 0 0 0 4px rgba(105,230,255,.14), 0 0 38px rgba(105,230,255,.42); }
+.board-word.ctrl-hover-queued { border-color: var(--amber); box-shadow: 0 0 0 4px rgba(255,204,118,.12), 0 0 34px rgba(255,204,118,.36); }
+.board-word.combining { pointer-events: none; animation: combining .58s ease-in-out infinite alternate; }
 .board-word.merging { animation: merge .32s ease-in forwards; pointer-events: none; }
 .board-word.appear { animation: appear .36s cubic-bezier(.2,.85,.25,1.25) both; }
 .board-word.rejected { animation: reject .34s ease; border-color: var(--danger); }
@@ -173,6 +178,7 @@ button:disabled { cursor: not-allowed; }
 .board-word.reveal-target { z-index: 20 !important; border-color: color-mix(in srgb, var(--cyan) 70%, white); background: linear-gradient(100deg, color-mix(in srgb, var(--violet) 22%, #12152d), color-mix(in srgb, var(--cyan) 15%, #10142a)); box-shadow: 0 0 0 5px rgba(105,230,255,.1), 0 0 52px rgba(105,230,255,.42), 0 0 80px color-mix(in srgb, var(--violet) 24%, transparent); }
 .board-word.reveal-target::after { content: ""; position: absolute; inset: -11px; pointer-events: none; border: 1px dashed color-mix(in srgb, var(--cyan) 58%, transparent); border-radius: inherit; animation: reveal-target-halo 1.8s ease-in-out infinite; }
 @keyframes merge { to { opacity: 0; filter: blur(7px); transform: translate3d(var(--x),var(--y),0) scale(.45); } }
+@keyframes combining { to { border-color: var(--cyan); filter: brightness(1.2); box-shadow: 0 0 0 4px rgba(105,230,255,.12), 0 0 32px rgba(105,230,255,.38); } }
 @keyframes appear { from { opacity: 0; filter: blur(5px); transform: translate3d(var(--x),var(--y),0) scale(.55); } }
 @keyframes twist-arrive { 0% { opacity: 0; filter: blur(8px) brightness(2); transform: translate3d(var(--x),var(--y),0) scale(.28) rotate(-8deg); } 62% { filter: brightness(1.5); transform: translate3d(var(--x),var(--y),0) scale(1.16) rotate(2deg); } 100% { opacity: 1; filter: none; transform: translate3d(var(--x),var(--y),0) scale(1); } }
 @keyframes twist-orbit { from { transform: translateY(-2px) rotate(-12deg); } to { transform: translateY(2px) rotate(12deg); } }
@@ -534,5 +540,5 @@ button:disabled { cursor: not-allowed; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; }
-  .reveal-pulse, .board-word.reveal-source, .board-word.reveal-target::after, .board-word.cosmic-twist::after, .cosmos-board.reveal-active::before { animation: none !important; }
+  .reveal-pulse, .board-word.reveal-source, .board-word.reveal-target::after, .board-word.cosmic-twist::after, .board-word.combining, .cosmos-board.reveal-active::before { animation: none !important; }
 }

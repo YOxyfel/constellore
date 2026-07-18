@@ -24,3 +24,16 @@ test("tray drops share an immediate-combine path on mouse and touch", () => {
   assert.match(styles, /touch-action:\s*pan-x/);
   assert.match(styles, /[.]tray-drag-ghost\s*\{/);
 });
+
+test("Ctrl hover fusion is wired to board words and lifecycle cleanup", () => {
+  assert.match(app, /createCtrlHoverController/);
+  assert.match(app, /addEventListener\("pointerenter", \(event\) => handleCtrlHoverEnter/);
+  assert.match(app, /window[.]addEventListener\("keydown", activateCtrlHover\)/);
+  assert.match(app, /window[.]addEventListener\("keyup", releaseCtrlHover\)/);
+  assert.match(app, /window[.]addEventListener\("blur", releaseCtrlHover\)/);
+  assert.match(app, /return \{ node: resultNode, completed: won \}/);
+  assert.match(app, /ctrlHover[.]reset\(\{ abandonPending: true \}\)/);
+  assert.match(styles, /[.]board-word[.]ctrl-hover-source\s*\{/);
+  assert.match(styles, /[.]board-word[.]ctrl-hover-queued\s*\{/);
+  assert.match(styles, /[.]board-word[.]combining\s*\{/);
+});
