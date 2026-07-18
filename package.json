@@ -1,6 +1,6 @@
 {
   "name": "constellore",
-  "version": "1.5.2",
+  "version": "1.5.3",
   "description": "A mobile-first cosmic word-combination puzzle game.",
   "private": true,
   "type": "module",

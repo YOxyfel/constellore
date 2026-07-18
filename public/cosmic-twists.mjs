@@ -1,4 +1,4 @@
-export const COSMIC_TWIST_CHANCE = 0.08;
+export const COSMIC_TWIST_CHANCE = 0.12;
 export const COSMIC_TWIST_GRACE_MOVES = 2;
 export const COSMIC_TWIST_MODES = Object.freeze(["reach", "challenge"]);
 

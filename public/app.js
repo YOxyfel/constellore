@@ -85,6 +85,7 @@ const state = {
 let profile = loadProfile();
 let config = { billingEnabled: false, checkoutUrl: "", testStoreEnabled: false, creditPacks: [], rewardedAdsEnabled: false, founderPrice: "€6.99", aiEnabled: false };
 let localRuntimePromise;
+let activeTrayDragCleanup = null;
 
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
@@ -363,6 +364,7 @@ async function beginCustomTarget(event) {
 }
 
 function startWithGame(game, run) {
+  cancelActiveTrayDrag();
   stopTimer();
   resetRevealPlayback();
   [els.revealDialog, els.resultDialog, els.leaderboardDialog, els.shareDialog, els.atlasDialog, els.wishDialog, els.paywallDialog, els.exchangeDialog, els.marketBuyDialog]
@@ -411,6 +413,7 @@ function startWithGame(game, run) {
 
 function returnHome() {
   if (state.startingRun) return showToast("The next orbit is still being mapped.");
+  cancelActiveTrayDrag();
   if (state.game && !state.finished && state.history.length) track("run_failed", { mode: state.mode, reason: "abandoned", moves: state.moves });
   stopTimer();
   resetRevealPlayback();
@@ -488,20 +491,23 @@ function renderInventory() {
     button.className = `inventory-word${["wish", "market"].includes(item.source) ? " wish" : ""}${item.source === "twist" ? " twist" : ""}${item.ghost ? " reveal-ghost" : ""}`;
     const revealLocked = state.reveal.active || state.reveal.pending;
     const unavailable = state.finished || revealLocked || item.ghost;
-    button.draggable = !unavailable;
+    button.draggable = false;
     button.disabled = unavailable;
-    button.setAttribute("aria-label", item.ghost ? `${item.word}, temporary revealed word. Not saved or playable.` : unavailable ? `${item.word}. Unavailable while this orbit is locked.` : `Add ${item.word} to the cosmos`);
+    button.setAttribute("aria-label", item.ghost ? `${item.word}, temporary revealed word. Not saved or playable.` : unavailable ? `${item.word}. Unavailable while this orbit is locked.` : `Add ${item.word} to the cosmos. Drag onto a board word to combine immediately.`);
+    if (!unavailable) button.title = `Drag ${item.word} onto a board word to combine`;
     const tag = item.ghost ? "REVEALED" : item.source === "twist" ? "TWIST" : item.source === "wish" ? "WISH" : item.source === "market" ? "VAULT" : item.source?.startsWith("ai") ? "AI" : "";
     button.innerHTML = `<span class="emoji">${escapeHtml(item.emoji)}</span><span class="word">${escapeHtml(item.word)}</span>${tag ? `<span class="source-tag">${tag}</span>` : ""}`;
-    button.addEventListener("click", () => placeFromTray(item));
-    button.addEventListener("dragstart", (event) => {
-      if (state.reveal.active || state.reveal.pending || state.finished) {
+    let suppressClickUntil = 0;
+    button.addEventListener("click", (event) => {
+      if (performance.now() < suppressClickUntil) {
         event.preventDefault();
         return;
       }
-      event.dataTransfer.effectAllowed = "copy";
-      event.dataTransfer.setData("application/x-constellore", item.word);
+      placeFromTray(item);
     });
+    button.addEventListener("pointerdown", (event) => startTrayPointerDrag(event, item, button, () => {
+      suppressClickUntil = performance.now() + 650;
+    }));
     return button;
   }));
   updateHud();
@@ -565,7 +571,123 @@ function placeFromTray(item, point) {
   const spread = state.nodes.length % 7;
   const x = point ? point.x - rect.left - 55 : rect.width * .46 + (spread - 3) * 22;
   const y = point ? point.y - rect.top - 22 : rect.height * .43 + ((state.nodes.length * 31) % 100) - 50;
-  addNode(item, x, y);
+  return addNode(item, x, y);
+}
+
+function cancelActiveTrayDrag() {
+  activeTrayDragCleanup?.();
+  activeTrayDragCleanup = null;
+}
+
+function pointInsideBoard(point) {
+  const rect = els.board.getBoundingClientRect();
+  return point.x >= rect.left && point.x <= rect.right && point.y >= rect.top && point.y <= rect.bottom;
+}
+
+function boardNodeAtPoint(clientX, clientY) {
+  const elements = document.elementsFromPoint?.(clientX, clientY) || [document.elementFromPoint(clientX, clientY)].filter(Boolean);
+  const button = elements.map((element) => element.closest?.(".board-word")).find((element) => element && els.boardItems.contains(element));
+  if (!button || button.disabled) return null;
+  const node = state.nodes.find((entry) => String(entry.id) === button.dataset.id);
+  if (!node || node.revealRole || node.item.ghost || state.busyPairs.has(node.id)) return null;
+  return node;
+}
+
+function setDropTarget(target) {
+  clearDropTargets();
+  if (target) els.boardItems.querySelector(`[data-id="${target.id}"]`)?.classList.add("drop-target");
+}
+
+function dropTrayItem(item, point) {
+  if (state.finished || state.reveal.active || state.reveal.pending || item.ghost || !pointInsideBoard(point)) return;
+  const target = boardNodeAtPoint(point.x, point.y);
+  if (!target) {
+    placeFromTray(item, point);
+    return;
+  }
+  state.selectedNodeId = null;
+  const targetElement = els.boardItems.querySelector(`[data-id="${target.id}"]`);
+  targetElement?.classList.remove("keyboard-selected");
+  targetElement?.setAttribute("aria-pressed", "false");
+  const traySource = {
+    id: `tray-${state.nextId++}`,
+    item,
+    x: target.x,
+    y: target.y,
+    z: ++state.topZ,
+    traySource: true
+  };
+  void combineNodes(traySource, target);
+}
+
+function startTrayPointerDrag(event, item, element, suppressClick) {
+  if (event.button !== 0 || state.finished || state.reveal.active || state.reveal.pending || item.ghost) return;
+  cancelActiveTrayDrag();
+  const startX = event.clientX;
+  const startY = event.clientY;
+  let lastPoint = { x: startX, y: startY };
+  let moved = false;
+  let dragging = false;
+  let ghost = null;
+  let cleaned = false;
+
+  const update = (moveEvent) => {
+    const samples = typeof moveEvent.getCoalescedEvents === "function" ? moveEvent.getCoalescedEvents() : [];
+    const point = samples.at(-1) || moveEvent;
+    lastPoint = { x: point.clientX, y: point.clientY };
+    const dx = lastPoint.x - startX;
+    const dy = lastPoint.y - startY;
+    if (Math.hypot(dx, dy) > 8) moved = true;
+    if (!dragging) {
+      const mobileTray = matchMedia("(max-width: 700px)").matches;
+      const headingTowardBoard = mobileTray
+        ? dy < -8 && Math.abs(dy) > Math.abs(dx) * .65
+        : dx < -8 && Math.abs(dx) > Math.abs(dy) * .65;
+      if (!moved || !headingTowardBoard) return;
+      dragging = true;
+      element.classList.add("pointer-dragging");
+      ghost = document.createElement("div");
+      ghost.className = "tray-drag-ghost";
+      ghost.setAttribute("aria-hidden", "true");
+      ghost.innerHTML = `<span>${escapeHtml(item.emoji)}</span><strong>${escapeHtml(item.word)}</strong>`;
+      document.body.append(ghost);
+    }
+    moveEvent.preventDefault();
+    ghost.style.left = `${lastPoint.x}px`;
+    ghost.style.top = `${lastPoint.y}px`;
+    setDropTarget(boardNodeAtPoint(lastPoint.x, lastPoint.y));
+  };
+
+  const cleanup = () => {
+    if (cleaned) return;
+    cleaned = true;
+    window.removeEventListener("pointermove", update);
+    window.removeEventListener("pointerup", end);
+    window.removeEventListener("pointercancel", cancel);
+    element.removeEventListener("lostpointercapture", cancel);
+    element.classList.remove("pointer-dragging");
+    ghost?.remove();
+    clearDropTargets();
+    if (activeTrayDragCleanup === cleanup) activeTrayDragCleanup = null;
+  };
+  const end = (upEvent) => {
+    lastPoint = { x: upEvent.clientX, y: upEvent.clientY };
+    if (moved) suppressClick();
+    const shouldDrop = dragging && pointInsideBoard(lastPoint);
+    cleanup();
+    if (shouldDrop) dropTrayItem(item, lastPoint);
+  };
+  const cancel = () => {
+    if (moved) suppressClick();
+    cleanup();
+  };
+
+  activeTrayDragCleanup = cleanup;
+  element.setPointerCapture(event.pointerId);
+  window.addEventListener("pointermove", update);
+  window.addEventListener("pointerup", end);
+  window.addEventListener("pointercancel", cancel);
+  element.addEventListener("lostpointercapture", cancel);
 }
 
 function addNode(item, x, y, options = {}) {
@@ -587,41 +709,58 @@ function startNodeDrag(event, node, element) {
   event.preventDefault();
   const boardRect = els.board.getBoundingClientRect();
   const nodeRect = element.getBoundingClientRect();
+  const nodeWidth = nodeRect.width;
+  const nodeHeight = nodeRect.height;
   const startX = event.clientX;
   const startY = event.clientY;
   const offsetX = event.clientX - nodeRect.left;
   const offsetY = event.clientY - nodeRect.top;
   let moved = false;
+  let highlightFrame = 0;
   node.z = ++state.topZ;
   element.style.zIndex = node.z;
+  element.classList.remove("appear");
   element.classList.add("dragging");
   element.setPointerCapture(event.pointerId);
 
-  const move = (moveEvent) => {
-    if (Math.hypot(moveEvent.clientX - startX, moveEvent.clientY - startY) > 5) moved = true;
-    node.x = clamp(moveEvent.clientX - boardRect.left - offsetX, 5, boardRect.width - element.offsetWidth - 5);
-    node.y = clamp(moveEvent.clientY - boardRect.top - offsetY, 5, boardRect.height - element.offsetHeight - 5);
+  const updatePosition = (moveEvent, highlight = true) => {
+    const samples = typeof moveEvent.getCoalescedEvents === "function" ? moveEvent.getCoalescedEvents() : [];
+    const point = samples.at(-1) || moveEvent;
+    if (Math.hypot(point.clientX - startX, point.clientY - startY) > 5) moved = true;
+    node.x = clamp(point.clientX - boardRect.left - offsetX, 5, boardRect.width - nodeWidth - 5);
+    node.y = clamp(point.clientY - boardRect.top - offsetY, 5, boardRect.height - nodeHeight - 5);
     element.style.setProperty("--x", `${node.x}px`);
     element.style.setProperty("--y", `${node.y}px`);
-    markDropTarget(node, element);
+    if (highlight && !highlightFrame) {
+      highlightFrame = requestAnimationFrame(() => {
+        highlightFrame = 0;
+        markDropTarget(node, element);
+      });
+    }
   };
+  const move = (moveEvent) => updatePosition(moveEvent);
   const cleanup = () => {
-    element.removeEventListener("pointermove", move);
-    element.removeEventListener("pointerup", end);
-    element.removeEventListener("pointercancel", cancel);
+    if (highlightFrame) cancelAnimationFrame(highlightFrame);
+    highlightFrame = 0;
+    window.removeEventListener("pointermove", move);
+    window.removeEventListener("pointerup", end);
+    window.removeEventListener("pointercancel", cancel);
+    element.removeEventListener("lostpointercapture", cancel);
     element.classList.remove("dragging");
     clearDropTargets();
   };
-  const end = () => {
+  const end = (upEvent) => {
+    updatePosition(upEvent, false);
     const target = findCollision(node, element);
     cleanup();
     if (target) combineNodes(node, target);
     else if (!moved) selectNodeForKeyboard(node);
   };
   const cancel = () => cleanup();
-  element.addEventListener("pointermove", move);
-  element.addEventListener("pointerup", end);
-  element.addEventListener("pointercancel", cancel);
+  window.addEventListener("pointermove", move);
+  window.addEventListener("pointerup", end);
+  window.addEventListener("pointercancel", cancel);
+  element.addEventListener("lostpointercapture", cancel);
 }
 
 function findCollision(source, sourceElement) {
@@ -1945,14 +2084,6 @@ els.exchangeDialog.addEventListener("close", () => {
   clearInterval(state.marketTimer);
   state.marketTimer = null;
   setTimeout(resumeTimerIfNeeded, 0);
-});
-els.board.addEventListener("dragover", (event) => { event.preventDefault(); event.dataTransfer.dropEffect = "copy"; });
-els.board.addEventListener("drop", (event) => {
-  event.preventDefault();
-  if (state.reveal.active || state.reveal.pending) return;
-  const word = event.dataTransfer.getData("application/x-constellore");
-  const item = state.words.find((entry) => entry.word === word);
-  if (item) placeFromTray(item, { x: event.clientX, y: event.clientY });
 });
 window.addEventListener("resize", () => { if (!els.gameScreen.hidden) startCosmos(); });
 window.addEventListener("online", updateConnection);

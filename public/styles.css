@@ -154,6 +154,7 @@ button:disabled { cursor: not-allowed; }
 .board-word { --x: 0px; --y: 0px; position: absolute; left: 0; top: 0; transform: translate3d(var(--x), var(--y), 0); pointer-events: auto; touch-action: none; user-select: none; cursor: grab; border: 1px solid rgba(255,255,255,.15); border-radius: 999px; background: rgba(13,16,34,.8); backdrop-filter: blur(10px); color: #f4f1ff; box-shadow: 0 8px 26px rgba(0,0,0,.26), inset 0 1px rgba(255,255,255,.05); padding: 8px 13px 8px 9px; display: flex; align-items: center; gap: 7px; white-space: nowrap; font-size: 15px; transition: border-color .14s, box-shadow .14s, filter .14s, opacity .16s, transform .16s; }
 .board-word .emoji { width: 24px; height: 24px; display: grid; place-items: center; border-radius: 50%; background: rgba(255,255,255,.07); font-size: 15px; }
 .board-word.wish { border-color: color-mix(in srgb, var(--violet) 72%, white); box-shadow: 0 0 0 3px var(--violet-soft), 0 0 28px color-mix(in srgb, var(--violet) 25%, transparent); }
+.board-word.dragging { transition: border-color .14s, box-shadow .14s, filter .14s, opacity .16s; will-change: transform; }
 .board-word.dragging, .board-word.keyboard-selected { cursor: grabbing; border-color: var(--violet); box-shadow: 0 0 26px color-mix(in srgb, var(--violet) 28%, transparent); }
 .board-word.drop-target { border-color: var(--cyan); box-shadow: 0 0 0 4px rgba(105,230,255,.1), 0 0 30px rgba(105,230,255,.35); }
 .board-word.merging { animation: merge .32s ease-in forwards; pointer-events: none; }
@@ -212,14 +213,18 @@ button:disabled { cursor: not-allowed; }
 .inventory-head h2 { margin: 5px 0 0; font-size: 20px; font-weight: 500; letter-spacing: -.04em; }
 .inventory-head > span { color: var(--muted); font: 400 15px "DM Mono", monospace; }
 .word-list { flex: 1; min-height: 0; overflow-y: auto; padding: 7px 2px 9px 0; scrollbar-width: thin; scrollbar-color: #34374d transparent; }
-.inventory-word { width: 100%; min-height: 43px; position: relative; border: 0; border-bottom: 1px solid rgba(255,255,255,.07); background: transparent; padding: 6px 5px; display: flex; align-items: center; gap: 9px; text-align: left; cursor: grab; transition: background .15s, padding-left .15s; }
+.inventory-word { width: 100%; min-height: 43px; position: relative; border: 0; border-bottom: 1px solid rgba(255,255,255,.07); background: transparent; padding: 6px 5px; display: flex; align-items: center; gap: 9px; text-align: left; cursor: grab; touch-action: pan-y; user-select: none; transition: background .15s, padding-left .15s, opacity .15s; }
 .inventory-word:hover { padding-left: 10px; background: var(--violet-soft); }
+.inventory-word.pointer-dragging { cursor: grabbing; opacity: .42; }
 .inventory-word .emoji { width: 26px; height: 26px; flex: 0 0 26px; display: grid; place-items: center; border-radius: 50%; background: rgba(255,255,255,.055); }
 .inventory-word .word { min-width: 0; overflow: hidden; text-overflow: ellipsis; font-size: 15px; }
 .inventory-word .source-tag { margin-left: auto; color: var(--violet); font: 500 15px "DM Mono", monospace; letter-spacing: .04em; }
 .inventory-word.wish .emoji { box-shadow: 0 0 14px var(--violet-soft); border: 1px solid var(--line-hot); }
 .inventory-word.twist .emoji { border: 1px solid rgba(255,204,118,.48); box-shadow: 0 0 16px rgba(255,204,118,.2); }
 .inventory-word.twist .source-tag { color: var(--amber); }
+.tray-drag-ghost { position: fixed; z-index: 1000; pointer-events: none; transform: translate(-50%, -50%) scale(1.04); min-height: 42px; max-width: min(190px, calc(100vw - 24px)); padding: 8px 13px 8px 9px; display: flex; align-items: center; gap: 8px; overflow: hidden; border: 1px solid color-mix(in srgb, var(--violet) 72%, white); border-radius: 999px; color: var(--text); background: rgba(18,18,41,.95); box-shadow: 0 0 0 4px var(--violet-soft), 0 18px 42px rgba(0,0,0,.48); font-size: 15px; }
+.tray-drag-ghost span { flex: 0 0 auto; }
+.tray-drag-ghost strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 15px; font-weight: 500; }
 .wish-button { flex: 0 0 auto; min-height: 50px; border: 1px solid color-mix(in srgb, var(--violet) 32%, transparent); background: linear-gradient(90deg, var(--violet-soft), rgba(105,230,255,.04)); padding: 0 12px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; font-size: 15px; }
 .wish-button span { display: flex; align-items: center; gap: 7px; }
 .wish-button i { color: var(--violet); font-style: normal; font-size: 17px; }
@@ -452,7 +457,7 @@ button:disabled { cursor: not-allowed; }
   .reveal-trigger { width: 44px; min-width: 44px; min-height: 44px; padding: 0; border-radius: 50%; }.reveal-trigger b { display: none; }
   .game-layout { display: flex; flex-direction: column; }.cosmos-board { flex: 1; min-height: 0; }.run-milestone { left: 13px; top: 12px; }
   .inventory { flex: 0 0 158px; min-height: 158px; position: relative; padding: 9px 10px max(9px, env(safe-area-inset-bottom)); border-left: 0; border-top: 1px solid var(--line); }.inventory-head { padding: 0 2px 6px; border: 0; }.inventory-head h2 { display: none; }
-  .word-list { display: flex; gap: 7px; overflow-x: auto; overflow-y: hidden; padding: 4px 49px 8px 0; scrollbar-width: none; }.inventory-word { flex: 0 0 auto; width: auto; min-width: 104px; min-height: 82px; border: 1px solid rgba(255,255,255,.09); border-radius: 9px; padding: 10px 9px 8px; flex-direction: column; justify-content: center; gap: 5px; text-align: center; background: rgba(255,255,255,.025); }.inventory-word:hover { padding-left: 9px; }.inventory-word .emoji { width: 24px; height: 24px; flex-basis: 24px; }.inventory-word .word { max-width: 96px; font-size: 15px; }.inventory-word .source-tag { position: absolute; right: 4px; top: 4px; font-size: 15px; }
+  .word-list { display: flex; gap: 7px; overflow-x: auto; overflow-y: hidden; padding: 4px 49px 8px 0; scrollbar-width: none; }.inventory-word { flex: 0 0 auto; width: auto; min-width: 104px; min-height: 82px; border: 1px solid rgba(255,255,255,.09); border-radius: 9px; padding: 10px 9px 8px; flex-direction: column; justify-content: center; gap: 5px; text-align: center; background: rgba(255,255,255,.025); touch-action: pan-x; }.inventory-word:hover { padding-left: 9px; }.inventory-word .emoji { width: 24px; height: 24px; flex-basis: 24px; }.inventory-word .word { max-width: 96px; font-size: 15px; }.inventory-word .source-tag { position: absolute; right: 4px; top: 4px; font-size: 15px; }
   .wish-button { position: absolute; right: 10px; bottom: max(10px, env(safe-area-inset-bottom)); width: 42px; min-height: 42px; border-radius: 50%; justify-content: center; padding: 0; background: #2b2151; box-shadow: 0 5px 18px rgba(0,0,0,.3); }.wish-button span b, .wish-button small { display: none; }.wish-button i { font-size: 19px; }
   .board-word { font-size: 15px; padding: 7px 11px 7px 7px; }.board-word .emoji { width: 22px; height: 22px; font-size: 14px; }.alchemy-note { bottom: 14px; }
   .reveal-controller { width: auto; left: 10px; right: 10px; bottom: 10px; padding: 12px; border-radius: 12px; }

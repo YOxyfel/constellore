@@ -54,7 +54,7 @@ test("Cosmic Twist catalog contains contextual alternatives to real canonical re
 });
 
 test("Cosmic Twists are rare, deterministic, and protected by a two-move grace period", () => {
-  assert.equal(COSMIC_TWIST_CHANCE, 0.08);
+  assert.equal(COSMIC_TWIST_CHANCE, 0.12);
   assert.equal(selectCosmicTwist({ ...eligible, moveNumber: 1, roll: 0 }), null);
   assert.equal(selectCosmicTwist({ ...eligible, moveNumber: 2, roll: 0 }), null);
   assert.equal(selectCosmicTwist({ ...eligible, roll: COSMIC_TWIST_CHANCE }), null);
@@ -65,6 +65,18 @@ test("Cosmic Twists are rare, deterministic, and protected by a two-move grace p
   assert.deepEqual(first, repeated);
   assert.equal(first?.word, "Great Wall");
   assert.equal(first?.twist.canonicalWord, "Wall");
+});
+
+test("the deterministic selector stays close to the advertised twelve-percent rate", () => {
+  let hits = 0;
+  for (let seed = 0; seed < 10_000; seed += 1) {
+    const twist = selectCosmicTwist({
+      ...eligible,
+      seed: cosmicTwistSeedFor({ mode: "reach", seed, target: "Telescope" })
+    });
+    if (twist) hits += 1;
+  }
+  assert.ok(hits >= 1_100 && hits <= 1_300, `expected about 12% Twists, received ${hits / 100}%`);
 });
 
 test("Cosmic Twists stay out of competitive modes and never replace the target", () => {

@@ -47,8 +47,8 @@ assert.match(gameApp, /await playRevealPath\(route, \{ replay: true \}\)/);
 assert.match(gameApp, /state\.reveal\.phase = "exiting"/);
 for (const expected of [
   'href="./manifest.webmanifest"',
-  'href="./styles.css?v=1.7.0"',
-  'src="./app.js?v=1.4.4"'
+  'href="./styles.css?v=1.7.1"',
+  'src="./app.js?v=1.4.5"'
 ]) assert.ok(gameHtml.includes(expected), `Missing ${expected} from the Pages game document.`);
 for (const forbidden of ['href="/manifest', 'href="/styles', 'href="/icon', 'src="/app']) {
   assert.ok(!gameHtml.includes(forbidden), `Root-absolute game path remains: ${forbidden}`);
