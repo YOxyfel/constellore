@@ -153,6 +153,10 @@ test("ghost snapshots interpolate pace and expose projected milestone state only
   assert.equal(snapshot.projectedMoves, 2);
   assert.equal(snapshot.relation, "ahead");
   assert.deepEqual(snapshot.milestone, { current: 0, next: 2, etaMs: 5_000 });
+
+  const restored = ghostSnapshot(ghost, { elapsedMs: 8 * 60 * 60 * 1000, playerProgress: 0, playerMoves: 0 });
+  assert.equal(restored.complete, true);
+  assert.equal(restored.elapsedMs, 20_000, "a completed ghost clock stops at its recorded finish after an offline restore");
 });
 
 test("feedback preferences sanitize JSON, booleans, mute, and volume", () => {

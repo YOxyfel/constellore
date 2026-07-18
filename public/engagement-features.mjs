@@ -192,25 +192,29 @@ function interpolate(left, right, elapsedMs, field) {
 export function ghostSnapshot(ghost, { elapsedMs = 0, playerProgress = 0, playerMoves = 0, tolerance = .06 } = {}) {
   const samples = Array.isArray(ghost?.samples) && ghost.samples.length ? ghost.samples : buildGhost([]).samples;
   const now = Math.max(0, Number(elapsedMs) || 0);
+  // A restored orbit may have been dormant for hours. The asynchronous ghost
+  // has a finite recorded finish, so its displayed clock stops there instead
+  // of borrowing the player's offline wall-clock time.
+  const ghostElapsedMs = Math.min(now, Math.max(0, Number(samples.at(-1)?.elapsedMs) || 0));
   let left = samples[0];
   let right = samples.at(-1);
   for (let index = 1; index < samples.length; index += 1) {
-    if (samples[index].elapsedMs >= now) { right = samples[index]; left = samples[index - 1]; break; }
+    if (samples[index].elapsedMs >= ghostElapsedMs) { right = samples[index]; left = samples[index - 1]; break; }
     left = samples[index];
   }
-  const progress = Math.min(1, interpolate(left, right, now, "progress"));
-  const moves = Math.max(0, interpolate(left, right, now, "moves"));
+  const progress = Math.min(1, interpolate(left, right, ghostElapsedMs, "progress"));
+  const moves = Math.max(0, interpolate(left, right, ghostElapsedMs, "moves"));
   const player = Math.min(1, Math.max(0, Number(playerProgress) || 0));
   const gap = player - progress;
   const safeTolerance = Math.max(.01, Number(tolerance) || .06);
   const relation = gap > safeTolerance ? "ahead" : gap < -safeTolerance ? "behind" : "even";
   const currentMilestone = clampInteger(left.milestone, 0, 1_000_000, Math.floor(progress * 4));
-  const nextMilestoneSample = samples.find((sample) => sample.elapsedMs > now && sample.milestone > currentMilestone);
+  const nextMilestoneSample = samples.find((sample) => sample.elapsedMs > ghostElapsedMs && sample.milestone > currentMilestone);
   return {
     mode: "asynchronous",
     live: false,
     label: ghost?.label || "Cosmos Scout",
-    elapsedMs: now,
+    elapsedMs: ghostElapsedMs,
     projectedProgress: progress,
     projectedMoves: Math.round(moves),
     playerMoves: Math.max(0, Number(playerMoves) || 0),
@@ -220,7 +224,7 @@ export function ghostSnapshot(ghost, { elapsedMs = 0, playerProgress = 0, player
     milestone: {
       current: currentMilestone,
       next: nextMilestoneSample?.milestone ?? null,
-      etaMs: nextMilestoneSample ? Math.max(0, nextMilestoneSample.elapsedMs - now) : null
+      etaMs: nextMilestoneSample ? Math.max(0, nextMilestoneSample.elapsedMs - ghostElapsedMs) : null
     }
   };
 }
