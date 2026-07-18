@@ -82,7 +82,7 @@ test("authenticated HTTP runs produce verified Pure and Open leaderboard scores"
 
   const serviceWorkerResponse = await fetch(`${baseUrl}/play/service-worker.js`);
   assert.equal(serviceWorkerResponse.status, 200);
-  assert.match(await serviceWorkerResponse.text(), /constellore-shell-v8/);
+  assert.match(await serviceWorkerResponse.text(), /constellore-shell-v9/);
 
   const manifestResponse = await fetch(`${baseUrl}/manifest.webmanifest`);
   assert.equal(manifestResponse.status, 200);
@@ -426,4 +426,28 @@ test("authenticated HTTP runs produce verified Pure and Open leaderboard scores"
   assert.equal(movesReplayAfterReveal.response.status, 201);
   assert.equal(movesReplayAfterReveal.payload.run.ranked, false);
   assert.equal(movesReplayAfterReveal.payload.run.scoringDisabled, true);
+
+  const twistStart = await request("/api/run/start", { method: "POST", body: { mode: "reach", seed: 14, target: "Telescope" } });
+  assert.equal(twistStart.response.status, 201);
+  assert.equal(twistStart.payload.run.ranked, false);
+  const twistCombine = (a, b) => request("/api/combine", {
+    method: "POST",
+    body: { a, b, runId: twistStart.payload.run.id, runToken: twistStart.payload.run.token }
+  });
+  assert.equal((await twistCombine("Earth", "Water")).payload.word, "Mud");
+  assert.equal((await twistCombine("Mud", "Fire")).payload.word, "Brick");
+  const parallelBrickMixes = await Promise.all([twistCombine("Brick", "Brick"), twistCombine("Brick", "Brick")]);
+  assert.ok(parallelBrickMixes.every(({ response }) => response.status === 200));
+  const twistedMixes = parallelBrickMixes.filter(({ payload }) => payload.twisted);
+  assert.equal(twistedMixes.length, 1, "concurrent requests must never create two Twists in one orbit");
+  assert.equal(twistedMixes[0].payload.word, "Great Wall");
+  assert.equal(twistedMixes[0].payload.source, "twist");
+  assert.equal(twistedMixes[0].payload.twist.canonicalWord, "Wall");
+  assert.equal(parallelBrickMixes.find(({ payload }) => !payload.twisted).payload.word, "Wall");
+  const canonicalRetry = await twistCombine("Brick", "Brick");
+  assert.equal(canonicalRetry.payload.word, "Wall");
+  assert.equal(canonicalRetry.payload.twisted, undefined);
+  const twistContinuation = await twistCombine("Great Wall", "Earth");
+  assert.equal(twistContinuation.response.status, 200);
+  assert.ok(twistContinuation.payload.word, "the alternate discovery must remain a usable concept");
 });

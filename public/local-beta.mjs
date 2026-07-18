@@ -7,6 +7,7 @@ import {
   localSuggestions,
   lookupLocalCombination
 } from "./local-world.mjs";
+import { cosmicTwistSeedFor, selectCosmicTwist } from "./cosmic-twists.mjs";
 
 const runs = new Map();
 const player = {
@@ -121,6 +122,8 @@ export async function localRequest(url, options = {}) {
       wished: false,
       assist: "none",
       scoringDisabled: false,
+      twistUsed: false,
+      twistedPairKey: null,
       revealRoute: null
     };
     runs.set(run.id, run);
@@ -164,8 +167,24 @@ export async function localRequest(url, options = {}) {
     }
     if (run.deadlineAt && Date.now() > Date.parse(run.deadlineAt)) fail("This quick orbit has ended.", "time_expired", 409);
     if (run.game.moveLimit && run.moves >= run.game.moveLimit) fail("No moves remain in this orbit.", "move_limit", 409);
-    const result = lookupLocalCombination(a, b);
-    if (!result) fail("Those ideas are outside this local universe.", "combination_missing");
+    const canonicalResult = lookupLocalCombination(a, b);
+    if (!canonicalResult) fail("Those ideas are outside this local universe.", "combination_missing");
+    const twist = selectCosmicTwist({
+      a,
+      b,
+      canonicalResult,
+      target: run.game.target,
+      mode: run.game.mode,
+      seed: cosmicTwistSeedFor(run.game),
+      moveNumber: run.moves + 1,
+      twistUsed: run.twistUsed,
+      discovered: run.available
+    });
+    const result = twist || canonicalResult;
+    if (twist) {
+      run.twistUsed = true;
+      run.twistedPairKey = [a, b].map((word) => word.toLowerCase()).sort().join("+");
+    }
     run.moves += 1;
     run.available.add(result.word.toLowerCase());
     run.completed ||= result.word.toLowerCase() === run.game.target.toLowerCase();

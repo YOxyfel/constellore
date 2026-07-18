@@ -572,6 +572,8 @@ export class RunRegistry {
       forfeitReason: scoringDisabled ? String(forfeitReason || "reveal") : null,
       forfeitedAt: scoringDisabled ? startedAt : null,
       revealRoute: null,
+      twistUsed: false,
+      twistedPairKey: null,
       usedBend: false,
       completedAt: null,
       submitted: false
@@ -594,7 +596,12 @@ export class RunRegistry {
     if (run.game.timeLimit && Date.now() - run.startedAt > run.game.timeLimit * 1000 + 3000) throw serviceError(409, "Time has expired for this orbit.", "time_limit");
   }
 
-  recordCombination(run, result) {
+  recordCombination(run, result, { a = "", b = "" } = {}) {
+    if (result.twisted) {
+      if (run.twistUsed) throw serviceError(409, "This orbit already found its Cosmic Twist.", "twist_used");
+      run.twistUsed = true;
+      run.twistedPairKey = [a, b].map((word) => String(word).trim().toLowerCase()).sort().join("+");
+    }
     run.moves += 1;
     run.discovered.set(result.word.toLowerCase(), result);
     if (result.source === "ai") run.assist = "ai";

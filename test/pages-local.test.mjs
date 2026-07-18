@@ -8,8 +8,10 @@ import { generateLocalWorldData, lookupGeneratedCombination, writeLocalWorldModu
 
 test("the compact Pages universe preserves important logical combinations", async () => {
   const data = await generateLocalWorldData();
-  assert.equal(data.words.length, 423);
-  assert.equal(data.matrix.length, 89_676);
+  assert.ok(data.words.length >= 425);
+  assert.equal(data.matrix.length, data.words.length * (data.words.length + 1) / 2);
+  assert.ok(data.words.some((item) => item.word === "Concrete"));
+  assert.ok(data.words.some((item) => item.word === "Great Wall"));
   assert.equal(lookupGeneratedCombination(data, "Earth", "Water").word, "Mud");
   assert.equal(lookupGeneratedCombination(data, "Water", "Water").word, "Ocean");
   assert.equal(lookupGeneratedCombination(data, "Fire", "Fire").word, "Inferno");
@@ -52,6 +54,7 @@ test("the Pages adapter completes a real local Telescope route without a server"
   context.after(() => rm(directory, { recursive: true, force: true }));
   await writeLocalWorldModule(join(directory, "local-world.mjs"));
   await copyFile(new URL("../public/local-beta.mjs", import.meta.url), join(directory, "local-beta.mjs"));
+  await copyFile(new URL("../public/cosmic-twists.mjs", import.meta.url), join(directory, "cosmic-twists.mjs"));
   const { localRequest } = await import(`${pathToFileURL(join(directory, "local-beta.mjs")).href}?test=${Date.now()}`);
 
   const registration = await localRequest("/api/player/register", { method: "POST" });
@@ -93,11 +96,43 @@ test("the Pages adapter completes a real local Telescope route without a server"
   await assert.rejects(localRequest("/api/leaderboard"), /online account service/i);
 });
 
+test("the Pages adapter produces one contextual Cosmic Twist and keeps it playable", async (context) => {
+  const directory = await mkdtemp(join(tmpdir(), "constellore-twist-"));
+  context.after(() => rm(directory, { recursive: true, force: true }));
+  await writeLocalWorldModule(join(directory, "local-world.mjs"));
+  await copyFile(new URL("../public/local-beta.mjs", import.meta.url), join(directory, "local-beta.mjs"));
+  await copyFile(new URL("../public/cosmic-twists.mjs", import.meta.url), join(directory, "cosmic-twists.mjs"));
+  const { localRequest } = await import(`${pathToFileURL(join(directory, "local-beta.mjs")).href}?test=${Date.now()}`);
+  const started = await localRequest("/api/run/start", {
+    method: "POST",
+    body: JSON.stringify({ mode: "reach", seed: 14, target: "Telescope" })
+  });
+  const combine = (a, b) => localRequest("/api/combine", {
+    method: "POST",
+    body: JSON.stringify({ a, b, runId: started.run.id, runToken: started.run.token })
+  });
+
+  assert.equal((await combine("Earth", "Water")).word, "Mud");
+  assert.equal((await combine("Mud", "Fire")).word, "Brick");
+  const twist = await combine("Brick", "Brick");
+  assert.equal(twist.word, "Great Wall");
+  assert.equal(twist.source, "twist");
+  assert.equal(twist.twisted, true);
+  assert.equal(twist.twist.canonicalWord, "Wall");
+
+  const retry = await combine("Brick", "Brick");
+  assert.equal(retry.word, "Wall", "the same pair should return its canonical result after the one Twist");
+  assert.equal(retry.twisted, undefined);
+  const continued = await combine(twist.word, "Earth");
+  assert.ok(continued.word, "a Cosmic Twist discovery should remain usable in later combinations");
+});
+
 test("the Pages reveal endpoint is idempotent and permanently zero-score", async (context) => {
   const directory = await mkdtemp(join(tmpdir(), "constellore-reveal-"));
   context.after(() => rm(directory, { recursive: true, force: true }));
   await writeLocalWorldModule(join(directory, "local-world.mjs"));
   await copyFile(new URL("../public/local-beta.mjs", import.meta.url), join(directory, "local-beta.mjs"));
+  await copyFile(new URL("../public/cosmic-twists.mjs", import.meta.url), join(directory, "cosmic-twists.mjs"));
   const { localRequest } = await import(`${pathToFileURL(join(directory, "local-beta.mjs")).href}?test=${Date.now()}`);
   const started = await localRequest("/api/run/start", {
     method: "POST",

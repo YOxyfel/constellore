@@ -1,5 +1,6 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
+import { cosmicTwistWords } from "../public/cosmic-twists.mjs";
 
 const STARTERS = [
   { word: "Earth", emoji: "🌍", category: "nature" },
@@ -39,6 +40,7 @@ export async function generateLocalWorldData() {
     buildGameForMode,
     contextualCombination,
     curatedCombination,
+    registerSemanticConcept,
     registerWishConcept,
     semanticCategoryFor
   } = await import("../server.mjs");
@@ -69,6 +71,10 @@ export async function generateLocalWorldData() {
 
   expandRecords();
   const naturalTargets = new Set(records.keys());
+  for (const item of cosmicTwistWords()) {
+    registerSemanticConcept(item.word, item.category);
+    if (!records.has(item.word.toLowerCase())) records.set(item.word.toLowerCase(), { ...item });
+  }
   for (const item of MARKET_CATALOG) {
     if (records.has(item.word.toLowerCase())) continue;
     records.set(item.word.toLowerCase(), {

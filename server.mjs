@@ -4,6 +4,7 @@ import { readFile } from "node:fs/promises";
 import { extname, join, normalize } from "node:path";
 import { fileURLToPath } from "node:url";
 import { GameStore, MARKET_CATALOG, RunRegistry, isoWeekKey, serviceError } from "./game-services.mjs";
+import { cosmicTwistSeedFor, selectCosmicTwist } from "./public/cosmic-twists.mjs";
 
 const projectRoot = fileURLToPath(new URL(".", import.meta.url));
 const root = join(projectRoot, "public");
@@ -671,6 +672,16 @@ export function semanticCategoryFor(word) {
   return learnedSemanticGroups.get(normalized) || semanticCategoryByWord.get(normalized);
 }
 
+export function registerSemanticConcept(word, category) {
+  const clean = String(word || "").trim().replace(/\s+/g, " ");
+  const normalizedCategory = String(category || "").trim().toLowerCase();
+  if (!isSensibleWish(clean) || !["force", "nature", "life", "structure"].includes(normalizedCategory)) return null;
+  const existing = semanticCategoryFor(clean);
+  if (existing) return existing;
+  learnedSemanticGroups.set(clean.toLowerCase(), normalizedCategory);
+  return normalizedCategory;
+}
+
 function stableHash(value) {
   let hash = 2166136261;
   for (const character of value) {
@@ -1120,7 +1131,7 @@ export const server = createServer(async (request, response) => {
       response.writeHead(308, { Location: "/play/", "Cache-Control": "no-cache" });
       return response.end();
     }
-    if (request.method === "GET" && url.pathname === "/healthz") return sendJson(response, 200, { ok: true, game: "Constellore", version: "1.5.1" });
+    if (request.method === "GET" && url.pathname === "/healthz") return sendJson(response, 200, { ok: true, game: "Constellore", version: "1.5.2" });
     if (request.method === "GET" && url.pathname === "/api/config") {
       const billing = billingSettings();
       return sendJson(response, 200, {
@@ -1340,10 +1351,25 @@ export const server = createServer(async (request, response) => {
       if (!result) return sendJson(response, 422, { error: "Those ideas do not form a meaningful concept yet.", rejected: true });
       const { word, emoji, note, source } = result;
       const category = semanticCategoryFor(word) || registerWishConcept(word);
-      const responseResult = { word, emoji, note, source, category };
+      let responseResult = { word, emoji, note, source, category };
       if (run) {
         runRegistry.canCombine(run, a, b);
-        runRegistry.recordCombination(run, responseResult);
+        const twist = selectCosmicTwist({
+          a,
+          b,
+          canonicalResult: responseResult,
+          target: run.game.target,
+          mode: run.game.mode,
+          seed: cosmicTwistSeedFor(run.game),
+          moveNumber: run.moves + 1,
+          twistUsed: run.twistUsed,
+          discovered: run.discovered.keys()
+        });
+        if (twist) {
+          const twistCategory = registerSemanticConcept(twist.word, twist.category) || twist.category;
+          responseResult = { ...twist, category: twistCategory };
+        }
+        runRegistry.recordCombination(run, responseResult, { a, b });
       }
       return sendJson(response, 200, { ...responseResult, completed: Boolean(run?.completedAt), ranked: Boolean(run?.ranked), division: run?.assist === "none" ? "pure" : "open" });
     }

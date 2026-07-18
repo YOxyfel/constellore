@@ -8,6 +8,7 @@ const output = join(root, "dist-pages");
 const rootHtml = await readFile(join(output, "index.html"), "utf8");
 const gameHtml = await readFile(join(output, "play", "index.html"), "utf8");
 const gameApp = await readFile(join(output, "play", "app.js"), "utf8");
+const gameServiceWorker = await readFile(join(output, "play", "service-worker.js"), "utf8");
 
 function bodyDataAttribute(document, name) {
   const body = document.match(/<body\b[^>]*>/i)?.[0] || "";
@@ -46,23 +47,25 @@ assert.match(gameApp, /await playRevealPath\(route, \{ replay: true \}\)/);
 assert.match(gameApp, /state\.reveal\.phase = "exiting"/);
 for (const expected of [
   'href="./manifest.webmanifest"',
-  'href="./styles.css?v=1.6.0"',
-  'src="./app.js?v=1.4.3"'
+  'href="./styles.css?v=1.7.0"',
+  'src="./app.js?v=1.4.4"'
 ]) assert.ok(gameHtml.includes(expected), `Missing ${expected} from the Pages game document.`);
 for (const forbidden of ['href="/manifest', 'href="/styles', 'href="/icon', 'src="/app']) {
   assert.ok(!gameHtml.includes(forbidden), `Root-absolute game path remains: ${forbidden}`);
 }
 
-for (const file of ["app.js", "styles.css", "local-beta.mjs", "local-world.mjs", "manifest.webmanifest", "service-worker.js", "icon.svg"]) {
+for (const file of ["app.js", "styles.css", "local-beta.mjs", "local-world.mjs", "cosmic-twists.mjs", "manifest.webmanifest", "service-worker.js", "icon.svg"]) {
   assert.ok((await stat(join(output, "play", file))).size > 0, `${file} is missing or empty.`);
 }
+assert.match(gameServiceWorker, /cosmic-twists[.]mjs/);
 
 const world = await import(`${pathToFileURL(join(output, "play", "local-world.mjs")).href}?verify=${Date.now()}`);
-assert.equal(world.localWorldSize, 423);
+assert.ok(world.localWorldSize >= 425);
 assert.equal(world.lookupLocalCombination("Earth", "Water").word, "Mud");
 assert.equal(world.lookupLocalCombination("Water", "Water").word, "Ocean");
 assert.equal(world.lookupLocalCombination("Fire", "Fire").word, "Inferno");
 assert.equal(world.lookupLocalCombination("Species", "Air").word, "Bird");
+assert.ok(world.lookupLocalCombination("Great Wall", "Earth").word);
 assert.equal(world.buildLocalGame("reach", 5, "Telescope").ranked, false);
 
 const workflowToken = process.env.GITHUB_TOKEN?.trim();

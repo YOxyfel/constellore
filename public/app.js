@@ -389,7 +389,7 @@ function startWithGame(game, run) {
   state.remainingSeconds = run?.deadlineAt ? Math.max(0, Math.ceil((Date.parse(run.deadlineAt) - Date.now()) / 1000)) : game.timeLimit || 0;
   state.resultAction = null;
   clearTimeout(showAlchemy.timer);
-  els.alchemyNote.classList.remove("show", "error");
+  els.alchemyNote.classList.remove("show", "error", "twist");
   els.alchemyNote.textContent = "";
   els.board.classList.remove("reveal-complete");
   els.startScreen.hidden = true;
@@ -485,13 +485,13 @@ function renderInventory() {
   els.wordList.replaceChildren(...state.words.map((item) => {
     const button = document.createElement("button");
     button.type = "button";
-    button.className = `inventory-word${["wish", "market"].includes(item.source) ? " wish" : ""}${item.ghost ? " reveal-ghost" : ""}`;
+    button.className = `inventory-word${["wish", "market"].includes(item.source) ? " wish" : ""}${item.source === "twist" ? " twist" : ""}${item.ghost ? " reveal-ghost" : ""}`;
     const revealLocked = state.reveal.active || state.reveal.pending;
     const unavailable = state.finished || revealLocked || item.ghost;
     button.draggable = !unavailable;
     button.disabled = unavailable;
     button.setAttribute("aria-label", item.ghost ? `${item.word}, temporary revealed word. Not saved or playable.` : unavailable ? `${item.word}. Unavailable while this orbit is locked.` : `Add ${item.word} to the cosmos`);
-    const tag = item.ghost ? "REVEALED" : item.source === "wish" ? "WISH" : item.source === "market" ? "VAULT" : item.source?.startsWith("ai") ? "AI" : "";
+    const tag = item.ghost ? "REVEALED" : item.source === "twist" ? "TWIST" : item.source === "wish" ? "WISH" : item.source === "market" ? "VAULT" : item.source?.startsWith("ai") ? "AI" : "";
     button.innerHTML = `<span class="emoji">${escapeHtml(item.emoji)}</span><span class="word">${escapeHtml(item.word)}</span>${tag ? `<span class="source-tag">${tag}</span>` : ""}`;
     button.addEventListener("click", () => placeFromTray(item));
     button.addEventListener("dragstart", (event) => {
@@ -516,7 +516,7 @@ function renderBoard(newId = null) {
 function createBoardNode(node, isNew) {
   const button = document.createElement("button");
   button.type = "button";
-  button.className = `board-word${isNew ? " appear" : ""}${["wish", "market"].includes(node.item.source) ? " wish" : ""}${node.item.ghost ? " reveal-ghost" : ""}${node.revealRole ? ` reveal-${node.revealRole}` : ""}${state.selectedNodeId === node.id ? " keyboard-selected" : ""}`;
+  button.className = `board-word${isNew ? " appear" : ""}${["wish", "market"].includes(node.item.source) ? " wish" : ""}${node.item.source === "twist" || node.cosmicTwist ? " cosmic-twist" : ""}${node.item.ghost ? " reveal-ghost" : ""}${node.revealRole ? ` reveal-${node.revealRole}` : ""}${state.selectedNodeId === node.id ? " keyboard-selected" : ""}`;
   button.dataset.id = node.id;
   button.style.setProperty("--x", `${node.x}px`);
   button.style.setProperty("--y", `${node.y}px`);
@@ -524,7 +524,11 @@ function createBoardNode(node, isNew) {
   const revealedNode = Boolean(node.revealRole || node.item.ghost);
   const unavailable = state.finished || state.reveal.active || state.reveal.pending || revealedNode;
   button.disabled = unavailable;
-  button.setAttribute("aria-label", revealedNode ? `${node.item.word}, revealed constellation word. Not playable.` : unavailable ? `${node.item.word}. Unavailable while this orbit is locked.` : `${node.item.word}. Drag onto another word to combine.`);
+  button.setAttribute("aria-label", revealedNode
+    ? `${node.item.word}, revealed constellation word. Not playable.`
+    : unavailable
+      ? `${node.item.word}. Unavailable while this orbit is locked.`
+      : `${node.item.word}${node.item.source === "twist" || node.cosmicTwist ? ", Cosmic Twist discovery" : ""}. Drag onto another word to combine.`);
   button.setAttribute("aria-pressed", String(state.selectedNodeId === node.id));
   button.innerHTML = `<span class="emoji">${escapeHtml(node.item.emoji)}</span><span>${escapeHtml(node.item.word)}</span>`;
   button.addEventListener("pointerdown", (event) => startNodeDrag(event, node, button));
@@ -678,27 +682,33 @@ async function combineNodes(a, b) {
     bElement?.classList.add("merging");
     await wait(170);
     state.moves += 1;
-    const known = state.words.find((item) => item.word.toLowerCase() === result.word.toLowerCase());
+    let known = state.words.find((item) => item.word.toLowerCase() === result.word.toLowerCase());
     const globallyKnown = profile.discovered.some((word) => word.toLowerCase() === result.word.toLowerCase());
     if (!known) {
       state.words.push(result);
+      known = result;
       if (!globallyKnown) {
         profile.discovered.push(result.word);
         state.newDiscoveries += 1;
         saveProfile();
       }
       renderInventory();
+    } else if (result.twisted) {
+      Object.assign(known, result);
+      renderInventory();
     }
-    state.history.push({ a: a.item.word, b: b.item.word, word: result.word, emoji: result.emoji, source: result.source, newDiscovery: !globallyKnown });
+    state.history.push({ a: a.item.word, b: b.item.word, word: result.word, emoji: result.emoji, source: result.source, newDiscovery: !globallyKnown, twisted: Boolean(result.twisted), canonicalWord: result.twist?.canonicalWord || "" });
     state.trails.push({ ax: a.x + 44, ay: a.y + 20, bx: b.x + 44, by: b.y + 20, x: x + 44, y: y + 20 });
     state.nodes = state.nodes.filter((node) => node.id !== a.id && node.id !== b.id);
-    addNode(known || result, x, y);
-    showAlchemy(`${a.item.word} + ${b.item.word} = ${result.emoji} ${result.word}`);
-    if (navigator.vibrate) navigator.vibrate(18);
+    addNode(known, x, y, { cosmicTwist: Boolean(result.twisted) });
+    showAlchemy(result.twisted
+      ? `✦ COSMIC TWIST · ${a.item.word} + ${b.item.word} found ${result.emoji} ${result.word} instead of ${result.twist.canonicalWord}. Mix them again for ${result.twist.canonicalWord}.`
+      : `${a.item.word} + ${b.item.word} = ${result.emoji} ${result.word}`, false, Boolean(result.twisted));
+    if (navigator.vibrate) navigator.vibrate(result.twisted ? [18, 35, 28, 35, 18] : 18);
     updateHud();
     updateMilestone();
     renderAtlas();
-    track("combination_completed", { mode: state.mode, a: a.item.word, b: b.item.word, result: result.word, source: result.source, newDiscovery: !globallyKnown });
+    track("combination_completed", { mode: state.mode, a: a.item.word, b: b.item.word, result: result.word, source: result.source, newDiscovery: !globallyKnown, twisted: Boolean(result.twisted) });
     if (result.division === "open" && state.assist === "none") state.assist = "open";
     const won = Boolean(result.completed);
     state.busyPairs.delete(a.id);
@@ -1612,7 +1622,7 @@ function renderAtlas() {
   $("#atlasMoves").textContent = state.moves;
   $("#atlasPath").replaceChildren(...state.history.map((step, index) => {
     const item = document.createElement("li");
-    item.innerHTML = `<span class="atlas-star">${escapeHtml(step.emoji)}</span><small>STAR ${String(index + 1).padStart(2, "0")}${step.newDiscovery ? " · NEW" : ""}</small><strong>${escapeHtml(step.word)}</strong><span>${escapeHtml(step.a)} + ${escapeHtml(step.b)}</span>`;
+    item.innerHTML = `<span class="atlas-star">${escapeHtml(step.emoji)}</span><small>STAR ${String(index + 1).padStart(2, "0")}${step.newDiscovery ? " · NEW" : ""}${step.twisted ? " · COSMIC TWIST" : ""}</small><strong>${escapeHtml(step.word)}</strong><span>${escapeHtml(step.a)} + ${escapeHtml(step.b)}${step.twisted ? ` · expected ${escapeHtml(step.canonicalWord)}` : ""}</span>`;
     return item;
   }));
 }
@@ -1795,12 +1805,13 @@ function startCosmos() {
   draw();
 }
 
-function showAlchemy(message, error = false) {
+function showAlchemy(message, error = false, twist = false) {
   clearTimeout(showAlchemy.timer);
   els.alchemyNote.textContent = message;
   els.alchemyNote.classList.toggle("error", error);
+  els.alchemyNote.classList.toggle("twist", twist);
   els.alchemyNote.classList.add("show");
-  showAlchemy.timer = setTimeout(() => els.alchemyNote.classList.remove("show"), error ? 2800 : 2300);
+  showAlchemy.timer = setTimeout(() => els.alchemyNote.classList.remove("show"), error ? 2800 : twist ? 3800 : 2300);
 }
 
 function updateConnection() {

@@ -207,6 +207,28 @@ test("server runs reject impossible inputs and only complete through combination
   assert.equal(entry.moves, 1);
 });
 
+test("server runs authoritatively allow at most one Cosmic Twist without marking assistance", async () => {
+  const store = await new GameStore(":memory:").init();
+  const player = await store.registerPlayer();
+  const runs = new RunRegistry(store);
+  const game = { mode: "reach", target: "Telescope", tier: 2, starters: ["Earth", "Water", "Fire", "Air"] };
+  const started = runs.start(player.id, game, { ranked: false });
+  const run = runs.get(started.run.runId, player.id, started.token);
+
+  runs.recordCombination(run, { word: "Great Wall", emoji: "🏯", category: "structure", source: "twist", twisted: true }, { a: "Brick", b: "Brick" });
+  assert.equal(run.moves, 1);
+  assert.equal(run.twistUsed, true);
+  assert.equal(run.twistedPairKey, "brick+brick");
+  assert.equal(run.assist, "none");
+  assert.ok(run.discovered.has("great wall"));
+
+  assert.throws(
+    () => runs.recordCombination(run, { word: "Flood", emoji: "🌊", category: "nature", source: "twist", twisted: true }, { a: "Water", b: "Water" }),
+    (error) => error.serviceCode === "twist_used"
+  );
+  assert.equal(run.moves, 1, "a rejected second Twist must not consume a move");
+});
+
 test("leaderboards keep each player's best verified result", async () => {
   const store = await new GameStore(":memory:").init();
   const player = await store.registerPlayer();
