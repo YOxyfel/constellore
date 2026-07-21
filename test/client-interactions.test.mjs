@@ -118,6 +118,31 @@ test("new cloud and onboarding status controls are announced and touch accessibl
   assert.match(styles, /[.]first-orbit-modal [.]modal-close\s*\{\s*width:\s*44px;\s*height:\s*44px/);
 });
 
+test("mode selection opens an accessible mission briefing before creating a run", () => {
+  assert.match(page, /id="missionBriefingDialog"[^>]+aria-labelledby="missionBriefingTitle"/);
+  for (const id of [
+    "missionBriefingTarget", "missionBriefingRule", "missionBriefingReward", "missionBriefingScore",
+    "missionBriefingLaw", "missionBriefingStatus", "beginMission", "cancelMission"
+  ]) assert.match(page, new RegExp(`id="${id}"`));
+  assert.match(app, /pendingMission:\s*null/);
+  assert.match(app, /function openMissionBriefing\(/);
+  assert.match(app, /function presentMissionBriefing\(\)[\s\S]*state[.]recoveryKit[?][.]code[\s\S]*showModal\(\)/);
+  assert.match(app, /async function confirmMissionBriefing\(/);
+  assert.match(app, /fetchJson\("\/api\/run\/preview"/);
+  assert.match(app, /request: \{ [.]\.\.request, previewToken: preview[.]previewToken \}/);
+  assert.match(app, /error[.]code === "mission_stale"[\s\S]*refreshMissionPreview\(pending\)/);
+  assert.match(app, /confirmMissionBriefing\(\)[\s\S]*createRun\(pending[.]request\)[\s\S]*startWithGame\(started[.]game, started[.]run\)/);
+  assert.match(app, /beginCustomTarget[\s\S]*requestMissionPreview\(request\)[\s\S]*openMissionBriefing\(preview[.]game, preview[.]request/);
+  assert.match(app, /skipBriefing:\s*true/);
+  assert.match(app, /acknowledgeRecoveryKit\(\)[\s\S]*state[.]pendingMission[\s\S]*presentMissionBriefing/);
+  assert.match(page, /class="training-mission-line"[\s\S]*<strong>Wall<\/strong>[\s\S]*3 guided fusions/);
+  assert.match(styles, /[.]mission-briefing-modal\[open\]\s*\{[^}]*display:\s*flex[^}]*overflow:\s*hidden/);
+  assert.match(styles, /[.]mission-scroll\s*\{[^}]*overflow-y:\s*auto/);
+  assert.match(styles, /[.]mission-target-lockup h2\s*\{[^}]*overflow-wrap:\s*anywhere/);
+  assert.match(styles, /[.]mission-status:empty\s*\{[^}]*display:\s*none/);
+  assert.match(app, /missionBriefingDialog[.]scrollTop = 0/);
+});
+
 test("Rival Ghost requests are cancelled and stale responses cannot start races", () => {
   assert.match(app, /requestController = new AbortController\(\)/);
   assert.match(app, /state[.]ghost[.]requestController[?][.]abort\(\)/);

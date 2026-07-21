@@ -324,6 +324,43 @@ body.board-blueprint .cosmos-board { background-color: #071528; background-image
 .modal li { padding: 6px 0; color: #c4c5d3; font-size: 15px; }.modal li::before { content: "✦"; margin-right: 8px; color: var(--violet); }
 .primary-action { width: 100%; min-height: 50px; border: 0; background: linear-gradient(100deg, color-mix(in srgb, var(--violet) 86%, #6c51c4), color-mix(in srgb, var(--violet) 60%, #4b3a91)); color: #fff; padding: 0 15px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; font-size: 15px; box-shadow: 0 10px 30px var(--violet-soft); }
 .prototype-note { display: block; margin-top: 10px; color: #8e91a6; text-align: center; font-size: 15px; line-height: 1.5; }
+
+.mission-briefing-modal { width: min(640px, calc(100% - 26px)); padding: 32px; border-color: color-mix(in srgb, var(--violet) 38%, rgba(255,255,255,.16)); background: radial-gradient(circle at 86% 8%, color-mix(in srgb, var(--violet) 17%, transparent), transparent 31%), radial-gradient(circle at 7% 90%, rgba(105,230,255,.08), transparent 28%), linear-gradient(155deg, #171a35, #090b19 72%); }
+.mission-briefing-modal[open] { display: flex; flex-direction: column; overflow: hidden; }
+.mission-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding-right: 4px; scrollbar-color: var(--line-hot) transparent; }
+.mission-briefing-modal .eyebrow { color: color-mix(in srgb, var(--violet) 74%, white); }
+.mission-target-lockup { margin: 18px 0 10px; display: grid; grid-template-columns: 64px minmax(0,1fr); align-items: center; gap: 16px; }
+.mission-target-emoji { width: 64px; height: 64px; display: grid; place-items: center; border: 1px solid var(--line-hot); border-radius: 50%; background: radial-gradient(circle, var(--violet-soft), rgba(255,255,255,.015)); font-size: 29px; box-shadow: 0 0 34px var(--violet-soft); }
+.mission-target-lockup small { color: var(--muted); font: 500 15px "DM Mono", monospace; letter-spacing: .08em; }
+.mission-target-lockup h2 { margin: 5px 0 0; overflow-wrap: anywhere; font-size: clamp(29px, 5vw, 38px); line-height: 1.05; }
+.mission-target-lockup h2 strong { color: color-mix(in srgb, var(--violet) 67%, white); font-weight: 600; }
+.mission-briefing-modal .mission-clue { margin: 0; color: var(--muted); }
+.mission-briefing-modal .mission-win-rule { margin: 14px 0 18px; padding: 12px 14px; border-left: 2px solid var(--cyan); background: rgba(105,230,255,.045); color: var(--text); font-weight: 600; line-height: 1.45; }
+.mission-facts { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 8px; }
+.mission-facts section { min-width: 0; min-height: 108px; padding: 12px; border: 1px solid var(--line); background: rgba(255,255,255,.025); }
+.mission-facts span, .mission-how-to summary, .mission-law > span { display: block; color: var(--muted); font: 500 15px "DM Mono", monospace; letter-spacing: .055em; }
+.mission-facts strong { display: block; margin: 7px 0 4px; color: var(--text); font-size: 17px; font-weight: 600; }
+.mission-facts section:nth-child(3) strong { color: var(--cyan); }
+.mission-facts small { display: block; color: var(--muted); font-size: 15px; line-height: 1.35; }
+.mission-how-to { margin-top: 10px; padding: 0 14px; border: 1px solid var(--line); background: rgba(3,5,14,.32); }
+.mission-how-to summary { min-height: 46px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; list-style: none; }
+.mission-how-to summary::-webkit-details-marker { display: none; }
+.mission-how-to summary::after { content: "+"; color: var(--violet); font-size: 20px; }
+.mission-how-to[open] { padding-bottom: 12px; }
+.mission-how-to[open] summary::after { content: "−"; }
+.mission-how-to p { margin: 6px 0 0; color: #d6d3e2; font-size: 15px; line-height: 1.45; }
+.mission-how-to p + p { color: var(--muted); }
+.mission-law { margin-top: 8px; padding: 11px 14px; border: 1px solid color-mix(in srgb, var(--amber) 30%, var(--line)); background: rgba(255,204,118,.045); display: grid; grid-template-columns: auto minmax(0,1fr); gap: 4px 12px; align-items: baseline; }
+.mission-law > span { grid-column: 1 / -1; color: var(--amber); }
+.mission-law strong { font-size: 15px; font-weight: 600; }
+.mission-law small { color: var(--muted); font-size: 15px; line-height: 1.4; }
+.mission-briefing-modal .mission-fairness { margin: 10px 0 0; color: var(--muted); font-size: 15px; line-height: 1.45; }
+.mission-actions { flex: 0 0 auto; z-index: 3; margin-top: 5px; padding-top: 10px; border-top: 1px solid var(--line); background: #090b19; }
+.mission-status { margin: 0 0 5px; color: var(--muted); }
+.mission-status:empty { display: none; }
+.mission-status.error { color: var(--danger); }
+.mission-briefing-modal .primary-action:disabled { opacity: .58; cursor: wait; }
+.mission-briefing-modal .quiet-action { width: 100%; margin-top: 7px; }
 .wish-modal form { margin-top: 22px; }.wish-modal label { display: block; margin-bottom: 8px; color: var(--muted); font-size: 15px; }
 .wish-modal input { width: 100%; height: 48px; border: 1px solid var(--line); background: rgba(255,255,255,.04); color: var(--text); padding: 0 13px; }
 .wish-modal .form-message { margin-bottom: 7px; }
@@ -590,6 +627,9 @@ body.board-blueprint .cosmos-board { background-color: #071528; background-image
 .training-replay-card button { min-width: 78px; min-height: 44px; border: 1px solid var(--line-hot); border-radius: 7px; background: var(--violet-soft); color: var(--text); cursor: pointer; font-size: 15px; }
 .first-orbit-modal { width: min(500px, calc(100% - 26px)); }
 .first-orbit-modal .modal-orb { margin-bottom: 18px; color: var(--cyan); border-color: color-mix(in srgb, var(--cyan) 48%, var(--line)); box-shadow: 0 0 35px rgba(105,230,255,.15); }
+.training-mission-line { min-height: 54px; margin: 16px 0 -9px; padding: 9px 12px; display: grid; grid-template-columns: auto minmax(0,1fr) auto; align-items: center; gap: 11px; border: 1px solid var(--line-hot); background: var(--violet-soft); }
+.training-mission-line span, .training-mission-line small { color: var(--muted); font: 500 15px "DM Mono", monospace; letter-spacing: .04em; }
+.training-mission-line strong { color: color-mix(in srgb, var(--violet) 68%, white); font-size: 20px; font-weight: 600; }
 .training-fairness { margin: 20px 0; border: 1px solid color-mix(in srgb, var(--cyan) 27%, var(--line)); background: rgba(105,230,255,.045); padding: 13px; }
 .training-fairness strong, .training-fairness span { display: block; font-size: 15px; line-height: 1.45; }
 .training-fairness strong { color: var(--cyan); font-family: "DM Mono", monospace; font-weight: 500; letter-spacing: .04em; }
@@ -659,6 +699,15 @@ body.board-blueprint .cosmos-board { background-color: #071528; background-image
   .reveal-controller { width: auto; left: 10px; right: 10px; bottom: 10px; padding: 12px; border-radius: 12px; }
   .reveal-controls { grid-template-columns: minmax(92px, 1fr) 56px minmax(104px, 1fr); }
   .modal { padding: 34px 23px; }.modal h2 { font-size: 27px; }.atlas-path { max-height: 45vh; }
+  .mission-briefing-modal { padding: 27px 19px max(23px, env(safe-area-inset-bottom)); }
+  .mission-target-lockup { grid-template-columns: 52px minmax(0,1fr); gap: 12px; margin-top: 14px; }
+  .mission-target-emoji { width: 52px; height: 52px; font-size: 24px; }
+  .mission-target-lockup h2 { font-size: 27px; }
+  .mission-facts { grid-template-columns: repeat(2, minmax(0,1fr)); }
+  .mission-facts section { min-height: 102px; }
+  .mission-facts section:last-child { grid-column: 1 / -1; min-height: 88px; }
+  .mission-law { grid-template-columns: 1fr; }
+  .mission-law > span { grid-column: auto; }
   .first-orbit-modal { padding-bottom: max(28px, env(safe-area-inset-bottom)); }
   .first-orbit-modal .modal-close { width: 44px; height: 44px; right: 7px; top: 6px; }
   .training-replay-card { grid-template-columns: 30px minmax(0,1fr) 74px; padding-left: 9px; }
@@ -757,6 +806,14 @@ body.board-blueprint .cosmos-board { background-color: #071528; background-image
 }
 
 @media (max-height: 520px) and (min-width: 520px) {
+  .mission-briefing-modal { width: min(760px, calc(100% - 24px)); padding: 20px 24px; }
+  .mission-target-lockup { grid-template-columns: 48px minmax(0,1fr); gap: 11px; margin: 9px 0 5px; }
+  .mission-target-emoji { width: 48px; height: 48px; font-size: 22px; }
+  .mission-target-lockup h2 { margin-top: 2px; font-size: 25px; }
+  .mission-briefing-modal .mission-win-rule { margin: 8px 0 10px; padding-block: 9px; }
+  .mission-facts { grid-template-columns: repeat(3, minmax(0,1fr)); }
+  .mission-facts section, .mission-facts section:last-child { grid-column: auto; min-height: 88px; }
+  .mission-how-to { margin-top: 7px; }
   .reveal-controller { width: min(650px, calc(100% - 24px)); left: 12px; right: auto; bottom: 8px; display: grid; grid-template-columns: minmax(230px, 1fr) minmax(290px, 1fr); align-items: center; gap: 8px 14px; padding: 9px 11px; }
   .reveal-controls { margin-top: 0; }
   .reveal-progress { grid-column: 1 / -1; margin-top: 0; }

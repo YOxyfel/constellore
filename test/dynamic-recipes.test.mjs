@@ -76,6 +76,13 @@ test("AI recipes stay bounded without corrupting authored or active-run routes",
   };
 
   const start = () => request("/api/run/start", { method: "POST", body: { mode: "reach", target, custom: true } });
+  const missionPreview = await request("/api/run/preview", {
+    method: "POST",
+    body: { mode: "reach", target, custom: true }
+  });
+  assert.equal(missionPreview.response.status, 200);
+  assert.equal(missionPreview.payload.game.target, target);
+  assert.equal(typeof missionPreview.payload.previewToken, "string");
   const combinationRun = await start();
   const revealRun = await start();
   assert.equal(combinationRun.response.status, 201);
@@ -108,4 +115,11 @@ test("AI recipes stay bounded without corrupting authored or active-run routes",
 
   const expiredTarget = await start();
   assert.equal(expiredTarget.response.status, 422, "evicted routes should not remain globally reachable for new runs");
+
+  const previewStart = await request("/api/run/start", {
+    method: "POST",
+    body: { previewToken: missionPreview.payload.previewToken }
+  });
+  assert.equal(previewStart.response.status, 201);
+  assert.equal(previewStart.payload.game.target, target, "a signed briefing must carry its verified custom route through cache eviction or a restart");
 });

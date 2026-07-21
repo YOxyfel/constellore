@@ -62,9 +62,20 @@ test("online games validate and expose deterministic non-spoiler universe contex
     "x-constellore-token": registration.payload.playerToken
   };
 
-  const ranked = await request("/api/run/start", { method: "POST", body: { mode: "quick" } });
+  const rankedPreview = await request("/api/run/preview", { method: "POST", body: { mode: "quick" } });
+  assert.equal(rankedPreview.response.status, 200);
+  assert.equal("run" in rankedPreview.payload, false, "a briefing preview must not create or expose a timed run");
+  assert.equal(rankedPreview.payload.game.ranked, true);
+  assert.equal(rankedPreview.payload.game.scoreEligible, true);
+  assert.equal(typeof rankedPreview.payload.previewToken, "string");
+
+  const ranked = await request("/api/run/start", { method: "POST", body: { previewToken: rankedPreview.payload.previewToken } });
   assert.equal(ranked.response.status, 201);
   assert.equal(ranked.payload.run.ranked, true);
+  for (const field of ["mode", "target", "timeLimit", "moveLimit", "reward", "law"]) {
+    assert.deepEqual(ranked.payload.game[field], rankedPreview.payload.game[field], `${field} must not change between briefing and run start`);
+  }
+  assert.ok(ranked.payload.run.deadlineAt, "the timed deadline is created only with the authoritative run");
   assert.deepEqual(ranked.payload.game.universe, selectUniverse(ranked.payload.game.seed));
   assert.deepEqual(Object.keys(ranked.payload.game.universeManifest).sort(), MANIFEST_KEYS);
   assert.equal(ranked.payload.game.universeManifest.validated, true);

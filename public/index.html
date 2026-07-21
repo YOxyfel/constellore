@@ -16,7 +16,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/styles.css?v=2.0.0">
+  <link rel="stylesheet" href="/styles.css?v=2.1.0">
 </head>
 <body>
   <section class="start-screen" id="startScreen" aria-labelledby="startTitle">
@@ -218,6 +218,50 @@
       </aside>
     </main>
   </section>
+
+  <dialog id="missionBriefingDialog" class="modal mission-briefing-modal" aria-labelledby="missionBriefingTitle" aria-describedby="missionBriefingRule missionBriefingScoreDetail">
+    <div class="mission-scroll" id="missionBriefingScroll">
+      <span class="eyebrow" id="missionBriefingMode">REACH &middot; MISSION BRIEF</span>
+      <div class="mission-target-lockup">
+        <span class="mission-target-emoji" id="missionBriefingEmoji" aria-hidden="true">&#10022;</span>
+        <div>
+          <small>YOU ARE LOOKING FOR</small>
+          <h2 id="missionBriefingTitle">Your target is <strong id="missionBriefingTarget">Telescope</strong>.</h2>
+        </div>
+      </div>
+      <p class="mission-clue" id="missionBriefingClue">A destination waits at the edge of this constellation.</p>
+      <p class="mission-win-rule" id="missionBriefingRule">Combine words until one fusion creates Telescope.</p>
+      <div class="mission-facts" aria-label="Mission limits and scoring">
+        <section>
+          <span>LIMIT</span>
+          <strong id="missionBriefingLimit">No limit</strong>
+          <small id="missionBriefingLimitDetail">Explore at your own pace.</small>
+        </section>
+        <section>
+          <span>BASE REWARD</span>
+          <strong id="missionBriefingReward">70 Stardust</strong>
+          <small id="missionBriefingRewardDetail">Discoveries and bonuses can add more.</small>
+        </section>
+        <section>
+          <span id="missionBriefingScoreLabel">SCORING</span>
+          <strong id="missionBriefingScore">Practice</strong>
+          <small id="missionBriefingScoreDetail">This mode does not upload to a leaderboard.</small>
+        </section>
+      </div>
+      <details class="mission-how-to">
+        <summary>HOW COMBINING WORKS</summary>
+        <p id="missionBriefingInteraction">Drag one word onto another, or tap any two discovered words, to fuse them.</p>
+        <p id="missionBriefingModeRule">There is no clock or move cap, so you can explore freely.</p>
+      </details>
+      <div class="mission-law" id="missionBriefingLaw" hidden><span>COSMIC LAW</span><strong id="missionBriefingLawName"></strong><small id="missionBriefingLawDescription"></small></div>
+      <p class="mission-fairness" id="missionBriefingFairness">Sense or Reveal turns progression rewards off for this run.</p>
+    </div>
+    <div class="mission-actions">
+      <p class="form-message mission-status" id="missionBriefingStatus" role="status" aria-live="polite"></p>
+      <button class="primary-action" id="beginMission" type="button"><span>Begin mission</span><span aria-hidden="true">&rarr;</span></button>
+      <button class="quiet-action" id="cancelMission" type="button">Back to modes</button>
+    </div>
+  </dialog>
 
   <dialog id="paywallDialog" class="modal premium-modal">
     <button class="modal-close" data-close="paywallDialog" type="button" aria-label="Close">×</button>
@@ -446,6 +490,7 @@
     <span class="eyebrow">YOUR FIRST ORBIT &middot; ABOUT 90 SECONDS</span>
     <h2 id="firstOrbitTitle">Learn the cosmos by touching it.</h2>
     <p>Trace three simple discoveries using the same drag-and-drop or tap controls as every other orbit. The guide reacts only after you make each combination yourself.</p>
+    <div class="training-mission-line"><span>TARGET</span><strong>Wall</strong><small>3 guided fusions</small></div>
     <div class="training-fairness"><strong>TRAINING ORBIT &middot; 0 SCORE</strong><span>No leaderboard entry, Stardust, mastery stars, permanent discoveries, streak progress, or rewards.</span></div>
     <button class="primary-action" id="beginFirstOrbit" type="button"><span>Begin First Orbit</span><span aria-hidden="true">&rarr;</span></button>
     <button class="quiet-action" id="dismissFirstOrbit" type="button">Not now</button>
@@ -485,6 +530,6 @@
 
   <div class="connection-badge" id="connectionBadge" role="status" hidden>Offline — reconnect to forge new words</div>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
-  <script type="module" src="/app.js?v=1.7.1"></script>
+  <script type="module" src="/app.js?v=1.8.0"></script>
 </body>
 </html>
