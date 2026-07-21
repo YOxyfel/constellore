@@ -16,7 +16,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/styles.css?v=2.2.0">
+  <link rel="stylesheet" href="/styles.css?v=2.4.0">
 </head>
 <body>
   <section class="start-screen" id="startScreen" aria-labelledby="startTitle">
@@ -24,6 +24,11 @@
     <div class="start-stars" aria-hidden="true"></div>
     <header class="start-nav">
       <div class="brand"><span class="brand-star" aria-hidden="true">✦</span><span class="brand-name">CONSTELLORE</span><small>BY OXYFEL GAMES</small></div>
+      <button class="updates-trigger" id="updatesButton" type="button" aria-haspopup="dialog" aria-controls="updatesDialog">
+        <span class="updates-trigger-icon" aria-hidden="true">✦</span>
+        <span class="updates-trigger-copy"><strong>DEV LOGS / UPDATES</strong><small>3 ENTRIES · LATEST JUL 21</small></span>
+        <span class="updates-trigger-dot" aria-hidden="true"></span>
+      </button>
       <div class="start-actions">
         <button class="nav-text-button" id="installButton" type="button" hidden>Install</button>
         <button class="nav-market-button" id="marketButton" type="button" aria-label="Open Word Exchange"><span aria-hidden="true">◈</span><b>EXCHANGE</b></button>
@@ -153,7 +158,7 @@
           <div class="first-orbit-progress" role="progressbar" aria-label="First Orbit training progress" aria-valuemin="0" aria-valuemax="3" aria-valuenow="0"><i id="firstOrbitProgressBar"></i></div>
         </section>
         <div class="board-tools" aria-label="Board tools">
-          <button class="sense-tool" id="senseButton" type="button" aria-haspopup="dialog" aria-controls="senseDialog" aria-label="Open Constellation Sense"><span aria-hidden="true">✧</span><b>Sense</b><em id="senseHudCount">1</em></button>
+          <button class="sense-tool" id="senseButton" type="button" aria-haspopup="dialog" aria-controls="senseDialog" aria-label="Open Cosmic Powerups"><span aria-hidden="true">✦</span><b>Powers</b><em id="senseHudCount">KIT</em></button>
           <button id="tidyBoard" type="button" aria-label="Tidy orbit; does not affect score"><span aria-hidden="true">✣</span><b>Tidy</b></button>
           <button id="resetBoard" type="button" aria-label="Clear the board"><span aria-hidden="true">↻</span><b>Clear</b></button>
         </div>
@@ -162,6 +167,11 @@
           <span><small id="ghostCallsign">COSMOS SCOUT</small><strong id="ghostStatus">Mapping a rival…</strong></span>
           <b id="ghostPace">0 · 0</b>
         </button>
+        <section class="ghost-preview" id="ghostPreview" aria-label="Projected rival trail preview; all words are hidden to prevent spoilers" hidden>
+          <header><span><small>PROJECTED TRAIL</small><strong>WORDS ENCRYPTED</strong></span><b id="ghostPreviewCount">0 / 0</b></header>
+          <div class="ghost-preview-progress" id="ghostPreviewProgress" role="progressbar" aria-label="Projected rival route progress" aria-valuemin="0" aria-valuemax="1" aria-valuenow="0"><i id="ghostPreviewBar"></i></div>
+          <div class="ghost-preview-steps" id="ghostPreviewSteps" aria-hidden="true"></div>
+        </section>
         <div id="boardItems" class="board-items"></div>
         <div class="drop-pair-preview" id="dropPairPreview" aria-hidden="true" hidden></div>
         <div class="tap-chain-status" id="tapChainStatus" role="status" aria-live="polite" hidden>
@@ -219,6 +229,37 @@
     </main>
   </section>
 
+  <dialog id="updatesDialog" class="modal updates-modal" aria-labelledby="updatesTitle" aria-describedby="updatesIntro">
+    <button class="modal-close" data-close="updatesDialog" type="button" aria-label="Close updates">×</button>
+    <div class="updates-heading">
+      <span class="updates-orb" aria-hidden="true">✦</span>
+      <div>
+        <span class="eyebrow">TRANSMISSION ARCHIVE · 3 ENTRIES</span>
+        <h2 id="updatesTitle">Dev Logs / Updates</h2>
+      </div>
+    </div>
+    <p id="updatesIntro">Follow Constellore from first light to its latest frictionless board controls.</p>
+    <ol class="updates-list">
+      <li class="updates-entry is-latest" data-update-entry>
+        <div class="updates-meta"><span>UPDATE 02</span><time datetime="2026-07-21">JUL 21, 2026</time><b>LATEST</b></div>
+        <h3>Shift Board Tools</h3>
+        <p><kbd>SHIFT</kbd> over a board word clears it when your hand is empty. Start dragging first, then hold Shift to leave evenly spaced copies; drop the held word onto another to fuse.</p>
+      </li>
+      <li class="updates-entry" data-update-entry>
+        <div class="updates-meta"><span>UPDATE 01</span><time datetime="2026-07-18">JUL 18, 2026</time></div>
+        <h3>Ctrl Hover Fusion</h3>
+        <p>Hold <kbd>CTRL</kbd>, hover one board word, then sweep onto another to combine instantly. The last result stays ready, making long discovery chains flow without extra clicks.</p>
+        <small>Shipped with the release and recorded separately as the first gameplay update.</small>
+      </li>
+      <li class="updates-entry" data-update-entry>
+        <div class="updates-meta"><span>PUBLIC BETA RELEASE</span><time datetime="2026-07-16">JUL 16, 2026</time></div>
+        <h3>First Light</h3>
+        <p>Constellore opened its public browser beta: begin with four elements, build a constellation of discoveries, and find the target word across Reach, Quick Orbit, Move Limit, and daily play.</p>
+      </li>
+    </ol>
+    <p class="updates-footer"><span aria-hidden="true">✦</span> More transmissions will appear here as the universe grows.</p>
+  </dialog>
+
   <dialog id="missionBriefingDialog" class="modal mission-briefing-modal" aria-labelledby="missionBriefingTitle" aria-describedby="missionBriefingRule missionBriefingScoreDetail">
     <div class="mission-scroll" id="missionBriefingScroll">
       <span class="eyebrow" id="missionBriefingMode">REACH &middot; MISSION BRIEF</span>
@@ -254,7 +295,7 @@
         <p id="missionBriefingModeRule">There is no clock or move cap, so you can explore freely.</p>
       </details>
       <div class="mission-law" id="missionBriefingLaw" hidden><span>COSMIC LAW</span><strong id="missionBriefingLawName"></strong><small id="missionBriefingLawDescription"></small></div>
-      <p class="mission-fairness" id="missionBriefingFairness">Sense or Reveal turns progression rewards off for this run.</p>
+      <p class="mission-fairness" id="missionBriefingFairness">Word Gift, Star Compass, or Reveal turns progression rewards off for this run.</p>
     </div>
     <div class="mission-actions">
       <p class="form-message mission-status" id="missionBriefingStatus" role="status" aria-live="polite"></p>
@@ -272,7 +313,7 @@
     <div class="price"><strong id="founderPrice">€6.99</strong><span>one time</span></div>
     <ul>
       <li>One personal Wish every UTC day, usable in any mode</li>
-      <li>A second daily Constellation Sense charge</li>
+      <li>A second daily Star Compass charge</li>
       <li>Aurora and Solar cosmos themes</li>
       <li>Nebula and Blueprint boards, Comet and Prism trails, and two sound packs</li>
       <li>One extra daily streak shield</li>
@@ -385,17 +426,38 @@
     </section>
   </dialog>
 
-  <dialog id="senseDialog" class="modal sense-modal" aria-labelledby="senseTitle">
-    <button class="modal-close" data-close="senseDialog" type="button" aria-label="Close">×</button>
-    <span class="modal-orb sense-orb" aria-hidden="true">✧</span>
-    <span class="eyebrow">CONSTELLATION SENSE</span>
-    <h2 id="senseTitle">Feel where the path is warm.</h2>
-    <p>Sense makes a few promising words shimmer for ten seconds. It never names a recipe or reveals the answer.</p>
-    <div class="sense-balance"><span>AVAILABLE</span><strong><b id="senseDialogCount">1</b> SENSE</strong><small id="senseEarnNote">One charge returns each UTC day.</small></div>
-    <div class="sense-fairness"><span>ASSISTED ORBIT</span><p>Using Sense turns score, leaderboard placement, and progression rewards off for this run.</p></div>
-    <button class="primary-action" id="useSense" type="button"><span>Use one Sense</span><span aria-hidden="true">✧</span></button>
-    <button class="secondary-action sense-buy" id="buySense" type="button"><span>Buy a charge</span><strong>90 ✦</strong></button>
-    <p class="form-message" id="senseMessage" aria-live="polite"></p>
+  <dialog id="senseDialog" class="modal sense-modal powerups-modal" aria-labelledby="senseTitle" aria-describedby="powerupsIntro">
+    <button class="modal-close" data-close="senseDialog" type="button" aria-label="Close powerups">×</button>
+    <div class="powerups-heading">
+      <span class="modal-orb sense-orb" aria-hidden="true">✦</span>
+      <div><span class="eyebrow">ORBIT KIT · 3 POWERUPS</span><h2 id="senseTitle">Cosmic Powerups</h2></div>
+    </div>
+    <p id="powerupsIntro">Take a small nudge, summon a route bridge, or ask the stars what already-discovered words feel promising.</p>
+    <div class="powerup-grid">
+      <article class="powerup-card tip-card">
+        <header><span class="powerup-icon cyan" aria-hidden="true">?</span><div><small>QUICK TIP</small><h3>Brief direction</h3></div><b class="score-safe">SCORE SAFE</b></header>
+        <p>A short mechanics or strategy hint based only on your current situation—never an answer word.</p>
+        <div class="powerup-stock"><span>THIS ORBIT</span><strong id="quickTipCount">3 / 3</strong></div>
+        <button class="powerup-action" id="useQuickTip" type="button"><span>Show a quick tip</span><span aria-hidden="true">→</span></button>
+        <p class="powerup-message tip-message" id="quickTipMessage" role="status" aria-live="polite">Three spoiler-free tips are ready.</p>
+      </article>
+      <article class="powerup-card gift-card" id="wordGiftCard">
+        <header><span class="powerup-icon amber" aria-hidden="true">✦</span><div><small>WORD GIFT</small><h3>A crucial bridge</h3></div><b class="study-badge">STUDY · 0 SCORE</b></header>
+        <p>Summons one undiscovered non-target word from the verified route. Its recipe stays secret.</p>
+        <div class="powerup-stock"><span>THIS ORBIT</span><strong id="wordGiftState">1 READY</strong></div>
+        <button class="powerup-action danger-action" id="useWordGift" type="button"><span>Summon gift · 0 score</span><span aria-hidden="true">✦</span></button>
+        <p class="powerup-message" id="wordGiftMessage" role="status" aria-live="polite">Using this permanently changes the orbit to Study.</p>
+      </article>
+      <article class="powerup-card compass-card">
+        <header><span class="powerup-icon violet" aria-hidden="true">✧</span><div><small>STAR COMPASS</small><h3>Find warm words</h3></div><b class="study-badge">STUDY · 0 SCORE</b></header>
+        <p>Makes up to three useful words you already discovered shimmer for ten seconds. No recipe is shown.</p>
+        <div class="powerup-stock"><span>AVAILABLE</span><strong><b id="senseDialogCount">1</b> CHARGE</strong><small id="senseEarnNote">One charge returns each UTC day.</small></div>
+        <button class="powerup-action danger-action" id="useSense" type="button"><span>Activate compass · 0 score</span><span aria-hidden="true">✧</span></button>
+        <button class="powerup-buy" id="buySense" type="button"><span>Buy one charge</span><strong>90 ✦</strong></button>
+        <p class="powerup-message" id="senseMessage" role="status" aria-live="polite"></p>
+      </article>
+    </div>
+    <p class="powerups-fairness"><span aria-hidden="true">◇</span><strong>Fair-play rule:</strong> Quick Tips preserve scoring. Word Gift and Star Compass remove score, rewards, streak credit, and leaderboard eligibility for this orbit.</p>
   </dialog>
 
   <dialog id="revealDialog" class="modal reveal-modal" aria-labelledby="revealTitle" aria-describedby="revealDescription">
@@ -448,7 +510,7 @@
       <div><strong id="profileCredits">0</strong><span>Star Credits</span></div>
       <div><strong id="profileVaultCount">0</strong><span>owned words</span></div>
       <div><strong id="profileMasteryStars">0</strong><span>recipe stars</span></div>
-      <div><strong id="profileSenseCount">1</strong><span>Sense charges</span></div>
+      <div><strong id="profileSenseCount">1</strong><span>Compass charges</span></div>
     </div>
     <section class="training-replay-card" aria-labelledby="trainingReplayTitle">
       <span aria-hidden="true">&#10022;</span>
@@ -530,6 +592,6 @@
 
   <div class="connection-badge" id="connectionBadge" role="status" hidden>Offline — reconnect to forge new words</div>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
-  <script type="module" src="/app.js?v=1.9.0"></script>
+  <script type="module" src="/app.js?v=1.11.0"></script>
 </body>
 </html>

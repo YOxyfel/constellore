@@ -77,6 +77,7 @@ export const ANALYTICS_EVENT_NAMES = Object.freeze([
   "challenge_opened", "theme_changed", "pwa_installed", "leaderboard_opened", "score_uploaded",
   "market_opened", "market_searched", "word_purchased", "market_word_used", "credit_pack_opened", "answer_revealed",
   "board_tidied", "sense_opened", "sense_used", "sense_earned", "sense_purchase_started", "sense_purchased",
+  "powerups_opened", "quick_tip_used", "word_gift_used",
   "ghost_loaded", "ghost_race_started", "ghost_race_completed", "mastery_opened", "mastery_progressed",
   "mastery_completed", "audio_toggled", "haptic_toggled", "fusion_feedback_played", "cosmetic_changed",
   "recipe_feedback_submitted", "card_shared", "card_downloaded", "cloud_sync", "ownership_restored",
@@ -86,14 +87,14 @@ const analyticsEventNames = new Set(ANALYTICS_EVENT_NAMES);
 const analyticsEnumDimensions = new Map([
   ["mode", new Set(["reach", "quick", "moves", "daily", "weekly", "challenge"])],
   ["division", new Set(["pure", "open"])],
-  ["source", new Set(["world", "ai", "twist", "reveal", "market", "wish", "earned", "credits", "reward", "free", "daily", "founder", "mastery", "benchmark", "verified"])],
+  ["source", new Set(["world", "ai", "twist", "reveal", "gift", "market", "wish", "earned", "credits", "reward", "free", "daily", "founder", "mastery", "benchmark", "verified"])],
   ["location", new Set(["home", "run", "result", "market", "mastery"])],
   ["provider", new Set(["native", "web", "sandbox", "rewarded"])],
   ["scope", new Set(["daily", "weekly", "sprint", "all"])],
   ["theme", new Set(["void", "aurora", "solar", "dark", "light", "system"])],
   ["entitlement", new Set(["pass", "reward", "free", "credits", "earned"])],
-  ["reason", new Set(["abandoned", "moves", "time", "reveal", "completed", "unavailable"])],
-  ["assist", new Set(["none", "ai", "market", "wish", "reveal", "sense"])],
+  ["reason", new Set(["abandoned", "moves", "time", "reveal", "sense", "gift", "completed", "unavailable"])],
+  ["assist", new Set(["none", "ai", "market", "wish", "reveal", "sense", "gift"])],
   ["result", new Set(["won", "lost", "tied", "completed", "dismissed", "accepted", "cancelled"])],
   ["kind", new Set(["fusion", "rejection", "discovery", "twist", "target", "ui", "music", "haptic", "theme", "board", "trail", "sound", "logical", "surprising", "bad"])],
   ["outcome", new Set(["accepted", "cancelled", "completed", "dismissed", "earned", "purchased"])],
@@ -1223,6 +1224,11 @@ export class GameStore {
 
 const RUN_SNAPSHOT_VERSION = 1;
 
+function studyAssistFor(reason, fallback = "reveal") {
+  const value = String(reason || "").trim().toLowerCase();
+  return ["reveal", "sense", "gift"].includes(value) ? value : fallback;
+}
+
 function serializeRun(run) {
   return {
     version: RUN_SNAPSHOT_VERSION,
@@ -1245,6 +1251,8 @@ function serializeRun(run) {
     solutionRecipes: run.solutionRecipes instanceof Map
       ? [...run.solutionRecipes.entries()].map(([key, result]) => [key, structuredClone(result)])
       : [],
+    giftUsed: Boolean(run.giftUsed),
+    giftItem: run.giftItem ? structuredClone(run.giftItem) : null,
     twistUsed: Boolean(run.twistUsed),
     twistedPairKey: run.twistedPairKey,
     usedBend: Boolean(run.usedBend),
@@ -1284,6 +1292,30 @@ function hydrateRun(snapshot, players) {
     if (!Array.isArray(entry) || entry.length !== 2 || typeof entry[0] !== "string" || !entry[1] || typeof entry[1] !== "object") continue;
     solutionRecipes.set(entry[0], structuredClone(entry[1]));
   }
+  const rawGiftItem = snapshot.giftItem && typeof snapshot.giftItem === "object" && !Array.isArray(snapshot.giftItem)
+    ? snapshot.giftItem
+    : null;
+  const giftWord = String(rawGiftItem?.word || "").trim().slice(0, 80);
+  const giftItem = giftWord && giftWord.toLowerCase() !== String(game.target).trim().toLowerCase()
+    ? {
+        word: giftWord,
+        emoji: String(rawGiftItem?.emoji || "").trim().slice(0, 24),
+        category: rawGiftItem?.category == null ? null : String(rawGiftItem.category).trim().slice(0, 40) || null,
+        source: "gift",
+        note: String(rawGiftItem?.note || "A crucial bridge gifted by the cosmos.").trim().slice(0, 180),
+        feedbackEligible: false
+      }
+    : null;
+  if (giftItem) discovered.set(giftItem.word.toLowerCase(), structuredClone(giftItem));
+  const giftUsed = Boolean(snapshot.giftUsed && giftItem);
+  const scoringDisabled = Boolean(snapshot.scoringDisabled || giftUsed);
+  const forfeited = Boolean(snapshot.forfeited || giftUsed);
+  const assist = scoringDisabled
+    ? studyAssistFor(snapshot.assist || snapshot.forfeitReason, giftUsed ? "gift" : "reveal")
+    : typeof snapshot.assist === "string" ? snapshot.assist.slice(0, 32) : "none";
+  const forfeitReason = forfeited
+    ? studyAssistFor(snapshot.forfeitReason || assist, giftUsed ? "gift" : "reveal")
+    : null;
 
   return {
     runId,
@@ -1295,14 +1327,16 @@ function hydrateRun(snapshot, players) {
     expiresAt: ranked && completedAt ? Math.max(expiresAt, completedAt + COMPLETED_RANKED_RUN_RETENTION_MS) : expiresAt,
     discovered,
     moves: nonnegativeCounter(snapshot.moves),
-    assist: typeof snapshot.assist === "string" ? snapshot.assist.slice(0, 32) : "none",
-    scoringDisabled: Boolean(snapshot.scoringDisabled),
-    forfeited: Boolean(snapshot.forfeited),
-    forfeitReason: typeof snapshot.forfeitReason === "string" ? snapshot.forfeitReason.slice(0, 32) : null,
+    assist,
+    scoringDisabled,
+    forfeited,
+    forfeitReason,
     forfeitedAt: snapshot.forfeitedAt == null ? null : Number.isFinite(Number(snapshot.forfeitedAt)) ? Number(snapshot.forfeitedAt) : null,
     revealRoute: Array.isArray(snapshot.revealRoute) ? structuredClone(snapshot.revealRoute.slice(0, 1_000)) : null,
     solutionRoute: Array.isArray(snapshot.solutionRoute) ? structuredClone(snapshot.solutionRoute.slice(0, 1_000)) : null,
     solutionRecipes,
+    giftUsed,
+    giftItem,
     twistUsed: Boolean(snapshot.twistUsed),
     twistedPairKey: typeof snapshot.twistedPairKey === "string" ? snapshot.twistedPairKey.slice(0, 160) : null,
     usedBend: Boolean(snapshot.usedBend),
@@ -1360,12 +1394,14 @@ export class RunRegistry {
       expiresAt: startedAt + Math.max((game.timeLimit || 0) * 1000 + 10_000, 30 * 60_000),
       discovered: new Map(game.starters.map((word) => [word.toLowerCase(), { word, source: "origin", feedbackEligible: true }])),
       moves: 0,
-      assist: scoringDisabled && String(forfeitReason).toLowerCase() === "sense" ? "sense" : scoringDisabled ? "reveal" : "none",
+      assist: scoringDisabled ? studyAssistFor(forfeitReason) : "none",
       scoringDisabled: Boolean(scoringDisabled),
       forfeited: Boolean(scoringDisabled),
-      forfeitReason: scoringDisabled ? String(forfeitReason || "reveal") : null,
+      forfeitReason: scoringDisabled ? studyAssistFor(forfeitReason) : null,
       forfeitedAt: scoringDisabled ? startedAt : null,
       revealRoute: null,
+      giftUsed: false,
+      giftItem: null,
       twistUsed: false,
       twistedPairKey: null,
       usedBend: false,
@@ -1487,6 +1523,35 @@ export class RunRegistry {
     return run;
   }
 
+  gift(run, item) {
+    if (run.giftUsed && run.giftItem) return structuredClone(run.giftItem);
+    if (run.submitted) throw serviceError(409, "This score was already submitted.", "already_submitted");
+    if (run.completedAt) throw serviceError(409, "This orbit is already complete.", "run_complete");
+
+    const word = String(item?.word || "").trim().slice(0, 80);
+    if (!word || word.toLowerCase() === String(run.game.target || "").trim().toLowerCase() || run.discovered.has(word.toLowerCase())) {
+      throw serviceError(422, "No undiscovered bridge word is available for this orbit.", "gift_unavailable");
+    }
+    const giftItem = {
+      word,
+      emoji: String(item?.emoji || "").trim().slice(0, 24),
+      category: item?.category == null ? null : String(item.category).trim().slice(0, 40) || null,
+      source: "gift",
+      note: String(item?.note || "A crucial bridge gifted by the cosmos.").trim().slice(0, 180),
+      feedbackEligible: false
+    };
+    run.giftUsed = true;
+    run.giftItem = giftItem;
+    if (!run.forfeited || run.assist === "none") run.assist = "gift";
+    run.scoringDisabled = true;
+    run.forfeited = true;
+    run.forfeitReason ||= "gift";
+    run.forfeitedAt ||= Date.now();
+    run.discovered.set(giftItem.word.toLowerCase(), structuredClone(giftItem));
+    this.checkpoint(run);
+    return structuredClone(giftItem);
+  }
+
   addBend(run, item, assist) {
     if (run.completedAt) throw serviceError(409, "This orbit is already complete.", "run_complete");
     if (run.usedBend) throw serviceError(409, "Only one Reality Bend may be used in a run.", "bend_used");
@@ -1508,7 +1573,9 @@ export class RunRegistry {
       discovered: [...run.discovered.values()].map((item) => structuredClone(item)),
       history: run.history.map((step) => structuredClone(step)),
       usedBend: Boolean(run.usedBend),
-      bendItem: run.bendItem ? structuredClone(run.bendItem) : null
+      bendItem: run.bendItem ? structuredClone(run.bendItem) : null,
+      giftUsed: Boolean(run.giftUsed),
+      giftItem: run.giftItem ? structuredClone(run.giftItem) : null
     };
   }
 

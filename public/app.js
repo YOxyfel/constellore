@@ -2,14 +2,14 @@ import { createCtrlHoverController } from "./ctrl-hover.mjs?v=1.0.0";
 import { createShiftBoardController } from "./shift-board.mjs?v=1.0.0";
 import { findOpenSpawn, orderInventory, packOrbit, pickMagneticTarget } from "./frictionless.mjs?v=1.0.0";
 import { buildMasteryCollections, recordRecipeDiscovery, sanitizeRecipeMasteryState, summarizeMasteryCollections } from "./recipe-mastery.mjs?v=1.0.0";
-import { buildGhost, feedbackCuePolicy, ghostSnapshot, grantSenseCharges, reconcileCloudProgression, refillSenseWallet, sanitizeFeedbackPreferences, sanitizeSenseWallet, spendSenseCharge } from "./engagement-features.mjs?v=1.0.1";
+import { QUICK_TIP_LIMIT, buildGhost, feedbackCuePolicy, ghostSnapshot, ghostTrailPreviewState, grantSenseCharges, reconcileCloudProgression, refillSenseWallet, sanitizeFeedbackPreferences, sanitizeSenseWallet, selectQuickTip, spendSenseCharge } from "./engagement-features.mjs?v=1.1.0";
 import { firstOrbitProgress, firstOrbitWrongPairMessage, resolveFirstOrbitCombination, sanitizeFirstOrbitState } from "./first-orbit.mjs?v=1.0.0";
 import { buildConstellationCard, constellationCardFilename, constellationCardShareText, renderConstellationCardSvg } from "./constellation-card.mjs?v=1.0.0";
 import { COSMETIC_CATALOG, cosmeticClasses, cosmeticOptions, sanitizeCosmeticLoadout, transformFeedbackAudio } from "./cosmetic-economy.mjs?v=1.0.0";
 import { createRecipeFeedbackRequest } from "./recipe-feedback.mjs?v=1.0.0";
 import { selectUniverse } from "./universe-director.mjs?v=1.0.0";
 import { listPendingScoreRecords, removePendingScoreRecord, savePendingScoreRecord } from "./pending-scores.mjs?v=1.0.0";
-import { buildMissionBriefing } from "./mission-briefing.mjs?v=1.0.0";
+import { buildMissionBriefing } from "./mission-briefing.mjs?v=1.0.1";
 
 const starterEmoji = { Earth: "🌍", Water: "💧", Fire: "🔥", Air: "💨" };
 const starterCategory = { Earth: "nature", Water: "force", Fire: "force", Air: "force" };
@@ -141,6 +141,7 @@ const state = {
   leaderboardScope: "daily",
   leaderboardDivision: "pure",
   sense: { words: [], timer: null, active: false },
+  powerups: { tipsUsed: 0, tipIds: [], giftUsed: false, giftUnavailable: false, giftItem: null, busy: false },
   recipeFeedback: { move: 0, timer: null, pendingTimer: null, submitted: false },
   scoreSubmission: { runId: "", activeSaved: false, pendingSaved: false, inFlight: false, exitAction: null, exitLabel: "" },
   recoveryKit: null,
@@ -183,10 +184,14 @@ const els = {
   timerHud: $("#timerHud"), timerValue: $("#timerValue"), pathCount: $("#pathCount"),
   milestoneText: $("#milestoneText"), milestoneBar: $("#milestoneBar"), wishState: $("#wishState"),
   senseButton: $("#senseButton"), senseHudCount: $("#senseHudCount"), senseDialog: $("#senseDialog"),
+  quickTipCount: $("#quickTipCount"), useQuickTip: $("#useQuickTip"), quickTipMessage: $("#quickTipMessage"),
+  wordGiftCard: $("#wordGiftCard"), wordGiftState: $("#wordGiftState"), useWordGift: $("#useWordGift"), wordGiftMessage: $("#wordGiftMessage"),
   rivalGhost: $("#rivalGhost"), ghostCallsign: $("#ghostCallsign"), ghostStatus: $("#ghostStatus"), ghostPace: $("#ghostPace"),
+  ghostPreview: $("#ghostPreview"), ghostPreviewCount: $("#ghostPreviewCount"), ghostPreviewProgress: $("#ghostPreviewProgress"), ghostPreviewBar: $("#ghostPreviewBar"), ghostPreviewSteps: $("#ghostPreviewSteps"),
   paywallDialog: $("#paywallDialog"), wishDialog: $("#wishDialog"), atlasDialog: $("#atlasDialog"),
   missionBriefingDialog: $("#missionBriefingDialog"),
   profileDialog: $("#profileDialog"), shareDialog: $("#shareDialog"), resultDialog: $("#resultDialog"),
+  updatesDialog: $("#updatesDialog"),
   exchangeDialog: $("#exchangeDialog"), marketBuyDialog: $("#marketBuyDialog"), leaderboardDialog: $("#leaderboardDialog"),
   revealDialog: $("#revealDialog"), revealController: $("#revealController"), revealPathButton: $("#revealPathButton"),
   revealStepText: $("#revealStepText"), revealPause: $("#revealPause"), revealSpeed: $("#revealSpeed"),
@@ -361,7 +366,7 @@ function recordMasteryStep(step) {
   saveProfile({ fields: ["mastery"] });
   track("mastery_progressed", { stars: award.recipe.stars, completed: Boolean(newlyCompleted) });
   if (newlyCompleted) {
-    showToast(`${newlyCompleted.title} collection complete · +1 Sense`);
+    showToast(`${newlyCompleted.title} collection complete · +1 Compass charge`);
     track("mastery_completed", { collection: newlyCompleted.id });
   } else {
     showToast(`Recipe Mastery · ${award.recipe.word} ${"★".repeat(award.recipe.stars)}${"☆".repeat(3 - award.recipe.stars)}`);
@@ -413,6 +418,25 @@ function renderCosmeticLoadout() {
   }));
 }
 
+function renderPowerups() {
+  const activeRun = Boolean(state.game && state.run && !state.finished && !state.startingRun && !state.reveal.active && !state.reveal.pending);
+  const tipsUsed = clamp(Number(state.powerups?.tipsUsed) || 0, 0, QUICK_TIP_LIMIT);
+  const tipsRemaining = QUICK_TIP_LIMIT - tipsUsed;
+  const senseCount = sanitizeSenseWallet(profile.senseWallet).charges;
+  els.quickTipCount.textContent = `${tipsRemaining} / ${QUICK_TIP_LIMIT}`;
+  els.useQuickTip.disabled = !activeRun || state.powerups.busy || tipsRemaining <= 0;
+  els.wordGiftState.textContent = state.powerups.giftUsed ? "USED" : state.powerups.giftUnavailable ? "NO BRIDGE" : "1 READY";
+  els.wordGiftCard.classList.toggle("is-used", state.powerups.giftUsed);
+  els.wordGiftCard.classList.toggle("is-unavailable", state.powerups.giftUnavailable);
+  els.useWordGift.disabled = !activeRun || state.powerups.busy || state.powerups.giftUsed || state.powerups.giftUnavailable;
+  $("#useSense").disabled = !activeRun || state.powerups.busy || !senseCount;
+}
+
+function resetPowerupControlLabels() {
+  els.useWordGift.querySelector("span").textContent = "Summon gift · 0 score";
+  $("#useSense span").textContent = "Activate compass · 0 score";
+}
+
 function renderProfile() {
   setupWeeklyState();
   setupDailyState();
@@ -449,10 +473,11 @@ function renderProfile() {
   const senseCount = sanitizeSenseWallet(profile.senseWallet).charges;
   $("#profileSenseCount").textContent = senseCount;
   $("#senseDialogCount").textContent = senseCount;
-  els.senseHudCount.textContent = senseCount;
+  els.senseHudCount.textContent = "KIT";
   $("#senseEarnNote").textContent = profile.premium ? "Founder: two charges return each UTC day." : "One charge returns each UTC day.";
-  $("#useSense").disabled = !state.game || state.finished || !senseCount;
-  $("#buySense").disabled = profile.stardust < 90 || senseCount >= 9;
+  els.senseButton.setAttribute("aria-label", `Open Cosmic Powerups; ${senseCount} Star Compass charge${senseCount === 1 ? "" : "s"}`);
+  $("#buySense").disabled = state.powerups.busy || profile.stardust < 90 || senseCount >= 9;
+  renderPowerups();
   const feedbackPreferences = sanitizeFeedbackPreferences(profile.feedbackPreferences);
   profile.feedbackPreferences = feedbackPreferences;
   for (const [id, enabled] of [["soundPreference", feedbackPreferences.sound], ["hapticPreference", feedbackPreferences.haptics]]) {
@@ -1347,6 +1372,11 @@ function buildActiveRunSnapshot({ completed = false } = {}) {
       usedBend: state.wished,
       usedWish: state.wished,
       bendItem: snapshotItem(bendItem),
+      tipsUsed: clamp(Number(state.powerups.tipsUsed) || 0, 0, QUICK_TIP_LIMIT),
+      tipIds: state.powerups.tipIds.slice(0, QUICK_TIP_LIMIT),
+      giftUsed: Boolean(state.powerups.giftUsed),
+      giftUnavailable: Boolean(state.powerups.giftUnavailable),
+      giftItem: snapshotItem(state.powerups.giftItem),
       assist: state.assist,
       scoringDisabled: state.scoringDisabled
     },
@@ -1539,7 +1569,14 @@ function hydrateRestoredRun(payload, snapshot) {
   state.wished = Boolean(progress.usedBend || progress.usedWish || progress.wished);
   state.bendItem = snapshotItem(progress.bendItem);
   state.assist = payload.run?.assist || progress.assist || "none";
-  state.scoringDisabled = payload.run?.scoreEligible === false || payload.game?.scoreEligible === false || Boolean(progress.scoringDisabled) || state.assist === "reveal";
+  const matchingSnapshot = snapshot?.run?.id === payload.run?.id ? snapshot.progress || {} : {};
+  state.powerups.tipsUsed = clamp(Number(matchingSnapshot.tipsUsed ?? progress.tipsUsed) || 0, 0, QUICK_TIP_LIMIT);
+  state.powerups.tipIds = Array.isArray(matchingSnapshot.tipIds) ? [...new Set(matchingSnapshot.tipIds.map((value) => String(value || "").slice(0, 60)).filter(Boolean))].slice(0, QUICK_TIP_LIMIT) : [];
+  state.powerups.giftUsed = Boolean(progress.giftUsed || matchingSnapshot.giftUsed || state.assist === "gift");
+  state.powerups.giftUnavailable = !state.powerups.giftUsed && Boolean(matchingSnapshot.giftUnavailable);
+  state.powerups.giftItem = snapshotItem(progress.giftItem) || snapshotItem(matchingSnapshot.giftItem);
+  state.powerups.busy = false;
+  state.scoringDisabled = payload.run?.scoreEligible === false || payload.game?.scoreEligible === false || Boolean(progress.scoringDisabled) || ["reveal", "sense", "gift"].includes(state.assist);
   const completedAt = Date.parse(progress.completedAt || "");
   if (progress.completed && Number.isFinite(completedAt) && Number.isFinite(state.startedAt)) {
     state.finishedElapsedSeconds = Math.max(1, Math.round((completedAt - state.startedAt) / 1000));
@@ -1641,6 +1678,8 @@ function startWithGame(game, run, { restored = false } = {}) {
   state.wished = false;
   state.bendItem = null;
   state.rewardedWish = false;
+  state.powerups = { tipsUsed: 0, tipIds: [], giftUsed: false, giftUnavailable: false, giftItem: null, busy: false };
+  resetPowerupControlLabels();
   state.startedAt = run?.startedAt ? Date.parse(run.startedAt) : Date.now();
   state.finishedElapsedSeconds = 0;
   state.remainingSeconds = run?.deadlineAt ? Math.max(0, Math.ceil((Date.parse(run.deadlineAt) - Date.now()) / 1000)) : game.timeLimit || 0;
@@ -1701,6 +1740,7 @@ function returnHome() {
   state.run = null;
   state.pendingMission = null;
   state.nodes = [];
+  resetPowerupControlLabels();
   clearActiveRunSnapshot();
   els.gameScreen.classList.remove("training-orbit");
   els.firstOrbitGuide.hidden = true;
@@ -1757,6 +1797,24 @@ function stopTimer() {
   state.timerId = null;
 }
 
+function updateStudyHud() {
+  if (!state.game) return;
+  const training = state.game.mode === "training";
+  const study = !training && state.scoringDisabled;
+  els.lawPill.classList.toggle("study-status", study);
+  els.universePill.hidden = training || study;
+  if (training) {
+    els.lawPill.hidden = false;
+    els.lawPill.textContent = "0 SCORE · NO REWARDS";
+  } else if (study) {
+    els.lawPill.hidden = false;
+    els.lawPill.textContent = "◇ STUDY · 0 SCORE";
+  } else {
+    els.lawPill.hidden = !state.game.law;
+    els.lawPill.textContent = state.game.law ? `${state.game.law.name}: ${state.game.law.description}` : "";
+  }
+}
+
 function updateHud() {
   if (!state.game) return;
   els.movesValue.textContent = state.game.moveLimit ? `${state.moves}/${state.game.moveLimit}` : String(state.moves);
@@ -1769,6 +1827,7 @@ function updateHud() {
     els.revealPathButton.classList.toggle("assisted", state.scoringDisabled);
     els.revealPathButton.querySelector("b").textContent = state.scoringDisabled && alreadyRevealed ? "0 SCORE" : "REVEAL";
   }
+  updateStudyHud();
   updateWishButton();
 }
 
@@ -1798,32 +1857,142 @@ function applySenseGlow(words) {
   state.sense.timer = setTimeout(clearSenseGlow, 10_000);
 }
 
-function openSense() {
+function openPowerups() {
   if (!state.game || state.finished) return;
   if (state.startingRun || state.reveal.active || state.reveal.pending || state.busyPairs.size) return showToast("Let the current constellation settle first.");
   stopTimer();
+  els.quickTipMessage.classList.remove("error");
+  els.quickTipMessage.textContent = state.powerups.tipsUsed >= QUICK_TIP_LIMIT
+    ? "All three Quick Tips have been used for this orbit."
+    : "Tips use only your visible board state and never reveal the hidden route.";
+  els.wordGiftMessage.classList.remove("error");
+  els.wordGiftMessage.textContent = state.powerups.giftUsed
+    ? `${state.powerups.giftItem?.word || "Your bridge word"} was gifted. This orbit is permanently Study.`
+    : state.powerups.giftUnavailable
+      ? "Every safe bridge for this target is already known, so no Word Gift is available."
+    : "Using this permanently changes the orbit to Study.";
+  $("#senseMessage").classList.remove("error");
   $("#senseMessage").textContent = "";
   renderProfile();
+  els.senseDialog.scrollTop = 0;
   els.senseDialog.showModal();
-  track("sense_opened", { mode: state.mode });
+  track("powerups_opened", { mode: state.mode });
+}
+
+function useQuickTip() {
+  if (!state.run || state.finished || state.reveal.active || state.reveal.pending || state.powerups.busy) return;
+  const tip = selectQuickTip({
+    mode: state.mode,
+    used: state.powerups.tipsUsed,
+    moves: state.moves,
+    discoveries: state.words.length,
+    boardWords: state.nodes.length,
+    seed: state.game?.seed,
+    seen: state.powerups.tipIds
+  });
+  els.quickTipMessage.classList.remove("error");
+  els.quickTipMessage.textContent = tip.text;
+  if (!tip.available) return renderPowerups();
+  state.powerups.tipsUsed += 1;
+  state.powerups.tipIds.push(tip.id);
+  renderPowerups();
+  scheduleRunSave();
+  playFeedback("place");
+  track("quick_tip_used", { mode: state.mode, tip: tip.id, remaining: tip.remaining });
+}
+
+async function useWordGift() {
+  if (!state.run || state.finished || state.reveal.active || state.reveal.pending || state.powerups.busy || state.powerups.giftUsed) return;
+  const runId = state.run.id;
+  const orbitGeneration = state.orbitGeneration;
+  const priorAssist = state.assist;
+  const priorScoringDisabled = state.scoringDisabled;
+  const priorRun = { ...state.run };
+  const label = els.useWordGift.querySelector("span");
+  const original = label.textContent;
+  state.powerups.busy = true;
+  label.textContent = "Summoning a bridge…";
+  els.wordGiftMessage.classList.remove("error");
+  els.wordGiftMessage.textContent = "The cosmos is selecting an undiscovered bridge without exposing its recipe…";
+  // Gift is a strong route intervention. Commit Study locally before the
+  // request so a lost success response can never preserve a ranked-looking run.
+  state.assist = ["reveal", "sense"].includes(priorAssist) ? priorAssist : "gift";
+  state.scoringDisabled = true;
+  state.run = { ...state.run, ranked: false, assisted: true, scoreEligible: false, leaderboardEligible: false };
+  updateHud();
+  renderPowerups();
+  scheduleRunSave();
+  try {
+    const result = await fetchJson("/api/run/gift", {
+      method: "POST",
+      headers: authHeaders({ "Content-Type": "application/json" }),
+      body: JSON.stringify({ runId, runToken: priorRun.token })
+    });
+    if (state.run?.id !== runId || state.orbitGeneration !== orbitGeneration) return;
+    const received = snapshotItem({ ...result.item, source: "gift", note: "A crucial bridge gifted by the cosmos." });
+    if (!received?.word) throw Object.assign(new Error("The cosmos returned an invalid Word Gift."), { code: "invalid_gift_response" });
+    const existing = state.words.find((item) => inventoryKey(item) === inventoryKey(received));
+    const item = existing || received;
+    if (!existing) state.words.push(item);
+    state.powerups.giftUsed = true;
+    state.powerups.giftItem = item;
+    state.assist = result.assist || state.assist || "gift";
+    state.scoringDisabled = result.scoringDisabled !== false;
+    state.run = { ...state.run, ranked: false, assisted: true, scoreEligible: false, leaderboardEligible: false };
+    renderInventory();
+    renderAtlas();
+    updateHud();
+    scheduleRunSave();
+    if (els.senseDialog.open) els.senseDialog.close();
+    placeFromTray(item);
+    showAlchemy(`✦ WORD GIFT · ${item.word} joined your Study orbit. Its recipe remains yours to discover.`);
+    playFeedback("sense", { analytics: true });
+    track("word_gift_used", { mode: state.mode, word: item.word });
+  } catch (error) {
+    if (state.run?.id !== runId || state.orbitGeneration !== orbitGeneration) return;
+    const confirmedBeforeForfeit = Number(error.status) >= 400 && Number(error.status) < 500;
+    if (confirmedBeforeForfeit) {
+      state.assist = priorAssist;
+      state.scoringDisabled = priorScoringDisabled;
+      state.run = priorRun;
+      if (error.code === "gift_unavailable") state.powerups.giftUnavailable = true;
+      els.wordGiftMessage.textContent = error.message;
+    } else {
+      els.wordGiftMessage.textContent = "The reply was interrupted. Fair play stays protected; retry Word Gift to recover the same bridge.";
+    }
+    els.wordGiftMessage.classList.add("error");
+    if (!els.senseDialog.open) showToast(error.code === "gift_unavailable" ? "No undiscovered bridge is available for this orbit." : "Word Gift could not confirm. This orbit remains Study; retry to recover it.");
+    updateHud();
+    scheduleRunSave();
+  } finally {
+    if (state.run?.id === runId && state.orbitGeneration === orbitGeneration) {
+      state.powerups.busy = false;
+      label.textContent = original;
+      renderProfile();
+      resumeTimerIfNeeded();
+    }
+  }
 }
 
 async function useConstellationSense() {
-  if (!state.run || state.finished || state.reveal.active || state.reveal.pending) return;
+  if (!state.run || state.finished || state.reveal.active || state.reveal.pending || state.powerups.busy) return;
   const preview = spendSenseCharge(profile.senseWallet);
   if (!preview.spent) {
-    $("#senseMessage").textContent = "No Sense charges remain. Earn one tomorrow or buy one with Stardust.";
+    $("#senseMessage").textContent = "No Star Compass charges remain. Earn one tomorrow or buy one with Stardust.";
     return;
   }
   const button = $("#useSense");
   const label = button.querySelector("span");
   const original = label.textContent;
   const runId = state.run.id;
+  const orbitGeneration = state.orbitGeneration;
   const priorWallet = sanitizeSenseWallet(profile.senseWallet);
   const priorAssist = state.assist;
   const priorScoringDisabled = state.scoringDisabled;
   const priorRun = { ...state.run };
+  state.powerups.busy = true;
   button.disabled = true;
+  renderPowerups();
   label.textContent = "Listening to the cosmos…";
   $("#senseMessage").textContent = "";
   // Sense forfeits fair-play rewards. Commit that locally before the request so
@@ -1841,7 +2010,7 @@ async function useConstellationSense() {
       headers: authHeaders({ "Content-Type": "application/json" }),
       body: JSON.stringify({ runId, runToken: priorRun.token })
     });
-    if (state.run?.id !== runId) return;
+    if (state.run?.id !== runId || state.orbitGeneration !== orbitGeneration) return;
     state.assist = result.assist || "sense";
     state.scoringDisabled = result.scoringDisabled !== false;
     state.run = { ...state.run, ranked: false, assisted: true, scoreEligible: false, leaderboardEligible: false };
@@ -1852,11 +2021,21 @@ async function useConstellationSense() {
     applySenseGlow(candidates);
     els.senseDialog.close();
     const names = candidates.map((entry) => entry.word).filter(Boolean).join(", ");
-    showAlchemy(names ? `CONSTELLATION SENSE · ${names} resonate for ten seconds.` : "CONSTELLATION SENSE · Follow the brightest recent discoveries.");
+    showAlchemy(names ? `STAR COMPASS · ${names} resonate for ten seconds.` : "STAR COMPASS · Follow the brightest recent discoveries.");
     playFeedback("sense", { analytics: true });
     track("sense_used", { mode: state.mode, words: candidates.length });
   } catch (error) {
     const confirmedBeforeForfeit = Number(error.status) >= 400 && Number(error.status) < 500;
+    if (state.run?.id !== runId || state.orbitGeneration !== orbitGeneration) {
+      if (confirmedBeforeForfeit) {
+        const refund = grantSenseCharges(profile.senseWallet, 1);
+        profile.senseWallet = refund.wallet;
+        saveProfile({ cloud: false });
+        renderProfile();
+        if (refund.granted) showToast("A Star Compass charge was returned after the earlier orbit closed.");
+      }
+      return;
+    }
     if (confirmedBeforeForfeit && state.run?.id === runId) {
       profile.senseWallet = priorWallet;
       state.assist = priorAssist;
@@ -1867,20 +2046,25 @@ async function useConstellationSense() {
       scheduleRunSave();
       $("#senseMessage").textContent = error.message;
     } else {
-      $("#senseMessage").textContent = "The signal response was interrupted. To protect fair play, this orbit remains assisted and the Sense charge stays spent.";
+      $("#senseMessage").textContent = "The signal response was interrupted. To protect fair play, this orbit remains assisted and the Compass charge stays spent.";
       scheduleRunSave();
     }
+    if (!els.senseDialog.open) showToast(confirmedBeforeForfeit ? error.message : "Star Compass could not confirm. This orbit remains Study.");
   } finally {
-    label.textContent = original;
-    renderProfile();
+    if (state.run?.id === runId && state.orbitGeneration === orbitGeneration) {
+      state.powerups.busy = false;
+      label.textContent = original;
+      renderProfile();
+    }
   }
 }
 
 function buySenseCharge() {
+  if (state.powerups.busy) return;
   const wallet = sanitizeSenseWallet(profile.senseWallet);
   track("sense_purchase_started", { cost: 90, chargesBefore: wallet.charges });
   if (wallet.charges >= 9) {
-    $("#senseMessage").textContent = "Your Sense reserve is already full.";
+    $("#senseMessage").textContent = "Your Star Compass reserve is already full.";
     return;
   }
   if (profile.stardust < 90) {
@@ -1890,7 +2074,7 @@ function buySenseCharge() {
   profile.stardust -= 90;
   profile.senseWallet = grantSenseCharges(wallet, 1).wallet;
   saveProfile({ fields: ["progression"] });
-  $("#senseMessage").textContent = "One Sense charge joined your reserve.";
+  $("#senseMessage").textContent = "One Star Compass charge joined your reserve.";
   playFeedback("place");
   track("sense_purchased", { cost: 90, chargesBefore: wallet.charges, chargesAfter: profile.senseWallet.charges });
 }
@@ -1912,10 +2096,39 @@ function ghostTimeline({ elapsedMs, moves }) {
   });
 }
 
+function hideGhostPreview() {
+  els.ghostPreview.hidden = true;
+  els.ghostPreviewCount.textContent = "0 / 0";
+  els.ghostPreviewProgress.setAttribute("aria-valuemax", "1");
+  els.ghostPreviewProgress.setAttribute("aria-valuenow", "0");
+  els.ghostPreviewBar.style.width = "0%";
+  els.ghostPreviewSteps.replaceChildren();
+}
+
+function renderGhostPreview(rivalStars, estimated) {
+  if (!state.game || !state.ghost.model || !profile.rivalGhostEnabled || state.game.mode === "training" || state.finished) return hideGhostPreview();
+  const preview = ghostTrailPreviewState({ current: rivalStars, total: estimated, windowSize: 3, seed: state.game.seed });
+  if (!preview.total) return hideGhostPreview();
+  els.ghostPreview.hidden = false;
+  els.ghostPreviewCount.textContent = `${preview.current} / ${preview.total}`;
+  els.ghostPreviewProgress.setAttribute("aria-valuemax", String(preview.total));
+  els.ghostPreviewProgress.setAttribute("aria-valuenow", String(preview.current));
+  els.ghostPreviewProgress.setAttribute("aria-valuetext", `${preview.current} of ${preview.total} projected route steps; all words encrypted`);
+  els.ghostPreviewBar.style.width = `${Math.round(preview.progress * 100)}%`;
+  els.ghostPreviewSteps.replaceChildren(...preview.steps.map((step) => {
+    const placeholder = document.createElement("span");
+    placeholder.className = `ghost-preview-step ${step.status}`;
+    placeholder.style.setProperty("--ghost-mask", `${step.widthPercent}%`);
+    placeholder.append(document.createElement("i"));
+    return placeholder;
+  }));
+}
+
 async function startRivalGhost() {
   stopRivalGhost();
   if (!state.game || state.finished) return;
   if (!profile.rivalGhostEnabled) {
+    hideGhostPreview();
     els.rivalGhost.hidden = false;
     els.rivalGhost.setAttribute("aria-pressed", "false");
     els.rivalGhost.setAttribute("aria-label", "Show Rival Ghost pace");
@@ -1963,6 +2176,7 @@ function renderRivalGhost() {
   els.rivalGhost.setAttribute("aria-label", profile.rivalGhostEnabled ? "Hide Rival Ghost pace" : "Show Rival Ghost pace");
   els.ghostCallsign.textContent = state.ghost.model.label.toUpperCase();
   if (!profile.rivalGhostEnabled) {
+    hideGhostPreview();
     els.ghostStatus.textContent = "Ghost hidden · tap to race";
     els.ghostPace.textContent = "OFF";
     return;
@@ -1985,6 +2199,7 @@ function renderRivalGhost() {
       : snapshot.relation === "behind"
         ? `Rival leads by ${gap} star${gap === 1 ? "" : "s"}`
         : "Neck and neck";
+  renderGhostPreview(rivalStars, estimated);
   if (snapshot.relation === "ahead" && state.ghost.lastRelation && state.ghost.lastRelation !== "ahead") playFeedback("ghostPass");
   state.ghost.lastRelation = snapshot.relation;
 }
@@ -2003,6 +2218,7 @@ function stopRivalGhost({ completed } = {}) {
   state.ghost.model = null;
   state.ghost.lastRelation = "";
   els.rivalGhost.hidden = true;
+  hideGhostPreview();
 }
 
 function toggleRivalGhost() {
@@ -2011,6 +2227,7 @@ function toggleRivalGhost() {
   if (profile.rivalGhostEnabled) void startRivalGhost();
   else {
     stopRivalGhost();
+    hideGhostPreview();
     els.rivalGhost.hidden = false;
     els.rivalGhost.setAttribute("aria-pressed", "false");
     els.rivalGhost.setAttribute("aria-label", "Show Rival Ghost pace");
@@ -2048,15 +2265,15 @@ function renderInventory() {
   const controls = visible.map((item) => {
     const button = document.createElement("button");
     button.type = "button";
-    button.className = `inventory-word${["wish", "market"].includes(item.source) ? " wish" : ""}${item.source === "twist" ? " twist" : ""}${item.ghost ? " reveal-ghost" : ""}${senseWordActive(item) ? " sense-hot" : ""}${firstOrbitWordActive(item) ? " tutorial-hot" : ""}`;
+    button.className = `inventory-word${["wish", "market"].includes(item.source) ? " wish" : ""}${item.source === "gift" ? " gift" : ""}${item.source === "twist" ? " twist" : ""}${item.ghost ? " reveal-ghost" : ""}${senseWordActive(item) ? " sense-hot" : ""}${firstOrbitWordActive(item) ? " tutorial-hot" : ""}`;
     button.dataset.word = inventoryKey(item);
     const revealLocked = state.reveal.active || state.reveal.pending;
     const unavailable = state.finished || revealLocked || item.ghost;
     button.draggable = false;
     button.disabled = unavailable;
-    button.setAttribute("aria-label", item.ghost ? `${item.word}, temporary revealed word. Not saved or playable.` : unavailable ? `${item.word}. Unavailable while this orbit is locked.` : `Add ${item.word} to the cosmos. Drag onto a board word to combine immediately.`);
+    button.setAttribute("aria-label", item.ghost ? `${item.word}, temporary revealed word. Not saved or playable.` : unavailable ? `${item.word}. Unavailable while this orbit is locked.` : `Add ${item.word}${item.source === "gift" ? ", Word Gift bridge" : ""} to the cosmos. Drag onto a board word to combine immediately.`);
     if (!unavailable) button.title = `Drag ${item.word} onto a board word to combine`;
-    const tag = item.ghost ? "REVEALED" : item.source === "twist" ? "TWIST" : item.source === "wish" ? "WISH" : item.source === "market" ? "VAULT" : item.source?.startsWith("ai") ? "AI" : "";
+    const tag = item.ghost ? "REVEALED" : item.source === "gift" ? "GIFT" : item.source === "twist" ? "TWIST" : item.source === "wish" ? "WISH" : item.source === "market" ? "VAULT" : item.source?.startsWith("ai") ? "AI" : "";
     const masteryStars = masteryStarsForWord(item.word);
     button.innerHTML = `<span class="emoji">${escapeHtml(item.emoji)}</span><span class="word">${escapeHtml(item.word)}</span>${tag ? `<span class="source-tag">${tag}</span>` : ""}${masteryStars ? `<span class="mastery-tag" aria-label="${masteryStars} recipe mastery stars">★${masteryStars}</span>` : ""}`;
     let suppressClickUntil = 0;
@@ -2181,6 +2398,54 @@ function undoBoardClear() {
   showAlchemy("Board restored · score unchanged.");
 }
 
+function boardRectangle(rectangle) {
+  const left = Number(rectangle?.left ?? rectangle?.x) || 0;
+  const top = Number(rectangle?.top ?? rectangle?.y) || 0;
+  const width = Math.max(0, Number(rectangle?.width) || 0);
+  const height = Math.max(0, Number(rectangle?.height) || 0);
+  return { left, top, width, height, right: left + width, bottom: top + height };
+}
+
+function rectanglesOverlap(leftValue, rightValue, gap = 0) {
+  const left = boardRectangle(leftValue);
+  const right = boardRectangle(rightValue);
+  return !(left.right + gap <= right.left || right.right + gap <= left.left || left.bottom + gap <= right.top || right.bottom + gap <= left.top);
+}
+
+function visibleBoardOverlayRectangles(boardRect = els.board.getBoundingClientRect()) {
+  const candidates = [els.rivalGhost, els.ghostPreview, document.querySelector(".board-tools"), document.querySelector(".run-milestone"), els.firstOrbitGuide];
+  return candidates.map((element) => {
+    if (!element || element.hidden) return null;
+    const bounds = element.getBoundingClientRect();
+    if (bounds.width < 1 || bounds.height < 1) return null;
+    const left = clamp(bounds.left - boardRect.left, 0, boardRect.width);
+    const top = clamp(bounds.top - boardRect.top, 0, boardRect.height);
+    const right = clamp(bounds.right - boardRect.left, 0, boardRect.width);
+    const bottom = clamp(bounds.bottom - boardRect.top, 0, boardRect.height);
+    return right > left && bottom > top ? { left, top, width: right - left, height: bottom - top } : null;
+  }).filter(Boolean);
+}
+
+function packOrbitAroundOverlays(items, bounds, blockers) {
+  const packed = packOrbit(items, bounds);
+  if (packed && packed.every((entry) => blockers.every((blocker) => !rectanglesOverlap(entry, blocker, bounds.gap)))) return packed;
+  const indexed = items.map((item, index) => ({ ...item, index }));
+  const ordered = indexed.slice().sort((left, right) => right.height - left.height || right.width - left.width || left.index - right.index);
+  const placed = [];
+  for (const item of ordered) {
+    const preferred = {
+      x: bounds.left + bounds.width * .5 - item.width * .5 + ((item.index % 5) - 2) * 18,
+      y: bounds.top + bounds.height * .48 - item.height * .5 + ((item.index % 4) - 1.5) * 15
+    };
+    const position = findOpenSpawn(preferred, item, [...blockers, ...placed], bounds, { gap: bounds.gap, step: 14 });
+    if (!position) return null;
+    const candidate = { id: item.id, x: position.x, y: position.y, width: item.width, height: item.height, index: item.index };
+    if ([...blockers, ...placed].some((blocker) => rectanglesOverlap(candidate, blocker, bounds.gap))) return null;
+    placed.push(candidate);
+  }
+  return placed.sort((left, right) => left.index - right.index).map(({ index, ...entry }) => entry);
+}
+
 function tidyOrbit(options = {}) {
   if (els.tidyBoard.disabled) return;
   cancelActiveTrayDrag();
@@ -2198,13 +2463,14 @@ function tidyOrbit(options = {}) {
   const padding = boardRect.width < 500 ? 10 : 18;
   const top = boardRect.width < 500 ? 64 : 72;
   const bottom = boardRect.width < 500 ? 70 : 64;
-  const packed = packOrbit(measured, {
+  const packBounds = {
     left: padding,
     top,
     width: Math.max(1, boardRect.width - padding * 2),
     height: Math.max(1, boardRect.height - top - bottom),
     gap: 10
-  });
+  };
+  const packed = packOrbitAroundOverlays(measured, packBounds, visibleBoardOverlayRectangles(boardRect));
   if (!packed) return showToast("These words need a little more room to tidy safely.");
   const byId = new Map(packed.map((entry) => [String(entry.id), entry]));
   for (const node of state.nodes) {
@@ -2424,7 +2690,7 @@ function releaseCtrlHover(event) {
 function createBoardNode(node, isNew) {
   const button = document.createElement("button");
   button.type = "button";
-  button.className = `board-word${isNew ? " appear" : ""}${isNew && node.shiftStamped ? " shift-stamped" : ""}${["wish", "market"].includes(node.item.source) ? " wish" : ""}${node.item.source === "twist" || node.cosmicTwist ? " cosmic-twist" : ""}${node.item.ghost ? " reveal-ghost" : ""}${node.revealRole ? ` reveal-${node.revealRole}` : ""}${state.selectedNodeId === node.id ? " keyboard-selected" : ""}${senseWordActive(node.item) ? " sense-hot" : ""}${firstOrbitWordActive(node.item) ? " tutorial-hot" : ""}`;
+  button.className = `board-word${isNew ? " appear" : ""}${isNew && node.shiftStamped ? " shift-stamped" : ""}${["wish", "market"].includes(node.item.source) ? " wish" : ""}${node.item.source === "gift" ? " gift" : ""}${node.item.source === "twist" || node.cosmicTwist ? " cosmic-twist" : ""}${node.item.ghost ? " reveal-ghost" : ""}${node.revealRole ? ` reveal-${node.revealRole}` : ""}${state.selectedNodeId === node.id ? " keyboard-selected" : ""}${senseWordActive(node.item) ? " sense-hot" : ""}${firstOrbitWordActive(node.item) ? " tutorial-hot" : ""}`;
   button.dataset.id = node.id;
   button.style.setProperty("--x", `${node.x}px`);
   button.style.setProperty("--y", `${node.y}px`);
@@ -2436,7 +2702,7 @@ function createBoardNode(node, isNew) {
     ? `${node.item.word}, revealed constellation word. Not playable.`
     : unavailable
       ? `${node.item.word}. Unavailable while this orbit is locked.`
-      : `${node.item.word}${node.item.source === "twist" || node.cosmicTwist ? ", Cosmic Twist discovery" : ""}. Drag onto another word to combine. Hold Shift while hovering to remove; grab it first and then hold Shift while dragging to copy.`);
+      : `${node.item.word}${node.item.source === "gift" ? ", Word Gift bridge" : node.item.source === "twist" || node.cosmicTwist ? ", Cosmic Twist discovery" : ""}. Drag onto another word to combine. Hold Shift while hovering to remove; grab it first and then hold Shift while dragging to copy.`);
   button.setAttribute("aria-pressed", String(state.selectedNodeId === node.id));
   button.innerHTML = `<span class="emoji">${escapeHtml(node.item.emoji)}</span><span>${escapeHtml(node.item.word)}</span>`;
   button.addEventListener("pointerdown", (event) => startNodeDrag(event, node, button));
@@ -2509,7 +2775,7 @@ function placeFromTray(item, point) {
     const occupied = [...els.boardItems.querySelectorAll(".board-word")].map((element) => {
       const bounds = element.getBoundingClientRect();
       return { left: bounds.left - rect.left, top: bounds.top - rect.top, width: bounds.width, height: bounds.height };
-    });
+    }).concat(visibleBoardOverlayRectangles(rect));
     const estimatedWidth = clamp(56 + [...String(item.word || "")].length * 8.2, 82, 220);
     const open = findOpenSpawn({ x, y }, { width: estimatedWidth, height: 44 }, occupied, {
       left: 7, top: safeTop, width: Math.max(1, rect.width - 14), height: Math.max(1, rect.height - safeTop - 7)
@@ -3464,7 +3730,9 @@ function finishGame(won, reason = "", { skipSubmit = false } = {}) {
     ? "Training is never scored and grants no leaderboard place, Stardust, mastery, permanent discoveries, streak progress, or rewards."
     : revealed
       ? "One visual replay is available. It returns to mode selection and grants no progression."
-      : "Constellation Sense guided this study orbit. It grants no score, leaderboard place, rewards, or later discoveries.";
+      : state.powerups.giftUsed || state.assist === "gift"
+        ? "A Word Gift supplied a crucial bridge. This Study orbit grants no score, leaderboard place, rewards, or progression."
+        : "Star Compass guided this Study orbit. It grants no score, leaderboard place, rewards, or progression.";
   $("#resultReveal").hidden = won || assisted || !state.run;
   if (won && !assisted) {
     reward = calculateReward();
@@ -4319,12 +4587,14 @@ els.resetBoard.addEventListener("click", clearBoardWithUndo);
 els.tidyBoard.addEventListener("click", tidyOrbit);
 $("#undoBoardClear").addEventListener("click", undoBoardClear);
 $("#cancelTapChain").addEventListener("click", () => cancelTapChain({ announce: true }));
-els.senseButton.addEventListener("click", openSense);
+els.senseButton.addEventListener("click", openPowerups);
+els.useQuickTip.addEventListener("click", useQuickTip);
+els.useWordGift.addEventListener("click", useWordGift);
 $("#useSense").addEventListener("click", useConstellationSense);
 $("#buySense").addEventListener("click", buySenseCharge);
 els.rivalGhost.addEventListener("click", toggleRivalGhost);
 els.board.addEventListener("pointerdown", (event) => {
-  if (event.target.closest?.(".board-word, .board-tools, .rival-ghost, .tap-chain-status, .board-undo, .reveal-controller, .recipe-feedback")) return;
+  if (event.target.closest?.(".board-word, .board-tools, .rival-ghost, .ghost-preview, .tap-chain-status, .board-undo, .reveal-controller, .recipe-feedback")) return;
   cancelTapChain();
 });
 els.inventorySearch.addEventListener("input", (event) => {
@@ -4382,6 +4652,9 @@ $("#soundPreference").addEventListener("click", () => toggleFeedbackPreference("
 $("#hapticPreference").addEventListener("click", () => toggleFeedbackPreference("haptics"));
 $("#marketButton").addEventListener("click", () => openExchange("market"));
 $("#leaderboardButton").addEventListener("click", () => openLeaderboard());
+$("#updatesButton").addEventListener("click", () => {
+  if (!els.updatesDialog.open) els.updatesDialog.showModal();
+});
 $("#viewLeaderboards").addEventListener("click", () => openLeaderboard());
 $("#browseExchange").addEventListener("click", () => openExchange("market"));
 $("#confirmMarketBuy").addEventListener("click", confirmMarketPurchase);

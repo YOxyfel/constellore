@@ -86,7 +86,7 @@ test("authenticated HTTP runs produce verified Pure and Open leaderboard scores"
 
   const serviceWorkerResponse = await fetch(`${baseUrl}/play/service-worker.js`);
   assert.equal(serviceWorkerResponse.status, 200);
-  assert.match(await serviceWorkerResponse.text(), /constellore-shell-v18/);
+  assert.match(await serviceWorkerResponse.text(), /constellore-shell-v20/);
   const moduleResponse = await fetch(`${baseUrl}/frictionless.mjs`);
   assert.equal(moduleResponse.status, 200);
   assert.match(moduleResponse.headers.get("content-type") || "", /^text\/javascript/);

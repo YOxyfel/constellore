@@ -86,13 +86,65 @@ test("completed ranked runs remain resumable until the verified upload succeeds"
   assert.match(app, /runId: submission[.]runId, runToken: submission[.]runToken/);
 });
 
-test("Sense fails closed on an ambiguous network response", () => {
+test("Star Compass fails closed on an ambiguous network response", () => {
   const senseStart = app.indexOf("async function useConstellationSense()");
   const localCommit = app.indexOf("profile.senseWallet = preview.wallet", senseStart);
   const request = app.indexOf('await fetchJson("/api/run/sense"', senseStart);
   assert.ok(localCommit > senseStart && localCommit < request, "the charge and fair-play forfeit commit before the request");
   assert.match(app.slice(senseStart, app.indexOf("function buySenseCharge", senseStart)), /confirmedBeforeForfeit/);
-  assert.match(app.slice(senseStart, app.indexOf("function buySenseCharge", senseStart)), /this orbit remains assisted and the Sense charge stays spent/);
+  assert.match(app.slice(senseStart, app.indexOf("function buySenseCharge", senseStart)), /this orbit remains assisted and the Compass charge stays spent/);
+  assert.match(app.slice(senseStart, app.indexOf("function buySenseCharge", senseStart)), /state[.]orbitGeneration !== orbitGeneration/);
+  assert.match(app.slice(senseStart, app.indexOf("function buySenseCharge", senseStart)), /const refund = grantSenseCharges\(profile[.]senseWallet, 1\)/);
+  assert.match(app.slice(senseStart, app.indexOf("function buySenseCharge", senseStart)), /if \(!els[.]senseDialog[.]open\) showToast/);
+  assert.match(app, /[$]\("#buySense"\)[.]disabled = state[.]powerups[.]busy/);
+});
+
+test("Cosmic Powerups clearly separate score-safe Tips from assisted tools", () => {
+  const dialog = page.match(/<dialog\b(?=[^>]*\bid="senseDialog")[^>]*>[\s\S]*?<\/dialog>/i)?.[0] || "";
+  assert.match(dialog, /id="powerupsIntro"/);
+  for (const id of ["useQuickTip", "quickTipMessage", "useWordGift", "wordGiftMessage", "useSense", "senseMessage"]) {
+    assert.match(dialog, new RegExp(`id="${id}"`));
+  }
+  assert.match(dialog, /QUICK TIP[\s\S]*SCORE SAFE/);
+  assert.match(dialog, /WORD GIFT[\s\S]*STUDY · 0 SCORE/);
+  assert.match(dialog, /STAR COMPASS[\s\S]*STUDY · 0 SCORE/);
+  assert.equal((dialog.match(/<h3>/g) || []).length, 3, "each powerup is a navigable dialog heading");
+  assert.match(dialog, /remove score, rewards, streak credit, and leaderboard eligibility/);
+  assert.match(app, /function useQuickTip\([\s\S]*selectQuickTip\(\{[\s\S]*boardWords: state[.]nodes[.]length/);
+  assert.match(app, /tipsUsed: clamp\(Number\(state[.]powerups[.]tipsUsed\)/, "Quick Tip use survives interrupted-run restore");
+  assert.match(styles, /[.]powerup-action, [.]powerup-buy\s*\{[^}]*min-height:\s*48px/);
+  assert.match(styles, /[.]powerup-message\s*\{[^}]*font-size:\s*15px/);
+  assert.match(styles, /[.]powerups-modal\s*\{[^}]*height:\s*100dvh/);
+  assert.match(styles, /@media \(max-width: 700px\)[\s\S]*[.]powerup-grid\s*\{\s*grid-template-columns:\s*1fr/);
+});
+
+test("Word Gift is one-use, server-selected, durable, and fails closed before its request", () => {
+  const giftStart = app.indexOf("async function useWordGift()");
+  const giftEnd = app.indexOf("async function useConstellationSense()", giftStart);
+  const giftSource = app.slice(giftStart, giftEnd);
+  const localForfeit = giftSource.indexOf("state.scoringDisabled = true");
+  const request = giftSource.indexOf('fetchJson("/api/run/gift"');
+  assert.ok(localForfeit >= 0 && localForfeit < request, "Study status commits before the Gift request");
+  assert.match(giftSource, /body: JSON[.]stringify\(\{ runId, runToken: priorRun[.]token \}\)/);
+  assert.match(giftSource, /state[.]powerups[.]giftUsed = true/);
+  assert.match(giftSource, /retry Word Gift to recover the same bridge/);
+  assert.match(giftSource, /if \(!els[.]senseDialog[.]open\) showToast/);
+  assert.match(giftSource, /error[.]code === "gift_unavailable"[)] state[.]powerups[.]giftUnavailable = true/);
+  assert.match(app, /giftUsed: Boolean\(state[.]powerups[.]giftUsed\)/);
+  assert.match(app, /state[.]powerups[.]giftUsed = Boolean\(progress[.]giftUsed/);
+  assert.match(app, /state[.]assist === "gift"/);
+  assert.match(app, /item[.]source === "gift" \? "GIFT"/);
+  assert.match(app, /Word Gift bridge/);
+  assert.match(styles, /[.]board-word[.]gift\s*\{/);
+  assert.match(styles, /[.]inventory-word[.]gift [.]source-tag\s*\{/);
+});
+
+test("Study assistance remains visibly and accessibly marked for the whole orbit", () => {
+  assert.match(app, /function updateStudyHud\(\)/);
+  assert.match(app, /els[.]lawPill[.]textContent = "◇ STUDY · 0 SCORE"/);
+  assert.match(app, /updateHud\(\)[\s\S]*updateStudyHud\(\)/);
+  assert.match(app, /\["reveal", "sense", "gift"\][.]includes\(state[.]assist\)/);
+  assert.match(styles, /[.]game-target #lawPill[.]study-status:not\(\[hidden\]\)\s*\{[^}]*display:\s*block[^}]*font-size:\s*15px/);
 });
 
 test("cloud sync preserves only genuinely pending local fields", () => {
@@ -116,6 +168,31 @@ test("recipe feedback appears only for server-approved recipes and never in loca
 test("new cloud and onboarding status controls are announced and touch accessible", () => {
   assert.match(page, /id="cloudSyncStatus"[^>]+role="status"[^>]+aria-live="polite"/);
   assert.match(styles, /[.]first-orbit-modal [.]modal-close\s*\{\s*width:\s*44px;\s*height:\s*44px/);
+});
+
+test("Dev Logs exposes three accessible, readable, responsive update entries", () => {
+  const button = page.match(/<button\b(?=[^>]*\bid="updatesButton")[^>]*>/i)?.[0] || "";
+  assert.ok(button, "the updates trigger is present");
+  assert.match(button, /\baria-haspopup="dialog"/i);
+  assert.match(button, /\baria-controls="updatesDialog"/i);
+
+  const dialog = page.match(/<dialog\b(?=[^>]*\bid="updatesDialog")[^>]*>[\s\S]*?<\/dialog>/i)?.[0] || "";
+  assert.ok(dialog, "the updates dialog is present");
+  assert.match(dialog.match(/<dialog\b[^>]*>/i)?.[0] || "", /\baria-labelledby="updatesTitle"/i);
+  assert.match(dialog, /id="updatesTitle"/i);
+  assert.match(dialog, /data-close="updatesDialog"/i);
+  assert.equal((dialog.match(/\bdata-update-entry(?:=|\s|>)/gi) || []).length, 3, "the log has exactly three updates");
+  for (const label of ["Release", "Ctrl", "Shift"]) assert.match(dialog, new RegExp(`\\b${label}\\b`, "i"));
+
+  assert.match(app, /[$]\(["']#updatesButton["']\)[.]addEventListener\(["']click["']/);
+  assert.match(app, /(?:[$]\(["']#updatesDialog["']\)|els[.]updatesDialog)[\s\S]{0,160}?[.]showModal\(\)/);
+
+  const metadataRule = styles.match(/[.]updates-meta\s*\{([^}]+)\}/)?.[1] || "";
+  assert.match(metadataRule, /font-size:\s*15px/, "update metadata stays at the 15px readability floor");
+  const closeRule = styles.match(/[.]updates-modal\s+[.]modal-close\s*\{([^}]+)\}/)?.[1] || "";
+  assert.match(closeRule, /width:\s*44px/);
+  assert.match(closeRule, /height:\s*44px/);
+  assert.match(styles, /@media\s*\(max-width:\s*700px\)[\s\S]*[.]updates-(?:button|modal|trigger)/, "updates UI has a mobile-specific layout rule");
 });
 
 test("mode selection opens an accessible mission briefing before creating a run", () => {
@@ -166,6 +243,31 @@ test("Ctrl hover fusion is wired to board words and lifecycle cleanup", () => {
   assert.match(styles, /[.]board-word[.]ctrl-hover-source\s*\{/);
   assert.match(styles, /[.]board-word[.]ctrl-hover-queued\s*\{/);
   assert.match(styles, /[.]board-word[.]combining\s*\{/);
+});
+
+test("Cosmos Scout renders a spoiler-safe encrypted progress window", () => {
+  assert.match(page, /id="ghostPreview"[^>]+all words are hidden to prevent spoilers/);
+  assert.match(page, /id="ghostPreviewProgress"[^>]+role="progressbar"/);
+  const previewStart = app.indexOf("function renderGhostPreview(");
+  const previewEnd = app.indexOf("async function startRivalGhost()", previewStart);
+  const previewSource = app.slice(previewStart, previewEnd);
+  assert.match(previewSource, /ghostTrailPreviewState\(\{ current: rivalStars, total: estimated, windowSize: 3, seed: state[.]game[.]seed \}\)/);
+  assert.match(previewSource, /document[.]createElement\("span"\)/);
+  assert.doesNotMatch(previewSource, /recipe|ingredients|route[.]map|preview[.]word|step[.]word|state[.]game[.]route/);
+  assert.match(styles, /[.]ghost-preview-step::before, [.]ghost-preview-step::after\s*\{[^}]*filter:\s*blur/);
+  assert.match(styles, /[.]ghost-preview\s*\{[^}]*pointer-events:\s*none/);
+  assert.match(styles, /@media \(max-width: 700px\) and \(max-height: 500px\)[\s\S]*[.]ghost-preview\s*\{\s*display:\s*none !important/);
+  assert.match(app, /if \(!profile[.]rivalGhostEnabled\) \{\s*hideGhostPreview\(\)/);
+  assert.doesNotMatch(previewSource, /setAttribute\("aria-label"/);
+});
+
+test("automatic placement and Tidy avoid visible board HUD overlays", () => {
+  assert.match(app, /function visibleBoardOverlayRectangles\(/);
+  assert.match(app, /rectangle[?][.]left \?\? rectangle[?][.]x/);
+  assert.match(app, /els[.]rivalGhost, els[.]ghostPreview, document[.]querySelector\("[.]board-tools"\)/);
+  assert.match(app, /packOrbitAroundOverlays\(measured, packBounds, visibleBoardOverlayRectangles\(boardRect\)\)/);
+  assert.match(app, /concat\(visibleBoardOverlayRectangles\(rect\)\)/);
+  assert.match(app, /findOpenSpawn\(preferred, item, \[[.][.][.]blockers, [.][.][.]placed\]/);
 });
 
 test("Shift hover removal and distance-spaced drag copies preserve the live drag element", () => {

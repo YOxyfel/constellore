@@ -68,7 +68,7 @@ export function buildMissionBriefing(game, { localOnly = false } = {}) {
     fairnessNote: scoringDisabled
       ? "Play it as a study orbit, or choose another mode for a fresh scored mission."
       : ranked
-      ? "A Wish moves the run to Open. Sense or Reveal turns score and rewards off."
-      : "Sense or Reveal turns progression rewards off for this run."
+      ? "A Wish moves the run to Open. Word Gift, Star Compass, or Reveal turns score and rewards off."
+      : "Word Gift, Star Compass, or Reveal turns progression rewards off for this run."
   };
 }

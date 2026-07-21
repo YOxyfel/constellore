@@ -164,6 +164,86 @@ export function rankSenseCandidates({ words = [], target = "", history = [], rou
   return selected.map((entry, index) => ({ ...entry.item, signal: signals[index] || "warm", rank: index + 1 }));
 }
 
+export const QUICK_TIP_LIMIT = 3;
+
+/**
+ * Returns short mechanics advice using only public run state. Route data is
+ * deliberately not accepted, so Quick Tips can remain score-safe.
+ */
+export function selectQuickTip(options = {}) {
+  const source = options && typeof options === "object" && !Array.isArray(options) ? options : {};
+  const mode = ["quick", "moves", "daily", "weekly", "challenge", "reach"].includes(String(source.mode || "").toLowerCase())
+    ? String(source.mode).toLowerCase()
+    : "reach";
+  const used = clampInteger(source.used, 0, QUICK_TIP_LIMIT, 0);
+  if (used >= QUICK_TIP_LIMIT) return { id: "tip-limit", text: "All three Quick Tips have been used for this orbit.", remaining: 0, available: false };
+
+  const moves = clampInteger(source.moves, 0, 1_000_000, 0);
+  const discoveries = clampInteger(source.discoveries, 0, 1_000_000, 4);
+  const boardWords = clampInteger(source.boardWords, 0, 1_000, 0);
+  const seed = clampInteger(source.seed, 0, 0xffffffff, 0);
+  const seen = new Set((Array.isArray(source.seen) ? source.seen : []).map((value) => String(value || "").slice(0, 60)).filter(Boolean));
+  const tips = [];
+  if (!moves) tips.push({ id: "same-word", text: "Same-word fusions count too—try doubling a foundational element." });
+  if (!boardWords) tips.push({ id: "summon", text: "Tap a discovered word to summon it, then tap another word to fuse." });
+  if (mode === "quick") tips.push({ id: "quick-chain", text: "For speed, use tap chains on touch or hold Ctrl and sweep across words on desktop." });
+  if (mode === "moves") tips.push({ id: "move-care", text: "With limited moves, favor combinations you recognize before testing wild pairs." });
+  if (["daily", "weekly"].includes(mode)) tips.push({ id: "branching", text: "Hard targets often need several branches. Build materials, forces, life, and structures in parallel." });
+  if (discoveries >= 12) tips.push({ id: "search", text: "Use inventory search when the cosmos gets crowded; clearing the board never erases discoveries." });
+  tips.push(
+    { id: "foundations", text: "Recombine recent discoveries with Earth, Water, Fire, and Air—foundations make strong bridges." },
+    { id: "recent", text: "A fresh discovery is usually worth testing with the words that created it." },
+    { id: "tidy", text: "Tidy only rearranges the board, so use it freely when words begin to overlap." }
+  );
+  const unique = [...new Map(tips.map((tip) => [tip.id, tip])).values()];
+  const available = unique.filter((tip) => !seen.has(tip.id));
+  const pool = available.length ? available : unique;
+  const tip = pool[(stableHash(`${seed}|${mode}|${moves}|${discoveries}`) + used) % pool.length];
+  return { ...tip, remaining: QUICK_TIP_LIMIT - used - 1, available: true };
+}
+
+/**
+ * Picks one undiscovered non-target route result that feeds a later step. The
+ * returned descriptor contains no ingredients or recipe metadata, making it
+ * safe for a Word Gift response after the server has verified the route.
+ */
+export function selectWordGift(options = {}) {
+  const source = options && typeof options === "object" && !Array.isArray(options) ? options : {};
+  const route = Array.isArray(source.route) ? source.route.slice(0, 1_000) : [];
+  const discoveredValues = Array.isArray(source.discovered) ? source.discovered : [];
+  const discovered = new Set(discoveredValues.map(wordKey).filter(Boolean));
+  const targetKey = wordKey(source.target);
+  const steps = route.map((step, index) => {
+    if (!step || typeof step !== "object" || Array.isArray(step)) return null;
+    const word = cleanWord(step.word);
+    const a = wordKey(step.a);
+    const b = wordKey(step.b);
+    if (!word || !a || !b) return null;
+    return {
+      index,
+      key: wordKey(word),
+      word,
+      a,
+      b,
+      emoji: cleanWord(step.emoji).slice(0, 16),
+      category: cleanWord(step.category).slice(0, 40) || null
+    };
+  }).filter(Boolean);
+  const candidates = steps.filter((step) => step.key !== targetKey && !discovered.has(step.key));
+  if (!candidates.length) return null;
+
+  const feedsLaterStep = (candidate) => steps.some((step) => step.index > candidate.index && (step.a === candidate.key || step.b === candidate.key));
+  const selected = [...candidates].reverse().find(feedsLaterStep) || candidates.at(-1);
+  return {
+    word: selected.word,
+    emoji: selected.emoji,
+    category: selected.category,
+    source: "gift",
+    note: "A crucial bridge gifted by the cosmos.",
+    feedbackEligible: false
+  };
+}
+
 function normalizeGhostSample(sample) {
   if (!sample || typeof sample !== "object") return null;
   const elapsedMs = Math.max(0, Number(sample.elapsedMs) || 0);
@@ -181,6 +261,49 @@ export function buildGhost(samples, { label = "Cosmos Scout" } = {}) {
   if (last.progress < 1) normalized.push({ elapsedMs: Math.max(last.elapsedMs + 1, last.elapsedMs / Math.max(.01, last.progress)), progress: 1, moves: last.moves, milestone: Math.max(4, last.milestone) });
   const limited = normalized.length <= 100 ? normalized : [...normalized.slice(0, 99), normalized.at(-1)];
   return { mode: "asynchronous", live: false, label: cleanWord(label).slice(0, 40) || "Cosmos Scout", samples: limited };
+}
+
+/**
+ * Builds a small encrypted-trail window without accepting or returning any
+ * recipe content. Placeholder widths depend only on bounded numeric values,
+ * so they cannot reveal a rival word's text or length.
+ */
+export function ghostTrailPreviewState(options = {}) {
+  const source = options && typeof options === "object" && !Array.isArray(options) ? options : {};
+  const safeInteger = (value, minimum, maximum, fallback) => {
+    try { return clampInteger(value, minimum, maximum, fallback); }
+    catch { return fallback; }
+  };
+  const total = safeInteger(source.total, 0, 1_000_000, 0);
+  const current = safeInteger(source.current, 0, total, 0);
+  const windowSize = safeInteger(source.windowSize, 1, 3, 3);
+  const seed = safeInteger(source.seed, 0, 0xffffffff, 0);
+  if (!total) {
+    return { current: 0, total: 0, progress: 0, complete: false, hiddenBefore: 0, hiddenAfter: 0, steps: [] };
+  }
+
+  const complete = current >= total;
+  const focus = complete ? total : current + 1;
+  let start = Math.max(1, focus - (windowSize > 1 ? 1 : 0));
+  let end = Math.min(total, start + windowSize - 1);
+  start = Math.max(1, end - windowSize + 1);
+  const steps = [];
+  for (let index = start; index <= end; index += 1) {
+    steps.push({
+      index,
+      status: index <= current ? "completed" : index === current + 1 ? "current" : "pending",
+      widthPercent: 46 + stableHash(`${seed}|${total}|${index}`) % 43
+    });
+  }
+  return {
+    current,
+    total,
+    progress: current / total,
+    complete,
+    hiddenBefore: start - 1,
+    hiddenAfter: total - end,
+    steps
+  };
 }
 
 function interpolate(left, right, elapsedMs, field) {

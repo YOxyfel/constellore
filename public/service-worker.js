@@ -1,5 +1,5 @@
-const CACHE = "constellore-shell-v18";
-const SHELL = ["/play/", "/styles.css?v=2.2.0", "/app.js?v=1.9.0", "/ctrl-hover.mjs?v=1.0.0", "/shift-board.mjs?v=1.0.0", "/frictionless.mjs?v=1.0.0", "/mission-briefing.mjs?v=1.0.0", "/recipe-mastery.mjs?v=1.0.0", "/engagement-features.mjs?v=1.0.1", "/first-orbit.mjs?v=1.0.0", "/universe-director.mjs?v=1.0.0", "/constellation-card.mjs?v=1.0.0", "/cosmetic-economy.mjs?v=1.0.0", "/recipe-feedback.mjs?v=1.0.0", "/pending-scores.mjs?v=1.0.0", "/manifest.webmanifest", "/icon.svg"];
+const CACHE = "constellore-shell-v20";
+const SHELL = ["/play/", "/styles.css?v=2.4.0", "/app.js?v=1.11.0", "/ctrl-hover.mjs?v=1.0.0", "/shift-board.mjs?v=1.0.0", "/frictionless.mjs?v=1.0.0", "/mission-briefing.mjs?v=1.0.1", "/recipe-mastery.mjs?v=1.0.0", "/engagement-features.mjs?v=1.1.0", "/first-orbit.mjs?v=1.0.0", "/universe-director.mjs?v=1.0.0", "/constellation-card.mjs?v=1.0.0", "/cosmetic-economy.mjs?v=1.0.0", "/recipe-feedback.mjs?v=1.0.0", "/pending-scores.mjs?v=1.0.0", "/manifest.webmanifest", "/icon.svg"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(SHELL)).then(() => self.skipWaiting()));

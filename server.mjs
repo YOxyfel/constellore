@@ -6,7 +6,7 @@ import { basename, dirname, extname, join, normalize } from "node:path";
 import { fileURLToPath } from "node:url";
 import { ANALYTICS_EVENT_NAMES, CREATIVE_COMMERCE_CATALOG, GameStore, MARKET_CATALOG, RunRegistry, isoWeekKey, serviceError } from "./game-services.mjs";
 import { cosmicTwistSeedFor, selectCosmicTwist } from "./public/cosmic-twists.mjs";
-import { rankSenseCandidates } from "./public/engagement-features.mjs";
+import { rankSenseCandidates, selectWordGift } from "./public/engagement-features.mjs";
 import { recipeFingerprint, sanitizeRecipeRating } from "./public/recipe-feedback.mjs";
 import { annotateUniverseResult, buildUniverseManifest, selectUniverse, validateUniverseRoute } from "./public/universe-director.mjs";
 
@@ -1274,6 +1274,17 @@ function publicRun(run, token) {
   };
 }
 
+function studyAssistForReason(reason) {
+  const value = String(reason || "").trim().toLowerCase();
+  return ["sense", "gift", "reveal"].includes(value) ? value : "reveal";
+}
+
+function studyForfeitMessage(assist) {
+  if (assist === "sense") return "Star Compass forfeited this orbit's score and rewards.";
+  if (assist === "gift") return "Word Gift forfeited this orbit's score and rewards.";
+  return "Reveal Path forfeited this orbit's score and rewards.";
+}
+
 function originItem(word) {
   return {
     word,
@@ -1571,6 +1582,50 @@ export const server = createServer(async (request, response) => {
         ranked: false
       });
     }
+    if (request.method === "POST" && url.pathname === "/api/run/gift") {
+      if (rateLimited(request, 40, "run-gift")) return sendJson(response, 429, { error: "The cosmos needs a moment before sending another gift." });
+      const player = requirePlayer(request);
+      const body = await jsonBody(request, 2_048);
+      if (!hasExactKeys(body, ["runId", "runToken"])) throw serviceError(400, "Word Gift requires only runId and runToken.", "invalid_gift_request");
+      const run = runRegistry.get(body.runId, player.id, body.runToken);
+      let item = run.giftUsed && run.giftItem ? structuredClone(run.giftItem) : null;
+      if (!item) {
+        if (run.submitted) throw serviceError(409, "This score was already submitted.", "already_submitted");
+        if (run.completedAt) throw serviceError(409, "This orbit is already complete.", "run_complete");
+        const route = run.solutionRoute || solutionRoute(run.game.target, { includeDynamic: !run.ranked });
+        if (!route) throw serviceError(422, "No safe bridge word is available for this target.", "gift_unavailable");
+        const selected = selectWordGift({
+          route,
+          discovered: [...run.discovered.values()],
+          target: run.game.target,
+          seed: run.game.seed
+        });
+        if (!selected) throw serviceError(422, "No undiscovered bridge word is available for this orbit.", "gift_unavailable");
+        item = runRegistry.gift(run, {
+          ...selected,
+          emoji: selected.emoji || emojiByWord[selected.word] || emojiForWord(selected.word),
+          category: selected.category || semanticCategoryFor(selected.word) || null
+        });
+      }
+      if (run.ranked) await gameStore.forfeitChallenge(player.id, run.challengeId, { reason: "gift", runId: run.runId });
+      await runRegistry.persist(run);
+      const publicItem = {
+        word: item.word,
+        emoji: item.emoji || "",
+        category: item.category || null,
+        source: "gift"
+      };
+      return sendJson(response, 200, {
+        item: publicItem,
+        assisted: true,
+        assist: run.assist,
+        scoringDisabled: true,
+        scoreEligible: false,
+        rewardEligible: false,
+        leaderboardEligible: false,
+        ranked: false
+      });
+    }
     if (request.method === "POST" && url.pathname === "/api/run/reveal") {
       if (rateLimited(request, 30, "run-reveal")) return sendJson(response, 429, { error: "Too many answer paths requested." });
       const player = requirePlayer(request);
@@ -1603,7 +1658,7 @@ export const server = createServer(async (request, response) => {
       const challengeForfeit = run.ranked ? gameStore.forfeitedChallenge(player.id, run.challengeId) : null;
       if (run.scoringDisabled || run.forfeited || challengeForfeit) {
         const forfeitReason = run.forfeitReason || challengeForfeit?.reason || "reveal";
-        run.assist = run.assist === "none" ? (forfeitReason === "sense" ? "sense" : "reveal") : run.assist;
+        if (!["sense", "gift", "reveal"].includes(run.assist)) run.assist = studyAssistForReason(forfeitReason);
         run.scoringDisabled = true;
         run.forfeited = true;
         run.forfeitReason ||= forfeitReason;
@@ -1618,7 +1673,7 @@ export const server = createServer(async (request, response) => {
           score: 0,
           creditReward: 0,
           weeklyBonus: 0,
-          reason: run.assist === "sense" ? "Constellation Sense forfeited this orbit's score and rewards." : "Reveal Path forfeited this orbit's score and rewards.",
+          reason: studyForfeitMessage(run.assist),
           player: gameStore.publicPlayer(player.id)
         });
       }

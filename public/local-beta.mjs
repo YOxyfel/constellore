@@ -8,7 +8,7 @@ import {
   lookupLocalCombination
 } from "./local-world.mjs";
 import { cosmicTwistOptions, cosmicTwistSeedFor, selectCosmicTwist } from "./cosmic-twists.mjs";
-import { rankSenseCandidates } from "./engagement-features.mjs";
+import { rankSenseCandidates, selectWordGift } from "./engagement-features.mjs";
 import { annotateUniverseResult, selectUniverse, validateUniverseRoute } from "./universe-director.mjs";
 import { sanitizeRecipeRating } from "./recipe-feedback.mjs";
 
@@ -99,6 +99,10 @@ function isRecord(value) {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
 
+function hasExactKeys(value, keys) {
+  return isRecord(value) && Object.keys(value).sort().join(",") === [...keys].sort().join(",");
+}
+
 function boundedInteger(value, fallback = 0, maximum = 10_000) {
   const parsed = Number(value);
   if (!Number.isFinite(parsed)) return fallback;
@@ -160,12 +164,16 @@ function publicProgress(run) {
     moves: run.moves,
     completed: Boolean(run.completed),
     submitted: Boolean(run.submitted),
-    discovered: [...run.available].map((word) => localItemFor(word)).filter(Boolean),
+    discovered: [...run.available].map((word) => run.giftItem?.word.toLowerCase() === String(word).toLowerCase()
+      ? { ...run.giftItem }
+      : localItemFor(word)).filter(Boolean),
     history: structuredClone(run.history),
     usedBend: Boolean(run.wished),
     usedWish: Boolean(run.wished),
     wished: Boolean(run.wished),
     bendItem: run.bendItem ? { ...run.bendItem } : null,
+    giftUsed: Boolean(run.giftUsed),
+    giftItem: run.giftItem ? { ...run.giftItem } : null,
     assist: run.assist,
     scoringDisabled: Boolean(run.scoringDisabled)
   };
@@ -237,7 +245,22 @@ function restoreRun(body) {
   const history = restoredHistory(progress.history);
   for (const entry of history) available.add(entry.word.toLowerCase());
   const assistValue = String(progress.assist || snapshotRun.assist || "none").toLowerCase();
-  const assist = ["none", "wish", "reveal", "sense"].includes(assistValue) ? assistValue : wished ? "wish" : "none";
+  const rawGiftItem = isRecord(progress.giftItem)
+    ? progress.giftItem
+    : Array.isArray(progress.discovered)
+      ? progress.discovered.find((item) => isRecord(item) && String(item.source || "").toLowerCase() === "gift")
+      : null;
+  const restoredGift = restoredItem(rawGiftItem);
+  const routeBridgeWords = new Set(solutionRoute.slice(0, -1).map((step) => String(step.word || "").toLowerCase()));
+  const giftItem = restoredGift && routeBridgeWords.has(restoredGift.word.toLowerCase())
+    ? { ...restoredGift, source: "gift", note: "A crucial bridge gifted by the cosmos.", feedbackEligible: false }
+    : null;
+  const giftClaimed = Boolean(progress.giftUsed || giftItem || assistValue === "gift");
+  if (giftItem) available.add(giftItem.word.toLowerCase());
+  let assist = ["none", "wish", "reveal", "sense", "gift"].includes(assistValue)
+    ? giftClaimed && assistValue === "none" ? "gift" : assistValue
+    : giftClaimed ? "gift" : wished ? "wish" : "none";
+  if (giftClaimed && !["reveal", "sense", "gift"].includes(assist)) assist = "gift";
   const moveMaximum = game.moveLimit ? Math.max(game.moveLimit, history.length) : 10_000;
   const moves = Math.max(history.length, boundedInteger(progress.moves, history.length, moveMaximum));
   const targetFound = available.has(game.target.toLowerCase());
@@ -259,7 +282,9 @@ function restoreRun(body) {
     wished,
     bendItem,
     assist: assist === "none" && wished ? "wish" : assist,
-    scoringDisabled: Boolean(progress.scoringDisabled || ["reveal", "sense"].includes(assist)),
+    scoringDisabled: Boolean(progress.scoringDisabled || giftClaimed || ["reveal", "sense", "gift"].includes(assist)),
+    giftUsed: Boolean(giftItem && giftClaimed),
+    giftItem,
     twistUsed: Boolean(twistEntry),
     twistedPairKey: twistEntry ? [twistEntry.a, twistEntry.b].map((word) => word.toLowerCase()).sort().join("+") : null,
     solutionRoute,
@@ -384,6 +409,8 @@ export async function localRequest(url, options = {}) {
       bendItem: null,
       assist: "none",
       scoringDisabled: false,
+      giftUsed: false,
+      giftItem: null,
       twistUsed: false,
       twistedPairKey: null,
       solutionRoute,
@@ -444,6 +471,48 @@ export async function localRequest(url, options = {}) {
       candidates,
       assisted: true,
       assist: "sense",
+      scoringDisabled: true,
+      scoreEligible: false,
+      rewardEligible: false,
+      leaderboardEligible: false,
+      ranked: false,
+      localOnly: true
+    };
+  }
+
+  if (method === "POST" && path === "/api/run/gift") {
+    if (!hasExactKeys(body, ["runId", "runToken"])) fail("Word Gift requires only runId and runToken.", "invalid_gift_request", 400);
+    const run = requireRun(body);
+    let item = run.giftUsed && run.giftItem ? { ...run.giftItem } : null;
+    if (!item) {
+      if (run.submitted) fail("This local orbit was already submitted.", "already_submitted", 409);
+      if (run.completed) fail("This local orbit is already complete.", "run_complete", 409);
+      const selected = selectWordGift({
+        route: run.solutionRoute,
+        discovered: [...run.available],
+        target: run.game.target,
+        seed: run.game.seed
+      });
+      const canonical = selected ? localItemFor(selected.word) : null;
+      if (!canonical || canonical.word.toLowerCase() === run.game.target.toLowerCase()) {
+        fail("No undiscovered bridge word is available for this orbit.", "gift_unavailable", 422);
+      }
+      item = {
+        ...canonical,
+        source: "gift",
+        note: "A crucial bridge gifted by the cosmos.",
+        feedbackEligible: false
+      };
+      run.giftUsed = true;
+      run.giftItem = item;
+      if (!["reveal", "sense", "gift"].includes(run.assist)) run.assist = "gift";
+      run.scoringDisabled = true;
+      run.available.add(item.word.toLowerCase());
+    }
+    return {
+      item: { word: item.word, emoji: item.emoji || "", category: item.category || null, source: "gift" },
+      assisted: true,
+      assist: run.assist,
       scoringDisabled: true,
       scoreEligible: false,
       rewardEligible: false,

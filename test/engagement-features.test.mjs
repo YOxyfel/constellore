@@ -3,15 +3,19 @@ import test from "node:test";
 
 import {
   FEEDBACK_CUES,
+  QUICK_TIP_LIMIT,
   buildGhost,
   feedbackCuePolicy,
   ghostSnapshot,
+  ghostTrailPreviewState,
   grantSenseCharges,
   rankSenseCandidates,
   reconcileCloudProgression,
   refillSenseWallet,
   sanitizeFeedbackPreferences,
   sanitizeSenseWallet,
+  selectQuickTip,
+  selectWordGift,
   spendSenseCharge
 } from "../public/engagement-features.mjs";
 
@@ -128,15 +132,125 @@ test("Sense ranking is deterministic, route-aware, and never reveals a ready rec
 
 test("ghosts are sanitized asynchronous recordings, never live sessions", () => {
   const ghost = buildGhost([
-    { elapsedMs: 0, progress: 0, moves: 0, milestone: 0, word: "secret" },
-    { elapsedMs: 10_000, progress: .5, moves: 4, milestone: 2, recipe: ["Fire", "Air"] },
-    { elapsedMs: 20_000, progress: 1, moves: 8, milestone: 4 }
+    { elapsedMs: 0, progress: 0, moves: 0, milestone: 0, word: "secret", path: ["Earth"] },
+    { elapsedMs: 10_000, progress: .5, moves: 4, milestone: 2, recipe: ["Fire", "Air"], result: "Energy" },
+    { elapsedMs: 20_000, progress: 1, moves: 8, milestone: 4, ingredients: ["secret", "target"] }
   ], { label: "  Rival Nova  " });
 
   assert.equal(ghost.mode, "asynchronous");
   assert.equal(ghost.live, false);
   assert.equal(ghost.label, "Rival Nova");
-  assert.equal(ghost.samples.some((sample) => "word" in sample || "recipe" in sample), false);
+  assert.equal(ghost.samples.some((sample) => ["word", "recipe", "path", "result", "ingredients"].some((key) => key in sample)), false);
+});
+
+test("encrypted ghost trail previews are deterministic and expose only numeric placeholders", () => {
+  const input = {
+    current: 2,
+    total: 5,
+    windowSize: 3,
+    seed: 42,
+    word: "Secret bird",
+    recipe: ["Species", "Air"],
+    path: [{ result: "Bird" }],
+    result: "Bird",
+    ingredients: ["Species", "Air"]
+  };
+  const preview = ghostTrailPreviewState(input);
+
+  assert.deepEqual(ghostTrailPreviewState(input), preview);
+  assert.deepEqual(preview.steps.map(({ index, status }) => ({ index, status })), [
+    { index: 2, status: "completed" },
+    { index: 3, status: "current" },
+    { index: 4, status: "pending" }
+  ]);
+  assert.equal(preview.current, 2);
+  assert.equal(preview.total, 5);
+  assert.equal(preview.progress, .4);
+  assert.equal(preview.complete, false);
+  assert.equal(preview.hiddenBefore, 1);
+  assert.equal(preview.hiddenAfter, 1);
+  assert.ok(preview.steps.every((step) => Number.isInteger(step.widthPercent) && step.widthPercent >= 46 && step.widthPercent <= 88));
+  assert.deepEqual(Object.keys(preview).sort(), ["complete", "current", "hiddenAfter", "hiddenBefore", "progress", "steps", "total"]);
+  assert.ok(preview.steps.every((step) => Object.keys(step).sort().join(",") === "index,status,widthPercent"));
+  assert.doesNotMatch(JSON.stringify(preview), /Secret bird|Species|Air|Bird/);
+  for (const forbidden of ["word", "recipe", "path", "result", "ingredients"]) assert.equal(forbidden in preview, false);
+});
+
+test("encrypted ghost trail previews clamp hostile input and represent empty and completed trails", () => {
+  assert.deepEqual(ghostTrailPreviewState({ current: Infinity, total: -900, windowSize: 99, seed: Symbol("hostile") }), {
+    current: 0,
+    total: 0,
+    progress: 0,
+    complete: false,
+    hiddenBefore: 0,
+    hiddenAfter: 0,
+    steps: []
+  });
+
+  const completed = ghostTrailPreviewState({ current: 999, total: "2.9", windowSize: 0, seed: -5 });
+  assert.equal(completed.current, 2);
+  assert.equal(completed.total, 2);
+  assert.equal(completed.progress, 1);
+  assert.equal(completed.complete, true);
+  assert.deepEqual(completed.steps.map(({ index, status }) => ({ index, status })), [{ index: 2, status: "completed" }]);
+  assert.equal(completed.hiddenBefore, 1);
+  assert.equal(completed.hiddenAfter, 0);
+});
+
+test("Quick Tips are bounded, deterministic, and never inspect hidden route data", () => {
+  const input = {
+    mode: "quick",
+    used: 0,
+    moves: 0,
+    discoveries: 4,
+    boardWords: 0,
+    seed: 42,
+    route: [{ a: "Species", b: "Air", word: "Bird" }],
+    target: "Bird"
+  };
+  const first = selectQuickTip(input);
+  assert.deepEqual(selectQuickTip(input), first);
+  assert.equal(first.available, true);
+  assert.equal(first.remaining, QUICK_TIP_LIMIT - 1);
+  assert.doesNotMatch(JSON.stringify(first), /Species|Bird/);
+
+  const exhausted = selectQuickTip({ ...input, used: 999 });
+  assert.equal(exhausted.available, false);
+  assert.equal(exhausted.remaining, 0);
+
+  const seen = [];
+  for (let used = 0; used < QUICK_TIP_LIMIT; used += 1) {
+    const next = selectQuickTip({ ...input, used, moves: used * 4, discoveries: 4 + used * 5, boardWords: used, seen });
+    assert.equal(next.available, true);
+    assert.equal(seen.includes(next.id), false, "a changed board state must not repeat an earlier tip");
+    seen.push(next.id);
+  }
+  assert.equal(new Set(seen).size, QUICK_TIP_LIMIT);
+});
+
+test("Word Gift selects an undiscovered non-target bridge without leaking its recipe", () => {
+  const gift = selectWordGift({
+    target: "Lightning",
+    discovered: ["Earth", "Water", "Fire", "Air", "Energy"],
+    seed: 19,
+    route: [
+      { a: "Fire", b: "Air", word: "Energy", emoji: "⚡", category: "force" },
+      { a: "Fire", b: "Water", word: "Steam", emoji: "♨️", category: "force" },
+      { a: "Air", b: "Steam", word: "Cloud", emoji: "☁️", category: "nature" },
+      { a: "Cloud", b: "Energy", word: "Storm", emoji: "⛈️", category: "force" },
+      { a: "Energy", b: "Storm", word: "Lightning", emoji: "🌩️", category: "force" }
+    ]
+  });
+  assert.deepEqual(gift, {
+    word: "Storm",
+    emoji: "⛈️",
+    category: "force",
+    source: "gift",
+    note: "A crucial bridge gifted by the cosmos.",
+    feedbackEligible: false
+  });
+  assert.equal("a" in gift || "b" in gift || "route" in gift || "target" in gift, false);
+  assert.equal(selectWordGift({ route: [{ a: "Air", b: "Species", word: "Bird" }], target: "Bird" }), null);
 });
 
 test("ghost snapshots interpolate pace and expose projected milestone state only", () => {
