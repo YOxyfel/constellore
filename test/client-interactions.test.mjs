@@ -157,7 +157,7 @@ test("all haptics pass through the feedback preference policy", () => {
 
 test("Ctrl hover fusion is wired to board words and lifecycle cleanup", () => {
   assert.match(app, /createCtrlHoverController/);
-  assert.match(app, /addEventListener\("pointerenter", \(event\) => handleCtrlHoverEnter/);
+  assert.match(app, /addEventListener\("pointerenter", \(event\) => \{[\s\S]*handleCtrlHoverEnter\(node, event\)/);
   assert.match(app, /window[.]addEventListener\("keydown", activateCtrlHover\)/);
   assert.match(app, /window[.]addEventListener\("keyup", releaseCtrlHover\)/);
   assert.match(app, /window[.]addEventListener\("blur", releaseCtrlHover\)/);
@@ -166,4 +166,33 @@ test("Ctrl hover fusion is wired to board words and lifecycle cleanup", () => {
   assert.match(styles, /[.]board-word[.]ctrl-hover-source\s*\{/);
   assert.match(styles, /[.]board-word[.]ctrl-hover-queued\s*\{/);
   assert.match(styles, /[.]board-word[.]combining\s*\{/);
+});
+
+test("Shift hover removal and distance-spaced drag copies preserve the live drag element", () => {
+  assert.match(app, /createShiftBoardController/);
+  assert.match(app, /function handleShiftBoardEnter\(/);
+  assert.match(app, /window[.]addEventListener\("keydown", activateShiftBoard\)/);
+  assert.match(app, /window[.]addEventListener\("keyup", releaseShiftBoard\)/);
+  assert.match(app, /window[.]addEventListener\("blur", releaseShiftBoard\)/);
+  assert.match(app, /window[.]addEventListener\("blur", cancelActivePointerGestures\)/);
+  assert.match(app, /function boardModifierBlocked\([\s\S]*input, textarea, select[\s\S]*dialog\[open\]/);
+  assert.match(app, /activateShiftBoard\(event\)[\s\S]*boardModifierBlocked\(event\)[\s\S]*activeTrayDragCleanup[\s\S]*shiftBoard[.]setHeld\(true\)/);
+  assert.match(app, /function rememberPointerPosition\([\s\S]*shiftBoard[.]pointerMove\(lastPointerPosition\)/);
+  assert.match(app, /shiftBoard[.]beginDrag\(node[.]id/);
+  assert.match(app, /moveEvent[.]shiftKey && !shiftBoard[.]snapshot\(\)[.]held[\s\S]*shiftArmedByPointer = true/);
+  assert.match(app, /shiftBoard[.]moveDrag\(\{ x: node[.]x, y: node[.]y \}\)/);
+  assert.match(app, /shiftBoard[.]endDrag\(\)[\s\S]*if \(shiftArmedByPointer\) shiftBoard[.]setHeld\(false\)/);
+  assert.match(app, /els[.]boardItems[.]append\(createBoardNode\(copy, true\)\)/);
+  const duplicateStart = app.indexOf("function duplicateShiftBoardNode");
+  const duplicateEnd = app.indexOf("function handleShiftBoardEnter", duplicateStart);
+  const duplicateSource = app.slice(duplicateStart, duplicateEnd);
+  assert.doesNotMatch(duplicateSource, /addNode\(|renderBoard\(/, "copy stamps must not replace the pointer-captured board DOM");
+  const removeStart = app.indexOf("function removeShiftBoardNode");
+  const removeSource = app.slice(removeStart, duplicateStart);
+  assert.doesNotMatch(`${removeSource}\n${duplicateSource}`, /state[.](?:moves|history|words)\s*[=+.-]/, "board-only gestures must not change scoring or discoveries");
+  assert.match(app, /startTrayPointerDrag\([\s\S]*if \(shiftBoard[.]snapshot\(\)[.]held\) shiftBoard[.]setHeld\(false\)/);
+  assert.match(app, /resolveDropCandidate\([\s\S]*sourceElement: element[\s\S]*if \(resolution[?][.]selected\) void combineNodes\(node, resolution[.]selected\)/);
+  assert.match(styles, /[.]cosmos-board[.]shift-remove-active/);
+  assert.match(styles, /[.]cosmos-board[.]shift-stamp-active/);
+  assert.match(styles, /[.]board-word[.]shift-stamped/);
 });

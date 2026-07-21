@@ -1,4 +1,5 @@
 import { createCtrlHoverController } from "./ctrl-hover.mjs?v=1.0.0";
+import { createShiftBoardController } from "./shift-board.mjs?v=1.0.0";
 import { findOpenSpawn, orderInventory, packOrbit, pickMagneticTarget } from "./frictionless.mjs?v=1.0.0";
 import { buildMasteryCollections, recordRecipeDiscovery, sanitizeRecipeMasteryState, summarizeMasteryCollections } from "./recipe-mastery.mjs?v=1.0.0";
 import { buildGhost, feedbackCuePolicy, ghostSnapshot, grantSenseCharges, reconcileCloudProgression, refillSenseWallet, sanitizeFeedbackPreferences, sanitizeSenseWallet, spendSenseCharge } from "./engagement-features.mjs?v=1.0.1";
@@ -17,6 +18,8 @@ const PROFILE_KEY = isStaticBeta ? "constellore-local-profile-v1" : "constellore
 const LEGACY_PROFILE_KEYS = isStaticBeta ? [] : ["wordforge-profile-v3", "wordforge-profile-v2"];
 const todayKey = new Date().toISOString().slice(0, 10);
 const sessionId = globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+const MAX_BOARD_NODES = 180;
+const MAX_SHIFT_COPIES_PER_DRAG = 24;
 
 const MASTERY_CATALOG = [
   ["Earth", "Water", "Mud", "🟤", "nature"], ["Air", "Water", "Mist", "🌫️", "nature"],
@@ -155,6 +158,8 @@ let config = { billingEnabled: false, checkoutUrl: "", testStoreEnabled: false, 
 let localRuntimePromise;
 let activeTrayDragCleanup = null;
 let activeBoardDragCleanup = null;
+let shiftCopyLimitAnnounced = false;
+let lastPointerPosition = null;
 let clearUndo = null;
 let clearUndoTimer = null;
 let runSaveTimer = null;
@@ -200,6 +205,14 @@ const ctrlHover = createCtrlHoverController({
   getNode: getCtrlHoverNode,
   combine: combineNodes,
   onChange: syncCtrlHoverState
+});
+
+const shiftBoard = createShiftBoardController({
+  getNode: getShiftBoardNode,
+  removeNode: removeShiftBoardNode,
+  duplicateNode: duplicateShiftBoardNode,
+  onChange: syncShiftBoardState,
+  maxCopies: MAX_SHIFT_COPIES_PER_DRAG
 });
 
 function loadProfile() {
@@ -1338,7 +1351,7 @@ function buildActiveRunSnapshot({ completed = false } = {}) {
       scoringDisabled: state.scoringDisabled
     },
     visuals: {
-      nodes: state.nodes.slice(0, 180).filter((node) => !node.revealRole && !node.item.ghost).map((node) => ({
+      nodes: state.nodes.slice(0, MAX_BOARD_NODES).filter((node) => !node.revealRole && !node.item.ghost).map((node) => ({
         word: node.item.word,
         x: clamp(node.x / width, 0, 1),
         y: clamp(node.y / height, 0, 1),
@@ -1541,7 +1554,7 @@ function hydrateRestoredRun(payload, snapshot) {
   state.nextId = 1;
   state.topZ = 10;
   if (snapshot?.run?.id === payload.run?.id && Array.isArray(snapshot?.visuals?.nodes)) {
-    for (const savedNode of snapshot.visuals.nodes.slice(0, 180)) {
+    for (const savedNode of snapshot.visuals.nodes.slice(0, MAX_BOARD_NODES)) {
       const item = byWord.get(inventoryKey(savedNode?.word));
       if (!item) continue;
       state.nodes.push({
@@ -1596,6 +1609,7 @@ function startWithGame(game, run, { restored = false } = {}) {
   cancelActiveBoardDrag();
   dismissClearUndo();
   ctrlHover.reset({ abandonPending: true });
+  shiftBoard.reset();
   state.orbitGeneration += 1;
   stopTimer();
   resetRevealPlayback();
@@ -1673,6 +1687,7 @@ function returnHome() {
   dismissClearUndo();
   cancelTapChain();
   ctrlHover.reset({ abandonPending: true });
+  shiftBoard.reset();
   state.orbitGeneration += 1;
   if (state.game && !state.finished && state.history.length) track("run_failed", { mode: state.mode, reason: "abandoned", moves: state.moves });
   stopTimer();
@@ -2087,6 +2102,7 @@ function renderBoard(newId = null) {
   els.boardGuide.classList.toggle("hidden", state.nodes.length > 0);
   els.boardGuide.setAttribute("aria-hidden", String(state.nodes.length > 0));
   syncCtrlHoverState(ctrlHover.snapshot());
+  syncShiftBoardState(shiftBoard.snapshot());
   syncSelectedNodeState();
   updateBoardTools();
   syncFirstOrbitGuide();
@@ -2137,6 +2153,7 @@ function clearBoardWithUndo() {
   cancelActiveTrayDrag();
   cancelActiveBoardDrag();
   ctrlHover.reset();
+  shiftBoard.reset();
   cancelTapChain();
   dismissClearUndo();
   clearUndo = {
@@ -2169,6 +2186,7 @@ function tidyOrbit(options = {}) {
   cancelActiveTrayDrag();
   cancelActiveBoardDrag();
   ctrlHover.reset();
+  shiftBoard.reset();
   cancelTapChain();
   dismissClearUndo();
   const boardRect = els.board.getBoundingClientRect();
@@ -2241,6 +2259,15 @@ function ctrlHoverAvailable() {
   return Boolean(state.game && !els.gameScreen.hidden && !state.finished && !state.startingRun && !state.reveal.active && !state.reveal.pending);
 }
 
+function shiftBoardAvailable() {
+  return ctrlHoverAvailable();
+}
+
+function boardModifierBlocked(event) {
+  const editable = event?.target?.closest?.('input, textarea, select, [contenteditable]:not([contenteditable="false"])');
+  return Boolean(editable || document.querySelector("dialog[open]"));
+}
+
 function getCtrlHoverNode(id) {
   if (!ctrlHoverAvailable()) return null;
   const node = state.nodes.find((entry) => String(entry.id) === String(id));
@@ -2259,7 +2286,116 @@ function syncCtrlHoverState(hoverState) {
   }
 }
 
+function getShiftBoardNode(id) {
+  if (!shiftBoardAvailable()) return null;
+  const node = state.nodes.find((entry) => String(entry.id) === String(id));
+  if (!node || node.revealRole || node.item.ghost || state.busyPairs.has(node.id)) return null;
+  return node;
+}
+
+function syncShiftBoardState(shiftState) {
+  if (!els.board) return;
+  const available = shiftBoardAvailable();
+  els.board.classList.toggle("shift-remove-active", available && shiftState.held && !shiftState.dragging);
+  els.board.classList.toggle("shift-stamp-active", available && shiftState.held && shiftState.dragging);
+  if (shiftState.dragging && shiftState.copies >= MAX_SHIFT_COPIES_PER_DRAG && !shiftCopyLimitAnnounced) {
+    shiftCopyLimitAnnounced = true;
+    showAlchemy(`SHIFT COPY · ${MAX_SHIFT_COPIES_PER_DRAG} spaced copies is the limit for one drag.`);
+  }
+}
+
+function removeShiftBoardNode(node) {
+  const current = getShiftBoardNode(node?.id);
+  if (!current) return false;
+  dismissClearUndo();
+  if (state.selectedNodeId === current.id) state.selectedNodeId = null;
+  state.nodes = state.nodes.filter((entry) => entry.id !== current.id);
+  els.boardItems.querySelector(`[data-id="${current.id}"]`)?.remove();
+  els.boardGuide.classList.toggle("hidden", state.nodes.length > 0);
+  els.boardGuide.setAttribute("aria-hidden", String(state.nodes.length > 0));
+  syncSelectedNodeState();
+  updateBoardTools();
+  syncFirstOrbitGuide();
+  scheduleRunSave();
+  showAlchemy(`SHIFT REMOVE · ${current.item.word} cleared from the board. It remains discovered.`);
+  return true;
+}
+
+function duplicateShiftBoardNode(source, point, { copyNumber = 1, size } = {}) {
+  const current = getShiftBoardNode(source?.id);
+  if (!current) return false;
+  if (state.nodes.length >= MAX_BOARD_NODES) {
+    if (!shiftCopyLimitAnnounced) showAlchemy(`SHIFT COPY · This board can hold ${MAX_BOARD_NODES} words.`, true);
+    shiftCopyLimitAnnounced = true;
+    return false;
+  }
+  dismissClearUndo();
+  const bounds = els.board.getBoundingClientRect();
+  const width = Math.max(1, Number(size?.width) || 1);
+  const height = Math.max(1, Number(size?.height) || 1);
+  const copy = {
+    id: state.nextId++,
+    item: current.item,
+    x: clamp(Number(point?.x) || 0, 5, Math.max(5, bounds.width - width - 5)),
+    y: clamp(Number(point?.y) || 0, 5, Math.max(5, bounds.height - height - 5)),
+    z: Math.max(1, (Number(current.z) || 2) - 1),
+    cosmicTwist: Boolean(current.cosmicTwist),
+    shiftStamped: true
+  };
+  state.nodes.push(copy);
+  els.boardItems.append(createBoardNode(copy, true));
+  els.boardGuide.classList.add("hidden");
+  els.boardGuide.setAttribute("aria-hidden", "true");
+  updateBoardTools();
+  syncFirstOrbitGuide();
+  scheduleRunSave();
+  if (copyNumber === 1) showAlchemy(`SHIFT COPY · ${current.item.word} is leaving a spaced trail. Drop the held word onto any word to fuse.`);
+  return true;
+}
+
+function handleShiftBoardEnter(node, event = {}) {
+  if (!shiftBoard.snapshot().held) return false;
+  const x = Number(event.clientX);
+  const y = Number(event.clientY);
+  shiftBoard.enter(node.id, {
+    buttons: event.buttons ?? 0,
+    point: Number.isFinite(x) && Number.isFinite(y) ? { x, y } : null
+  });
+  return true;
+}
+
+function activateShiftBoard(event) {
+  if (event.key !== "Shift" || event.repeat || boardModifierBlocked(event) || activeTrayDragCleanup || !shiftBoardAvailable()) return;
+  ctrlHover.reset();
+  shiftBoard.setHeld(true);
+  if (shiftBoard.snapshot().dragging) {
+    showAlchemy("SHIFT COPY · Keep dragging to leave safely spaced copies.");
+    return;
+  }
+  const hovered = els.boardItems.querySelector(".board-word:hover");
+  const focused = els.boardItems.contains(document.activeElement) ? document.activeElement.closest?.(".board-word") : null;
+  const element = hovered || focused;
+  const node = element ? getShiftBoardNode(element.dataset.id) : null;
+  if (node) {
+    const rect = element.getBoundingClientRect();
+    const pointer = lastPointerPosition
+      && lastPointerPosition.x >= rect.left && lastPointerPosition.x <= rect.right
+      && lastPointerPosition.y >= rect.top && lastPointerPosition.y <= rect.bottom
+      ? lastPointerPosition
+      : null;
+    handleShiftBoardEnter(node, { buttons: 0, clientX: pointer?.x, clientY: pointer?.y });
+  } else {
+    showAlchemy("SHIFT REMOVE · Hover words to clear them. Grab a word first, then hold Shift to copy.");
+  }
+}
+
+function releaseShiftBoard(event) {
+  if (event?.key && event.key !== "Shift") return;
+  shiftBoard.setHeld(false);
+}
+
 function handleCtrlHoverEnter(node, event = {}) {
+  if (shiftBoard.snapshot().held || shiftBoard.snapshot().dragging) return;
   if (event.ctrlKey && !ctrlHover.snapshot().active) ctrlHover.setActive(true);
   if (!ctrlHoverAvailable()) return;
   const action = ctrlHover.enter(node.id);
@@ -2271,7 +2407,7 @@ function handleCtrlHoverEnter(node, event = {}) {
 }
 
 function activateCtrlHover(event) {
-  if (event.key !== "Control" || event.repeat || !ctrlHoverAvailable()) return;
+  if (event.key !== "Control" || event.repeat || boardModifierBlocked(event) || !ctrlHoverAvailable() || shiftBoard.snapshot().held || shiftBoard.snapshot().dragging) return;
   if (!ctrlHover.setActive(true)) return;
   const hovered = els.boardItems.querySelector(".board-word:hover");
   const node = hovered ? getCtrlHoverNode(hovered.dataset.id) : null;
@@ -2288,7 +2424,7 @@ function releaseCtrlHover(event) {
 function createBoardNode(node, isNew) {
   const button = document.createElement("button");
   button.type = "button";
-  button.className = `board-word${isNew ? " appear" : ""}${["wish", "market"].includes(node.item.source) ? " wish" : ""}${node.item.source === "twist" || node.cosmicTwist ? " cosmic-twist" : ""}${node.item.ghost ? " reveal-ghost" : ""}${node.revealRole ? ` reveal-${node.revealRole}` : ""}${state.selectedNodeId === node.id ? " keyboard-selected" : ""}${senseWordActive(node.item) ? " sense-hot" : ""}${firstOrbitWordActive(node.item) ? " tutorial-hot" : ""}`;
+  button.className = `board-word${isNew ? " appear" : ""}${isNew && node.shiftStamped ? " shift-stamped" : ""}${["wish", "market"].includes(node.item.source) ? " wish" : ""}${node.item.source === "twist" || node.cosmicTwist ? " cosmic-twist" : ""}${node.item.ghost ? " reveal-ghost" : ""}${node.revealRole ? ` reveal-${node.revealRole}` : ""}${state.selectedNodeId === node.id ? " keyboard-selected" : ""}${senseWordActive(node.item) ? " sense-hot" : ""}${firstOrbitWordActive(node.item) ? " tutorial-hot" : ""}`;
   button.dataset.id = node.id;
   button.style.setProperty("--x", `${node.x}px`);
   button.style.setProperty("--y", `${node.y}px`);
@@ -2300,11 +2436,13 @@ function createBoardNode(node, isNew) {
     ? `${node.item.word}, revealed constellation word. Not playable.`
     : unavailable
       ? `${node.item.word}. Unavailable while this orbit is locked.`
-      : `${node.item.word}${node.item.source === "twist" || node.cosmicTwist ? ", Cosmic Twist discovery" : ""}. Drag onto another word to combine.`);
+      : `${node.item.word}${node.item.source === "twist" || node.cosmicTwist ? ", Cosmic Twist discovery" : ""}. Drag onto another word to combine. Hold Shift while hovering to remove; grab it first and then hold Shift while dragging to copy.`);
   button.setAttribute("aria-pressed", String(state.selectedNodeId === node.id));
   button.innerHTML = `<span class="emoji">${escapeHtml(node.item.emoji)}</span><span>${escapeHtml(node.item.word)}</span>`;
   button.addEventListener("pointerdown", (event) => startNodeDrag(event, node, button));
-  button.addEventListener("pointerenter", (event) => handleCtrlHoverEnter(node, event));
+  button.addEventListener("pointerenter", (event) => {
+    if (!handleShiftBoardEnter(node, event)) handleCtrlHoverEnter(node, event);
+  });
   button.addEventListener("keydown", (event) => {
     if (event.key === "Enter" || event.key === " ") {
       event.preventDefault();
@@ -2315,7 +2453,7 @@ function createBoardNode(node, isNew) {
 }
 
 async function selectNodeForTap(node) {
-  if (state.finished || state.reveal.active || state.reveal.pending || ctrlHover.snapshot().active) return;
+  if (state.finished || state.reveal.active || state.reveal.pending || ctrlHover.snapshot().active || shiftBoard.snapshot().held) return;
   if (!state.selectedNodeId) {
     state.selectedNodeId = node.id;
     syncSelectedNodeState();
@@ -2414,6 +2552,20 @@ function cancelActiveBoardDrag() {
   activeBoardDragCleanup = null;
 }
 
+function rememberPointerPosition(event) {
+  const x = Number(event?.clientX);
+  const y = Number(event?.clientY);
+  if (!Number.isFinite(x) || !Number.isFinite(y)) return;
+  lastPointerPosition = { x, y };
+  shiftBoard.pointerMove(lastPointerPosition);
+}
+
+function cancelActivePointerGestures() {
+  cancelActiveTrayDrag();
+  cancelActiveBoardDrag();
+  shiftBoard.reset();
+}
+
 function pointInsideBoard(point) {
   const rect = els.board.getBoundingClientRect();
   return point.x >= rect.left && point.x <= rect.right && point.y >= rect.top && point.y <= rect.bottom;
@@ -2510,6 +2662,7 @@ function dropTrayItem(item, point, pointerType = "mouse") {
 
 function startTrayPointerDrag(event, item, element, suppressClick) {
   if (event.button !== 0 || (!event.isPrimary && event.pointerType !== "mouse") || state.finished || state.reveal.active || state.reveal.pending || item.ghost) return;
+  if (shiftBoard.snapshot().held) shiftBoard.setHeld(false);
   cancelActiveTrayDrag();
   const pointerId = event.pointerId;
   const pointerType = event.pointerType || "mouse";
@@ -2621,13 +2774,21 @@ function startNodeDrag(event, node, element) {
   const offsetY = event.clientY - nodeRect.top;
   let moved = false;
   let highlightFrame = 0;
+  let shiftArmedByPointer = false;
   node.z = ++state.topZ;
   element.style.zIndex = node.z;
   element.classList.remove("appear");
   element.setPointerCapture(event.pointerId);
+  shiftCopyLimitAnnounced = false;
+  shiftBoard.beginDrag(node.id, { x: node.x, y: node.y }, { width: nodeWidth, height: nodeHeight });
 
   const updatePosition = (moveEvent, highlight = true) => {
     if (moveEvent.pointerId !== pointerId) return;
+    if (moveEvent.shiftKey && !shiftBoard.snapshot().held) {
+      ctrlHover.reset();
+      shiftBoard.setHeld(true);
+      shiftArmedByPointer = true;
+    }
     const samples = typeof moveEvent.getCoalescedEvents === "function" ? moveEvent.getCoalescedEvents() : [];
     const point = samples.at(-1) || moveEvent;
     if (!moved && Math.hypot(point.clientX - startX, point.clientY - startY) > dragThreshold(pointerType)) {
@@ -2641,6 +2802,7 @@ function startNodeDrag(event, node, element) {
     node.y = clamp(point.clientY - boardRect.top - offsetY, 5, boardRect.height - nodeHeight - 5);
     element.style.setProperty("--x", `${node.x}px`);
     element.style.setProperty("--y", `${node.y}px`);
+    shiftBoard.moveDrag({ x: node.x, y: node.y });
     if (highlight && !highlightFrame) {
       highlightFrame = requestAnimationFrame(() => {
         highlightFrame = 0;
@@ -2658,6 +2820,8 @@ function startNodeDrag(event, node, element) {
     element.removeEventListener("lostpointercapture", cancel);
     element.classList.remove("dragging");
     clearDropTargets();
+    shiftBoard.endDrag();
+    if (shiftArmedByPointer) shiftBoard.setHeld(false);
     if (activeBoardDragCleanup === cleanup) activeBoardDragCleanup = null;
   };
   const end = (upEvent) => {
@@ -2904,6 +3068,7 @@ function openRevealPath() {
   if (!state.game || !state.run || state.startingRun || state.reveal.revealed || state.reveal.active || state.reveal.pending) return;
   if (state.busyPairs.size) return showToast("Let the current combination resolve before revealing the path.");
   ctrlHover.reset();
+  shiftBoard.reset();
   stopTimer();
   $("#revealTitle").textContent = `Reveal the path to ${state.game.target}?`;
   const warnings = {
@@ -3077,6 +3242,7 @@ async function playRevealPath(route, { replay = false } = {}) {
   const generation = state.reveal.generation + 1;
   const runId = state.run?.id;
   ctrlHover.reset({ abandonPending: true });
+  shiftBoard.reset();
   if (!replay) state.finished = false;
   state.nodes = [];
   state.selectedNodeId = null;
@@ -3266,6 +3432,7 @@ function finishGame(won, reason = "", { skipSubmit = false } = {}) {
   ctrlHover.reset({ abandonPending: true });
   cancelActiveTrayDrag();
   cancelActiveBoardDrag();
+  shiftBoard.reset();
   cancelTapChain();
   dismissClearUndo();
   state.finished = true;
@@ -4297,6 +4464,9 @@ window.addEventListener("resize", () => {
   });
 });
 document.addEventListener("pointerdown", primeFeedbackAudio, { once: true, passive: true });
+window.addEventListener("pointerdown", rememberPointerPosition, { capture: true, passive: true });
+window.addEventListener("pointermove", rememberPointerPosition, { passive: true });
+window.addEventListener("keydown", activateShiftBoard);
 window.addEventListener("keydown", activateCtrlHover);
 window.addEventListener("keydown", (event) => {
   if (event.key === "Escape" && state.selectedNodeId != null && !event.defaultPrevented) {
@@ -4305,7 +4475,10 @@ window.addEventListener("keydown", (event) => {
   }
 });
 window.addEventListener("keyup", releaseCtrlHover);
+window.addEventListener("keyup", releaseShiftBoard);
 window.addEventListener("blur", releaseCtrlHover);
+window.addEventListener("blur", releaseShiftBoard);
+window.addEventListener("blur", cancelActivePointerGestures);
 window.addEventListener("pagehide", flushRunSave);
 window.addEventListener("beforeunload", (event) => {
   flushRunSave();
@@ -4319,6 +4492,8 @@ window.addEventListener("offline", updateConnection);
 document.addEventListener("visibilitychange", () => {
   if (document.hidden) {
     releaseCtrlHover();
+    releaseShiftBoard();
+    cancelActivePointerGestures();
     flushRunSave();
   }
   else wakeRevealPlayback();

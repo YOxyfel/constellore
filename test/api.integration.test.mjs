@@ -86,10 +86,13 @@ test("authenticated HTTP runs produce verified Pure and Open leaderboard scores"
 
   const serviceWorkerResponse = await fetch(`${baseUrl}/play/service-worker.js`);
   assert.equal(serviceWorkerResponse.status, 200);
-  assert.match(await serviceWorkerResponse.text(), /constellore-shell-v17/);
+  assert.match(await serviceWorkerResponse.text(), /constellore-shell-v18/);
   const moduleResponse = await fetch(`${baseUrl}/frictionless.mjs`);
   assert.equal(moduleResponse.status, 200);
   assert.match(moduleResponse.headers.get("content-type") || "", /^text\/javascript/);
+  const shiftModuleResponse = await fetch(`${baseUrl}/shift-board.mjs`);
+  assert.equal(shiftModuleResponse.status, 200);
+  assert.match(shiftModuleResponse.headers.get("content-type") || "", /^text\/javascript/);
   const briefingModuleResponse = await fetch(`${baseUrl}/mission-briefing.mjs`);
   assert.equal(briefingModuleResponse.status, 200);
   assert.match(briefingModuleResponse.headers.get("content-type") || "", /^text\/javascript/);
