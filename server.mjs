@@ -977,8 +977,8 @@ const RECOVERY_RATE_WINDOW_MS = 15 * 60_000;
 const RECOVERY_RATE_LIMIT = 10;
 const analyticsEvents = new Set(ANALYTICS_EVENT_NAMES);
 
-function rateLimited(request, limit = 180) {
-  const key = request.socket.remoteAddress || "unknown";
+function rateLimited(request, limit = 180, bucket = "general") {
+  const key = `${request.socket.remoteAddress || "unknown"}:${bucket}`;
   const now = Date.now();
   const current = requestWindows.get(key);
   if (!current || now - current.startedAt > 60_000) {
@@ -1184,6 +1184,80 @@ function officialRunDetails(mode, requestedSeed, stage = 0, requestedTarget = ""
   return { game: { ...game, ranked, challengeId }, ranked, challengeId, seed };
 }
 
+const MISSION_PREVIEW_TTL_MS = 15 * 60_000;
+const MISSION_PREVIEW_TOKEN_LIMIT = 16_000;
+
+function missionBriefingFingerprint(game) {
+  return JSON.stringify({
+    mode: game.mode,
+    modeName: game.modeName,
+    target: game.target,
+    emoji: game.emoji,
+    clue: game.clue,
+    tier: game.tier,
+    seed: game.seed,
+    stage: game.stage ?? null,
+    stageCount: game.stageCount ?? null,
+    timeLimit: game.timeLimit ?? null,
+    moveLimit: game.moveLimit ?? null,
+    reward: game.reward,
+    law: game.law ? { id: game.law.id, name: game.law.name, description: game.law.description } : null,
+    ranked: Boolean(game.ranked),
+    scoreEligible: game.scoreEligible !== false,
+    rewardEligible: game.rewardEligible !== false,
+    leaderboardEligible: Boolean(game.leaderboardEligible),
+    challengeId: game.challengeId || ""
+  });
+}
+
+function missionPreviewRequest(details, body) {
+  const mode = details.game.mode;
+  return {
+    mode,
+    seed: details.seed,
+    target: ["reach", "challenge"].includes(mode) ? String(body.target || "") : "",
+    stage: mode === "weekly" ? Math.min(2, Math.max(0, Number(body.stage) || 0)) : 0,
+    custom: Boolean(body.custom)
+  };
+}
+
+function createMissionPreviewToken(playerId, request, game, route = []) {
+  const payload = Buffer.from(JSON.stringify({
+    v: 1,
+    playerId,
+    expiresAt: Date.now() + MISSION_PREVIEW_TTL_MS,
+    request,
+    fingerprint: missionBriefingFingerprint(game),
+    route: request.custom ? route.slice(0, 9).map((step) => ({
+      a: step.a,
+      b: step.b,
+      word: step.word,
+      emoji: step.emoji,
+      note: step.note,
+      source: step.source || "ai-route"
+    })) : []
+  }), "utf8").toString("base64url");
+  return `${payload}.${gameStore.sign(`mission-preview:v1:${payload}`)}`;
+}
+
+function readMissionPreviewToken(token, playerId) {
+  try {
+    if (typeof token !== "string" || token.length < 40 || token.length > MISSION_PREVIEW_TOKEN_LIMIT) throw new Error("invalid");
+    const separator = token.lastIndexOf(".");
+    if (separator < 1) throw new Error("invalid");
+    const encoded = token.slice(0, separator);
+    const signature = token.slice(separator + 1);
+    if (!gameStore.verify(`mission-preview:v1:${encoded}`, signature)) throw new Error("invalid");
+    const payload = JSON.parse(Buffer.from(encoded, "base64url").toString("utf8"));
+    if (!hasExactKeys(payload, ["v", "playerId", "expiresAt", "request", "fingerprint", "route"])) throw new Error("invalid");
+    if (payload.v !== 1 || payload.playerId !== playerId || !Number.isFinite(payload.expiresAt) || payload.expiresAt <= Date.now()) throw new Error("invalid");
+    if (!hasExactKeys(payload.request, ["mode", "seed", "target", "stage", "custom"]) || typeof payload.fingerprint !== "string" || !Array.isArray(payload.route) || payload.route.length > 9) throw new Error("invalid");
+    return payload;
+  } catch {
+    throw serviceError(409, "This mission briefing expired or changed. Review the refreshed mission before starting.", "mission_stale");
+  }
+}
+
 function publicRun(run, token) {
   return {
     id: run.runId,
@@ -1288,7 +1362,7 @@ export const server = createServer(async (request, response) => {
       });
     }
     if (request.method === "POST" && url.pathname === "/api/player/register") {
-      if (rateLimited(request, 20)) return sendJson(response, 429, { error: "Too many player registrations." });
+      if (rateLimited(request, 20, "player-register")) return sendJson(response, 429, { error: "Too many player registrations." });
       const registration = await gameStore.registerPlayer({ withRecoveryCode: true });
       return sendJson(response, 201, {
         player: registration.player,
@@ -1348,7 +1422,7 @@ export const server = createServer(async (request, response) => {
       return sendJson(response, 200, snapshot);
     }
     if (request.method === "POST" && url.pathname === "/api/market/buy") {
-      if (rateLimited(request, 80)) return sendJson(response, 429, { error: "Too many market requests." });
+      if (rateLimited(request, 80, "market-buy")) return sendJson(response, 429, { error: "Too many market requests." });
       const player = requirePlayer(request);
       const { quoteId, idempotencyKey } = await jsonBody(request);
       const purchase = await gameStore.buyLicense(player.id, quoteId, idempotencyKey);
@@ -1371,12 +1445,43 @@ export const server = createServer(async (request, response) => {
       const playerId = request.headers["x-constellore-player"] || request.headers["x-wordforge-player"] || "";
       return sendJson(response, 200, gameStore.leaderboard(scope, division, Number(url.searchParams.get("limit") || 25), playerId));
     }
-    if (request.method === "POST" && url.pathname === "/api/run/start") {
-      if (rateLimited(request, 100)) return sendJson(response, 429, { error: "Too many runs started." });
+    if (request.method === "POST" && url.pathname === "/api/run/preview") {
+      if (rateLimited(request, 160, "run-preview")) return sendJson(response, 429, { error: "Too many missions mapped." });
       const player = requirePlayer(request);
       const body = await jsonBody(request);
       const mode = ["reach", "quick", "moves", "daily", "weekly", "challenge"].includes(body.mode) ? body.mode : "reach";
       const details = officialRunDetails(mode, body.seed, body.stage, String(body.target || ""), Boolean(body.custom));
+      if (!details) throw serviceError(422, "That target has no verified route yet.", "target_unavailable");
+      if (mode === "daily" && gameStore.hasScore(player.id, details.challengeId)) throw serviceError(409, "Today's ranked Word has already been completed.", "daily_complete");
+      const priorForfeit = details.ranked ? gameStore.forfeitedChallenge(player.id, details.challengeId) : null;
+      const ranked = details.ranked && !priorForfeit;
+      const game = {
+        ...details.game,
+        ranked,
+        scoringDisabled: Boolean(priorForfeit),
+        scoreEligible: !priorForfeit,
+        rewardEligible: !priorForfeit,
+        leaderboardEligible: Boolean(ranked)
+      };
+      const verified = verifiedServerRoute(game, { includeDynamic: !details.ranked });
+      if (!verified) throw serviceError(422, "That target has no verified route yet.", "target_unavailable");
+      const previewRequest = missionPreviewRequest(details, body);
+      const previewToken = createMissionPreviewToken(player.id, previewRequest, game, verified.route);
+      return sendJson(response, 200, { game, previewToken, player: gameStore.publicPlayer(player.id) });
+    }
+    if (request.method === "POST" && url.pathname === "/api/run/start") {
+      if (rateLimited(request, 100, "run-start")) return sendJson(response, 429, { error: "Too many runs started." });
+      const player = requirePlayer(request);
+      const body = await jsonBody(request);
+      const preview = body.previewToken ? readMissionPreviewToken(body.previewToken, player.id) : null;
+      const runRequest = preview?.request || body;
+      const mode = ["reach", "quick", "moves", "daily", "weekly", "challenge"].includes(runRequest.mode) ? runRequest.mode : "reach";
+      let details = officialRunDetails(mode, runRequest.seed, runRequest.stage, String(runRequest.target || ""), Boolean(runRequest.custom));
+      if (!details && preview?.request.custom && preview.route.length) {
+        registerDynamicRoute(preview.route, preview.request.target);
+        details = officialRunDetails(mode, runRequest.seed, runRequest.stage, String(runRequest.target || ""), true);
+      }
+      if (!details && preview) throw serviceError(409, "This mission briefing expired or changed. Review the refreshed mission before starting.", "mission_stale");
       if (!details) throw serviceError(422, "That target has no verified route yet.", "target_unavailable");
       if (mode === "daily" && gameStore.hasScore(player.id, details.challengeId)) throw serviceError(409, "Today's ranked Word has already been completed.", "daily_complete");
       const priorForfeit = details.ranked ? gameStore.forfeitedChallenge(player.id, details.challengeId) : null;
@@ -1389,6 +1494,9 @@ export const server = createServer(async (request, response) => {
         rewardEligible: !priorForfeit,
         leaderboardEligible: Boolean(ranked)
       };
+      if (preview && missionBriefingFingerprint(candidateGame) !== preview.fingerprint) {
+        throw serviceError(409, "This mission briefing expired or changed. Review the refreshed mission before starting.", "mission_stale");
+      }
       const verified = verifiedServerRoute(candidateGame, { includeDynamic: !details.ranked });
       if (!verified) throw serviceError(422, "That target has no verified route yet.", "target_unavailable");
       const universeManifest = buildUniverseManifest({ seed: candidateGame.seed, validation: verified.validation });
@@ -1423,7 +1531,7 @@ export const server = createServer(async (request, response) => {
       });
     }
     if (request.method === "POST" && url.pathname === "/api/run/sense") {
-      if (rateLimited(request, 60)) return sendJson(response, 429, { error: "The constellation needs a moment." });
+      if (rateLimited(request, 60, "run-sense")) return sendJson(response, 429, { error: "The constellation needs a moment." });
       const player = requirePlayer(request);
       const { runId, runToken } = await jsonBody(request);
       const run = runRegistry.get(runId, player.id, runToken);
@@ -1464,7 +1572,7 @@ export const server = createServer(async (request, response) => {
       });
     }
     if (request.method === "POST" && url.pathname === "/api/run/reveal") {
-      if (rateLimited(request, 30)) return sendJson(response, 429, { error: "Too many answer paths requested." });
+      if (rateLimited(request, 30, "run-reveal")) return sendJson(response, 429, { error: "Too many answer paths requested." });
       const player = requirePlayer(request);
       const { runId, runToken } = await jsonBody(request);
       const run = runRegistry.get(runId, player.id, runToken);
@@ -1605,7 +1713,7 @@ export const server = createServer(async (request, response) => {
       return sendJson(response, 202, { accepted: true });
     }
     if (request.method === "POST" && url.pathname === "/api/wish") {
-      if (rateLimited(request, 60)) return sendJson(response, 429, { error: "Too many wishes. Let the cosmos settle." });
+      if (rateLimited(request, 60, "wish")) return sendJson(response, 429, { error: "Too many wishes. Let the cosmos settle." });
       const player = requirePlayer(request);
       const { word, runId, runToken } = await jsonBody(request);
       const run = runRegistry.get(runId, player.id, runToken);
@@ -1620,7 +1728,7 @@ export const server = createServer(async (request, response) => {
       return sendJson(response, 200, { ...item, player: gameStore.publicPlayer(player.id), assist: run.assist, division: "open", competitive: false });
     }
     if (request.method === "POST" && url.pathname === "/api/custom-target") {
-      if (rateLimited(request, 30)) return sendJson(response, 429, { error: "Too many routes requested. Try again shortly." });
+      if (rateLimited(request, 30, "custom-target")) return sendJson(response, 429, { error: "Too many routes requested. Try again shortly." });
       const { target } = await jsonBody(request);
       if (typeof target !== "string" || !isSafeTarget(target.trim())) return sendJson(response, 400, { error: "Use a short, recognizable word or phrase." });
       const knownGame = directedServerGame(buildGameForMode("reach", 0, target));
@@ -1631,7 +1739,7 @@ export const server = createServer(async (request, response) => {
       return sendJson(response, 200, generatedGame);
     }
     if (request.method === "POST" && url.pathname === "/api/combine") {
-      if (rateLimited(request, 180)) return sendJson(response, 429, { error: "The cosmos needs a moment." });
+      if (rateLimited(request, 180, "combine")) return sendJson(response, 429, { error: "The cosmos needs a moment." });
       const body = await jsonBody(request);
       const { a, b, categoryA, categoryB, discovered = [], runId, runToken } = body;
       if (typeof a !== "string" || typeof b !== "string" || !a.trim() || !b.trim()) return sendJson(response, 400, { error: "Choose two words first." });

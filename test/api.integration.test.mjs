@@ -86,10 +86,13 @@ test("authenticated HTTP runs produce verified Pure and Open leaderboard scores"
 
   const serviceWorkerResponse = await fetch(`${baseUrl}/play/service-worker.js`);
   assert.equal(serviceWorkerResponse.status, 200);
-  assert.match(await serviceWorkerResponse.text(), /constellore-shell-v16/);
+  assert.match(await serviceWorkerResponse.text(), /constellore-shell-v17/);
   const moduleResponse = await fetch(`${baseUrl}/frictionless.mjs`);
   assert.equal(moduleResponse.status, 200);
   assert.match(moduleResponse.headers.get("content-type") || "", /^text\/javascript/);
+  const briefingModuleResponse = await fetch(`${baseUrl}/mission-briefing.mjs`);
+  assert.equal(briefingModuleResponse.status, 200);
+  assert.match(briefingModuleResponse.headers.get("content-type") || "", /^text\/javascript/);
 
   const manifestResponse = await fetch(`${baseUrl}/manifest.webmanifest`);
   assert.equal(manifestResponse.status, 200);
@@ -522,6 +525,10 @@ test("authenticated HTTP runs produce verified Pure and Open leaderboard scores"
   assert.equal(parallelAssistedStart.response.status, 201);
   assert.equal(parallelAssistedStart.payload.run.ranked, true);
   assert.equal(parallelAssistedStart.payload.run.challengeId, assistedStart.payload.run.challengeId);
+  const preForfeitPreview = await request("/api/run/preview", { method: "POST", body: { mode: "quick" } });
+  assert.equal(preForfeitPreview.response.status, 200);
+  assert.equal(preForfeitPreview.payload.game.scoreEligible, true);
+  assert.equal(typeof preForfeitPreview.payload.previewToken, "string");
 
   const reveal = await request("/api/run/reveal", {
     method: "POST",
@@ -576,7 +583,23 @@ test("authenticated HTTP runs produce verified Pure and Open leaderboard scores"
   assert.equal(pureAfterReveal.payload.entries.some((entry) => entry.callsign === assistedRegistration.payload.player.callsign), false);
   assert.equal(openAfterReveal.payload.entries.some((entry) => entry.callsign === assistedRegistration.payload.player.callsign), false);
 
-  const assistedReplay = await request("/api/run/start", { method: "POST", body: { mode: "quick" } });
+  const stalePreviewStart = await request("/api/run/start", {
+    method: "POST",
+    body: { previewToken: preForfeitPreview.payload.previewToken }
+  });
+  assert.equal(stalePreviewStart.response.status, 409);
+  assert.equal(stalePreviewStart.payload.code, "mission_stale", "a run may not start under scoring terms that changed after its briefing");
+
+  const assistedPreview = await request("/api/run/preview", { method: "POST", body: { mode: "quick" } });
+  assert.equal(assistedPreview.response.status, 200);
+  assert.equal(assistedPreview.payload.game.ranked, false);
+  assert.equal(assistedPreview.payload.game.scoreEligible, false, "the briefing must disclose an earlier forfeit before replay starts");
+  assert.equal(assistedPreview.payload.game.rewardEligible, false);
+
+  const assistedReplay = await request("/api/run/start", {
+    method: "POST",
+    body: { previewToken: assistedPreview.payload.previewToken }
+  });
   assert.equal(assistedReplay.response.status, 201);
   assert.equal(assistedReplay.payload.run.ranked, false);
   assert.equal(assistedReplay.payload.run.scoringDisabled, true);

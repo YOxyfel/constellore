@@ -68,11 +68,20 @@ test("the Pages adapter completes a real local Telescope route without a server"
 
   const registration = await localRequest("/api/player/register", { method: "POST" });
   assert.equal(registration.player.callsign, "Local Stargazer");
-  const started = await localRequest("/api/run/start", {
+  const missionPreview = await localRequest("/api/run/preview", {
     method: "POST",
     body: JSON.stringify({ mode: "reach", seed: 7, target: "Telescope" })
   });
+  assert.equal("run" in missionPreview, false, "local briefing does not start an orbit");
+  assert.equal(missionPreview.game.target, "Telescope");
+  assert.equal(missionPreview.game.leaderboardEligible, false);
+  assert.match(missionPreview.previewToken, /^mission-preview-/);
+  const started = await localRequest("/api/run/start", {
+    method: "POST",
+    body: JSON.stringify({ previewToken: missionPreview.previewToken })
+  });
   assert.equal(started.game.target, "Telescope");
+  assert.equal(started.game.target, missionPreview.game.target);
   assert.equal(started.run.ranked, false);
   assert.equal(started.game.universe.seedId.startsWith("cx1-"), true);
   assert.ok(started.game.universe.season.id);

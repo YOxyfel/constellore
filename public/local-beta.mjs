@@ -13,6 +13,8 @@ import { annotateUniverseResult, selectUniverse, validateUniverseRoute } from ".
 import { sanitizeRecipeRating } from "./recipe-feedback.mjs";
 
 const runs = new Map();
+const missionPreviews = new Map();
+const LOCAL_MISSION_PREVIEW_TTL_MS = 15 * 60_000;
 const MAX_RESUME_DISCOVERIES = 1000;
 const MAX_RESUME_HISTORY = 500;
 const player = {
@@ -45,6 +47,18 @@ function parseBody(options) {
 
 function publicPlayer() {
   return { ...player, vault: [] };
+}
+
+function cloneMissionGame(game) {
+  return JSON.parse(JSON.stringify(game));
+}
+
+function pruneMissionPreviews() {
+  const now = Date.now();
+  for (const [token, preview] of missionPreviews) {
+    if (preview.expiresAt <= now) missionPreviews.delete(token);
+  }
+  while (missionPreviews.size >= 24) missionPreviews.delete(missionPreviews.keys().next().value);
 }
 
 function directedLocalGame(mode, seed, target, stage) {
@@ -310,10 +324,45 @@ export async function localRequest(url, options = {}) {
     return directedLocalGame("reach", 0, target);
   }
 
-  if (method === "POST" && path === "/api/run/start") {
+  if (method === "POST" && path === "/api/run/preview") {
     const target = body.target ? canonicalLocalTarget(body.target) : "";
     if (body.target && !target) fail("That target is not mapped in local practice yet.", "local_target_unknown");
     const game = directedLocalGame(body.mode, body.seed, target, body.stage);
+    if (!game) fail("The local universe could not map that orbit.");
+    if (!verifiedLocalRoute(game)) fail("The local universe could not verify a route to that target.", "local_route_invalid", 409);
+    const missionGame = {
+      ...game,
+      ranked: false,
+      scoreEligible: true,
+      rewardEligible: true,
+      leaderboardEligible: false
+    };
+    pruneMissionPreviews();
+    const previewToken = localId("mission-preview");
+    missionPreviews.set(previewToken, {
+      game: cloneMissionGame(missionGame),
+      expiresAt: Date.now() + LOCAL_MISSION_PREVIEW_TTL_MS
+    });
+    return {
+      player: publicPlayer(),
+      game: missionGame,
+      previewToken
+    };
+  }
+
+  if (method === "POST" && path === "/api/run/start") {
+    let game;
+    if (body.previewToken) {
+      pruneMissionPreviews();
+      const preview = missionPreviews.get(body.previewToken);
+      if (!preview) fail("This mission briefing expired or changed. Review the refreshed mission before starting.", "mission_stale", 409);
+      missionPreviews.delete(body.previewToken);
+      game = cloneMissionGame(preview.game);
+    } else {
+      const target = body.target ? canonicalLocalTarget(body.target) : "";
+      if (body.target && !target) fail("That target is not mapped in local practice yet.", "local_target_unknown");
+      game = directedLocalGame(body.mode, body.seed, target, body.stage);
+    }
     if (!game) fail("The local universe could not map that orbit.");
     const solutionRoute = verifiedLocalRoute(game);
     if (!solutionRoute) fail("The local universe could not verify a route to that target.", "local_route_invalid", 409);

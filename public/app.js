@@ -8,6 +8,7 @@ import { COSMETIC_CATALOG, cosmeticClasses, cosmeticOptions, sanitizeCosmeticLoa
 import { createRecipeFeedbackRequest } from "./recipe-feedback.mjs?v=1.0.0";
 import { selectUniverse } from "./universe-director.mjs?v=1.0.0";
 import { listPendingScoreRecords, removePendingScoreRecord, savePendingScoreRecord } from "./pending-scores.mjs?v=1.0.0";
+import { buildMissionBriefing } from "./mission-briefing.mjs?v=1.0.0";
 
 const starterEmoji = { Earth: "🌍", Water: "💧", Fire: "🔥", Air: "💨" };
 const starterCategory = { Earth: "nature", Water: "force", Fire: "force", Air: "force" };
@@ -99,6 +100,7 @@ const state = {
   finishedElapsedSeconds: 0,
   finished: false,
   startingRun: false,
+  pendingMission: null,
   wished: false,
   bendItem: null,
   rewardedWish: false,
@@ -178,6 +180,7 @@ const els = {
   senseButton: $("#senseButton"), senseHudCount: $("#senseHudCount"), senseDialog: $("#senseDialog"),
   rivalGhost: $("#rivalGhost"), ghostCallsign: $("#ghostCallsign"), ghostStatus: $("#ghostStatus"), ghostPace: $("#ghostPace"),
   paywallDialog: $("#paywallDialog"), wishDialog: $("#wishDialog"), atlasDialog: $("#atlasDialog"),
+  missionBriefingDialog: $("#missionBriefingDialog"),
   profileDialog: $("#profileDialog"), shareDialog: $("#shareDialog"), resultDialog: $("#resultDialog"),
   exchangeDialog: $("#exchangeDialog"), marketBuyDialog: $("#marketBuyDialog"), leaderboardDialog: $("#leaderboardDialog"),
   revealDialog: $("#revealDialog"), revealController: $("#revealController"), revealPathButton: $("#revealPathButton"),
@@ -789,7 +792,11 @@ function acknowledgeRecoveryKit() {
   $("#recoveryPlayerId").textContent = "Cleared";
   $("#recoveryCode").textContent = "Cleared from this screen";
   $("#recoveryDialog").close();
-  if (!state.game && !sanitizeFirstOrbitState(profile.firstOrbit).seen) requestAnimationFrame(openFirstOrbitWelcome);
+  if (state.pendingMission) {
+    $("#missionBriefingStatus").textContent = "";
+    requestAnimationFrame(presentMissionBriefing);
+  }
+  else if (!state.game && !sanitizeFirstOrbitState(profile.firstOrbit).seen) requestAnimationFrame(openFirstOrbitWelcome);
 }
 
 async function rotateRecoveryKit() {
@@ -1076,6 +1083,160 @@ function skipFirstOrbit() {
   showToast("Training skipped · replay it anytime from your profile.");
 }
 
+function presentMissionBriefing() {
+  const pending = state.pendingMission;
+  if (!pending || state.recoveryKit?.code || $("#recoveryDialog").open || els.missionBriefingDialog.open) return;
+  els.missionBriefingDialog.scrollTop = 0;
+  $("#missionBriefingScroll").scrollTop = 0;
+  els.missionBriefingDialog.showModal();
+  requestAnimationFrame(() => $("#beginMission").focus({ preventScroll: true }));
+  track("mission_briefing_viewed", { mode: pending.game.mode, target: pending.game.target, ranked: Boolean(pending.game.leaderboardEligible) });
+}
+
+function openMissionBriefing(game, request, trigger = null) {
+  const briefing = buildMissionBriefing(game, { localOnly: isStaticBeta });
+  state.pendingMission = { game, request: { ...request }, trigger, returnToModes: !els.gameScreen.hidden };
+  $("#missionBriefingMode").textContent = briefing.modeLabel;
+  $("#missionBriefingEmoji").textContent = briefing.emoji;
+  $("#missionBriefingTarget").textContent = briefing.target;
+  $("#missionBriefingClue").textContent = game.clue || "A destination waits at the edge of this constellation.";
+  $("#missionBriefingRule").textContent = briefing.instruction;
+  $("#missionBriefingLimit").textContent = briefing.limitValue;
+  $("#missionBriefingLimitDetail").textContent = briefing.limitDetail;
+  $("#missionBriefingReward").textContent = briefing.rewardValue;
+  $("#missionBriefingRewardDetail").textContent = briefing.rewardDetail;
+  $("#missionBriefingScoreLabel").textContent = briefing.scoringLabel;
+  $("#missionBriefingScore").textContent = briefing.scoringValue;
+  $("#missionBriefingScoreDetail").textContent = briefing.scoringDetail;
+  $("#missionBriefingInteraction").textContent = briefing.interactionRule;
+  $("#missionBriefingModeRule").textContent = briefing.modeRule;
+  $("#missionBriefingFairness").textContent = briefing.fairnessNote;
+  const law = game.law;
+  $("#missionBriefingLaw").hidden = !law;
+  $("#missionBriefingLawName").textContent = law?.name || "";
+  $("#missionBriefingLawDescription").textContent = law?.description || "";
+  const status = $("#missionBriefingStatus");
+  status.textContent = "";
+  status.classList.remove("error");
+  $("#beginMission").disabled = false;
+  $("#cancelMission").disabled = false;
+  $("#beginMission span").textContent = "Begin mission";
+  els.missionBriefingDialog.scrollTop = 0;
+  $("#missionBriefingScroll").scrollTop = 0;
+  presentMissionBriefing();
+}
+
+function cancelMissionBriefing() {
+  if (state.startingRun || !state.pendingMission) return;
+  const pending = state.pendingMission;
+  state.pendingMission = null;
+  if (els.missionBriefingDialog.open) els.missionBriefingDialog.close("cancel");
+  track("mission_briefing_dismissed", { mode: pending.game.mode, target: pending.game.target });
+  if (pending.returnToModes) returnHome();
+  else requestAnimationFrame(() => pending.trigger?.focus?.({ preventScroll: true }));
+}
+
+async function createRun(request) {
+  if (!profile.playerId || !profile.playerToken) await ensurePlayer();
+  return fetchJson("/api/run/start", {
+    method: "POST",
+    headers: authHeaders({ "Content-Type": "application/json" }),
+    body: JSON.stringify(request)
+  });
+}
+
+async function requestMissionPreview(request) {
+  if (!profile.playerId || !profile.playerToken) await ensurePlayer();
+  const preview = await fetchJson("/api/run/preview", {
+    method: "POST",
+    headers: authHeaders({ "Content-Type": "application/json" }),
+    body: JSON.stringify(request)
+  });
+  applyServerPlayer(preview.player);
+  return {
+    game: preview.game,
+    request: { ...request, previewToken: preview.previewToken }
+  };
+}
+
+async function rebuildCustomMission(request) {
+  const game = await fetchJson("/api/custom-target", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ target: request.target })
+  }, 45000);
+  return {
+    mode: "reach",
+    seed: game.seed,
+    target: game.target,
+    custom: true
+  };
+}
+
+async function refreshMissionPreview(pending) {
+  const request = { ...pending.request };
+  delete request.previewToken;
+  try {
+    return await requestMissionPreview(request);
+  } catch (error) {
+    if (!request.custom || error.code !== "target_unavailable") throw error;
+    return requestMissionPreview(await rebuildCustomMission(request));
+  }
+}
+
+async function confirmMissionBriefing() {
+  const pending = state.pendingMission;
+  if (!pending || state.startingRun) return;
+  const begin = $("#beginMission");
+  const cancel = $("#cancelMission");
+  const status = $("#missionBriefingStatus");
+  state.startingRun = true;
+  begin.disabled = true;
+  cancel.disabled = true;
+  begin.querySelector("span").textContent = "Opening orbit…";
+  status.classList.remove("error");
+  status.textContent = "Creating your verified starting point…";
+  try {
+    if (!profile.playerId || !profile.playerToken) await ensurePlayer();
+    if (state.recoveryKit?.code) {
+      begin.disabled = false;
+      cancel.disabled = false;
+      begin.querySelector("span").textContent = "Begin mission";
+      status.textContent = "Save your one-time Recovery Kit, then this mission will reopen.";
+      if (els.missionBriefingDialog.open) els.missionBriefingDialog.close("recovery");
+      showRecoveryKit();
+      return;
+    }
+    const started = await createRun(pending.request);
+    applyServerPlayer(started.player);
+    state.pendingMission = null;
+    if (els.missionBriefingDialog.open) els.missionBriefingDialog.close("start");
+    startWithGame(started.game, started.run);
+  } catch (error) {
+    if (error.code === "mission_stale") {
+      try {
+        status.classList.remove("error");
+        status.textContent = "The mission changed while this briefing was open. Refreshing it now...";
+        begin.querySelector("span").textContent = "Refreshing mission...";
+        const refreshed = await refreshMissionPreview(pending);
+        openMissionBriefing(refreshed.game, refreshed.request, pending.trigger);
+        $("#missionBriefingStatus").textContent = "Mission refreshed. Review the updated details, then begin when ready.";
+        return;
+      } catch (refreshError) {
+        error = refreshError;
+      }
+    }
+    status.classList.add("error");
+    status.textContent = error.message;
+    begin.disabled = false;
+    cancel.disabled = false;
+    begin.querySelector("span").textContent = "Try again";
+  } finally {
+    state.startingRun = false;
+    if (state.game) { updateHud(); updateBoardTools(); }
+  }
+}
+
 async function beginMode(mode, options = {}) {
   if (state.startingRun) return;
   if (mode === "daily" && profile.dailyCompleted === todayKey) return;
@@ -1088,15 +1249,16 @@ async function beginMode(mode, options = {}) {
   if (button) button.disabled = true;
   if (label) label.textContent = "Mapping orbit…";
   try {
-    if (!profile.playerId || !profile.playerToken) await ensurePlayer();
     const seed = options.seed ?? (mode === "daily" ? Math.floor(Date.now() / 86_400_000) : mode === "weekly" ? currentWeekSeed() : Math.floor(Math.random() * 1_000_000));
-    const started = await fetchJson("/api/run/start", {
-      method: "POST",
-      headers: authHeaders({ "Content-Type": "application/json" }),
-      body: JSON.stringify({ mode, seed, target: options.target || "", stage: mode === "weekly" ? profile.weekly.stage : undefined })
-    });
-    applyServerPlayer(started.player);
-    startWithGame(started.game, started.run);
+    const request = { mode, seed, target: options.target || "", stage: mode === "weekly" ? profile.weekly.stage : undefined };
+    if (options.skipBriefing) {
+      const started = await createRun(request);
+      applyServerPlayer(started.player);
+      startWithGame(started.game, started.run);
+    } else {
+      const preview = await requestMissionPreview(request);
+      openMissionBriefing(preview.game, preview.request, button);
+    }
   } catch (error) {
     showToast(error.message);
   } finally {
@@ -1121,15 +1283,10 @@ async function beginCustomTarget(event) {
     const game = await fetchJson("/api/custom-target", {
       method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ target })
     }, 45000);
-    if (!profile.playerId || !profile.playerToken) await ensurePlayer();
-    const started = await fetchJson("/api/run/start", {
-      method: "POST",
-      headers: authHeaders({ "Content-Type": "application/json" }),
-      body: JSON.stringify({ mode: "reach", seed: game.seed, target: game.target, custom: true })
-    });
+    const request = { mode: "reach", seed: game.seed, target: game.target, custom: true };
+    const preview = await requestMissionPreview(request);
     els.targetMessage.textContent = "";
-    applyServerPlayer(started.player);
-    startWithGame(started.game, started.run);
+    openMissionBriefing(preview.game, preview.request, submit);
   } catch (error) {
     els.targetMessage.textContent = error.message;
   } finally {
@@ -1444,7 +1601,7 @@ function startWithGame(game, run, { restored = false } = {}) {
   resetRevealPlayback();
   clearSenseGlow();
   resetRecipeFeedback();
-  [els.revealDialog, els.resultDialog, els.leaderboardDialog, els.shareDialog, els.atlasDialog, els.senseDialog, els.wishDialog, els.paywallDialog, els.exchangeDialog, els.marketBuyDialog, els.firstOrbitDialog]
+  [els.missionBriefingDialog, els.revealDialog, els.resultDialog, els.leaderboardDialog, els.shareDialog, els.atlasDialog, els.senseDialog, els.wishDialog, els.paywallDialog, els.exchangeDialog, els.marketBuyDialog, els.firstOrbitDialog]
     .forEach((dialog) => { if (dialog?.open) dialog.close(); });
   state.game = game;
   state.run = run;
@@ -1527,13 +1684,14 @@ function returnHome() {
   state.cosmosFrame = null;
   state.game = null;
   state.run = null;
+  state.pendingMission = null;
   state.nodes = [];
   clearActiveRunSnapshot();
   els.gameScreen.classList.remove("training-orbit");
   els.firstOrbitGuide.hidden = true;
   els.gameScreen.hidden = true;
   els.startScreen.hidden = false;
-  [els.resultDialog, els.atlasDialog, els.senseDialog, els.shareDialog, els.wishDialog, els.paywallDialog, els.exchangeDialog, els.marketBuyDialog, els.leaderboardDialog, els.revealDialog].forEach((dialog) => { if (dialog?.open) dialog.close(); });
+  [els.missionBriefingDialog, els.resultDialog, els.atlasDialog, els.senseDialog, els.shareDialog, els.wishDialog, els.paywallDialog, els.exchangeDialog, els.marketBuyDialog, els.leaderboardDialog, els.revealDialog].forEach((dialog) => { if (dialog?.open) dialog.close(); });
   renderProfile();
   window.scrollTo({ top: 0, behavior: "smooth" });
   requestAnimationFrame(() => els.startScreen.querySelector(".mode-grid [data-mode]:not(:disabled)")?.focus({ preventScroll: true }));
@@ -1556,7 +1714,7 @@ async function retryGame() {
     return;
   }
   const mode = state.game.mode;
-  const options = { seed: state.game.seed, target: ["reach", "challenge"].includes(mode) ? state.game.target : undefined };
+  const options = { seed: state.game.seed, target: ["reach", "challenge"].includes(mode) ? state.game.target : undefined, skipBriefing: true };
   const resultActions = [els.resultPrimary, els.resultRetry, $("#resultLeaderboard"), els.resultShare, $("#resultReveal")];
   resultActions.forEach((control) => { control.disabled = true; });
   try { await beginMode(mode, options); }
@@ -3655,7 +3813,7 @@ function renderLeaderboard(board) {
 }
 
 function resumeTimerIfNeeded() {
-  if (state.game?.timeLimit && !state.finished && !state.reveal.active && !state.reveal.pending && !els.gameScreen.hidden && !els.paywallDialog.open && !els.wishDialog.open && !els.atlasDialog.open && !els.senseDialog.open && !els.shareDialog.open && !els.profileDialog.open && !els.exchangeDialog.open && !els.marketBuyDialog.open && !els.leaderboardDialog.open && !els.revealDialog.open && !$("#recoveryDialog").open) startTimer();
+  if (state.game?.timeLimit && !state.finished && !state.reveal.active && !state.reveal.pending && !els.gameScreen.hidden && !els.missionBriefingDialog.open && !els.paywallDialog.open && !els.wishDialog.open && !els.atlasDialog.open && !els.senseDialog.open && !els.shareDialog.open && !els.profileDialog.open && !els.exchangeDialog.open && !els.marketBuyDialog.open && !els.leaderboardDialog.open && !els.revealDialog.open && !$("#recoveryDialog").open) startTimer();
 }
 
 function renderAtlas() {
@@ -3987,6 +4145,8 @@ function escapeHtml(value) { return String(value).replace(/[&<>'"]/g, (character
 
 $$('[data-mode]').forEach((button) => button.addEventListener("click", () => beginMode(button.dataset.mode)));
 $("#customTargetForm").addEventListener("submit", beginCustomTarget);
+$("#beginMission").addEventListener("click", confirmMissionBriefing);
+$("#cancelMission").addEventListener("click", cancelMissionBriefing);
 $("#homeButton").addEventListener("click", returnHome);
 els.resetBoard.addEventListener("click", clearBoardWithUndo);
 els.tidyBoard.addEventListener("click", tidyOrbit);
@@ -4102,6 +4262,10 @@ $$('[data-close]').forEach((button) => button.addEventListener("click", () => {
   if (button.dataset.close === "revealDialog" && state.reveal.pending) return;
   document.getElementById(button.dataset.close).close();
 }));
+els.missionBriefingDialog.addEventListener("cancel", (event) => {
+  event.preventDefault();
+  cancelMissionBriefing();
+});
 els.revealDialog.addEventListener("cancel", (event) => {
   if (state.reveal.pending) event.preventDefault();
 });

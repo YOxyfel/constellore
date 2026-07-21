@@ -80,7 +80,7 @@ export const ANALYTICS_EVENT_NAMES = Object.freeze([
   "ghost_loaded", "ghost_race_started", "ghost_race_completed", "mastery_opened", "mastery_progressed",
   "mastery_completed", "audio_toggled", "haptic_toggled", "fusion_feedback_played", "cosmetic_changed",
   "recipe_feedback_submitted", "card_shared", "card_downloaded", "cloud_sync", "ownership_restored",
-  "recovery_rotated", "account_recovered"
+  "recovery_rotated", "account_recovered", "mission_briefing_viewed", "mission_briefing_dismissed"
 ]);
 const analyticsEventNames = new Set(ANALYTICS_EVENT_NAMES);
 const analyticsEnumDimensions = new Map([
