@@ -47,8 +47,8 @@ assert.match(gameApp, /await playRevealPath\(route, \{ replay: true \}\)/);
 assert.match(gameApp, /state\.reveal\.phase = "exiting"/);
 for (const expected of [
   'href="./manifest.webmanifest"',
-  'href="./styles.css?v=2.6.1"',
-  'src="./app.js?v=1.13.1"'
+  'href="./styles.css?v=2.7.0"',
+  'src="./app.js?v=1.14.0"'
 ]) assert.ok(gameHtml.includes(expected), `Missing ${expected} from the Pages game document.`);
 for (const forbidden of ['href="/manifest', 'href="/styles', 'href="/icon', 'src="/app']) {
   assert.ok(!gameHtml.includes(forbidden), `Root-absolute game path remains: ${forbidden}`);
@@ -60,10 +60,13 @@ assert.match(updatesButton, /\baria-haspopup="dialog"/i);
 assert.match(updatesButton, /\baria-controls="updatesDialog"/i);
 const updatesDialog = gameHtml.match(/<dialog\b(?=[^>]*\bid="updatesDialog")[^>]*>[\s\S]*?<\/dialog>/i)?.[0] || "";
 assert.ok(updatesDialog, "The Pages game is missing the updates dialog.");
-assert.equal((updatesDialog.match(/\bdata-update-entry(?:=|\s|>)/gi) || []).length, 3, "The Pages updates dialog must contain exactly three entries.");
-for (const label of ["Release", "Ctrl", "Shift"]) {
+assert.equal((updatesDialog.match(/\bdata-update-entry(?:=|\s|>)/gi) || []).length, 4, "The Pages updates dialog must contain exactly four entries.");
+for (const label of ["Release", "Ctrl", "Shift", "Route Signals"]) {
   assert.match(updatesDialog, new RegExp(`\\b${label}\\b`, "i"), `The Pages updates dialog is missing the ${label} entry.`);
 }
+assert.match(updatesDialog, /4 ENTRIES/i, "The Pages updates dialog is missing its current entry count.");
+assert.equal((updatesDialog.match(/\bis-latest\b/gi) || []).length, 1, "The Pages updates dialog must have exactly one latest entry.");
+assert.equal((updatesDialog.match(/>LATEST</gi) || []).length, 1, "The Pages updates dialog must have exactly one latest badge.");
 
 for (const file of ["app.js", "ctrl-hover.mjs", "shift-board.mjs", "frictionless.mjs", "mission-briefing.mjs", "styles.css", "local-beta.mjs", "local-world.mjs", "cosmic-twists.mjs", "recipe-mastery.mjs", "engagement-features.mjs", "first-orbit.mjs", "universe-director.mjs", "constellation-card.mjs", "cosmetic-economy.mjs", "recipe-feedback.mjs", "pending-scores.mjs", "manifest.webmanifest", "service-worker.js", "icon.svg"]) {
   assert.ok((await stat(join(output, "play", file))).size > 0, `${file} is missing or empty.`);
@@ -81,11 +84,11 @@ assert.match(gameServiceWorker, /constellation-card[.]mjs/);
 assert.match(gameServiceWorker, /cosmetic-economy[.]mjs/);
 assert.match(gameServiceWorker, /recipe-feedback[.]mjs/);
 assert.match(gameServiceWorker, /pending-scores[.]mjs/);
-assert.match(gameServiceWorker, /engagement-features[.]mjs[?]v=1[.]1[.]0/);
-assert.match(gameApp, /engagement-features[.]mjs[?]v=1[.]1[.]0/);
+assert.match(gameServiceWorker, /engagement-features[.]mjs[?]v=1[.]2[.]0/);
+assert.match(gameApp, /engagement-features[.]mjs[?]v=1[.]2[.]0/);
 assert.match(gameServiceWorker, /mission-briefing[.]mjs[?]v=1[.]0[.]1/);
 assert.match(gameApp, /mission-briefing[.]mjs[?]v=1[.]0[.]1/);
-assert.match(gameApp, /shift-board[.]mjs[?]v=1[.]0[.]0/);
+assert.match(gameApp, /shift-board[.]mjs[?]v=1[.]1[.]0/);
 
 const playRoot = resolve(output, "play");
 const visitedModules = new Set();

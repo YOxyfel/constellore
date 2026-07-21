@@ -1,8 +1,8 @@
 import { createCtrlHoverController } from "./ctrl-hover.mjs?v=1.0.0";
-import { createShiftBoardController } from "./shift-board.mjs?v=1.0.0";
+import { createShiftBoardController } from "./shift-board.mjs?v=1.1.0";
 import { findOpenSpawn, orderInventory, packOrbit, pickMagneticTarget } from "./frictionless.mjs?v=1.0.0";
 import { buildMasteryCollections, recordRecipeDiscovery, sanitizeRecipeMasteryState, summarizeMasteryCollections } from "./recipe-mastery.mjs?v=1.0.0";
-import { QUICK_TIP_LIMIT, buildGhost, feedbackCuePolicy, ghostSnapshot, ghostTrailPreviewState, grantSenseCharges, reconcileCloudProgression, refillSenseWallet, sanitizeFeedbackPreferences, sanitizeSenseWallet, selectQuickTip, spendSenseCharge } from "./engagement-features.mjs?v=1.1.0";
+import { QUICK_TIP_LIMIT, buildGhost, feedbackCuePolicy, ghostSnapshot, ghostTrailPreviewState, grantSenseCharges, reconcileCloudProgression, refillSenseWallet, sanitizeFeedbackPreferences, sanitizeSenseWallet, spendSenseCharge } from "./engagement-features.mjs?v=1.2.0";
 import { firstOrbitProgress, firstOrbitWrongPairMessage, resolveFirstOrbitCombination, sanitizeFirstOrbitState } from "./first-orbit.mjs?v=1.0.0";
 import { buildConstellationCard, constellationCardFilename, constellationCardShareText, renderConstellationCardSvg } from "./constellation-card.mjs?v=1.0.0";
 import { COSMETIC_CATALOG, cosmeticClasses, cosmeticOptions, sanitizeCosmeticLoadout, transformFeedbackAudio } from "./cosmetic-economy.mjs?v=1.0.0";
@@ -110,6 +110,7 @@ const state = {
   cosmosFrame: null,
   stars: [],
   resultAction: null,
+  resultMasteryNotice: "",
   shareGame: null,
   shareCard: null,
   installPrompt: null,
@@ -158,6 +159,7 @@ let profile = loadProfile();
 let config = { billingEnabled: false, checkoutUrl: "", testStoreEnabled: false, creditPacks: [], rewardedAdsEnabled: false, founderPrice: "€6.99", aiEnabled: false };
 let localRuntimePromise;
 let activeTrayDragCleanup = null;
+let activeTrayShiftSource = null;
 let activeBoardDragCleanup = null;
 let shiftCopyLimitAnnounced = false;
 let lastPointerPosition = null;
@@ -179,7 +181,7 @@ const els = {
   board: $("#board"), boardItems: $("#boardItems"), boardGuide: $("#boardGuide"), cosmosCanvas: $("#cosmosCanvas"),
   tidyBoard: $("#tidyBoard"), resetBoard: $("#resetBoard"), dropPairPreview: $("#dropPairPreview"),
   tapChainStatus: $("#tapChainStatus"), tapChainText: $("#tapChainText"), boardUndo: $("#boardUndo"),
-  alchemyNote: $("#alchemyNote"), wordList: $("#wordList"), collectionCount: $("#collectionCount"),
+  alchemyNote: $("#alchemyNote"), boardAnnouncement: $("#boardAnnouncement"), wordList: $("#wordList"), collectionCount: $("#collectionCount"),
   inventorySearch: $("#inventorySearch"), inventorySearchClear: $("#inventorySearchClear"), inventorySearchStatus: $("#inventorySearchStatus"),
   modeName: $("#modeName"), targetWord: $("#targetWord"), universePill: $("#universePill"), lawPill: $("#lawPill"), movesValue: $("#movesValue"),
   timerHud: $("#timerHud"), timerValue: $("#timerValue"), pathCount: $("#pathCount"),
@@ -204,7 +206,7 @@ const els = {
   marketList: $("#marketList"), marketBalance: $("#marketBalance"), marketCountdown: $("#marketCountdown"),
   marketMessage: $("#marketMessage"), leaderboardRows: $("#leaderboardRows"), leaderboardMessage: $("#leaderboardMessage"),
   resultEmoji: $("#resultEmoji"), resultKicker: $("#resultKicker"), resultTitle: $("#resultTitle"),
-  resultStats: $("#resultStats"), resultPrimary: $("#resultPrimary"), resultRetry: $("#resultRetry"),
+  resultStats: $("#resultStats"), resultMasteryCard: $("#resultMasteryCard"), resultMasteryText: $("#resultMasteryText"), resultPrimary: $("#resultPrimary"), resultRetry: $("#resultRetry"),
   resultShare: $("#resultShare"), rewardCard: $("#rewardCard"), rewardDust: $("#rewardDust"),
   rewardReason: $("#rewardReason"), masteryCollectionList: $("#masteryCollectionList"),
   firstOrbitGuide: $("#firstOrbitGuide"), firstOrbitDialog: $("#firstOrbitDialog"), recipeFeedback: $("#recipeFeedback"),
@@ -370,14 +372,14 @@ function recordMasteryStep(step) {
   }
   saveProfile({ fields: ["mastery"] });
   track("mastery_progressed", { stars: award.recipe.stars, completed: Boolean(newlyCompleted) });
+  const notice = newlyCompleted
+    ? `${newlyCompleted.title} collection complete · +1 Compass charge`
+    : `Recipe Mastery · ${award.recipe.word} ${"★".repeat(award.recipe.stars)}${"☆".repeat(3 - award.recipe.stars)}`;
   if (newlyCompleted) {
-    showToast(`${newlyCompleted.title} collection complete · +1 Compass charge`);
     track("mastery_completed", { collection: newlyCompleted.id });
-  } else {
-    showToast(`Recipe Mastery · ${award.recipe.word} ${"★".repeat(award.recipe.stars)}${"☆".repeat(3 - award.recipe.stars)}`);
   }
   setTimeout(() => playFeedback("mastery", { analytics: true }), 180);
-  return { ...award, newlyCompleted };
+  return { ...award, newlyCompleted, notice };
 }
 
 const cosmeticClassNames = COSMETIC_CATALOG.map((item) => `${item.kind}-${item.id}`);
@@ -440,8 +442,8 @@ function renderPowerups() {
 
   els.quickTipShortcutCount.textContent = String(tipsRemaining);
   els.quickTipShortcut.disabled = !activeRun || state.powerups.busy || tipsRemaining <= 0;
-  els.quickTipShortcut.setAttribute("aria-label", `Use a Quick Tip; ${tipsRemaining} remaining; score safe`);
-  els.quickTipShortcut.title = tipsRemaining ? `Use a Quick Tip · ${tipsRemaining} remaining · score safe` : "No Quick Tips remain this orbit";
+  els.quickTipShortcut.setAttribute("aria-label", `Read a Route Signal; ${tipsRemaining} remaining; score safe`);
+  els.quickTipShortcut.title = tipsRemaining ? `Read a Route Signal · ${tipsRemaining} remaining · score safe` : "No Route Signals remain this orbit";
   els.quickTipShortcut.classList.toggle("is-empty", tipsRemaining <= 0);
 
   els.wordGiftShortcutCount.textContent = armedKind === "gift" ? "!" : state.powerups.giftUsed ? "✓" : giftReady ? "1" : "0";
@@ -1656,7 +1658,7 @@ function hydrateRestoredRun(payload, snapshot) {
   state.bendItem = snapshotItem(progress.bendItem);
   state.assist = payload.run?.assist || progress.assist || "none";
   const matchingSnapshot = snapshot?.run?.id === payload.run?.id ? snapshot.progress || {} : {};
-  state.powerups.tipsUsed = clamp(Number(matchingSnapshot.tipsUsed ?? progress.tipsUsed) || 0, 0, QUICK_TIP_LIMIT);
+  state.powerups.tipsUsed = clamp(Number(progress.tipsUsed ?? matchingSnapshot.tipsUsed) || 0, 0, QUICK_TIP_LIMIT);
   state.powerups.tipIds = Array.isArray(matchingSnapshot.tipIds) ? [...new Set(matchingSnapshot.tipIds.map((value) => String(value || "").slice(0, 60)).filter(Boolean))].slice(0, QUICK_TIP_LIMIT) : [];
   state.powerups.giftUsed = Boolean(progress.giftUsed || matchingSnapshot.giftUsed || state.assist === "gift");
   state.powerups.giftUnavailable = !state.powerups.giftUsed && Boolean(matchingSnapshot.giftUnavailable);
@@ -1772,9 +1774,9 @@ function startWithGame(game, run, { restored = false } = {}) {
   state.finishedElapsedSeconds = 0;
   state.remainingSeconds = run?.deadlineAt ? Math.max(0, Math.ceil((Date.parse(run.deadlineAt) - Date.now()) / 1000)) : game.timeLimit || 0;
   state.resultAction = null;
-  clearTimeout(showAlchemy.timer);
-  els.alchemyNote.classList.remove("show", "error", "twist");
-  els.alchemyNote.textContent = "";
+  state.resultMasteryNotice = "";
+  clearGlobalToast();
+  clearBoardNotices();
   els.board.classList.remove("reveal-complete");
   els.startScreen.hidden = true;
   els.gameScreen.hidden = false;
@@ -1819,6 +1821,7 @@ function returnHome() {
   if (state.game && !state.finished && state.history.length) track("run_failed", { mode: state.mode, reason: "abandoned", moves: state.moves });
   stopTimer();
   resetRevealPlayback();
+  clearBoardNotices();
   clearSenseGlow();
   resetRecipeFeedback();
   stopRivalGhost();
@@ -1952,8 +1955,8 @@ function openPowerups() {
   stopTimer();
   els.quickTipMessage.classList.remove("error");
   els.quickTipMessage.textContent = state.powerups.tipsUsed >= QUICK_TIP_LIMIT
-    ? "All three Quick Tips have been used for this orbit."
-    : "Tips use only your visible board state and never reveal the hidden route.";
+    ? "All three Route Signals have been used for this orbit."
+    : "Route Signal finds your next reachable bridge and names at most one word you already discovered.";
   els.wordGiftMessage.classList.remove("error");
   els.wordGiftMessage.textContent = state.powerups.giftUsed
     ? `${state.powerups.giftItem?.word || "Your bridge word"} was gifted. This orbit is permanently Study.`
@@ -1979,28 +1982,53 @@ function openPowerupShop() {
   });
 }
 
-function useQuickTip() {
+async function useQuickTip() {
   if (!state.run || state.finished || state.startingRun || state.reveal.active || state.reveal.pending || state.busyPairs.size || state.powerups.busy) return;
   clearArmedPowerup({ render: false });
-  const tip = selectQuickTip({
-    mode: state.mode,
-    used: state.powerups.tipsUsed,
-    moves: state.moves,
-    discoveries: state.words.length,
-    boardWords: state.nodes.length,
-    seed: state.game?.seed,
-    seen: state.powerups.tipIds
-  });
+  const runId = state.run.id;
+  const runToken = state.run.token;
+  const orbitGeneration = state.orbitGeneration;
+  const tipIndex = clamp(Number(state.powerups.tipsUsed) || 0, 0, QUICK_TIP_LIMIT);
+  const label = els.useQuickTip.querySelector("span");
+  const original = label.textContent;
+  state.powerups.busy = true;
+  label.textContent = "Tracing the next bridge…";
   els.quickTipMessage.classList.remove("error");
-  els.quickTipMessage.textContent = tip.text;
-  if (!tip.available) return renderPowerups();
-  state.powerups.tipsUsed += 1;
-  state.powerups.tipIds.push(tip.id);
+  els.quickTipMessage.textContent = "Reading the first route connection your discoveries can reach…";
   renderPowerups();
-  scheduleRunSave();
-  if (!els.senseDialog.open) showAlchemy(`QUICK TIP · ${tip.text}`);
-  playFeedback("place");
-  track("quick_tip_used", { mode: state.mode, tip: tip.id, remaining: tip.remaining });
+  try {
+    const tip = await fetchJson("/api/run/tip", {
+      method: "POST",
+      headers: authHeaders({ "Content-Type": "application/json" }),
+      body: JSON.stringify({ runId, runToken, tipIndex })
+    });
+    if (state.run?.id !== runId || state.orbitGeneration !== orbitGeneration) return;
+    state.powerups.tipsUsed = clamp(Number(tip.used) || 0, 0, QUICK_TIP_LIMIT);
+    if (tip.available) {
+      const tipId = `route-signal-${state.powerups.tipsUsed}`;
+      if (!state.powerups.tipIds.includes(tipId)) state.powerups.tipIds.push(tipId);
+      state.powerups.tipIds = state.powerups.tipIds.slice(-QUICK_TIP_LIMIT);
+    }
+    els.quickTipMessage.textContent = tip.text;
+    scheduleRunSave();
+    if (!els.senseDialog.open) showAlchemy(`ROUTE SIGNAL · ${tip.text}`);
+    if (tip.available) {
+      playFeedback("place");
+      track("quick_tip_used", { mode: state.mode, tipIndex, remaining: tip.remaining, scoreSafe: tip.scoreSafe === true });
+    }
+  } catch (error) {
+    if (state.run?.id !== runId || state.orbitGeneration !== orbitGeneration) return;
+    els.quickTipMessage.classList.add("error");
+    els.quickTipMessage.textContent = error.message || "The route signal could not be read. No tip was spent.";
+    if (!els.senseDialog.open) showAlchemy("Route Signal could not connect. No tip was spent.", true);
+  } finally {
+    if (state.run?.id === runId && state.orbitGeneration === orbitGeneration) {
+      state.powerups.busy = false;
+      label.textContent = original;
+      renderPowerups();
+      resumeTimerIfNeeded();
+    }
+  }
 }
 
 async function useWordGift() {
@@ -2543,9 +2571,10 @@ function rectanglesOverlap(leftValue, rightValue, gap = 0) {
 }
 
 function visibleBoardOverlayRectangles(boardRect = els.board.getBoundingClientRect()) {
-  const candidates = [els.rivalGhost, els.ghostPreview, document.querySelector(".board-tools"), document.querySelector(".run-milestone"), els.firstOrbitGuide];
+  const candidates = [els.rivalGhost, els.ghostPreview, document.querySelector(".board-tools"), document.querySelector(".run-milestone"), els.tapChainStatus, els.boardUndo, els.recipeFeedback, els.alchemyNote, els.firstOrbitGuide];
   return candidates.map((element) => {
     if (!element || element.hidden) return null;
+    if (element === els.alchemyNote && !element.classList.contains("show")) return null;
     const bounds = element.getBoundingClientRect();
     if (bounds.width < 1 || bounds.height < 1) return null;
     const left = clamp(bounds.left - boardRect.left, 0, boardRect.width);
@@ -2684,6 +2713,7 @@ function syncCtrlHoverState(hoverState) {
 
 function getShiftBoardNode(id) {
   if (!shiftBoardAvailable()) return null;
+  if (activeTrayShiftSource && String(activeTrayShiftSource.id) === String(id)) return activeTrayShiftSource;
   const node = state.nodes.find((entry) => String(entry.id) === String(id));
   if (!node || node.revealRole || node.item.ghost || state.busyPairs.has(node.id)) return null;
   return node;
@@ -2761,11 +2791,16 @@ function handleShiftBoardEnter(node, event = {}) {
 }
 
 function activateShiftBoard(event) {
-  if (event.key !== "Shift" || event.repeat || boardModifierBlocked(event) || activeTrayDragCleanup || !shiftBoardAvailable()) return;
+  if (event.key !== "Shift" || event.repeat || boardModifierBlocked(event) || !shiftBoardAvailable()) return;
+  resetRecipeFeedback();
   ctrlHover.reset();
   shiftBoard.setHeld(true);
   if (shiftBoard.snapshot().dragging) {
     showAlchemy("SHIFT COPY · Keep dragging to leave safely spaced copies.");
+    return;
+  }
+  if (activeTrayDragCleanup) {
+    showAlchemy("SHIFT COPY · Drag this inventory word onto the board to leave spaced copies.");
     return;
   }
   const hovered = els.boardItems.querySelector(".board-word:hover");
@@ -2781,7 +2816,7 @@ function activateShiftBoard(event) {
       : null;
     handleShiftBoardEnter(node, { buttons: 0, clientX: pointer?.x, clientY: pointer?.y });
   } else {
-    showAlchemy("SHIFT REMOVE · Hover words to clear them. Grab a word first, then hold Shift to copy.");
+    showAlchemy("SHIFT REMOVE · Hover words to clear them. Hold Shift before or during a drag to stamp copies.");
   }
 }
 
@@ -2850,6 +2885,7 @@ function createBoardNode(node, isNew) {
 
 async function selectNodeForTap(node) {
   if (state.finished || state.reveal.active || state.reveal.pending || ctrlHover.snapshot().active || shiftBoard.snapshot().held) return;
+  resetRecipeFeedback();
   if (!state.selectedNodeId) {
     state.selectedNodeId = node.id;
     syncSelectedNodeState();
@@ -2873,6 +2909,7 @@ async function selectNodeForTap(node) {
 }
 
 async function activateTrayItem(item) {
+  resetRecipeFeedback();
   const selected = state.nodes.find((node) => node.id === state.selectedNodeId);
   if (!selected) {
     const placed = placeFromTray(item);
@@ -2893,14 +2930,20 @@ async function activateTrayItem(item) {
   return outcome;
 }
 
-function placeFromTray(item, point) {
+function placeFromTray(item, point, placement = {}) {
   if (state.finished || state.reveal.active || state.reveal.pending || item.ghost) return;
   const rect = els.board.getBoundingClientRect();
   const guideRect = firstOrbitActive() && !els.firstOrbitGuide.hidden ? els.firstOrbitGuide.getBoundingClientRect() : null;
   const safeTop = guideRect ? clamp(guideRect.bottom - rect.top + 9, 7, Math.max(7, rect.height - 55)) : 7;
   const spread = state.nodes.length % 7;
-  let x = point ? point.x - rect.left - 55 : rect.width * .46 + (spread - 3) * 22;
-  let y = point ? point.y - rect.top - 22 : Math.max(safeTop, rect.height * .43 + ((state.nodes.length * 31) % 100) - 50);
+  const boardPoint = Number.isFinite(Number(placement?.boardPoint?.x)) && Number.isFinite(Number(placement?.boardPoint?.y))
+    ? { x: Number(placement.boardPoint.x), y: Number(placement.boardPoint.y) }
+    : null;
+  const measuredSize = Number(placement?.size?.width) > 0 && Number(placement?.size?.height) > 0
+    ? { width: Number(placement.size.width), height: Number(placement.size.height) }
+    : null;
+  let x = boardPoint ? boardPoint.x : point ? point.x - rect.left - 55 : rect.width * .46 + (spread - 3) * 22;
+  let y = boardPoint ? boardPoint.y : point ? point.y - rect.top - 22 : Math.max(safeTop, rect.height * .43 + ((state.nodes.length * 31) % 100) - 50);
   if (!point) {
     const occupied = [...els.boardItems.querySelectorAll(".board-word")].map((element) => {
       const bounds = element.getBoundingClientRect();
@@ -2914,7 +2957,7 @@ function placeFromTray(item, point) {
   }
   touchInventory(item);
   renderInventory();
-  const node = addNode(item, x, y);
+  const node = addNode(item, x, y, measuredSize ? { size: measuredSize, inset: 5 } : {});
   playFeedback("place");
   return node;
 }
@@ -2965,6 +3008,29 @@ function cancelActivePointerGestures() {
 function pointInsideBoard(point) {
   const rect = els.board.getBoundingClientRect();
   return point.x >= rect.left && point.x <= rect.right && point.y >= rect.top && point.y <= rect.bottom;
+}
+
+function trayShiftBoardPoint(point, size) {
+  const rect = els.board.getBoundingClientRect();
+  const width = Math.max(1, Number(size?.width) || 1);
+  const height = Math.max(1, Number(size?.height) || 1);
+  return {
+    x: clamp(Number(point?.x) - rect.left - width / 2, 5, Math.max(5, rect.width - width - 5)),
+    y: clamp(Number(point?.y) - rect.top - height / 2, 5, Math.max(5, rect.height - height - 5))
+  };
+}
+
+function measureBoardWord(item) {
+  const probe = document.createElement("button");
+  probe.type = "button";
+  probe.className = "board-word board-word-measure";
+  probe.tabIndex = -1;
+  probe.setAttribute("aria-hidden", "true");
+  probe.innerHTML = `<span class="emoji">${escapeHtml(item.emoji)}</span><span>${escapeHtml(item.word)}</span>`;
+  els.boardItems.append(probe);
+  const bounds = probe.getBoundingClientRect();
+  probe.remove();
+  return { width: Math.max(1, bounds.width), height: Math.max(1, bounds.height) };
 }
 
 function dragThreshold(pointerType) {
@@ -3042,7 +3108,7 @@ function setDropTarget(resolution, sourceItem) {
   els.dropPairPreview.style.setProperty("--preview-y", `${targetRect ? Math.max(62, targetRect.top - boardRect.top - 6) : 78}px`);
 }
 
-function dropTrayItem(item, point, pointerType = "mouse") {
+function dropTrayItem(item, point, pointerType = "mouse", placement = {}) {
   if (state.finished || state.reveal.active || state.reveal.pending || item.ghost || !pointInsideBoard(point)) return;
   const resolution = resolveDropCandidate({ point, pointerType });
   if (resolution.ambiguous) {
@@ -3050,7 +3116,7 @@ function dropTrayItem(item, point, pointerType = "mouse") {
     return;
   }
   if (!resolution.selected) {
-    placeFromTray(item, point);
+    placeFromTray(item, point, placement);
     return;
   }
   void combineTrayWithTarget(item, resolution.selected);
@@ -3058,8 +3124,14 @@ function dropTrayItem(item, point, pointerType = "mouse") {
 
 function startTrayPointerDrag(event, item, element, suppressClick) {
   if (event.button !== 0 || (!event.isPrimary && event.pointerType !== "mouse") || state.finished || state.reveal.active || state.reveal.pending || item.ghost) return;
-  if (shiftBoard.snapshot().held) shiftBoard.setHeld(false);
+  resetRecipeFeedback();
   cancelActiveTrayDrag();
+  let shiftArmedByPointer = false;
+  if (event.shiftKey && !shiftBoard.snapshot().held) {
+    ctrlHover.reset();
+    shiftBoard.setHeld(true);
+    shiftArmedByPointer = true;
+  }
   const pointerId = event.pointerId;
   const pointerType = event.pointerType || "mouse";
   const startX = event.clientX;
@@ -3068,13 +3140,39 @@ function startTrayPointerDrag(event, item, element, suppressClick) {
   let moved = false;
   let dragging = false;
   let ghost = null;
+  let shiftDragStarted = false;
+  let dragSize = null;
+  let shiftPointerInsideBoard = false;
   let cleaned = false;
+
+  const updateShiftTrail = (point) => {
+    if (!shiftDragStarted || !activeTrayShiftSource) return;
+    const inside = pointInsideBoard(point);
+    if (!inside) {
+      shiftPointerInsideBoard = false;
+      return;
+    }
+    const boardPoint = trayShiftBoardPoint(point, dragSize);
+    activeTrayShiftSource.x = boardPoint.x;
+    activeTrayShiftSource.y = boardPoint.y;
+    if (!shiftPointerInsideBoard) {
+      shiftPointerInsideBoard = true;
+      shiftBoard.reanchorDrag(boardPoint);
+      return;
+    }
+    shiftBoard.moveDrag(boardPoint);
+  };
 
   const update = (moveEvent) => {
     if (moveEvent.pointerId !== pointerId) return;
     const samples = typeof moveEvent.getCoalescedEvents === "function" ? moveEvent.getCoalescedEvents() : [];
     const point = samples.at(-1) || moveEvent;
     lastPoint = { x: point.clientX, y: point.clientY };
+    if (moveEvent.shiftKey && !shiftBoard.snapshot().held) {
+      ctrlHover.reset();
+      shiftBoard.setHeld(true);
+      shiftArmedByPointer = true;
+    }
     const dx = lastPoint.x - startX;
     const dy = lastPoint.y - startY;
     if (Math.hypot(dx, dy) > 8) moved = true;
@@ -3092,11 +3190,27 @@ function startTrayPointerDrag(event, item, element, suppressClick) {
       ghost.className = "tray-drag-ghost";
       ghost.setAttribute("aria-hidden", "true");
       ghost.innerHTML = `<span>${escapeHtml(item.emoji)}</span><strong>${escapeHtml(item.word)}</strong>`;
+      ghost.style.left = `${lastPoint.x}px`;
+      ghost.style.top = `${lastPoint.y}px`;
       document.body.append(ghost);
+      dragSize = measureBoardWord(item);
+      const origin = trayShiftBoardPoint(lastPoint, dragSize);
+      activeTrayShiftSource = {
+        id: `tray-shift-${state.orbitGeneration}-${pointerId}`,
+        item,
+        x: origin.x,
+        y: origin.y,
+        z: state.topZ + 1,
+        traySource: true
+      };
+      shiftCopyLimitAnnounced = false;
+      shiftDragStarted = shiftBoard.beginDrag(activeTrayShiftSource.id, origin, dragSize);
+      if (!shiftDragStarted) activeTrayShiftSource = null;
     }
     moveEvent.preventDefault();
     ghost.style.left = `${lastPoint.x}px`;
     ghost.style.top = `${lastPoint.y}px`;
+    updateShiftTrail(lastPoint);
     setDropTarget(resolveDropCandidate({ point: lastPoint, pointerType }), item);
   };
 
@@ -3110,6 +3224,9 @@ function startTrayPointerDrag(event, item, element, suppressClick) {
     element.classList.remove("pointer-dragging");
     ghost?.remove();
     clearDropTargets();
+    if (shiftDragStarted) shiftBoard.endDrag();
+    activeTrayShiftSource = null;
+    if (shiftArmedByPointer) shiftBoard.setHeld(false);
     if (activeTrayDragCleanup === cleanup) activeTrayDragCleanup = null;
   };
   const end = (upEvent) => {
@@ -3117,8 +3234,10 @@ function startTrayPointerDrag(event, item, element, suppressClick) {
     lastPoint = { x: upEvent.clientX, y: upEvent.clientY };
     if (moved) suppressClick();
     const shouldDrop = dragging && pointInsideBoard(lastPoint);
+    if (dragging) updateShiftTrail(lastPoint);
+    const placement = shouldDrop && dragSize ? { boardPoint: trayShiftBoardPoint(lastPoint, dragSize), size: dragSize } : {};
     cleanup();
-    if (shouldDrop) dropTrayItem(item, lastPoint, pointerType);
+    if (shouldDrop) dropTrayItem(item, lastPoint, pointerType, placement);
   };
   const cancel = (cancelEvent) => {
     if (cancelEvent?.pointerId != null && cancelEvent.pointerId !== pointerId) return;
@@ -3137,12 +3256,16 @@ function startTrayPointerDrag(event, item, element, suppressClick) {
 function addNode(item, x, y, options = {}) {
   dismissClearUndo();
   const bounds = els.board.getBoundingClientRect();
+  const { size, inset: requestedInset, ...nodeOptions } = options;
+  const width = Number(size?.width) > 0 ? Number(size.width) : 155;
+  const height = Number(size?.height) > 0 ? Number(size.height) : 54;
+  const inset = Number.isFinite(Number(requestedInset)) ? clamp(Number(requestedInset), 0, 20) : 8;
   const node = {
     id: state.nextId++, item,
-    x: clamp(x, 8, Math.max(8, bounds.width - 155)),
-    y: clamp(y, 8, Math.max(8, bounds.height - 54)),
+    x: clamp(x, inset, Math.max(inset, bounds.width - width - inset)),
+    y: clamp(y, inset, Math.max(inset, bounds.height - height - inset)),
     z: ++state.topZ,
-    ...options
+    ...nodeOptions
   };
   state.nodes.push(node);
   renderBoard(node.id);
@@ -3156,6 +3279,7 @@ function startNodeDrag(event, node, element) {
     return;
   }
   if (event.button !== 0 || (!event.isPrimary && event.pointerType !== "mouse") || state.finished || state.reveal.active || state.reveal.pending || node.revealRole || node.item.ghost || state.busyPairs.has(node.id)) return;
+  resetRecipeFeedback();
   event.preventDefault();
   cancelActiveBoardDrag();
   const pointerId = event.pointerId;
@@ -3327,7 +3451,7 @@ async function combineNodes(a, b) {
     if (result.division === "open" && state.assist === "none") state.assist = "open";
     const historyStep = { a: a.item.word, b: b.item.word, word: result.word, emoji: result.emoji, category: result.category || known.category || "", source: result.source, newDiscovery: !globallyKnown, twisted: Boolean(result.twisted), canonicalWord: result.twist?.canonicalWord || "", feedbackEligible: result.feedbackEligible === true };
     state.history.push(historyStep);
-    recordMasteryStep(historyStep);
+    const mastery = recordMasteryStep(historyStep);
     state.trails.push({ ax: a.x + 44, ay: a.y + 20, bx: b.x + 44, by: b.y + 20, x: x + 44, y: y + 20 });
     state.nodes = state.nodes.filter((node) => node.id !== a.id && node.id !== b.id);
     const resultNode = addNode(known, x, y, { cosmicTwist: Boolean(result.twisted) });
@@ -3335,6 +3459,10 @@ async function combineNodes(a, b) {
     showAlchemy(result.twisted
       ? `✦ COSMIC TWIST · ${a.item.word} + ${b.item.word} found ${result.emoji} ${result.word} instead of ${result.twist.canonicalWord}. Mix them again for ${result.twist.canonicalWord}.`
       : `${a.item.word} + ${b.item.word} = ${result.emoji} ${result.word}${universeLabel}`, false, Boolean(result.twisted));
+    if (mastery?.notice) {
+      if (result.completed) state.resultMasteryNotice = mastery.notice;
+      else queueAlchemyNotice(mastery.notice, false, false, { key: `mastery:${inventoryKey(mastery.notice)}`, retain: true, maxAge: 10_000 });
+    }
     playFeedback(result.twisted ? "twist" : "success", { analytics: Boolean(result.twisted) });
     updateHud();
     updateMilestone();
@@ -3376,8 +3504,7 @@ function resetRecipeFeedback() {
     els.recipeFeedback.hidden = true;
     els.recipeFeedback.querySelectorAll("button").forEach((button) => { button.disabled = false; });
   }
-  const announcement = $("#recipeFeedbackAnnouncement");
-  if (announcement) announcement.textContent = "";
+  clearBoardAnnouncement("recipe-feedback");
 }
 
 function scheduleRecipeFeedbackExpiry(delay = 7600) {
@@ -3393,12 +3520,17 @@ function offerRecipeFeedback(step, move) {
   resetRecipeFeedback();
   state.recipeFeedback.move = move;
   $("#recipeFeedbackRecipe").textContent = `${step.a} + ${step.b} → ${step.word}`;
-  state.recipeFeedback.pendingTimer = setTimeout(() => {
+  const revealFeedback = () => {
     if (!state.game || state.finished || state.recipeFeedback.move !== move) return;
+    if (boardNoticeBusy()) {
+      state.recipeFeedback.pendingTimer = setTimeout(revealFeedback, 280);
+      return;
+    }
     els.recipeFeedback.hidden = false;
-    $("#recipeFeedbackAnnouncement").textContent = `Optional recipe rating: ${step.a} plus ${step.b} made ${step.word}.`;
+    announceBoardMessage(`Optional recipe rating: ${step.a} plus ${step.b} made ${step.word}.`, "recipe-feedback");
     scheduleRecipeFeedbackExpiry();
-  }, 1650);
+  };
+  state.recipeFeedback.pendingTimer = setTimeout(revealFeedback, 1650);
 }
 
 async function submitRecipeFeedback(rating) {
@@ -3639,6 +3771,8 @@ async function playRevealPath(route, { replay = false } = {}) {
   const runId = state.run?.id;
   ctrlHover.reset({ abandonPending: true });
   shiftBoard.reset();
+  resetRecipeFeedback();
+  clearBoardNotices();
   if (!replay) state.finished = false;
   state.nodes = [];
   state.selectedNodeId = null;
@@ -3831,6 +3965,8 @@ function finishGame(won, reason = "", { skipSubmit = false } = {}) {
   shiftBoard.reset();
   cancelTapChain();
   dismissClearUndo();
+  resetRecipeFeedback();
+  clearBoardNotices();
   state.finished = true;
   syncFirstOrbitGuide();
   stopTimer();
@@ -3910,6 +4046,8 @@ function finishGame(won, reason = "", { skipSubmit = false } = {}) {
     : revealed
     ? `${state.reveal.route.length} combinations traced · 0 score · no discoveries saved`
     : `${state.words.length} discoveries · ${state.moves} moves${timeStat}${state.wished ? " · 1 Wish" : ""}`;
+  els.resultMasteryCard.hidden = !won || !state.resultMasteryNotice;
+  els.resultMasteryText.textContent = won ? state.resultMasteryNotice : "";
   els.rewardCard.hidden = !won || assisted;
   if (reward) {
     els.rewardDust.textContent = reward.reward;
@@ -4652,13 +4790,132 @@ function startCosmos() {
   draw();
 }
 
-function showAlchemy(message, error = false, twist = false) {
-  clearTimeout(showAlchemy.timer);
-  els.alchemyNote.textContent = message;
-  els.alchemyNote.classList.toggle("error", error);
-  els.alchemyNote.classList.toggle("twist", twist);
+let boardNoticeTimer = null;
+let boardNoticeNextTimer = null;
+let activeBoardNotice = null;
+const boardNoticeQueue = [];
+let boardAnnouncementFrame = 0;
+let boardAnnouncementKey = "";
+
+function announceBoardMessage(message, key = "board") {
+  const text = String(message || "").trim();
+  if (!text || !els.boardAnnouncement) return;
+  cancelAnimationFrame(boardAnnouncementFrame);
+  els.boardAnnouncement.textContent = "";
+  boardAnnouncementKey = String(key || "board");
+  boardAnnouncementFrame = requestAnimationFrame(() => {
+    boardAnnouncementFrame = 0;
+    if (boardAnnouncementKey === String(key || "board")) els.boardAnnouncement.textContent = text;
+  });
+}
+
+function clearBoardAnnouncement(key = "") {
+  if (key && boardAnnouncementKey !== key) return false;
+  cancelAnimationFrame(boardAnnouncementFrame);
+  boardAnnouncementFrame = 0;
+  boardAnnouncementKey = "";
+  if (els.boardAnnouncement) els.boardAnnouncement.textContent = "";
+  return true;
+}
+
+function boardNoticeDescriptor(message, error = false, twist = false, options = {}) {
+  const text = String(message || "").trim();
+  const prefix = text.split("·", 1)[0].trim().toLowerCase();
+  const createdAt = Date.now();
+  return {
+    text,
+    error: Boolean(error),
+    twist: Boolean(twist),
+    key: String(options.key || (["shift copy", "shift remove", "ctrl fusion"].includes(prefix) ? "gesture" : prefix || "notice")).slice(0, 80),
+    duration: clamp(Number(options.duration) || (error ? 2800 : twist ? 3800 : 2300), 900, 8000),
+    retain: Boolean(options.retain),
+    expiresAt: createdAt + clamp(Number(options.maxAge) || (options.retain ? 10_000 : 6500), 1200, 30_000)
+  };
+}
+
+function boardNoticeExpired(notice) {
+  return !notice || notice.expiresAt <= Date.now();
+}
+
+function pruneBoardNoticeQueue() {
+  for (let index = boardNoticeQueue.length - 1; index >= 0; index -= 1) {
+    if (boardNoticeExpired(boardNoticeQueue[index])) boardNoticeQueue.splice(index, 1);
+  }
+}
+
+function enqueueBoardNotice(notice) {
+  if (boardNoticeExpired(notice)) return;
+  for (let index = boardNoticeQueue.length - 1; index >= 0; index -= 1) {
+    if (boardNoticeQueue[index].key === notice.key) boardNoticeQueue.splice(index, 1);
+  }
+  boardNoticeQueue.push(notice);
+  if (boardNoticeQueue.length > 4) {
+    const disposable = boardNoticeQueue.findIndex((queued) => !queued.retain);
+    boardNoticeQueue.splice(disposable >= 0 ? disposable : 0, 1);
+  }
+}
+
+function boardNoticeBusy() {
+  pruneBoardNoticeQueue();
+  return Boolean(activeBoardNotice || boardNoticeNextTimer || boardNoticeQueue.length);
+}
+
+function displayBoardNotice(notice) {
+  if (boardNoticeExpired(notice)) return;
+  if (els.recipeFeedback && !els.recipeFeedback.hidden) resetRecipeFeedback();
+  clearGlobalToast();
+  clearTimeout(boardNoticeTimer);
+  clearTimeout(boardNoticeNextTimer);
+  boardNoticeNextTimer = null;
+  activeBoardNotice = notice;
+  els.alchemyNote.textContent = notice.text;
+  els.alchemyNote.classList.toggle("error", notice.error);
+  els.alchemyNote.classList.toggle("twist", notice.twist);
   els.alchemyNote.classList.add("show");
-  showAlchemy.timer = setTimeout(() => els.alchemyNote.classList.remove("show"), error ? 2800 : twist ? 3800 : 2300);
+  announceBoardMessage(notice.text, "board-notice");
+  boardNoticeTimer = setTimeout(() => {
+    els.alchemyNote.classList.remove("show");
+    activeBoardNotice = null;
+    boardNoticeNextTimer = setTimeout(() => {
+      boardNoticeNextTimer = null;
+      pruneBoardNoticeQueue();
+      const next = boardNoticeQueue.shift();
+      if (next) displayBoardNotice(next);
+      else {
+        els.alchemyNote.textContent = "";
+        clearBoardAnnouncement("board-notice");
+      }
+    }, 170);
+  }, notice.duration);
+  showAlchemy.timer = boardNoticeTimer;
+}
+
+function showAlchemy(message, error = false, twist = false, options = {}) {
+  const notice = boardNoticeDescriptor(message, error, twist, options);
+  if (!notice.text) return;
+  pruneBoardNoticeQueue();
+  if (activeBoardNotice?.retain && activeBoardNotice.key !== notice.key && !boardNoticeExpired(activeBoardNotice)) enqueueBoardNotice(activeBoardNotice);
+  displayBoardNotice(notice);
+}
+
+function queueAlchemyNotice(message, error = false, twist = false, options = {}) {
+  const notice = boardNoticeDescriptor(message, error, twist, options);
+  if (!notice.text) return;
+  if (!activeBoardNotice && !boardNoticeNextTimer) return displayBoardNotice(notice);
+  enqueueBoardNotice(notice);
+}
+
+function clearBoardNotices() {
+  clearTimeout(boardNoticeTimer);
+  clearTimeout(boardNoticeNextTimer);
+  boardNoticeTimer = null;
+  boardNoticeNextTimer = null;
+  activeBoardNotice = null;
+  boardNoticeQueue.length = 0;
+  clearBoardAnnouncement("board-notice");
+  if (!els.alchemyNote) return;
+  els.alchemyNote.classList.remove("show", "error", "twist");
+  els.alchemyNote.textContent = "";
 }
 
 function updateConnection() {
@@ -4695,7 +4952,19 @@ function formatTime(seconds) {
 }
 
 let toastTimer;
-function showToast(message) {
+function clearGlobalToast() {
+  clearTimeout(toastTimer);
+  toastTimer = null;
+  els.toast?.classList.remove("show");
+  if (els.toast) els.toast.textContent = "";
+}
+
+function showToast(message, { scope = "auto" } = {}) {
+  const boardCanOwnNotice = state.game && !els.gameScreen.hidden && !state.finished && !state.reveal.active && !state.reveal.pending && !document.querySelector("dialog[open]");
+  if (scope !== "global" && boardCanOwnNotice) {
+    showAlchemy(message);
+    return;
+  }
   clearTimeout(toastTimer);
   els.toast.textContent = message;
   els.toast.classList.add("show");

@@ -166,6 +166,35 @@ export function rankSenseCandidates({ words = [], target = "", history = [], rou
 
 export const QUICK_TIP_LIMIT = 3;
 
+const ROUTE_TIP_CATEGORIES = new Set(["force", "nature", "life", "structure"]);
+
+function normalizedTipWords(words) {
+  const entries = new Map();
+  for (const value of Array.isArray(words) ? words : []) {
+    const word = cleanWord(typeof value === "object" ? value?.word : value);
+    const key = wordKey(word);
+    if (!key || entries.has(key)) continue;
+    const requestedCategory = typeof value === "object" ? cleanWord(value?.category).toLowerCase() : "";
+    entries.set(key, {
+      key,
+      word,
+      category: ROUTE_TIP_CATEGORIES.has(requestedCategory) ? requestedCategory : ""
+    });
+  }
+  return entries;
+}
+
+function tipMentionsConcept(text, concept) {
+  const normalize = (value) => String(value ?? "").normalize("NFKC").toLocaleLowerCase("en-US").replace(/[^\p{L}\p{N}]+/gu, " ").replace(/\s+/g, " ").trim();
+  const haystack = normalize(text);
+  const needle = normalize(concept);
+  return Boolean(haystack && needle && ` ${haystack} `.includes(` ${needle} `));
+}
+
+function firstSpoilerSafeText(candidates, forbidden) {
+  return candidates.find((text) => text && !(Array.isArray(forbidden) ? forbidden : []).some((word) => tipMentionsConcept(text, word))) || "↻ + ↻";
+}
+
 /**
  * Returns short mechanics advice using only public run state. Route data is
  * deliberately not accepted, so Quick Tips can remain score-safe.
@@ -191,7 +220,7 @@ export function selectQuickTip(options = {}) {
   if (["daily", "weekly"].includes(mode)) tips.push({ id: "branching", text: "Hard targets often need several branches. Build materials, forces, life, and structures in parallel." });
   if (discoveries >= 12) tips.push({ id: "search", text: "Use inventory search when the cosmos gets crowded; clearing the board never erases discoveries." });
   tips.push(
-    { id: "foundations", text: "Recombine recent discoveries with Earth, Water, Fire, and Air—foundations make strong bridges." },
+    { id: "foundations", text: "Recombine recent discoveries with the four foundations—foundational ideas make strong bridges." },
     { id: "recent", text: "A fresh discovery is usually worth testing with the words that created it." },
     { id: "tidy", text: "Tidy only rearranges the board, so use it freely when words begin to overlap." }
   );
@@ -200,6 +229,134 @@ export function selectQuickTip(options = {}) {
   const pool = available.length ? available : unique;
   const tip = pool[(stableHash(`${seed}|${mode}|${moves}|${discoveries}`) + used) % pool.length];
   return { ...tip, remaining: QUICK_TIP_LIMIT - used - 1, available: true };
+}
+
+/**
+ * Produces a route-aware nudge without exposing a recipe. At most one already
+ * discovered ingredient is named. Its partner category is included only when
+ * at least two discovered candidates fit, so the category cannot identify the
+ * other ingredient. A same-word frontier never names that word.
+ *
+ * `id` is private bookkeeping for the run service and must not be returned by
+ * a public endpoint.
+ */
+export function selectRouteNavigationTip(options = {}) {
+  const source = options && typeof options === "object" && !Array.isArray(options) ? options : {};
+  const safeInteger = (value, minimum, maximum, fallback) => {
+    try { return clampInteger(value, minimum, maximum, fallback); }
+    catch { return fallback; }
+  };
+  const words = normalizedTipWords(Array.isArray(source.words) && source.words.length ? source.words : source.discovered);
+  const known = new Set(words.keys());
+  const targetKey = wordKey(source.target);
+  const route = Array.isArray(source.route) ? source.route.slice(0, 1_000) : [];
+  const seed = safeInteger(source.seed, 0, 0xffffffff, 0);
+  const used = safeInteger(source.used, 0, QUICK_TIP_LIMIT, 0);
+  const seen = new Set((Array.isArray(source.seen) ? source.seen : []).map((value) => String(value || "").slice(0, 80)).filter(Boolean));
+
+  const pending = route.map((step) => {
+    if (!step || typeof step !== "object" || Array.isArray(step)) return null;
+    const a = wordKey(step.a);
+    const b = wordKey(step.b);
+    const result = wordKey(step.word);
+    if (!a || !b || !result || result === a || result === b) return null;
+    return { a, b, result };
+  }).filter(Boolean).filter((step) => !known.has(step.result));
+  const frontier = pending.find((step) => known.has(step.a) && known.has(step.b));
+
+  if (frontier) {
+    const frontierId = `route-${stableHash(`${targetKey}|${frontier.result}`).toString(36)}`;
+    if (seen.has(frontierId)) {
+      const text = firstSpoilerSafeText([
+        "That route signal is still active—use it to make progress before spending another.",
+        "Your current signal is still active. Make progress before spending another Tip.",
+        "◇ SIGNAL ACTIVE",
+        "◇"
+      ], [...known, frontier.result, targetKey]);
+      return {
+        id: frontierId,
+        kind: "route",
+        text,
+        available: false
+      };
+    }
+
+    if (frontier.a === frontier.b) {
+        const category = words.get(frontier.a)?.category || "";
+        const categoryCandidates = category
+          ? [...words.values()].filter((item) => item.category === category && item.key !== targetKey)
+          : [];
+        const qualifier = categoryCandidates.length >= 2 ? ` ${category}` : "";
+        const text = firstSpoilerSafeText([
+          `A same-word fusion among your discovered${qualifier} concepts opens the next bridge.`,
+          "Try doubling one of your existing discoveries.",
+          "↻ + ↻"
+        ], [...known, frontier.result, targetKey]);
+        return {
+          id: frontierId,
+          kind: "route",
+          text,
+          available: true
+        };
+    }
+
+    const anchorChoices = [
+      { anchorKey: frontier.a, partnerKey: frontier.b },
+      { anchorKey: frontier.b, partnerKey: frontier.a }
+    ].map((choice) => {
+      const anchor = words.get(choice.anchorKey);
+      const partnerCategory = words.get(choice.partnerKey)?.category || "";
+      const categoryCandidates = partnerCategory
+        ? [...words.values()].filter((item) => item.key !== choice.anchorKey && item.key !== targetKey && item.category === partnerCategory)
+        : [];
+      return {
+        ...choice,
+        anchor,
+        partnerCategory,
+        categoryUseful: categoryCandidates.length >= 2
+      };
+    }).filter((choice) => choice.anchor?.word && choice.anchorKey !== targetKey);
+    const usefulChoices = anchorChoices.filter((choice) => choice.categoryUseful);
+    const choicePool = usefulChoices.length ? usefulChoices : anchorChoices;
+    const anchorChoice = choicePool.length
+      ? choicePool[stableHash(`${seed}|${targetKey}|${frontier.result}`) % choicePool.length]
+      : null;
+    if (anchorChoice) {
+      const { anchor, anchorKey, partnerCategory, categoryUseful } = anchorChoice;
+      const categoryText = categoryUseful
+        ? `Keep ${anchor.word} in play. Try it with a discovered ${partnerCategory} concept.`
+        : "";
+      const text = firstSpoilerSafeText([
+        categoryText,
+        `Keep ${anchor.word} in play. Its route-forward partner is already in your discoveries.`,
+        `Useful anchor: ${anchor.word}.`,
+        `✦ ${anchor.word}`
+      ], [...known].filter((key) => key !== anchorKey).concat(frontier.result, targetKey));
+      return {
+        id: frontierId,
+        kind: "route",
+        text,
+        available: true
+      };
+    }
+  }
+
+  const fallback = selectQuickTip({
+    mode: source.mode,
+    used,
+    moves: Array.isArray(source.history) ? source.history.length : safeInteger(source.moves, 0, 1_000_000, 0),
+    discoveries: words.size,
+    boardWords: source.boardWords,
+    seed,
+    seen: [...seen]
+  });
+  const protectedRouteWords = [targetKey, ...known, ...pending.flatMap((step) => [step.a, step.b, step.result])].filter(Boolean);
+  const fallbackText = firstSpoilerSafeText([
+    fallback.text,
+    "Try a familiar pairing you have not tested in this orbit.",
+    "◇"
+  ], protectedRouteWords);
+  return { id: fallback.id, kind: "mechanic", text: fallbackText, available: fallback.available };
 }
 
 /**

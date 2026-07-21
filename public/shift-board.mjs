@@ -168,6 +168,15 @@ export function createShiftBoardController({
     return { type: placed.length ? "stamped" : "moved", points: placed };
   };
 
+  const reanchorDrag = (point) => {
+    if (!dragging || !getNode(dragNodeId)) return false;
+    const current = finitePoint(point);
+    if (!current) return false;
+    dragPoint = current;
+    stampAnchor = held ? { ...current } : null;
+    return true;
+  };
+
   const endDrag = () => {
     if (!dragging) return false;
     dragging = false;
@@ -197,5 +206,5 @@ export function createShiftBoardController({
     emit();
   };
 
-  return { setHeld, enter, pointerMove, beginDrag, moveDrag, endDrag, reset, snapshot };
+  return { setHeld, enter, pointerMove, beginDrag, moveDrag, reanchorDrag, endDrag, reset, snapshot };
 }

@@ -6,7 +6,7 @@ import { basename, dirname, extname, join, normalize } from "node:path";
 import { fileURLToPath } from "node:url";
 import { ANALYTICS_EVENT_NAMES, CREATIVE_COMMERCE_CATALOG, GameStore, MARKET_CATALOG, RunRegistry, isoWeekKey, serviceError } from "./game-services.mjs";
 import { cosmicTwistSeedFor, selectCosmicTwist } from "./public/cosmic-twists.mjs";
-import { rankSenseCandidates, selectWordGift } from "./public/engagement-features.mjs";
+import { rankSenseCandidates, selectRouteNavigationTip, selectWordGift } from "./public/engagement-features.mjs";
 import { recipeFingerprint, sanitizeRecipeRating } from "./public/recipe-feedback.mjs";
 import { annotateUniverseResult, buildUniverseManifest, selectUniverse, validateUniverseRoute } from "./public/universe-director.mjs";
 
@@ -1540,6 +1540,29 @@ export const server = createServer(async (request, response) => {
         progress: runRegistry.progress(run),
         player: gameStore.publicPlayer(player.id)
       });
+    }
+    if (request.method === "POST" && url.pathname === "/api/run/tip") {
+      if (rateLimited(request, 90, "run-tip")) return sendJson(response, 429, { error: "The constellation needs a moment." });
+      const player = requirePlayer(request);
+      const body = await jsonBody(request);
+      if (!hasExactKeys(body, ["runId", "runToken", "tipIndex"])) {
+        throw serviceError(400, "Route Signal requires only runId, runToken, and tipIndex.", "invalid_tip_request");
+      }
+      const run = runRegistry.get(body.runId, player.id, body.runToken);
+      const route = run.solutionRoute || solutionRoute(run.game.target, { includeDynamic: !run.ranked }) || [];
+      const tip = runRegistry.tip(run, body.tipIndex, ({ used, seen }) => selectRouteNavigationTip({
+        words: [...run.discovered.values()],
+        target: run.game.target,
+        history: run.history,
+        route,
+        seed: run.game.seed,
+        mode: run.game.mode,
+        used,
+        seen,
+        boardWords: 1
+      }));
+      await runRegistry.persist(run);
+      return sendJson(response, 200, tip);
     }
     if (request.method === "POST" && url.pathname === "/api/run/sense") {
       if (rateLimited(request, 60, "run-sense")) return sendJson(response, 429, { error: "The constellation needs a moment." });

@@ -8,12 +8,18 @@ import {
   lookupLocalCombination
 } from "./local-world.mjs";
 import { cosmicTwistOptions, cosmicTwistSeedFor, selectCosmicTwist } from "./cosmic-twists.mjs";
-import { rankSenseCandidates, selectWordGift } from "./engagement-features.mjs";
+import { QUICK_TIP_LIMIT, rankSenseCandidates, selectRouteNavigationTip, selectWordGift } from "./engagement-features.mjs";
 import { annotateUniverseResult, selectUniverse, validateUniverseRoute } from "./universe-director.mjs";
 import { sanitizeRecipeRating } from "./recipe-feedback.mjs";
 
 const runs = new Map();
 const missionPreviews = new Map();
+const PRIVATE_TIP_LEDGER_STORAGE_KEY = "constellore-local-route-signals-v1";
+const privateTipLedgerSymbol = Symbol.for("constellore.local.route-signals.v1");
+const privateTipLedger = globalThis[privateTipLedgerSymbol] instanceof Map
+  ? globalThis[privateTipLedgerSymbol]
+  : new Map();
+globalThis[privateTipLedgerSymbol] = privateTipLedger;
 const LOCAL_MISSION_PREVIEW_TTL_MS = 15 * 60_000;
 const MAX_RESUME_DISCOVERIES = 1000;
 const MAX_RESUME_HISTORY = 500;
@@ -174,6 +180,7 @@ function publicProgress(run) {
     bendItem: run.bendItem ? { ...run.bendItem } : null,
     giftUsed: Boolean(run.giftUsed),
     giftItem: run.giftItem ? { ...run.giftItem } : null,
+    tipsUsed: Math.min(QUICK_TIP_LIMIT, Array.isArray(run.tipRecords) ? run.tipRecords.length : 0),
     assist: run.assist,
     scoringDisabled: Boolean(run.scoringDisabled)
   };
@@ -186,6 +193,105 @@ function resumeResponse(run) {
     run: publicRun(run),
     progress: publicProgress(run)
   };
+}
+
+function cleanPrivateTipRecord(value) {
+  const id = String(value?.id || "").trim().toLowerCase().slice(0, 80);
+  const text = String(value?.text || "").normalize("NFKC").replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim().slice(0, 240);
+  return /^[a-z0-9][a-z0-9-]{0,79}$/.test(id) && text ? { id, text } : null;
+}
+
+function privateTipLedgerId(run) {
+  return `${String(run?.id || "").slice(0, 120)}\u001f${String(run?.token || "").slice(0, 180)}`;
+}
+
+function readPrivateTipStorage() {
+  try {
+    const parsed = JSON.parse(globalThis.localStorage?.getItem(PRIVATE_TIP_LEDGER_STORAGE_KEY) || "[]");
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function cleanPrivateTipEntry(value) {
+  const id = String(value?.id || "").trim().slice(0, 120);
+  const token = String(value?.token || "").trim().slice(0, 180);
+  if (!id || !token) return null;
+  const records = (Array.isArray(value?.records) ? value.records : []).slice(0, QUICK_TIP_LIMIT).map(cleanPrivateTipRecord).filter(Boolean);
+  const updatedAt = Number.isFinite(Number(value?.updatedAt)) ? Math.max(0, Math.trunc(Number(value.updatedAt))) : 0;
+  return { id, token, records, updatedAt };
+}
+
+function privateTipRecordsFor(run) {
+  const ledgerId = privateTipLedgerId(run);
+  const cached = privateTipLedger.get(ledgerId);
+  if (Array.isArray(cached)) return cached.map((record) => ({ ...record }));
+  const stored = readPrivateTipStorage().map(cleanPrivateTipEntry).filter(Boolean).find((entry) => entry.id === run.id && entry.token === run.token);
+  const records = stored?.records || [];
+  if (records.length) privateTipLedger.set(ledgerId, records);
+  return records.map((record) => ({ ...record }));
+}
+
+function persistPrivateTipRecords(run) {
+  const records = (Array.isArray(run?.tipRecords) ? run.tipRecords : []).map(cleanPrivateTipRecord).filter(Boolean).slice(0, QUICK_TIP_LIMIT);
+  const ledgerId = privateTipLedgerId(run);
+  privateTipLedger.delete(ledgerId);
+  privateTipLedger.set(ledgerId, records);
+  while (privateTipLedger.size > 24) privateTipLedger.delete(privateTipLedger.keys().next().value);
+  try {
+    const entries = readPrivateTipStorage().map(cleanPrivateTipEntry).filter(Boolean)
+      .filter((entry) => entry?.id !== run.id || entry?.token !== run.token)
+      .slice(0, 23);
+    entries.unshift({ id: run.id, token: run.token, records, updatedAt: Date.now() });
+    globalThis.localStorage?.setItem(PRIVATE_TIP_LEDGER_STORAGE_KEY, JSON.stringify(entries));
+  } catch {
+    // Local practice still works in storage-restricted browsers for this tab.
+  }
+}
+
+function localTipResponse(record, used, available = Boolean(record)) {
+  const count = Math.min(QUICK_TIP_LIMIT, Math.max(0, Number(used) || 0));
+  return {
+    available: Boolean(available),
+    text: String(record?.text || "All three Route Signals have been used for this orbit.").slice(0, 240),
+    used: count,
+    remaining: Math.max(0, QUICK_TIP_LIMIT - count),
+    scoreSafe: true
+  };
+}
+
+function useLocalTip(run, tipIndex) {
+  if (!Number.isInteger(tipIndex) || tipIndex < 0 || tipIndex > QUICK_TIP_LIMIT) {
+    fail("Route Signal requires a valid current signal index.", "invalid_tip_index", 400);
+  }
+  run.tipRecords ||= [];
+  if (tipIndex < run.tipRecords.length) return localTipResponse(run.tipRecords[tipIndex], run.tipRecords.length);
+  if (tipIndex > run.tipRecords.length) fail("Route Signal state changed. Refresh this orbit and try again.", "tip_state_mismatch", 409);
+  if (run.tipRecords.length >= QUICK_TIP_LIMIT) return localTipResponse(null, run.tipRecords.length, false);
+  if (run.submitted) fail("This local orbit was already submitted.", "already_submitted", 409);
+  if (run.completed) fail("This local orbit is already complete.", "run_complete", 409);
+
+  const words = [...run.available].map((word) => localItemFor(word)).filter(Boolean);
+  const selected = selectRouteNavigationTip({
+    words,
+    target: run.game.target,
+    history: run.history,
+    route: run.solutionRoute,
+    seed: run.game.seed,
+    mode: run.game.mode,
+    used: run.tipRecords.length,
+    seen: run.tipRecords.map((record) => record.id),
+    boardWords: 1
+  });
+  const text = String(selected?.text || "").normalize("NFKC").replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim().slice(0, 240);
+  let id = String(selected?.id || "").trim().toLowerCase().slice(0, 80);
+  if (!/^[a-z0-9][a-z0-9-]{0,79}$/.test(id) || run.tipRecords.some((record) => record.id === id)) id = `tip-${run.tipRecords.length + 1}`;
+  if (selected?.available === false || !text) return localTipResponse({ text: text || "No spoiler-safe direction is available yet." }, run.tipRecords.length, false);
+  const record = { id, text };
+  run.tipRecords.push(record);
+  persistPrivateTipRecords(run);
+  return localTipResponse(record, run.tipRecords.length);
 }
 
 function restoreRun(body) {
@@ -263,9 +369,15 @@ function restoreRun(body) {
   if (giftClaimed && !["reveal", "sense", "gift"].includes(assist)) assist = "gift";
   const moveMaximum = game.moveLimit ? Math.max(game.moveLimit, history.length) : 10_000;
   const moves = Math.max(history.length, boundedInteger(progress.moves, history.length, moveMaximum));
+  const tipsUsed = boundedInteger(progress.tipsUsed, 0, QUICK_TIP_LIMIT);
   const targetFound = available.has(game.target.toLowerCase());
   const completed = Boolean(progress.completed && targetFound);
   const twistEntry = history.find((entry) => entry.twisted);
+  const restoredPrivateTips = privateTipRecordsFor({ id: runId, token: runToken }).slice(0, tipsUsed);
+  const tipRecords = Array.from({ length: tipsUsed }, (_, index) => restoredPrivateTips[index] || ({
+    id: `restored-${index + 1}`,
+    text: "A previous Route Signal was already used in this orbit."
+  }));
   const run = {
     id: runId,
     token: runToken,
@@ -285,6 +397,7 @@ function restoreRun(body) {
     scoringDisabled: Boolean(progress.scoringDisabled || giftClaimed || ["reveal", "sense", "gift"].includes(assist)),
     giftUsed: Boolean(giftItem && giftClaimed),
     giftItem,
+    tipRecords,
     twistUsed: Boolean(twistEntry),
     twistedPairKey: twistEntry ? [twistEntry.a, twistEntry.b].map((word) => word.toLowerCase()).sort().join("+") : null,
     solutionRoute,
@@ -411,6 +524,7 @@ export async function localRequest(url, options = {}) {
       scoringDisabled: false,
       giftUsed: false,
       giftItem: null,
+      tipRecords: [],
       twistUsed: false,
       twistedPairKey: null,
       solutionRoute,
@@ -440,6 +554,13 @@ export async function localRequest(url, options = {}) {
     if (run.feedbackMoves.has(move)) fail("That discovery was already rated.", "recipe_feedback_duplicate", 409);
     run.feedbackMoves.add(move);
     return { accepted: true, move, rating, localOnly: true };
+  }
+
+  if (method === "POST" && path === "/api/run/tip") {
+    if (!hasExactKeys(body, ["runId", "runToken", "tipIndex"])) {
+      fail("Route Signal requires only runId, runToken, and tipIndex.", "invalid_tip_request", 400);
+    }
+    return useLocalTip(requireRun(body), body.tipIndex);
   }
 
   if (method === "POST" && path === "/api/run/sense") {

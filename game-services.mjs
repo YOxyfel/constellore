@@ -1,6 +1,7 @@
 import { createHmac, randomBytes, randomUUID, timingSafeEqual } from "node:crypto";
 import { mkdir, readFile, readdir, rename, unlink, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
+import { QUICK_TIP_LIMIT } from "./public/engagement-features.mjs";
 import { emptyRecipeFeedback, normalizeRecipeFeedback, recipeFeedbackSummary, recordRecipeFeedback } from "./public/recipe-feedback.mjs";
 
 export const MARKET_CATALOG = Object.freeze([
@@ -1224,6 +1225,32 @@ export class GameStore {
 
 const RUN_SNAPSHOT_VERSION = 1;
 
+function sanitizeRunTipRecords(raw) {
+  const records = [];
+  const ids = new Set();
+  for (const value of Array.isArray(raw) ? raw.slice(0, QUICK_TIP_LIMIT) : []) {
+    if (!value || typeof value !== "object" || Array.isArray(value)) continue;
+    const text = String(value.text || "").normalize("NFKC").replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim().slice(0, 240);
+    let id = String(value.id || "").trim().toLowerCase().slice(0, 80);
+    if (!/^[a-z0-9][a-z0-9-]{0,79}$/.test(id) || ids.has(id)) id = `restored-${records.length + 1}`;
+    if (!text) continue;
+    ids.add(id);
+    records.push({ id, text });
+  }
+  return records;
+}
+
+function publicTipResponse(record, used, available = Boolean(record)) {
+  const count = Math.min(QUICK_TIP_LIMIT, Math.max(0, Number(used) || 0));
+  return {
+    available: Boolean(available),
+    text: String(record?.text || "All three Route Signals have been used for this orbit.").slice(0, 240),
+    used: count,
+    remaining: Math.max(0, QUICK_TIP_LIMIT - count),
+    scoreSafe: true
+  };
+}
+
 function studyAssistFor(reason, fallback = "reveal") {
   const value = String(reason || "").trim().toLowerCase();
   return ["reveal", "sense", "gift"].includes(value) ? value : fallback;
@@ -1253,6 +1280,7 @@ function serializeRun(run) {
       : [],
     giftUsed: Boolean(run.giftUsed),
     giftItem: run.giftItem ? structuredClone(run.giftItem) : null,
+    tipRecords: sanitizeRunTipRecords(run.tipRecords),
     twistUsed: Boolean(run.twistUsed),
     twistedPairKey: run.twistedPairKey,
     usedBend: Boolean(run.usedBend),
@@ -1337,6 +1365,7 @@ function hydrateRun(snapshot, players) {
     solutionRecipes,
     giftUsed,
     giftItem,
+    tipRecords: sanitizeRunTipRecords(snapshot.tipRecords),
     twistUsed: Boolean(snapshot.twistUsed),
     twistedPairKey: typeof snapshot.twistedPairKey === "string" ? snapshot.twistedPairKey.slice(0, 160) : null,
     usedBend: Boolean(snapshot.usedBend),
@@ -1402,6 +1431,7 @@ export class RunRegistry {
       revealRoute: null,
       giftUsed: false,
       giftItem: null,
+      tipRecords: [],
       twistUsed: false,
       twistedPairKey: null,
       usedBend: false,
@@ -1552,6 +1582,36 @@ export class RunRegistry {
     return structuredClone(giftItem);
   }
 
+  tip(run, tipIndex, selectTip) {
+    if (!Number.isInteger(tipIndex) || tipIndex < 0 || tipIndex > QUICK_TIP_LIMIT) {
+      throw serviceError(400, "Route Signal requires a valid current signal index.", "invalid_tip_index");
+    }
+    run.tipRecords = sanitizeRunTipRecords(run.tipRecords);
+    if (tipIndex < run.tipRecords.length) {
+      return publicTipResponse(run.tipRecords[tipIndex], run.tipRecords.length);
+    }
+    if (tipIndex > run.tipRecords.length) {
+      throw serviceError(409, "Route Signal state changed. Refresh this orbit and try again.", "tip_state_mismatch");
+    }
+    if (run.tipRecords.length >= QUICK_TIP_LIMIT) return publicTipResponse(null, run.tipRecords.length, false);
+    if (run.submitted) throw serviceError(409, "This score was already submitted.", "already_submitted");
+    if (run.completedAt) throw serviceError(409, "This orbit is already complete.", "run_complete");
+
+    const selected = typeof selectTip === "function"
+      ? selectTip({ used: run.tipRecords.length, seen: run.tipRecords.map((record) => record.id) })
+      : null;
+    const text = String(selected?.text || "").normalize("NFKC").replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim().slice(0, 240);
+    let id = String(selected?.id || "").trim().toLowerCase().slice(0, 80);
+    if (!/^[a-z0-9][a-z0-9-]{0,79}$/.test(id) || run.tipRecords.some((record) => record.id === id)) id = `tip-${run.tipRecords.length + 1}`;
+    if (selected?.available === false || !text) {
+      return publicTipResponse({ text: text || "No spoiler-safe direction is available yet." }, run.tipRecords.length, false);
+    }
+    const record = { id, text };
+    run.tipRecords.push(record);
+    this.checkpoint(run);
+    return publicTipResponse(record, run.tipRecords.length);
+  }
+
   addBend(run, item, assist) {
     if (run.completedAt) throw serviceError(409, "This orbit is already complete.", "run_complete");
     if (run.usedBend) throw serviceError(409, "Only one Reality Bend may be used in a run.", "bend_used");
@@ -1575,7 +1635,8 @@ export class RunRegistry {
       usedBend: Boolean(run.usedBend),
       bendItem: run.bendItem ? structuredClone(run.bendItem) : null,
       giftUsed: Boolean(run.giftUsed),
-      giftItem: run.giftItem ? structuredClone(run.giftItem) : null
+      giftItem: run.giftItem ? structuredClone(run.giftItem) : null,
+      tipsUsed: sanitizeRunTipRecords(run.tipRecords).length
     };
   }
 

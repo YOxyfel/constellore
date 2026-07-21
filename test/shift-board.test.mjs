@@ -86,6 +86,50 @@ test("releasing and repressing Shift starts a fresh copy trail without backlog",
   assert.equal(controller.snapshot().dragging, false);
 });
 
+test("reanchoring a Shift drag discards movement before first board entry", () => {
+  const { controller, copies } = setup();
+  controller.setHeld(true);
+  controller.beginDrag("a", { x: 0, y: 0 }, { width: 80, height: 40 });
+
+  assert.equal(controller.reanchorDrag({ x: 500, y: 300 }), true);
+  controller.moveDrag({ x: 510, y: 300 });
+  assert.deepEqual(copies, [], "outside movement must not become an entry backlog");
+
+  controller.moveDrag({ x: 632, y: 300 });
+  assert.deepEqual(copies, [{ id: "a", x: 500, y: 300 }]);
+});
+
+test("re-entry reanchoring retains the copy count and occupied trail", () => {
+  const { controller, copies } = setup();
+  controller.beginDrag("a", { x: 0, y: 0 }, { width: 80, height: 40 });
+  controller.setHeld(true);
+  controller.moveDrag({ x: 132, y: 0 });
+  assert.equal(controller.snapshot().copies, 1);
+
+  assert.equal(controller.reanchorDrag({ x: 500, y: 0 }), true);
+  assert.equal(controller.snapshot().copies, 1, "reanchoring must not reset the copy limit counter");
+  controller.moveDrag({ x: 510, y: 0 });
+  assert.equal(copies.length, 1, "re-entry must not stamp the skipped outside segment");
+  controller.moveDrag({ x: 632, y: 0 });
+  assert.deepEqual(copies.map(({ x }) => x), [0, 500]);
+  assert.equal(controller.snapshot().copies, 2);
+
+  controller.reanchorDrag({ x: 0, y: 0 });
+  controller.moveDrag({ x: 132, y: 0 });
+  assert.deepEqual(copies.map(({ x }) => x), [0, 500], "the retained trail must reject a prior stamp position");
+  assert.equal(controller.snapshot().copies, 2);
+});
+
+test("reanchoring safely rejects invalid or inactive drags", () => {
+  const { controller } = setup();
+  assert.equal(controller.reanchorDrag({ x: 10, y: 10 }), false);
+  controller.beginDrag("a", { x: 0, y: 0 }, { width: 80, height: 40 });
+  assert.equal(controller.reanchorDrag({ x: Number.NaN, y: 10 }), false);
+  assert.equal(controller.reanchorDrag(null), false);
+  controller.endDrag();
+  assert.equal(controller.reanchorDrag({ x: 10, y: 10 }), false);
+});
+
 test("a held Shift cannot erase the word revealed beneath a finished copy drag", () => {
   const { controller, nodes, removed } = setup();
   controller.beginDrag("a", { x: 0, y: 0 }, { width: 80, height: 40 });
