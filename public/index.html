@@ -16,7 +16,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/styles.css?v=2.4.0">
+  <link rel="stylesheet" href="/styles.css?v=2.6.1">
 </head>
 <body>
   <section class="start-screen" id="startScreen" aria-labelledby="startTitle">
@@ -158,7 +158,13 @@
           <div class="first-orbit-progress" role="progressbar" aria-label="First Orbit training progress" aria-valuemin="0" aria-valuemax="3" aria-valuenow="0"><i id="firstOrbitProgressBar"></i></div>
         </section>
         <div class="board-tools" aria-label="Board tools">
-          <button class="sense-tool" id="senseButton" type="button" aria-haspopup="dialog" aria-controls="senseDialog" aria-label="Open Cosmic Powerups"><span aria-hidden="true">✦</span><b>Powers</b><em id="senseHudCount">KIT</em></button>
+          <div class="powerup-shortcuts" role="group" aria-label="Quick powerups">
+            <button class="sense-tool" id="senseButton" type="button" aria-haspopup="dialog" aria-controls="senseDialog" aria-label="Open Cosmic Powerups"><span aria-hidden="true">&#10022;</span><b>Powers</b><em id="senseHudCount" aria-hidden="true">KIT</em></button>
+            <button class="quick-power-button tip-shortcut" id="quickTipShortcut" type="button" title="Use a Quick Tip (score safe)" aria-label="Use a Quick Tip; 3 remaining; score safe"><span aria-hidden="true">?</span><em id="quickTipShortcutCount" aria-hidden="true">3</em></button>
+            <button class="quick-power-button gift-shortcut" id="wordGiftShortcut" type="button" title="Use Word Gift (Study mode, zero score)" aria-label="Use Word Gift; 1 ready; switches this orbit to Study with zero score"><span aria-hidden="true">&#10022;</span><em id="wordGiftShortcutCount" aria-hidden="true">1</em></button>
+            <button class="quick-power-button compass-shortcut" id="senseShortcut" type="button" title="Use Star Compass (Study mode, zero score)" aria-label="Use Star Compass; 1 charge; switches this orbit to Study with zero score"><span aria-hidden="true">&#10023;</span><em id="senseShortcutCount" aria-hidden="true">1</em></button>
+            <button class="powerup-shop-shortcut" id="powerupShopShortcut" type="button" title="Buy more Star Compass charges" aria-label="Open Cosmic Powerups to buy more Star Compass charges"><span aria-hidden="true">+</span></button>
+          </div>
           <button id="tidyBoard" type="button" aria-label="Tidy orbit; does not affect score"><span aria-hidden="true">✣</span><b>Tidy</b></button>
           <button id="resetBoard" type="button" aria-label="Clear the board"><span aria-hidden="true">↻</span><b>Clear</b></button>
         </div>
@@ -168,8 +174,8 @@
           <b id="ghostPace">0 · 0</b>
         </button>
         <section class="ghost-preview" id="ghostPreview" aria-label="Projected rival trail preview; all words are hidden to prevent spoilers" hidden>
-          <header><span><small>PROJECTED TRAIL</small><strong>WORDS ENCRYPTED</strong></span><b id="ghostPreviewCount">0 / 0</b></header>
-          <div class="ghost-preview-progress" id="ghostPreviewProgress" role="progressbar" aria-label="Projected rival route progress" aria-valuemin="0" aria-valuemax="1" aria-valuenow="0"><i id="ghostPreviewBar"></i></div>
+          <header><span><small>PROJECTED TRAIL</small><strong id="ghostPreviewStatus">SCOUT CALIBRATING</strong></span><span class="ghost-preview-counter"><b id="ghostPreviewCount">0 / 0</b><small id="ghostPreviewPercent">0%</small></span></header>
+          <div class="ghost-preview-progress" id="ghostPreviewProgress" role="progressbar" aria-label="Projected rival route progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i id="ghostPreviewBar"></i></div>
           <div class="ghost-preview-steps" id="ghostPreviewSteps" aria-hidden="true"></div>
         </section>
         <div id="boardItems" class="board-items"></div>
@@ -592,6 +598,6 @@
 
   <div class="connection-badge" id="connectionBadge" role="status" hidden>Offline — reconnect to forge new words</div>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
-  <script type="module" src="/app.js?v=1.11.0"></script>
+  <script type="module" src="/app.js?v=1.13.1"></script>
 </body>
 </html>

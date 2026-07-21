@@ -135,8 +135,8 @@ gameHtml = gameHtml
   .replace("<body>", '<body data-runtime="local-practice">')
   .replaceAll('href="/manifest.webmanifest"', 'href="./manifest.webmanifest"')
   .replaceAll('href="/icon.svg"', 'href="./icon.svg"')
-  .replaceAll('href="/styles.css?v=2.4.0"', 'href="./styles.css?v=2.4.0"')
-  .replaceAll('src="/app.js?v=1.11.0"', 'src="./app.js?v=1.11.0"');
+  .replaceAll('href="/styles.css?v=2.6.1"', 'href="./styles.css?v=2.6.1"')
+  .replaceAll('src="/app.js?v=1.13.1"', 'src="./app.js?v=1.13.1"');
 await writeFile(join(playOutput, "index.html"), gameHtml, "utf8");
 await copyFile(join(root, "public", "styles.css"), join(playOutput, "styles.css"));
 await copyFile(join(root, "public", "app.js"), join(playOutput, "app.js"));
@@ -165,9 +165,9 @@ manifest.scope = "./";
 manifest.icons = manifest.icons.map((icon) => ({ ...icon, src: "./icon.svg" }));
 await writeFile(join(playOutput, "manifest.webmanifest"), `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
 
-const serviceWorker = `const CACHE = "constellore-pages-practice-v19";
+const serviceWorker = `const CACHE = "constellore-pages-practice-v22";
 const BASE = new URL("./", self.location.href);
-const SHELL = ["./", "./styles.css?v=2.4.0", "./app.js?v=1.11.0", "./ctrl-hover.mjs?v=1.0.0", "./shift-board.mjs?v=1.0.0", "./frictionless.mjs?v=1.0.0", "./mission-briefing.mjs?v=1.0.1", "./local-beta.mjs", "./local-world.mjs", "./cosmic-twists.mjs", "./recipe-mastery.mjs?v=1.0.0", "./engagement-features.mjs?v=1.1.0", "./first-orbit.mjs?v=1.0.0", "./universe-director.mjs?v=1.0.0", "./constellation-card.mjs?v=1.0.0", "./cosmetic-economy.mjs?v=1.0.0", "./recipe-feedback.mjs?v=1.0.0", "./pending-scores.mjs?v=1.0.0", "./manifest.webmanifest", "./icon.svg"].map((path) => new URL(path, BASE).href);
+const SHELL = ["./", "./styles.css?v=2.6.1", "./app.js?v=1.13.1", "./ctrl-hover.mjs?v=1.0.0", "./shift-board.mjs?v=1.0.0", "./frictionless.mjs?v=1.0.0", "./mission-briefing.mjs?v=1.0.1", "./local-beta.mjs", "./local-world.mjs", "./cosmic-twists.mjs", "./recipe-mastery.mjs?v=1.0.0", "./engagement-features.mjs?v=1.1.0", "./first-orbit.mjs?v=1.0.0", "./universe-director.mjs?v=1.0.0", "./constellation-card.mjs?v=1.0.0", "./cosmetic-economy.mjs?v=1.0.0", "./recipe-feedback.mjs?v=1.0.0", "./pending-scores.mjs?v=1.0.0", "./manifest.webmanifest", "./icon.svg"].map((path) => new URL(path, BASE).href);
 self.addEventListener("install", (event) => event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(SHELL)).then(() => self.skipWaiting())));
 self.addEventListener("activate", (event) => event.waitUntil(caches.keys().then((keys) => Promise.all(keys.filter((key) => key !== CACHE).map((key) => caches.delete(key)))).then(() => self.clients.claim())));
 self.addEventListener("fetch", (event) => {

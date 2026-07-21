@@ -118,6 +118,29 @@ test("Cosmic Powerups clearly separate score-safe Tips from assisted tools", () 
   assert.match(styles, /@media \(max-width: 700px\)[\s\S]*[.]powerup-grid\s*\{\s*grid-template-columns:\s*1fr/);
 });
 
+test("board powerup shortcuts stay synchronized, safe, and touch accessible", () => {
+  const tools = page.match(/<div\b(?=[^>]*\bclass="board-tools")[^>]*>[\s\S]*?<\/div>\s*<button class="rival-ghost"/i)?.[0] || "";
+  assert.match(tools, /class="powerup-shortcuts"[^>]*role="group"/);
+  for (const id of ["senseButton", "quickTipShortcut", "wordGiftShortcut", "senseShortcut", "powerupShopShortcut"]) {
+    assert.match(tools, new RegExp(`id="${id}"`));
+  }
+  assert.match(tools, /id="powerupShopShortcut"[\s\S]*Buy more Star Compass charges/);
+  assert.match(app, /quickTipShortcutCount[.]textContent = String\(tipsRemaining\)/);
+  assert.match(app, /wordGiftShortcutCount[.]textContent = armedKind === "gift"/);
+  assert.match(app, /senseShortcutCount[.]textContent = armedKind === "sense"/);
+  assert.match(app, /function activateStudyPowerupShortcut\(kind, action\)[\s\S]*if \(state[.]scoringDisabled\)[\s\S]*activeArmedPowerup\(\) === kind[\s\S]*TAP AGAIN/);
+  assert.match(app, /if \(!els[.]senseDialog[.]open\) showAlchemy\(`QUICK TIP/);
+  assert.match(app, /function openPowerupShop\(\)[\s\S]*scrollIntoView[\s\S]*focus\(\{ preventScroll: true \}\)/);
+  assert.match(app, /function buySenseCharge\(\)[\s\S]*saveProfile\(\{ fields: \["progression"\] \}\);[\s\S]*renderProfile\(\)/);
+  assert.match(app, /wordGiftShortcut[.]addEventListener\("click", useWordGiftShortcut\)/);
+  assert.match(app, /senseShortcut[.]addEventListener\("click", useSenseShortcut\)/);
+  assert.match(styles, /[.]sense-tool em\s*\{[^}]*min-width:\s*max-content[^}]*white-space:\s*nowrap/);
+  assert.match(styles, /[.]board-tools [.]quick-power-button, [.]board-tools [.]powerup-shop-shortcut\s*\{[^}]*width:\s*44px[^}]*min-height:\s*44px/);
+  assert.match(styles, /@media \(max-width: 780px\)[\s\S]*[.]run-milestone\s*\{\s*display:\s*none/);
+  assert.match(styles, /@media \(max-width: 359px\)[\s\S]*grid-template-rows:\s*44px 44px/);
+  assert.match(styles, /@media \(max-width: 700px\) and \(max-height: 500px\) and \(min-width: 520px\)[\s\S]*[.]board-tools\s*\{[^}]*width:\s*244px[^}]*grid-template-rows:\s*44px 44px/);
+});
+
 test("Word Gift is one-use, server-selected, durable, and fails closed before its request", () => {
   const giftStart = app.indexOf("async function useWordGift()");
   const giftEnd = app.indexOf("async function useConstellationSense()", giftStart);
@@ -247,15 +270,26 @@ test("Ctrl hover fusion is wired to board words and lifecycle cleanup", () => {
 
 test("Cosmos Scout renders a spoiler-safe encrypted progress window", () => {
   assert.match(page, /id="ghostPreview"[^>]+all words are hidden to prevent spoilers/);
-  assert.match(page, /id="ghostPreviewProgress"[^>]+role="progressbar"/);
+  assert.match(page, /id="ghostPreviewProgress"[^>]+role="progressbar"[^>]+aria-valuemax="100"/);
+  assert.match(page, /id="ghostPreviewPercent">0%/);
   const previewStart = app.indexOf("function renderGhostPreview(");
   const previewEnd = app.indexOf("async function startRivalGhost()", previewStart);
   const previewSource = app.slice(previewStart, previewEnd);
-  assert.match(previewSource, /ghostTrailPreviewState\(\{ current: rivalStars, total: estimated, windowSize: 3, seed: state[.]game[.]seed \}\)/);
+  assert.match(previewSource, /const continuousProgress = clamp\(Number\(projectedProgress\)/);
+  assert.match(previewSource, /ghostTrailPreviewState\(\{ current: completedSteps, total: estimated, windowSize: 3, seed: state[.]game[.]seed \}\)/);
+  assert.match(previewSource, /const percent = preview[.]complete \? 100 : Math[.]min\(99, Math[.]floor\(continuousProgress \* 100\)\)/);
+  assert.match(previewSource, /ghostPreviewPercent[.]textContent = `[$]\{percent\}%`/);
+  assert.match(previewSource, /--ghost-step-progress/);
+  assert.match(previewSource, /const sameWindow = existingSteps[.]length === preview[.]steps[.]length/);
+  assert.match(previewSource, /if \(!sameWindow\) els[.]ghostPreviewSteps[.]replaceChildren/);
   assert.match(previewSource, /document[.]createElement\("span"\)/);
   assert.doesNotMatch(previewSource, /recipe|ingredients|route[.]map|preview[.]word|step[.]word|state[.]game[.]route/);
   assert.match(styles, /[.]ghost-preview-step::before, [.]ghost-preview-step::after\s*\{[^}]*filter:\s*blur/);
+  assert.match(styles, /[.]ghost-preview-step-fill\s*\{[^}]*width:\s*var\(--ghost-step-progress\)[^}]*transition:\s*width [.]5s linear/);
+  assert.match(styles, /[.]ghost-preview-progress i::after\s*\{[^}]*animation:\s*ghost-tracer/);
   assert.match(styles, /[.]ghost-preview\s*\{[^}]*pointer-events:\s*none/);
+  assert.match(styles, /[.]cosmos-board:has\([.]ghost-preview:not\(\[hidden\]\)\) [.]board-guide\s*\{[^}]*bottom:\s*22px/);
+  assert.match(styles, /@media \(max-width: 390px\) and \(max-height: 620px\)[\s\S]*[.]ghost-preview-steps\s*\{\s*display:\s*none/);
   assert.match(styles, /@media \(max-width: 700px\) and \(max-height: 500px\)[\s\S]*[.]ghost-preview\s*\{\s*display:\s*none !important/);
   assert.match(app, /if \(!profile[.]rivalGhostEnabled\) \{\s*hideGhostPreview\(\)/);
   assert.doesNotMatch(previewSource, /setAttribute\("aria-label"/);

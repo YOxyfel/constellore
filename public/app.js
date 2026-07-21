@@ -163,6 +163,7 @@ let shiftCopyLimitAnnounced = false;
 let lastPointerPosition = null;
 let clearUndo = null;
 let clearUndoTimer = null;
+let armedPowerupShortcut = { kind: "", expiresAt: 0, timer: null };
 let runSaveTimer = null;
 let cloudSyncTimer = null;
 const pendingScoreRetryPromises = new Map();
@@ -184,10 +185,14 @@ const els = {
   timerHud: $("#timerHud"), timerValue: $("#timerValue"), pathCount: $("#pathCount"),
   milestoneText: $("#milestoneText"), milestoneBar: $("#milestoneBar"), wishState: $("#wishState"),
   senseButton: $("#senseButton"), senseHudCount: $("#senseHudCount"), senseDialog: $("#senseDialog"),
+  quickTipShortcut: $("#quickTipShortcut"), quickTipShortcutCount: $("#quickTipShortcutCount"),
+  wordGiftShortcut: $("#wordGiftShortcut"), wordGiftShortcutCount: $("#wordGiftShortcutCount"),
+  senseShortcut: $("#senseShortcut"), senseShortcutCount: $("#senseShortcutCount"), powerupShopShortcut: $("#powerupShopShortcut"),
   quickTipCount: $("#quickTipCount"), useQuickTip: $("#useQuickTip"), quickTipMessage: $("#quickTipMessage"),
   wordGiftCard: $("#wordGiftCard"), wordGiftState: $("#wordGiftState"), useWordGift: $("#useWordGift"), wordGiftMessage: $("#wordGiftMessage"),
   rivalGhost: $("#rivalGhost"), ghostCallsign: $("#ghostCallsign"), ghostStatus: $("#ghostStatus"), ghostPace: $("#ghostPace"),
-  ghostPreview: $("#ghostPreview"), ghostPreviewCount: $("#ghostPreviewCount"), ghostPreviewProgress: $("#ghostPreviewProgress"), ghostPreviewBar: $("#ghostPreviewBar"), ghostPreviewSteps: $("#ghostPreviewSteps"),
+  ghostPreview: $("#ghostPreview"), ghostPreviewStatus: $("#ghostPreviewStatus"), ghostPreviewCount: $("#ghostPreviewCount"), ghostPreviewPercent: $("#ghostPreviewPercent"),
+  ghostPreviewProgress: $("#ghostPreviewProgress"), ghostPreviewBar: $("#ghostPreviewBar"), ghostPreviewSteps: $("#ghostPreviewSteps"),
   paywallDialog: $("#paywallDialog"), wishDialog: $("#wishDialog"), atlasDialog: $("#atlasDialog"),
   missionBriefingDialog: $("#missionBriefingDialog"),
   profileDialog: $("#profileDialog"), shareDialog: $("#shareDialog"), resultDialog: $("#resultDialog"),
@@ -419,10 +424,12 @@ function renderCosmeticLoadout() {
 }
 
 function renderPowerups() {
-  const activeRun = Boolean(state.game && state.run && !state.finished && !state.startingRun && !state.reveal.active && !state.reveal.pending);
+  const activeRun = Boolean(state.game && state.run && !state.finished && !state.startingRun && !state.reveal.active && !state.reveal.pending && !state.busyPairs.size);
   const tipsUsed = clamp(Number(state.powerups?.tipsUsed) || 0, 0, QUICK_TIP_LIMIT);
   const tipsRemaining = QUICK_TIP_LIMIT - tipsUsed;
   const senseCount = sanitizeSenseWallet(profile.senseWallet).charges;
+  const giftReady = !state.powerups.giftUsed && !state.powerups.giftUnavailable;
+  const armedKind = activeArmedPowerup();
   els.quickTipCount.textContent = `${tipsRemaining} / ${QUICK_TIP_LIMIT}`;
   els.useQuickTip.disabled = !activeRun || state.powerups.busy || tipsRemaining <= 0;
   els.wordGiftState.textContent = state.powerups.giftUsed ? "USED" : state.powerups.giftUnavailable ? "NO BRIDGE" : "1 READY";
@@ -430,6 +437,85 @@ function renderPowerups() {
   els.wordGiftCard.classList.toggle("is-unavailable", state.powerups.giftUnavailable);
   els.useWordGift.disabled = !activeRun || state.powerups.busy || state.powerups.giftUsed || state.powerups.giftUnavailable;
   $("#useSense").disabled = !activeRun || state.powerups.busy || !senseCount;
+
+  els.quickTipShortcutCount.textContent = String(tipsRemaining);
+  els.quickTipShortcut.disabled = !activeRun || state.powerups.busy || tipsRemaining <= 0;
+  els.quickTipShortcut.setAttribute("aria-label", `Use a Quick Tip; ${tipsRemaining} remaining; score safe`);
+  els.quickTipShortcut.title = tipsRemaining ? `Use a Quick Tip · ${tipsRemaining} remaining · score safe` : "No Quick Tips remain this orbit";
+  els.quickTipShortcut.classList.toggle("is-empty", tipsRemaining <= 0);
+
+  els.wordGiftShortcutCount.textContent = armedKind === "gift" ? "!" : state.powerups.giftUsed ? "✓" : giftReady ? "1" : "0";
+  els.wordGiftShortcut.disabled = !activeRun || state.powerups.busy || !giftReady;
+  els.wordGiftShortcut.setAttribute("aria-label", armedKind === "gift"
+    ? "Confirm Word Gift now; this switches the orbit to Study and removes score and leaderboard eligibility"
+    : state.powerups.giftUsed
+    ? "Word Gift used; this orbit is Study with zero score"
+    : state.powerups.giftUnavailable
+      ? "Word Gift unavailable for this orbit"
+      : "Use Word Gift; 1 ready; switches this orbit to Study with zero score");
+  els.wordGiftShortcut.title = state.powerups.giftUsed
+    ? "Word Gift used · Study mode"
+    : state.powerups.giftUnavailable
+      ? "No undiscovered bridge is available"
+      : "Use Word Gift · Study mode · zero score";
+  els.wordGiftShortcut.classList.toggle("is-used", state.powerups.giftUsed);
+  els.wordGiftShortcut.classList.toggle("is-empty", state.powerups.giftUnavailable);
+  els.wordGiftShortcut.classList.toggle("is-armed", armedKind === "gift");
+
+  els.senseShortcutCount.textContent = armedKind === "sense" ? "!" : String(senseCount);
+  els.senseShortcut.disabled = !activeRun || state.powerups.busy || !senseCount;
+  els.senseShortcut.setAttribute("aria-label", armedKind === "sense"
+    ? "Confirm Star Compass now; this switches the orbit to Study and removes score and leaderboard eligibility"
+    : `Use Star Compass; ${senseCount} charge${senseCount === 1 ? "" : "s"}; switches this orbit to Study with zero score`);
+  els.senseShortcut.title = senseCount ? `Use Star Compass · ${senseCount} charge${senseCount === 1 ? "" : "s"} · Study mode` : "No Star Compass charges remain";
+  els.senseShortcut.classList.toggle("is-empty", senseCount <= 0);
+  els.senseShortcut.classList.toggle("is-armed", armedKind === "sense");
+  els.powerupShopShortcut.disabled = !activeRun || state.powerups.busy;
+  els.powerupShopShortcut.setAttribute("aria-label", `Open Cosmic Powerups to buy more Star Compass charges; ${senseCount} currently available`);
+}
+
+function activeArmedPowerup() {
+  if (!armedPowerupShortcut.kind || armedPowerupShortcut.expiresAt <= Date.now()) {
+    clearTimeout(armedPowerupShortcut.timer);
+    armedPowerupShortcut = { kind: "", expiresAt: 0, timer: null };
+    return "";
+  }
+  return armedPowerupShortcut.kind;
+}
+
+function clearArmedPowerup({ render = true } = {}) {
+  clearTimeout(armedPowerupShortcut.timer);
+  armedPowerupShortcut = { kind: "", expiresAt: 0, timer: null };
+  if (render) renderPowerups();
+}
+
+function activateStudyPowerupShortcut(kind, action) {
+  if (state.scoringDisabled) {
+    clearArmedPowerup({ render: false });
+    return action();
+  }
+  if (activeArmedPowerup() === kind) {
+    clearArmedPowerup({ render: false });
+    return action();
+  }
+  clearArmedPowerup({ render: false });
+  armedPowerupShortcut = {
+    kind,
+    expiresAt: Date.now() + 4_000,
+    timer: setTimeout(() => clearArmedPowerup(), 4_000)
+  };
+  renderPowerups();
+  const label = kind === "gift" ? "Word Gift" : "Star Compass";
+  showAlchemy(`TAP AGAIN · ${label} switches this orbit to Study · 0 score.`);
+  playFeedback("place");
+}
+
+function useWordGiftShortcut() {
+  return activateStudyPowerupShortcut("gift", useWordGift);
+}
+
+function useSenseShortcut() {
+  return activateStudyPowerupShortcut("sense", useConstellationSense);
 }
 
 function resetPowerupControlLabels() {
@@ -475,7 +561,7 @@ function renderProfile() {
   $("#senseDialogCount").textContent = senseCount;
   els.senseHudCount.textContent = "KIT";
   $("#senseEarnNote").textContent = profile.premium ? "Founder: two charges return each UTC day." : "One charge returns each UTC day.";
-  els.senseButton.setAttribute("aria-label", `Open Cosmic Powerups; ${senseCount} Star Compass charge${senseCount === 1 ? "" : "s"}`);
+  els.senseButton.setAttribute("aria-label", `Open Cosmic Powerups kit; ${senseCount} Star Compass charge${senseCount === 1 ? "" : "s"}`);
   $("#buySense").disabled = state.powerups.busy || profile.stardust < 90 || senseCount >= 9;
   renderPowerups();
   const feedbackPreferences = sanitizeFeedbackPreferences(profile.feedbackPreferences);
@@ -1576,6 +1662,7 @@ function hydrateRestoredRun(payload, snapshot) {
   state.powerups.giftUnavailable = !state.powerups.giftUsed && Boolean(matchingSnapshot.giftUnavailable);
   state.powerups.giftItem = snapshotItem(progress.giftItem) || snapshotItem(matchingSnapshot.giftItem);
   state.powerups.busy = false;
+  clearArmedPowerup({ render: false });
   state.scoringDisabled = payload.run?.scoreEligible === false || payload.game?.scoreEligible === false || Boolean(progress.scoringDisabled) || ["reveal", "sense", "gift"].includes(state.assist);
   const completedAt = Date.parse(progress.completedAt || "");
   if (progress.completed && Number.isFinite(completedAt) && Number.isFinite(state.startedAt)) {
@@ -1679,6 +1766,7 @@ function startWithGame(game, run, { restored = false } = {}) {
   state.bendItem = null;
   state.rewardedWish = false;
   state.powerups = { tipsUsed: 0, tipIds: [], giftUsed: false, giftUnavailable: false, giftItem: null, busy: false };
+  clearArmedPowerup({ render: false });
   resetPowerupControlLabels();
   state.startedAt = run?.startedAt ? Date.parse(run.startedAt) : Date.now();
   state.finishedElapsedSeconds = 0;
@@ -1860,6 +1948,7 @@ function applySenseGlow(words) {
 function openPowerups() {
   if (!state.game || state.finished) return;
   if (state.startingRun || state.reveal.active || state.reveal.pending || state.busyPairs.size) return showToast("Let the current constellation settle first.");
+  clearArmedPowerup({ render: false });
   stopTimer();
   els.quickTipMessage.classList.remove("error");
   els.quickTipMessage.textContent = state.powerups.tipsUsed >= QUICK_TIP_LIMIT
@@ -1879,8 +1968,20 @@ function openPowerups() {
   track("powerups_opened", { mode: state.mode });
 }
 
+function openPowerupShop() {
+  openPowerups();
+  if (!els.senseDialog.open) return;
+  requestAnimationFrame(() => {
+    const buyButton = $("#buySense");
+    const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    buyButton.scrollIntoView({ block: "center", behavior: reducedMotion ? "auto" : "smooth" });
+    buyButton.focus({ preventScroll: true });
+  });
+}
+
 function useQuickTip() {
-  if (!state.run || state.finished || state.reveal.active || state.reveal.pending || state.powerups.busy) return;
+  if (!state.run || state.finished || state.startingRun || state.reveal.active || state.reveal.pending || state.busyPairs.size || state.powerups.busy) return;
+  clearArmedPowerup({ render: false });
   const tip = selectQuickTip({
     mode: state.mode,
     used: state.powerups.tipsUsed,
@@ -1897,12 +1998,14 @@ function useQuickTip() {
   state.powerups.tipIds.push(tip.id);
   renderPowerups();
   scheduleRunSave();
+  if (!els.senseDialog.open) showAlchemy(`QUICK TIP · ${tip.text}`);
   playFeedback("place");
   track("quick_tip_used", { mode: state.mode, tip: tip.id, remaining: tip.remaining });
 }
 
 async function useWordGift() {
-  if (!state.run || state.finished || state.reveal.active || state.reveal.pending || state.powerups.busy || state.powerups.giftUsed) return;
+  if (!state.run || state.finished || state.startingRun || state.reveal.active || state.reveal.pending || state.busyPairs.size || state.powerups.busy || state.powerups.giftUsed) return;
+  clearArmedPowerup({ render: false });
   const runId = state.run.id;
   const orbitGeneration = state.orbitGeneration;
   const priorAssist = state.assist;
@@ -1975,7 +2078,8 @@ async function useWordGift() {
 }
 
 async function useConstellationSense() {
-  if (!state.run || state.finished || state.reveal.active || state.reveal.pending || state.powerups.busy) return;
+  if (!state.run || state.finished || state.startingRun || state.reveal.active || state.reveal.pending || state.busyPairs.size || state.powerups.busy) return;
+  clearArmedPowerup({ render: false });
   const preview = spendSenseCharge(profile.senseWallet);
   if (!preview.spent) {
     $("#senseMessage").textContent = "No Star Compass charges remain. Earn one tomorrow or buy one with Stardust.";
@@ -2074,6 +2178,7 @@ function buySenseCharge() {
   profile.stardust -= 90;
   profile.senseWallet = grantSenseCharges(wallet, 1).wallet;
   saveProfile({ fields: ["progression"] });
+  renderProfile();
   $("#senseMessage").textContent = "One Star Compass charge joined your reserve.";
   playFeedback("place");
   track("sense_purchased", { cost: 90, chargesBefore: wallet.charges, chargesAfter: profile.senseWallet.charges });
@@ -2098,30 +2203,54 @@ function ghostTimeline({ elapsedMs, moves }) {
 
 function hideGhostPreview() {
   els.ghostPreview.hidden = true;
+  els.ghostPreview.classList.remove("complete");
+  els.ghostPreviewStatus.textContent = "SCOUT CALIBRATING";
   els.ghostPreviewCount.textContent = "0 / 0";
-  els.ghostPreviewProgress.setAttribute("aria-valuemax", "1");
+  els.ghostPreviewPercent.textContent = "0%";
+  els.ghostPreviewProgress.setAttribute("aria-valuemax", "100");
   els.ghostPreviewProgress.setAttribute("aria-valuenow", "0");
+  els.ghostPreviewProgress.setAttribute("aria-valuetext", "Scout calibration has not started");
   els.ghostPreviewBar.style.width = "0%";
   els.ghostPreviewSteps.replaceChildren();
 }
 
-function renderGhostPreview(rivalStars, estimated) {
+function renderGhostPreview(projectedProgress, estimated) {
   if (!state.game || !state.ghost.model || !profile.rivalGhostEnabled || state.game.mode === "training" || state.finished) return hideGhostPreview();
-  const preview = ghostTrailPreviewState({ current: rivalStars, total: estimated, windowSize: 3, seed: state.game.seed });
+  const continuousProgress = clamp(Number(projectedProgress) || 0, 0, 1);
+  const continuousSteps = continuousProgress * estimated;
+  const completedSteps = Math.min(estimated, Math.floor(continuousSteps + Number.EPSILON));
+  const currentStepProgress = completedSteps >= estimated ? 1 : continuousSteps - completedSteps;
+  const preview = ghostTrailPreviewState({ current: completedSteps, total: estimated, windowSize: 3, seed: state.game.seed });
   if (!preview.total) return hideGhostPreview();
+  const percent = preview.complete ? 100 : Math.min(99, Math.floor(continuousProgress * 100));
   els.ghostPreview.hidden = false;
+  els.ghostPreview.classList.toggle("complete", preview.complete);
+  els.ghostPreviewStatus.textContent = preview.complete ? "ROUTE COMPLETE" : `TRACING STEP ${Math.min(preview.total, completedSteps + 1)}`;
   els.ghostPreviewCount.textContent = `${preview.current} / ${preview.total}`;
-  els.ghostPreviewProgress.setAttribute("aria-valuemax", String(preview.total));
-  els.ghostPreviewProgress.setAttribute("aria-valuenow", String(preview.current));
-  els.ghostPreviewProgress.setAttribute("aria-valuetext", `${preview.current} of ${preview.total} projected route steps; all words encrypted`);
-  els.ghostPreviewBar.style.width = `${Math.round(preview.progress * 100)}%`;
-  els.ghostPreviewSteps.replaceChildren(...preview.steps.map((step) => {
+  els.ghostPreviewPercent.textContent = `${percent}%`;
+  els.ghostPreviewProgress.setAttribute("aria-valuemax", "100");
+  els.ghostPreviewProgress.setAttribute("aria-valuenow", String(percent));
+  els.ghostPreviewProgress.setAttribute("aria-valuetext", `${percent}% of projected route; ${preview.current} of ${preview.total} steps complete; all words encrypted`);
+  els.ghostPreviewBar.style.width = `${(continuousProgress * 100).toFixed(1)}%`;
+  const existingSteps = [...els.ghostPreviewSteps.children];
+  const sameWindow = existingSteps.length === preview.steps.length
+    && preview.steps.every((step, index) => existingSteps[index]?.dataset.stepIndex === String(step.index));
+  const stepNodes = sameWindow ? existingSteps : preview.steps.map((step) => {
     const placeholder = document.createElement("span");
+    placeholder.dataset.stepIndex = String(step.index);
+    const fill = document.createElement("b");
+    fill.className = "ghost-preview-step-fill";
+    placeholder.append(fill, document.createElement("i"));
+    return placeholder;
+  });
+  preview.steps.forEach((step, index) => {
+    const placeholder = stepNodes[index];
     placeholder.className = `ghost-preview-step ${step.status}`;
     placeholder.style.setProperty("--ghost-mask", `${step.widthPercent}%`);
-    placeholder.append(document.createElement("i"));
-    return placeholder;
-  }));
+    const stepProgress = step.index <= completedSteps ? 1 : step.index === completedSteps + 1 ? currentStepProgress : 0;
+    placeholder.style.setProperty("--ghost-step-progress", `${(stepProgress * 100).toFixed(1)}%`);
+  });
+  if (!sameWindow) els.ghostPreviewSteps.replaceChildren(...stepNodes);
 }
 
 async function startRivalGhost() {
@@ -2199,7 +2328,7 @@ function renderRivalGhost() {
       : snapshot.relation === "behind"
         ? `Rival leads by ${gap} star${gap === 1 ? "" : "s"}`
         : "Neck and neck";
-  renderGhostPreview(rivalStars, estimated);
+  renderGhostPreview(snapshot.projectedProgress, estimated);
   if (snapshot.relation === "ahead" && state.ghost.lastRelation && state.ghost.lastRelation !== "ahead") playFeedback("ghostPass");
   state.ghost.lastRelation = snapshot.relation;
 }
@@ -2361,6 +2490,7 @@ function updateBoardTools() {
   els.tidyBoard.disabled = locked || state.nodes.length < 2;
   els.resetBoard.disabled = locked || state.nodes.length === 0;
   els.senseButton.disabled = locked;
+  renderPowerups();
 }
 
 function clearBoardWithUndo() {
@@ -4588,6 +4718,10 @@ els.tidyBoard.addEventListener("click", tidyOrbit);
 $("#undoBoardClear").addEventListener("click", undoBoardClear);
 $("#cancelTapChain").addEventListener("click", () => cancelTapChain({ announce: true }));
 els.senseButton.addEventListener("click", openPowerups);
+els.quickTipShortcut.addEventListener("click", useQuickTip);
+els.wordGiftShortcut.addEventListener("click", useWordGiftShortcut);
+els.senseShortcut.addEventListener("click", useSenseShortcut);
+els.powerupShopShortcut.addEventListener("click", openPowerupShop);
 els.useQuickTip.addEventListener("click", useQuickTip);
 els.useWordGift.addEventListener("click", useWordGift);
 $("#useSense").addEventListener("click", useConstellationSense);
