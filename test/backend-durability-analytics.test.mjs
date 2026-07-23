@@ -148,6 +148,9 @@ test("product analytics persist useful aggregates without raw sessions or free-f
   await store.recordAnalyticsEvent({ name: "audio_toggled", sessionId: secondSession, properties: { enabled: false, kind: "music" } }, at);
   await store.recordAnalyticsEvent({ name: "run_restored", sessionId: firstSession, properties: { mode: "quick", moves: 3 } }, at);
   await store.recordAnalyticsEvent({ name: "board_tidied", sessionId: firstSession, properties: { mode: "quick", words: 9 } }, at);
+  for (const name of ["mode_screen_viewed", "first_orbit_started", "first_combination", "first_orbit_completed", "run_retried", "supporter_interest"]) {
+    await store.recordAnalyticsEvent({ name, sessionId: firstSession }, at);
+  }
   for (const theme of ["void", "aurora", "solar"]) {
     await store.recordAnalyticsEvent({ name: "theme_changed", sessionId: secondSession, properties: { theme } }, at);
   }
@@ -168,6 +171,11 @@ test("product analytics persist useful aggregates without raw sessions or free-f
   assert.equal(summary.segments.theme_changed.theme.aurora, 1);
   assert.equal(summary.segments.theme_changed.theme.solar, 1);
   assert.equal(summary.funnels.ghost.completed, 1);
+  assert.equal(summary.funnels.onboarding.startRatePercent, 100);
+  assert.equal(summary.funnels.onboarding.firstCombinationRatePercent, 100);
+  assert.equal(summary.funnels.onboarding.completionPercent, 100);
+  assert.equal(summary.funnels.reengagement.retries, 1);
+  assert.equal(summary.funnels.reengagement.supporterInterest, 1);
   assert.equal(summary.economy.wordPurchases, 0);
   assert.equal(summary.economy.senseStardustSpent, 90);
   assert.equal("senseCreditsSpent" in summary.economy, false);

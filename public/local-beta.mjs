@@ -6,11 +6,11 @@ import {
   localRouteTo,
   localSuggestions,
   lookupLocalCombination
-} from "./local-world.mjs";
-import { cosmicTwistOptions, cosmicTwistSeedFor, selectCosmicTwist } from "./cosmic-twists.mjs";
-import { QUICK_TIP_LIMIT, rankSenseCandidates, selectRouteNavigationTip, selectWordGift } from "./engagement-features.mjs";
-import { annotateUniverseResult, selectUniverse, validateUniverseRoute } from "./universe-director.mjs";
-import { sanitizeRecipeRating } from "./recipe-feedback.mjs";
+} from "./local-world.mjs?v=3.0.0-beta.1";
+import { cosmicTwistOptions, cosmicTwistSeedFor, selectCosmicTwist } from "./cosmic-twists.mjs?v=3.0.0-beta.1";
+import { QUICK_TIP_LIMIT, assistancePolicy, combineAssistance, rankSenseCandidates, selectRouteNavigationTip, selectWordGift } from "./engagement-features.mjs?v=3.0.0-beta.1";
+import { annotateUniverseResult, selectUniverse, validateUniverseRoute } from "./universe-director.mjs?v=3.0.0-beta.1";
+import { sanitizeRecipeRating } from "./recipe-feedback.mjs?v=3.0.0-beta.1";
 
 const runs = new Map();
 const missionPreviews = new Map();
@@ -69,7 +69,13 @@ function pruneMissionPreviews() {
 
 function directedLocalGame(mode, seed, target, stage) {
   const game = buildLocalGame(mode, seed, target, stage);
-  return game ? { ...game, universe: selectUniverse(game.seed) } : null;
+  if (!game) return null;
+  const route = localRouteTo(game.target);
+  return {
+    ...game,
+    ...(Array.isArray(route) ? { routeLength: route.length } : {}),
+    universe: selectUniverse(game.seed)
+  };
 }
 
 function canonicalRouteRecipes(route) {
@@ -150,6 +156,7 @@ function restoredHistory(value) {
 
 function publicRun(run) {
   const scoreEligible = !run.scoringDisabled;
+  const scoreMultiplier = scoreEligible ? assistancePolicy(run.assist).scoreMultiplier : 0;
   return {
     id: run.id,
     token: run.token,
@@ -160,6 +167,7 @@ function publicRun(run) {
     assist: run.assist,
     scoringDisabled: Boolean(run.scoringDisabled),
     scoreEligible,
+    scoreMultiplier,
     rewardEligible: scoreEligible,
     leaderboardEligible: false
   };
@@ -182,7 +190,8 @@ function publicProgress(run) {
     giftItem: run.giftItem ? { ...run.giftItem } : null,
     tipsUsed: Math.min(QUICK_TIP_LIMIT, Array.isArray(run.tipRecords) ? run.tipRecords.length : 0),
     assist: run.assist,
-    scoringDisabled: Boolean(run.scoringDisabled)
+    scoringDisabled: Boolean(run.scoringDisabled),
+    scoreMultiplier: run.scoringDisabled ? 0 : assistancePolicy(run.assist).scoreMultiplier
   };
 }
 
@@ -366,7 +375,7 @@ function restoreRun(body) {
   let assist = ["none", "wish", "reveal", "sense", "gift"].includes(assistValue)
     ? giftClaimed && assistValue === "none" ? "gift" : assistValue
     : giftClaimed ? "gift" : wished ? "wish" : "none";
-  if (giftClaimed && !["reveal", "sense", "gift"].includes(assist)) assist = "gift";
+  if (giftClaimed) assist = combineAssistance(assist, "gift").id;
   const moveMaximum = game.moveLimit ? Math.max(game.moveLimit, history.length) : 10_000;
   const moves = Math.max(history.length, boundedInteger(progress.moves, history.length, moveMaximum));
   const tipsUsed = boundedInteger(progress.tipsUsed, 0, QUICK_TIP_LIMIT);
@@ -394,7 +403,9 @@ function restoreRun(body) {
     wished,
     bendItem,
     assist: assist === "none" && wished ? "wish" : assist,
-    scoringDisabled: Boolean(progress.scoringDisabled || giftClaimed || ["reveal", "sense", "gift"].includes(assist)),
+    // Older local snapshots treated Compass and Gift as Study. Migrate them
+    // into reduced-score Open assistance; only an automatic Reveal stays 0.
+    scoringDisabled: Boolean(assist === "reveal" || (progress.scoringDisabled && !["sense", "gift"].includes(assist))),
     giftUsed: Boolean(giftItem && giftClaimed),
     giftItem,
     tipRecords,
@@ -586,15 +597,18 @@ export async function localRequest(url, options = {}) {
       };
     }).slice(0, 3);
     if (!candidates.length) fail("No safe constellation signal is available yet.", "sense_unavailable", 422);
-    run.assist = "sense";
-    run.scoringDisabled = true;
+    if (!run.scoringDisabled) run.assist = combineAssistance(run.assist, "sense").id;
+    const policy = assistancePolicy(run.assist);
+    const scoringDisabled = Boolean(run.scoringDisabled || policy.study);
     return {
       candidates,
+      division: scoringDisabled ? "study" : policy.division,
       assisted: true,
-      assist: "sense",
-      scoringDisabled: true,
-      scoreEligible: false,
-      rewardEligible: false,
+      assist: run.assist,
+      scoringDisabled,
+      scoreEligible: !scoringDisabled && policy.scoreEligible,
+      scoreMultiplier: scoringDisabled ? 0 : policy.scoreMultiplier,
+      rewardEligible: !scoringDisabled,
       leaderboardEligible: false,
       ranked: false,
       localOnly: true
@@ -626,17 +640,20 @@ export async function localRequest(url, options = {}) {
       };
       run.giftUsed = true;
       run.giftItem = item;
-      if (!["reveal", "sense", "gift"].includes(run.assist)) run.assist = "gift";
-      run.scoringDisabled = true;
+      if (!run.scoringDisabled) run.assist = combineAssistance(run.assist, "gift").id;
       run.available.add(item.word.toLowerCase());
     }
+    const policy = assistancePolicy(run.assist);
+    const scoringDisabled = Boolean(run.scoringDisabled || policy.study);
     return {
       item: { word: item.word, emoji: item.emoji || "", category: item.category || null, source: "gift" },
+      division: scoringDisabled ? "study" : policy.division,
       assisted: true,
       assist: run.assist,
-      scoringDisabled: true,
-      scoreEligible: false,
-      rewardEligible: false,
+      scoringDisabled,
+      scoreEligible: !scoringDisabled && policy.scoreEligible,
+      scoreMultiplier: scoringDisabled ? 0 : policy.scoreMultiplier,
+      rewardEligible: !scoringDisabled,
       leaderboardEligible: false,
       ranked: false,
       localOnly: true
@@ -664,18 +681,23 @@ export async function localRequest(url, options = {}) {
   }
 
   if (method === "POST" && path === "/api/combine") {
-    const run = requireRun(body);
-    if (run.completed) fail("This local orbit is already complete.", "run_complete", 409);
+    const hasRunCredentials = Boolean(body.runId || body.runToken);
+    const run = hasRunCredentials ? requireRun(body) : null;
+    if (run?.completed) fail("This local orbit is already complete.", "run_complete", 409);
     const a = canonicalLocalWord(body.a);
     const b = canonicalLocalWord(body.b);
-    if (!a || !b || !run.available.has(a.toLowerCase()) || !run.available.has(b.toLowerCase())) {
+    const available = run?.available || new Set((Array.isArray(body.discovered) ? body.discovered : [])
+      .slice(0, 1000)
+      .map((word) => canonicalLocalWord(word)?.toLowerCase())
+      .filter(Boolean));
+    if (!a || !b || !available.has(a.toLowerCase()) || !available.has(b.toLowerCase())) {
       fail("Use words already discovered in this orbit.", "word_unavailable", 409);
     }
-    if (run.deadlineAt && Date.now() > Date.parse(run.deadlineAt)) fail("This quick orbit has ended.", "time_expired", 409);
-    if (run.game.moveLimit && run.moves >= run.game.moveLimit) fail("No moves remain in this orbit.", "move_limit", 409);
+    if (run?.deadlineAt && Date.now() > Date.parse(run.deadlineAt)) fail("This quick orbit has ended.", "time_expired", 409);
+    if (run?.game.moveLimit && run.moves >= run.game.moveLimit) fail("No moves remain in this orbit.", "move_limit", 409);
     const canonicalResult = lookupLocalCombination(a, b);
     if (!canonicalResult) fail("Those ideas are outside this local universe.", "combination_missing");
-    const twist = selectCosmicTwist({
+    const twist = run ? selectCosmicTwist({
       a,
       b,
       canonicalResult,
@@ -685,39 +707,41 @@ export async function localRequest(url, options = {}) {
       moveNumber: run.moves + 1,
       twistUsed: run.twistUsed,
       discovered: run.available
-    });
+    }) : null;
     const result = twist || canonicalResult;
-    const annotation = annotateUniverseResult({
+    const annotation = run ? annotateUniverseResult({
       universe: run.game.universe,
       a,
       b,
       result,
       recipes: [{ a, b, ...canonicalResult }]
-    });
-    if (twist) {
+    }) : null;
+    if (run && twist) {
       run.twistUsed = true;
       run.twistedPairKey = [a, b].map((word) => word.toLowerCase()).sort().join("+");
     }
-    run.moves += 1;
-    run.available.add(result.word.toLowerCase());
-    run.history.push({
-      a,
-      b,
-      word: result.word,
-      emoji: result.emoji,
-      category: result.category,
-      source: result.source,
-      ...(result.twisted ? { twisted: true, canonicalWord: result.twist?.canonicalWord || canonicalResult.word } : {})
-    });
-    run.completed ||= result.word.toLowerCase() === run.game.target.toLowerCase();
+    if (run) {
+      run.moves += 1;
+      run.available.add(result.word.toLowerCase());
+      run.history.push({
+        a,
+        b,
+        word: result.word,
+        emoji: result.emoji,
+        category: result.category,
+        source: result.source,
+        ...(result.twisted ? { twisted: true, canonicalWord: result.twist?.canonicalWord || canonicalResult.word } : {})
+      });
+      run.completed ||= result.word.toLowerCase() === run.game.target.toLowerCase();
+    }
     return {
       ...result,
       ...(annotation ? { universeContext: annotation.context } : {}),
-      feedbackEligible: false,
-      completed: run.completed,
+      feedbackEligible: !twist,
+      completed: Boolean(run?.completed),
       ranked: false,
       localOnly: true,
-      division: run.assist === "none" ? "local" : "local-assisted"
+      division: run?.assist && run.assist !== "none" ? "local-assisted" : "local"
     };
   }
 
@@ -728,10 +752,10 @@ export async function localRequest(url, options = {}) {
     const item = localItemFor(body.word);
     if (!item) fail("Practice Wishes must use a word mapped in the local universe.", "local_wish_unknown");
     run.wished = true;
-    run.assist = "wish";
+    run.assist = combineAssistance(run.assist, "wish").id;
     run.bendItem = { ...item };
     run.available.add(item.word.toLowerCase());
-    return { ...item, assist: "wish", player: publicPlayer(), localOnly: true };
+    return { ...item, assist: run.assist, scoreMultiplier: assistancePolicy(run.assist).scoreMultiplier, player: publicPlayer(), localOnly: true };
   }
 
   if (method === "POST" && path === "/api/run/submit") return {

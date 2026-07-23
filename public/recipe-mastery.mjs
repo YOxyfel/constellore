@@ -1,6 +1,17 @@
 export const RECIPE_MASTERY_VERSION = 1;
 export const MAX_MASTERY_STARS = 3;
 
+const LIFETIME_MASTERY_TIERS = Object.freeze([
+  Object.freeze({ name: "Recipe Observer", at: 0 }),
+  Object.freeze({ name: "Fusion Apprentice", at: 10 }),
+  Object.freeze({ name: "Recipe Cartographer", at: 25 }),
+  Object.freeze({ name: "Constellation Scholar", at: 50 }),
+  Object.freeze({ name: "Cosmic Archivist", at: 100 }),
+  Object.freeze({ name: "Lorekeeper", at: 200 }),
+  Object.freeze({ name: "Master of Orbits", at: 400 }),
+  Object.freeze({ name: "Infinite Alchemist", at: 800 })
+]);
+
 const MAX_MASTERY_RECIPES = 1_000;
 const MAX_WORD_LENGTH = 80;
 const MAX_INDEPENDENCE_LENGTH = 160;
@@ -202,7 +213,7 @@ function unchangedRecordResult(state, reason, extras = {}) {
 
 /**
  * Awards at most one star for a recipe in each independent run/session. Three
- * stars is full mastery. Assisted and revealed combinations deliberately earn
+ * stars is full mastery. Study and revealed combinations deliberately earn
  * no mastery progress.
  */
 export function recordRecipeDiscovery(rawState, discovery = {}) {
@@ -402,5 +413,39 @@ export function summarizeMasteryCollections(collections) {
     collections: list.length,
     completionPercent: totals.total ? Math.round((totals.unlocked / totals.total) * 100) : 0,
     masteryPercent: totals.maxStars ? Math.round((totals.stars / totals.maxStars) * 100) : 0
+  };
+}
+
+/**
+ * Summarizes every stored recipe, not only the small rotating Atlas sample.
+ * The final title repeats in 800-star constellations, so mastery never caps.
+ */
+export function lifetimeMasteryProgress(rawState) {
+  const state = sanitizeRecipeMasteryState(rawState);
+  const stars = state.recipes.reduce((sum, recipe) => sum + clampInteger(recipe.stars, 0, MAX_MASTERY_STARS, 0), 0);
+  const masteredRecipes = state.recipes.filter((recipe) => recipe.stars >= MAX_MASTERY_STARS).length;
+  let tierIndex = LIFETIME_MASTERY_TIERS.findLastIndex((tier) => stars >= tier.at);
+  tierIndex = Math.max(0, tierIndex);
+  const finalTier = LIFETIME_MASTERY_TIERS.at(-1);
+  let title = LIFETIME_MASTERY_TIERS[tierIndex].name;
+  let currentAt = LIFETIME_MASTERY_TIERS[tierIndex].at;
+  let nextAt = LIFETIME_MASTERY_TIERS[tierIndex + 1]?.at ?? null;
+  if (stars >= finalTier.at) {
+    const constellation = Math.floor((stars - finalTier.at) / finalTier.at) + 1;
+    title = `Infinite Alchemist ${constellation}`;
+    currentAt = finalTier.at * constellation;
+    nextAt = finalTier.at * (constellation + 1);
+  }
+  const span = Math.max(1, (nextAt ?? currentAt + 1) - currentAt);
+  return {
+    stars,
+    recipes: state.recipes.length,
+    masteredRecipes,
+    title,
+    tier: tierIndex + 1,
+    currentAt,
+    nextAt,
+    remaining: nextAt == null ? 0 : Math.max(0, nextAt - stars),
+    progress: nextAt == null ? 100 : Math.min(100, Math.round(((stars - currentAt) / span) * 100))
   };
 }

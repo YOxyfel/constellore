@@ -24,6 +24,9 @@ test("mission briefings make the destination and win condition explicit", () => 
   assert.equal(briefing.rewardValue, "70 Stardust");
   assert.equal(briefing.scoringValue, "Practice");
   assert.match(briefing.interactionRule, /Drag one word onto another/);
+  assert.match(briefing.fairnessNote, /Route Signals are score-safe/);
+  assert.match(briefing.fairnessNote, /Compass and Gift keep reduced rewards in Open/);
+  assert.match(briefing.fairnessNote, /Reveal becomes Study with 0 score/);
 });
 
 test("each competitive mode reports its real limit, base reward, and scoring policy", () => {
@@ -69,4 +72,32 @@ test("a previously forfeited official challenge is clearly shown as zero-score",
   assert.equal(briefing.scoringValue, "0 points");
   assert.equal(briefing.rewardValue, "0 Stardust");
   assert.match(briefing.scoringDetail, /already forfeited/i);
+});
+
+test("Second Orbit is score-free while Explore is presented as persistent Practice", () => {
+  const second = buildMissionBriefing({
+    ...baseGame,
+    mode: "second-orbit",
+    modeName: "Second Orbit",
+    target: "Mountain",
+    scoreEligible: false,
+    rewardEligible: false
+  });
+  assert.equal(second.division.id, "study");
+  assert.equal(second.scoringValue, "0 points");
+  assert.match(second.modeRule, /three route fusions/i);
+
+  const explore = buildMissionBriefing({
+    ...baseGame,
+    mode: "explore",
+    modeName: "Explore",
+    target: "Free exploration",
+    ranked: false,
+    scoreEligible: false,
+    rewardEligible: false
+  });
+  assert.equal(explore.division.id, "practice");
+  assert.equal(explore.scoringValue, "Unranked");
+  assert.equal(explore.rewardValue, "No rewards");
+  assert.match(explore.fairnessNote, /Ranked modes always begin again from Earth, Water, Fire, and Air/);
 });

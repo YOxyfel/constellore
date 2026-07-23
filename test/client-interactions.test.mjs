@@ -5,6 +5,7 @@ import test from "node:test";
 const app = await readFile(new URL("../public/app.js", import.meta.url), "utf8");
 const styles = await readFile(new URL("../public/styles.css", import.meta.url), "utf8");
 const page = await readFile(new URL("../public/index.html", import.meta.url), "utf8");
+const releaseVersion = JSON.parse(await readFile(new URL("../package.json", import.meta.url), "utf8")).version;
 
 test("dragged board words update without a trailing transform transition", () => {
   const draggingRule = styles.match(/[.]board-word[.]dragging\s*\{([^}]+)\}/)?.[1] || "";
@@ -86,30 +87,30 @@ test("completed ranked runs remain resumable until the verified upload succeeds"
   assert.match(app, /runId: submission[.]runId, runToken: submission[.]runToken/);
 });
 
-test("Star Compass fails closed on an ambiguous network response", () => {
+test("Star Compass preserves its visible Open penalty on an ambiguous network response", () => {
   const senseStart = app.indexOf("async function useConstellationSense()");
   const localCommit = app.indexOf("profile.senseWallet = preview.wallet", senseStart);
   const request = app.indexOf('await fetchJson("/api/run/sense"', senseStart);
-  assert.ok(localCommit > senseStart && localCommit < request, "the charge and fair-play forfeit commit before the request");
+  assert.ok(localCommit > senseStart && localCommit < request, "the charge and Open score penalty commit before the request");
   assert.match(app.slice(senseStart, app.indexOf("function buySenseCharge", senseStart)), /confirmedBeforeForfeit/);
-  assert.match(app.slice(senseStart, app.indexOf("function buySenseCharge", senseStart)), /this orbit remains assisted and the Compass charge stays spent/);
+  assert.match(app.slice(senseStart, app.indexOf("function buySenseCharge", senseStart)), /visible Open penalty remains and the Compass charge stays spent/);
   assert.match(app.slice(senseStart, app.indexOf("function buySenseCharge", senseStart)), /state[.]orbitGeneration !== orbitGeneration/);
   assert.match(app.slice(senseStart, app.indexOf("function buySenseCharge", senseStart)), /const refund = grantSenseCharges\(profile[.]senseWallet, 1\)/);
   assert.match(app.slice(senseStart, app.indexOf("function buySenseCharge", senseStart)), /if \(!els[.]senseDialog[.]open\) showToast/);
   assert.match(app, /[$]\("#buySense"\)[.]disabled = state[.]powerups[.]busy/);
 });
 
-test("Cosmic Powerups clearly separate score-safe Tips from assisted tools", () => {
+test("Cosmic Powerups clearly present the graded assistance ladder", () => {
   const dialog = page.match(/<dialog\b(?=[^>]*\bid="senseDialog")[^>]*>[\s\S]*?<\/dialog>/i)?.[0] || "";
   assert.match(dialog, /id="powerupsIntro"/);
   for (const id of ["useQuickTip", "quickTipMessage", "useWordGift", "wordGiftMessage", "useSense", "senseMessage"]) {
     assert.match(dialog, new RegExp(`id="${id}"`));
   }
   assert.match(dialog, /ROUTE SIGNAL[\s\S]*SCORE SAFE/);
-  assert.match(dialog, /WORD GIFT[\s\S]*STUDY · 0 SCORE/);
-  assert.match(dialog, /STAR COMPASS[\s\S]*STUDY · 0 SCORE/);
+  assert.match(dialog, /WORD GIFT[\s\S]*OPEN · 50% SCORE/);
+  assert.match(dialog, /STAR COMPASS[\s\S]*OPEN · 75% SCORE/);
   assert.equal((dialog.match(/<h3>/g) || []).length, 3, "each powerup is a navigable dialog heading");
-  assert.match(dialog, /remove score, rewards, streak credit, and leaderboard eligibility/);
+  assert.match(dialog, /Automatic Reveal is the only full Study option at 0 score/);
   assert.match(app, /async function useQuickTip\([\s\S]*fetchJson\("\/api\/run\/tip"[\s\S]*tipIndex/);
   assert.match(app, /state[.]powerups[.]tipsUsed = clamp\(Number\(tip[.]used\)/);
   assert.match(app, /tipsUsed: clamp\(Number\(state[.]powerups[.]tipsUsed\)/, "Quick Tip use survives interrupted-run restore");
@@ -129,7 +130,7 @@ test("board powerup shortcuts stay synchronized, safe, and touch accessible", ()
   assert.match(app, /quickTipShortcutCount[.]textContent = String\(tipsRemaining\)/);
   assert.match(app, /wordGiftShortcutCount[.]textContent = armedKind === "gift"/);
   assert.match(app, /senseShortcutCount[.]textContent = armedKind === "sense"/);
-  assert.match(app, /function activateStudyPowerupShortcut\(kind, action\)[\s\S]*if \(state[.]scoringDisabled\)[\s\S]*activeArmedPowerup\(\) === kind[\s\S]*TAP AGAIN/);
+  assert.match(app, /function activateOpenPowerupShortcut\(kind, action\)[\s\S]*activeArmedPowerup\(\) === kind[\s\S]*keeps [^`]+ score in Open/);
   assert.match(app, /if \(!els[.]senseDialog[.]open\) showAlchemy\(`ROUTE SIGNAL/);
   assert.match(app, /function openPowerupShop\(\)[\s\S]*scrollIntoView[\s\S]*focus\(\{ preventScroll: true \}\)/);
   assert.match(app, /function buySenseCharge\(\)[\s\S]*saveProfile\(\{ fields: \["progression"\] \}\);[\s\S]*renderProfile\(\)/);
@@ -140,18 +141,19 @@ test("board powerup shortcuts stay synchronized, safe, and touch accessible", ()
   assert.match(styles, /@media \(max-width: 780px\)[\s\S]*[.]run-milestone\s*\{\s*display:\s*none/);
   assert.match(styles, /@media \(max-width: 359px\)[\s\S]*grid-template-rows:\s*44px 44px/);
   assert.match(styles, /@media \(max-width: 700px\) and \(max-height: 500px\) and \(min-width: 520px\)[\s\S]*[.]board-tools\s*\{[^}]*width:\s*244px[^}]*grid-template-rows:\s*44px 44px/);
+  assert.match(styles, /@media \(max-width: 700px\)\s*\{\s*[.]game-screen[.]first-ranked-orbit [.]board-tools [.]sense-tool\s*\{[^}]*width:\s*112px[^}]*min-width:\s*112px/, "the first ranked orbit's Powers KIT pill stays inside a mobile board");
 });
 
-test("Word Gift is one-use, server-selected, durable, and fails closed before its request", () => {
+test("Word Gift is one-use, server-selected, durable, and commits its Open penalty before its request", () => {
   const giftStart = app.indexOf("async function useWordGift()");
   const giftEnd = app.indexOf("async function useConstellationSense()", giftStart);
   const giftSource = app.slice(giftStart, giftEnd);
-  const localForfeit = giftSource.indexOf("state.scoringDisabled = true");
+  const localPenalty = giftSource.indexOf('combineAssistance(priorAssist, "gift")');
   const request = giftSource.indexOf('fetchJson("/api/run/gift"');
-  assert.ok(localForfeit >= 0 && localForfeit < request, "Study status commits before the Gift request");
+  assert.ok(localPenalty >= 0 && localPenalty < request, "Open status commits before the Gift request");
   assert.match(giftSource, /body: JSON[.]stringify\(\{ runId, runToken: priorRun[.]token \}\)/);
   assert.match(giftSource, /state[.]powerups[.]giftUsed = true/);
-  assert.match(giftSource, /retry Word Gift to recover the same bridge/);
+  assert.match(giftSource, /retry to recover the same bridge/);
   assert.match(giftSource, /if \(!els[.]senseDialog[.]open\) showToast/);
   assert.match(giftSource, /error[.]code === "gift_unavailable"[)] state[.]powerups[.]giftUnavailable = true/);
   assert.match(app, /giftUsed: Boolean\(state[.]powerups[.]giftUsed\)/);
@@ -163,12 +165,29 @@ test("Word Gift is one-use, server-selected, durable, and fails closed before it
   assert.match(styles, /[.]inventory-word[.]gift [.]source-tag\s*\{/);
 });
 
-test("Study assistance remains visibly and accessibly marked for the whole orbit", () => {
+test("graded assistance remains visibly and accessibly marked for the whole orbit", () => {
   assert.match(app, /function updateStudyHud\(\)/);
   assert.match(app, /els[.]lawPill[.]textContent = "◇ STUDY · 0 SCORE"/);
   assert.match(app, /updateHud\(\)[\s\S]*updateStudyHud\(\)/);
-  assert.match(app, /\["reveal", "sense", "gift"\][.]includes\(state[.]assist\)/);
+  assert.match(app, /els[.]lawPill[.]textContent = `◇ OPEN · \$\{Math[.]round\(state[.]scoreMultiplier \* 100\)\}% SCORE`/);
   assert.match(styles, /[.]game-target #lawPill[.]study-status:not\(\[hidden\]\)\s*\{[^}]*display:\s*block[^}]*font-size:\s*15px/);
+  assert.match(styles, /[.]game-target #lawPill[.]partial-status:not\(\[hidden\]\)\s*\{[^}]*display:\s*block[^}]*font-size:\s*15px/);
+  assert.match(page, /id="partialAssistResultCard"[\s\S]*id="partialAssistScore"/);
+});
+
+test("no response or assistance composition can upgrade a committed score penalty", () => {
+  assert.match(app, /function cappedScoreMultiplier\(assist, [.][.][.]values\)[\s\S]*assistancePolicy\(assist\)[.]scoreMultiplier[\s\S]*Math[.]min\(multiplier, clamp\(number, 0, 1\)\)/);
+  const gift = app.slice(app.indexOf("async function useWordGift()"), app.indexOf("async function useConstellationSense()"));
+  assert.match(gift, /combineAssistance\(priorAssist, "gift"\)/);
+  assert.match(gift, /combineAssistance\(pendingPolicy[.]id, result[.]assist \|\| "gift"\)/);
+  assert.match(gift, /state[.]scoringDisabled = Boolean\(state[.]scoringDisabled \|\| confirmedPolicy[.]study \|\| result[.]scoringDisabled === true \|\| result[.]scoreEligible === false\)/);
+  assert.match(gift, /cappedScoreMultiplier\(state[.]assist, state[.]scoreMultiplier, confirmedPolicy[.]scoreMultiplier, result[.]scoreMultiplier\)/);
+  const sense = app.slice(app.indexOf("async function useConstellationSense()"), app.indexOf("function buySenseCharge"));
+  assert.match(sense, /combineAssistance\(priorAssist, "sense"\)/);
+  assert.match(sense, /state[.]scoringDisabled = Boolean\(state[.]scoringDisabled \|\| confirmedPolicy[.]study \|\| result[.]scoringDisabled === true \|\| result[.]scoreEligible === false\)/);
+  assert.match(sense, /cappedScoreMultiplier\(state[.]assist, state[.]scoreMultiplier, confirmedPolicy[.]scoreMultiplier, result[.]scoreMultiplier\)/);
+  assert.match(app, /combineAssistance\(state[.]assist, "wish"\)[\s\S]*cappedScoreMultiplier\(state[.]assist, state[.]scoreMultiplier, declaredPolicy[.]scoreMultiplier/);
+  assert.match(app, /combineAssistance\(state[.]assist, "market"\)[\s\S]*cappedScoreMultiplier\(state[.]assist, state[.]scoreMultiplier, declaredPolicy[.]scoreMultiplier/);
 });
 
 test("cloud sync preserves only genuinely pending local fields", () => {
@@ -180,10 +199,14 @@ test("cloud sync preserves only genuinely pending local fields", () => {
   assert.match(app, /scheduleCloudProfileSync\(\{ changed: false, delay: 250 \}\)/);
 });
 
-test("recipe feedback appears only for server-approved recipes and never in local-only Pages practice", () => {
+test("recipe feedback accepts authored local recipes with privacy-safe aggregate storage", () => {
   assert.match(app, /feedbackEligible: result[.]feedbackEligible === true/);
   assert.match(app, /historyStep[.]feedbackEligible\) offerRecipeFeedback/);
-  assert.match(app, /if \(isStaticBeta \|\| !step[?][.]feedbackEligible/);
+  assert.match(app, /if \(!step[?][.]feedbackEligible \|\| step[.]twisted \|\| step[.]revealed/);
+  assert.match(app, /function recordLocalRecipeVote\(step, rating\)/);
+  assert.match(app, /recipeFingerprint\(step\)/);
+  assert.match(app, /LOCAL_RECIPE_FEEDBACK_KEY/);
+  assert.doesNotMatch(app.slice(app.indexOf("function recordLocalRecipeVote"), app.indexOf("async function submitRecipeFeedback")), /localStorage[.]setItem\([^\n]+step[.]|\ba:\s*step[.]a|\bword:\s*step[.]word/);
   assert.match(page, /id="boardAnnouncement"[^>]+role="status"[^>]+aria-live="polite"[^>]+aria-atomic="true"/);
   assert.doesNotMatch(page, /id="recipeFeedbackAnnouncement"/, "board prompts must share one announcement channel");
   assert.match(page, /id="dismissRecipeFeedback"/);
@@ -196,7 +219,96 @@ test("new cloud and onboarding status controls are announced and touch accessibl
   assert.match(styles, /[.]first-orbit-modal [.]modal-close\s*\{\s*width:\s*44px;\s*height:\s*44px/);
 });
 
-test("Dev Logs exposes four accessible, readable, responsive update entries", () => {
+test("an unacknowledged Recovery Kit survives refresh without interrupting the first orbit", () => {
+  assert.match(app, /const PENDING_RECOVERY_KIT_KEY = "constellore-pending-recovery-kit-v1"/);
+  assert.match(app, /function rememberPendingRecoveryKit\(value\)[\s\S]*localStorage[.]setItem\(PENDING_RECOVERY_KIT_KEY, JSON[.]stringify\(kit\)\)/);
+  assert.match(app, /function restorePendingRecoveryKit\(playerId\)[\s\S]*kit[?][.]playerId === playerId/);
+  assert.match(app, /async function ensurePlayer\(\)[\s\S]*restorePendingRecoveryKit\(profile[.]playerId\)/);
+  assert.match(app, /function showRecoveryKit\(\{ force = false \} = \{\}\)[\s\S]*if \(!force && profile[.]wins < 1\) return/);
+  assert.match(app, /function acknowledgeRecoveryKit\(\)[\s\S]*rememberPendingRecoveryKit\(null\)[\s\S]*renderProfile\(\)/);
+  assert.match(app, /async function rotateRecoveryKit\(\)[\s\S]*if \(state[.]recoveryKit[?][.]code\)[\s\S]*showRecoveryKit\(\{ force: true \}\)/);
+});
+
+test("every modal has an explicit accessible name and a full-size close target", () => {
+  const dialogs = [...page.matchAll(/<dialog\b[^>]*>/gi)].map((match) => match[0]);
+  assert.ok(dialogs.length >= 15);
+  for (const dialog of dialogs) {
+    const id = dialog.match(/\bid="([^"]+)"/i)?.[1] || "unnamed dialog";
+    const labelId = dialog.match(/\baria-labelledby="([^"]+)"/i)?.[1];
+    assert.ok(labelId, `${id} needs aria-labelledby`);
+    assert.match(page, new RegExp(`\\bid="${labelId}"`), `${id} must reference an existing label`);
+  }
+  assert.match(styles, /[.]modal-close\s*\{[^}]*width:\s*44px;[^}]*height:\s*44px/);
+});
+
+test("the home screen explains the loop, presents one next action, and groups every deeper choice", () => {
+  assert.match(page, /<button\b(?=[^>]*id="primaryOrbitButton")(?=[^>]*class="[^"]*primary-orbit-button)/);
+  assert.equal((page.match(/\bid="primaryOrbitButton"/g) || []).length, 1);
+  assert.match(page, /id="primaryOrbitSecondary"/);
+  assert.match(page, /Combine two words to make a new one[.] Keep discovering until you create the target word[.]/);
+  assert.match(page, /aria-label="Example: Earth plus Water makes Mud"/);
+  assert.match(page, /<details\b(?=[^>]*id="modePicker")(?=[^>]*data-progressive="secondary")/);
+  assert.match(page, /<details\b(?=[^>]*id="adventuresHub")(?=[^>]*data-progressive="adventure")/);
+  assert.match(page, /id="hubMenuButton"[^>]+aria-controls="hubMenuDialog"/);
+  assert.match(page, /id="hubMenuDialog"[^>]+aria-labelledby="hubMenuTitle"/);
+  assert.match(page, /data-progressive="progress"/);
+  assert.match(app, /createHomeMenuState/);
+  assert.match(app, /function homeMenuState\(\)/);
+  assert.match(app, /function syncProgressiveDisclosure\(\)/);
+  assert.match(app, /classList[.]toggle\("first-session", !menu[.]onboardingComplete\)/);
+  assert.match(app, /classList[.]toggle\("progress-ready", menu[.]progressReady\)/);
+  assert.match(app, /classList[.]toggle\("adventures-ready", menu[.]adventuresReady\)/);
+  assert.match(app, /classList[.]toggle\("training-needed", !training[.]completed\)/);
+  assert.match(app, /primaryOrbitButton["']\)[.]addEventListener\("click", beginPrimaryOrbit\)/);
+  assert.match(app, /primaryOrbitSecondary["']\)[.]addEventListener\("click", beginPrimarySecondary\)/);
+  assert.match(styles, /body[.]first-session \[data-progressive="secondary"\]/);
+  assert.match(styles, /body:not\([.]adventures-ready\) \[data-progressive="adventure"\]/);
+  assert.match(styles, /[.]primary-orbit-button\s*\{[^}]*min-height:\s*60px/);
+});
+
+test("seeing or skipping training never unlocks the full home shell by itself", () => {
+  assert.match(app, /function firstSessionUnlocked\(\)\s*\{\s*return homeMenuState\(\)[.]onboardingComplete/);
+  assert.doesNotMatch(app, /function firstSessionUnlocked\(\)[\s\S]{0,180}training[.]seen/);
+  assert.match(app, /function beginPrimarySecondary\(\)[\s\S]*action === "reach"[\s\S]*rememberFirstOrbitSeen\(\)[\s\S]*beginMode\("reach"/);
+  assert.match(app, /function skipFirstOrbit\(\)[\s\S]*rememberFirstOrbitSeen\(\)[\s\S]*returnHome\(\)/, "in-board Skip must return to a real choice");
+  assert.doesNotMatch(page, /id="firstOrbitDialog"/, "first use should not be blocked by a redundant welcome dialog");
+});
+
+test("opening alternative modes never hijacks the viewport or keyboard focus", () => {
+  const source = app.slice(app.indexOf("function openModePicker()"), app.indexOf("async function beginPrimarySecondary()"));
+  assert.match(source, /picker[.]open = true/);
+  assert.doesNotMatch(source, /scrollIntoView|scrollTo|[.]focus\(/);
+});
+
+test("relaxed Reach suppresses the race ghost and leaderboards retain exact challenge identity", () => {
+  const ghostEligibility = app.slice(app.indexOf("function competitiveGhostEligible"), app.indexOf("function renderGhostPreview"));
+  assert.match(ghostEligibility, /!\["training", "second-orbit", "explore", "reach"\][.]includes\(state[.]mode\)/);
+  assert.match(app, /const challengeId = state[.]game[?][.]challengeId \|\| state[.]run[?][.]challengeId/);
+  assert.match(app, /params[.]set\("challengeId", String\(challengeId\)\)/);
+});
+
+test("local diagnostics are bounded aggregates and players can export or reset their data", () => {
+  const tracking = app.slice(app.indexOf("function track("), app.indexOf("let feedbackAudioContext"));
+  const localTracking = tracking.slice(0, tracking.indexOf("const body"));
+  const staticTracking = localTracking.slice(localTracking.indexOf("if (isStaticBeta)"));
+  assert.match(tracking, /if \(isStaticBeta\)/);
+  assert.match(tracking, /JSON[.]stringify\(\{ version: 1, counts: bounded \}\)/);
+  assert.doesNotMatch(staticTracking, /sessionId|properties|updatedAt/, "static storage must contain aggregate counts only");
+  for (const id of ["exportLocalPractice", "resetLocalPractice", "exportLocalDiagnostics", "resetLocalDiagnostics", "exportPlayerData", "deletePlayerData"]) {
+    assert.match(page, new RegExp(`id="${id}"`));
+  }
+  assert.match(app, /fetchJson\("\/api\/player\/profile", \{[\s\S]*method: "DELETE"[\s\S]*confirm: "DELETE"/);
+});
+
+test("returning home preserves the post-win recovery decision without leaking it into pointer cleanup", () => {
+  const returnHome = app.slice(app.indexOf("function returnHome()"), app.indexOf("async function beginPrimaryOrbit"));
+  const pointerCleanup = app.slice(app.indexOf("function cancelActivePointerGestures()"), app.indexOf("function pointInsideBoard"));
+  assert.match(returnHome, /const showRecoveryAfterExit = Boolean\(state[.]finished && state[.]recoveryKit[?][.]code && profile[.]wins > 0\)/);
+  assert.match(returnHome, /if \(showRecoveryAfterExit\) showRecoveryKit\(\)/);
+  assert.doesNotMatch(pointerCleanup, /showRecoveryAfterExit/);
+});
+
+test("Dev Logs exposes the complete accessible, readable, responsive update history", () => {
   const button = page.match(/<button\b(?=[^>]*\bid="updatesButton")[^>]*>/i)?.[0] || "";
   assert.ok(button, "the updates trigger is present");
   assert.match(button, /\baria-haspopup="dialog"/i);
@@ -207,11 +319,16 @@ test("Dev Logs exposes four accessible, readable, responsive update entries", ()
   assert.match(dialog.match(/<dialog\b[^>]*>/i)?.[0] || "", /\baria-labelledby="updatesTitle"/i);
   assert.match(dialog, /id="updatesTitle"/i);
   assert.match(dialog, /data-close="updatesDialog"/i);
-  assert.equal((dialog.match(/\bdata-update-entry(?:=|\s|>)/gi) || []).length, 4, "the log has exactly four updates");
-  for (const label of ["Release", "Ctrl", "Shift", "Route Signals"]) assert.match(dialog, new RegExp(`\\b${label}\\b`, "i"));
-  assert.match(dialog, /4 ENTRIES/i);
+  assert.equal((dialog.match(/\bdata-update-entry(?:=|\s|>)/gi) || []).length, 7, "the 3.0 log has exactly seven updates");
+  for (const label of ["Release", "Ctrl", "Shift", "Route Signals", "Living Atlas", "Signature Constellations", "Path Becomes the Game"]) assert.match(dialog, new RegExp(`\\b${label}\\b`, "i"));
+  assert.match(dialog, /7 ENTRIES/i);
   assert.equal((dialog.match(/\bis-latest\b/gi) || []).length, 1, "the log has exactly one latest entry");
   assert.equal((dialog.match(/>LATEST</gi) || []).length, 1, "the log has exactly one latest badge");
+  const latest = dialog.match(/<li\b(?=[^>]*\bis-latest\b)[^>]*>[\s\S]*?<\/li>/i)?.[0] || "";
+  assert.ok(latest, "the log identifies its latest entry");
+  assert.ok(latest.toUpperCase().includes(`VERSION ${releaseVersion.toUpperCase()}`));
+  assert.match(latest, /Pages and itch are deterministic local practice without live rankings, accounts, or AI/i);
+  assert.match(latest, /Beta progress may reset/i);
 
   assert.match(app, /[$]\(["']#updatesButton["']\)[.]addEventListener\(["']click["']/);
   assert.match(app, /(?:[$]\(["']#updatesDialog["']\)|els[.]updatesDialog)[\s\S]{0,160}?[.]showModal\(\)/);
@@ -232,16 +349,16 @@ test("mode selection opens an accessible mission briefing before creating a run"
   ]) assert.match(page, new RegExp(`id="${id}"`));
   assert.match(app, /pendingMission:\s*null/);
   assert.match(app, /function openMissionBriefing\(/);
-  assert.match(app, /function presentMissionBriefing\(\)[\s\S]*state[.]recoveryKit[?][.]code[\s\S]*showModal\(\)/);
+  assert.match(app, /function presentMissionBriefing\(\)[\s\S]*[$]\("#recoveryDialog"\)[.]open[\s\S]*showModal\(\)/);
   assert.match(app, /async function confirmMissionBriefing\(/);
   assert.match(app, /fetchJson\("\/api\/run\/preview"/);
   assert.match(app, /request: \{ [.]\.\.request, previewToken: preview[.]previewToken \}/);
   assert.match(app, /error[.]code === "mission_stale"[\s\S]*refreshMissionPreview\(pending\)/);
-  assert.match(app, /confirmMissionBriefing\(\)[\s\S]*createRun\(pending[.]request\)[\s\S]*startWithGame\(started[.]game, started[.]run\)/);
+  assert.match(app, /confirmMissionBriefing\(\)[\s\S]*createRun\(pending[.]request\)[\s\S]*startWithGame\(started[.]game, started[.]run, \{ context: pending[.]context \}\)/);
   assert.match(app, /beginCustomTarget[\s\S]*requestMissionPreview\(request\)[\s\S]*openMissionBriefing\(preview[.]game, preview[.]request/);
   assert.match(app, /skipBriefing:\s*true/);
   assert.match(app, /acknowledgeRecoveryKit\(\)[\s\S]*state[.]pendingMission[\s\S]*presentMissionBriefing/);
-  assert.match(page, /class="training-mission-line"[\s\S]*<strong>Wall<\/strong>[\s\S]*3 guided fusions/);
+  assert.match(page, /id="primaryOrbitDescription"[^>]*>Your target is Wall[.][\s\S]*id="primaryOrbitMeta">TARGET: WALL · GUIDED · NO SCORE/);
   assert.match(styles, /[.]mission-briefing-modal\[open\]\s*\{[^}]*display:\s*flex[^}]*overflow:\s*hidden/);
   assert.match(styles, /[.]mission-scroll\s*\{[^}]*overflow-y:\s*auto/);
   assert.match(styles, /[.]mission-target-lockup h2\s*\{[^}]*overflow-wrap:\s*anywhere/);

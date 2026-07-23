@@ -1,0 +1,206 @@
+const recipe = (a, b, word, emoji, note) => Object.freeze({
+  a,
+  b,
+  word,
+  emoji,
+  note,
+  source: "expanded"
+});
+
+// This reviewed pack has two jobs:
+// 1. give official goals alternate, intuitive producers; and
+// 2. turn useful discoveries that used to be cul-de-sacs into a connected web.
+// Results deliberately reuse established concepts instead of minting filler.
+export const GRAPH_BREADTH_RECIPES = Object.freeze([
+  // Alternate goal routes and escapes from the Energy-heavy opening trunk.
+  recipe("Earth", "Mist", "Plant", "🌱", "Moist earth gives a plant the conditions it needs to take root."),
+  recipe("Swamp", "Species", "Ecosystem", "🌿", "The species living throughout a swamp form an ecosystem."),
+  recipe("Bird", "Inferno", "Phoenix", "🔥", "A bird reborn through an inferno evokes the legendary phoenix."),
+  recipe("Star", "Cosmic Dust", "Galaxy", "🌌", "Stars gathering within vast fields of cosmic dust form a galaxy."),
+  recipe("World", "Space", "Planet", "🌍", "A world traveling through space is a planet."),
+  recipe("Land", "Ocean", "World", "🌍", "Land and ocean together form a world."),
+  recipe("Air", "Land", "Sky", "🌤️", "The expanse of air visible above the land is the sky."),
+  recipe("Cloud", "Stone", "Comet", "☄️", "A rocky core wrapped in frozen vapor resembles a comet."),
+  recipe("Glass", "Observatory", "Telescope", "🔭", "Optical glass installed at an observatory becomes a telescope."),
+  recipe("Research", "Telescope", "Astronomy", "🔭", "Research performed with a telescope advances astronomy."),
+  recipe("Engine", "Metal", "Rocket", "🚀", "A powerful engine inside a metal airframe becomes a rocket."),
+  recipe("Metal", "Rocket", "Spacecraft", "🛰️", "A metal rocket designed for travel beyond Earth is a spacecraft."),
+  recipe("Lightning", "Metal", "Electricity", "⚡", "Lightning conducted through metal produces an electrical current."),
+  recipe("Cloud", "Metal", "Electricity", "⚡", "A charged cloud discharging through a metal conductor produces electricity."),
+  recipe("Ash", "Clay", "Brick", "🧱", "Fly ash blended with clay can be formed and fired into brick."),
+  recipe("Lightning", "Mud", "Life", "🧬", "A spark striking primordial mud evokes the beginnings of life."),
+  recipe("Fire", "Lantern", "Light", "💡", "Fire held safely inside a lantern produces light."),
+  recipe("Stone", "Range", "Mountain", "⛰️", "A rocky peak within a range is a mountain."),
+  recipe("Seed", "Tree", "Forest", "🌲", "A tree spreading seeds can grow into a forest."),
+  recipe("Rain", "Prism", "Rainbow", "🌈", "A prism makes the color spectrum visible through rain-like refraction."),
+  recipe("Village", "Population", "City", "🏙️", "A village with a growing population becomes a city."),
+  recipe("Rain", "Valley", "River", "🏞️", "Rain draining through a valley gathers into a river."),
+  recipe("Star", "World", "Solar System", "🪐", "A world orbiting its star belongs to a solar system."),
+  recipe("Ice Cap", "Ocean", "Iceberg", "🧊", "Ice calving from a coastal ice cap into the ocean becomes an iceberg."),
+  recipe("Fire", "Lightning", "Plasma", "⚡", "Lightning ionizes heated gas into plasma."),
+  recipe("Electricity", "Lightning", "High Voltage", "⚡", "Lightning is a natural high-voltage electrical discharge."),
+  recipe("Animal", "Electricity", "Electric Shock", "⚡", "Electricity passing through an animal causes an electric shock."),
+  recipe("House", "Spacecraft", "Space Station", "🛰️", "A spacecraft built to serve as a long-term home becomes a space station."),
+
+  // Built environment, public works, and energy infrastructure.
+  recipe("Adobe", "Construction", "House", "🏠", "Adobe used in construction becomes a house."),
+  recipe("Construction", "Community", "City", "🏙️", "Sustained construction around a growing community creates a city."),
+  recipe("Infrastructure", "Industrial Park", "Industry", "🏭", "Infrastructure supporting an industrial park enables industry."),
+  recipe("Automation", "Industrial Complex", "Manufacturing", "🏭", "Automation across an industrial complex enables manufacturing."),
+  recipe("Manufacturing", "Automation", "Factory", "🏭", "Automated manufacturing defines a modern factory."),
+  recipe("Hardware", "Appliance", "Machine", "⚙️", "Hardware assembled into an appliance forms a machine."),
+  recipe("Appliance", "Wireless", "Smart Home", "🏠", "Wireless connected appliances create a smart home."),
+  recipe("Smart Home", "Internet", "Network", "🖧", "An internet-connected smart home operates as a device network."),
+  recipe("Power Plant", "Electrical Grid", "Power Grid", "🔌", "An electrical grid carrying energy from power plants forms a power grid."),
+  recipe("Power Grid", "Power Plant", "Electricity", "⚡", "A power plant feeds electricity into the power grid."),
+  recipe("Power Plant", "Generator", "Power", "🔋", "Generators inside a power plant produce power."),
+  recipe("Water", "Generator", "Hydropower", "💧", "Moving water driving a generator produces hydropower."),
+  recipe("Dam", "Generator", "Hydroelectricity", "💧", "A generator powered by water released from a dam produces hydroelectricity."),
+  recipe("Hydro Energy", "Turbine", "Hydropower", "💧", "A turbine converts moving-water energy into usable hydropower."),
+  recipe("Hydropower", "Generator", "Hydroelectricity", "⚡", "Hydropower driving a generator produces hydroelectricity."),
+  recipe("Hydroelectricity", "Power Grid", "Electricity", "⚡", "A power grid distributes hydroelectricity as usable electricity."),
+  recipe("Water Supply", "Waterworks", "Utility", "🚰", "Waterworks maintain a community's water utility."),
+  recipe("Waterworks", "Wastewater", "Utility", "🚰", "Treating wastewater is a core public water utility."),
+  recipe("Wastewater", "Sewer", "Waterworks", "🚰", "A sewer carries wastewater to the waterworks."),
+  recipe("Sewer", "Plumbing", "Utility", "🚰", "Public plumbing and sewers form a water utility."),
+  recipe("Plumbing", "Utility", "Water Supply", "🚰", "A plumbing utility delivers the water supply."),
+  recipe("Utility", "Roadworks", "Infrastructure", "🏗️", "Utility repairs coordinated with roadworks maintain infrastructure."),
+  recipe("Roadworks", "Road", "Highway", "🛣️", "Roadworks can expand a road into a highway."),
+  recipe("Highway", "Traffic", "Traffic Jam", "🚗", "Heavy traffic on a highway becomes a traffic jam."),
+  recipe("Traffic", "Main Street", "Traffic Jam", "🚗", "Heavy traffic along a main street becomes a traffic jam."),
+  recipe("Community", "Settlement", "Village", "🏘️", "A settled community can grow into a village."),
+  recipe("Settlement", "Hamlet", "Village", "🏘️", "A settlement larger than a hamlet becomes a village."),
+  recipe("Hamlet", "Cottage", "Village", "🏘️", "Cottages clustered in a hamlet form a village."),
+  recipe("Cottage", "Farmhouse", "Countryside", "🏞️", "Cottages and farmhouses evoke the countryside."),
+  recipe("Farmhouse", "Barn", "Farm", "🌾", "A farmhouse and barn together form a working farm."),
+  recipe("Adobe", "Cottage", "House", "🏠", "An adobe cottage is a durable house."),
+
+  // Aviation and connected travel.
+  recipe("Aviation", "Airport", "Flight", "✈️", "Aviation operating from an airport enables flight."),
+  recipe("Airport", "Air Network", "Aviation", "✈️", "Airports linked through an air network support aviation."),
+  recipe("Wireless", "Satellite Constellation", "Internet", "🌐", "A satellite constellation can deliver wireless internet."),
+  recipe("Orbiter", "Wireless", "Satellite", "🛰️", "A wireless orbiter relaying signals functions as a satellite."),
+  recipe("Orbiter", "Probe", "Space Observatory", "🛰️", "An orbiting probe built for observation becomes a space observatory."),
+  recipe("Lander", "Rover", "Probe", "🛰️", "A lander delivering a rover forms a planetary probe mission."),
+  recipe("Airship", "Balloon", "Flight", "🎈", "A balloon providing lift allows an airship to fly."),
+  recipe("Balloon", "Airliner", "Airship", "🎈", "A balloon's lift combined with an airliner's control evokes an airship."),
+
+  // Maritime transport and freight.
+  recipe("Aircraft Carrier", "Navy", "Fleet", "🚢", "An aircraft carrier serving with a navy belongs to a fleet."),
+  recipe("Seaport", "Barge", "Freight", "🚢", "A barge leaving a seaport carries freight."),
+  recipe("Barge", "Freight", "Trade", "📦", "A freight barge carries goods for trade."),
+  recipe("Freight", "Seaport", "Port", "⚓", "A seaport equipped to handle freight is a working port."),
+  recipe("Seaplane", "Navy", "Aviation", "✈️", "A seaplane serving with a navy belongs to naval aviation."),
+
+  // Rail and road transit.
+  recipe("Rail Network", "Electric Train", "Railway", "🚆", "Electric trains running across a rail network form a railway."),
+  recipe("Electric Train", "Locomotive", "Train", "🚆", "An electric locomotive pulls a train."),
+  recipe("Automobile", "Electricity", "Electric Vehicle", "🚗", "An automobile powered by electricity is an electric vehicle."),
+  recipe("Railway", "City", "Subway", "🚇", "An urban railway running through a city becomes a subway."),
+
+  // Books, records, and reference systems.
+  recipe("Archive", "Biography", "History", "📜", "Archived biographies preserve personal history."),
+  recipe("Biography", "Open Book", "Reading", "📖", "An open biography invites reading."),
+  recipe("Library System", "Encyclopedia", "Research", "🔬", "A library system and encyclopedia support research."),
+  recipe("Encyclopedia", "Atlas", "Research", "🔬", "Encyclopedias and atlases are core tools for research."),
+  recipe("Atlas", "Archive", "History", "📜", "Historical maps preserved in an archive record history."),
+
+  // Civic records and shared culture.
+  recipe("Population", "Society", "Community", "👥", "A population connected by social life forms a community."),
+  recipe("Civilization", "Planet", "World", "🌍", "A planet inhabited by a civilization becomes a living world."),
+  recipe("Capital", "Census", "Population", "👥", "A census measures the population of a capital."),
+
+  // Science institutions and the space program.
+  recipe("Science Center", "Laboratory", "Research", "🔬", "A laboratory inside a science center supports research."),
+  recipe("Laboratory", "Planetarium", "Astronomy", "🔭", "A planetarium paired with a laboratory teaches astronomy."),
+  recipe("Planetarium", "Star Atlas", "Stargazing", "🔭", "A star atlas used in a planetarium prepares visitors for stargazing."),
+  recipe("Space Telescope", "Space Observatory", "Astronomy", "🔭", "A space observatory uses a space telescope for astronomy."),
+  recipe("Space Observatory", "Space Garden", "Space Station", "🛰️", "An orbital observatory and garden are modules of a space station."),
+  recipe("Space Garden", "Life", "Ecosystem", "🌿", "Life interacting throughout a space garden forms a small ecosystem."),
+  recipe("Planet", "Orbit", "Planetary System", "🪐", "Planets arranged in stable orbits form a planetary system."),
+  recipe("Orbit", "Spaceplane", "Spacecraft", "🛰️", "A spaceplane reaching orbit becomes a spacecraft."),
+  recipe("Spaceplane", "Science Center", "Engineering", "⚙️", "A spaceplane displayed at a science center demonstrates advanced engineering."),
+
+  // Cultivation and food production.
+  recipe("Botanical Garden", "Plant", "Garden", "🌷", "A botanical garden is a cultivated garden filled with plants."),
+  recipe("Blossom", "Flowerpot", "Flower", "🌸", "A blossom growing in a flowerpot is a flower."),
+  recipe("Flowerpot", "Growth", "Plant", "🌱", "Growth inside a flowerpot produces a plant."),
+  recipe("Growth", "Seedling", "Plant", "🌱", "A seedling showing healthy growth becomes a plant."),
+  recipe("Seedling", "Irrigation", "Crop", "🌾", "Irrigated seedlings mature into a crop."),
+  recipe("Irrigation", "Paddy", "Agriculture", "🌾", "Irrigation makes rice-paddy agriculture possible."),
+  recipe("Paddy", "Crop", "Grain", "🌾", "A paddy crop produces grain."),
+  recipe("Crop", "Irrigation", "Agriculture", "🌾", "Irrigation supporting crops enables agriculture."),
+
+  // Domestic animals and habitats.
+  recipe("Livestock", "Poultry", "Farm", "🌾", "Livestock and poultry are raised together on a farm."),
+  recipe("Flock", "Nest", "Bird", "🐦", "A flock returning to nests is a community of birds."),
+  recipe("Nest", "Birdbath", "Habitat", "🌿", "A nest beside a birdbath creates a small bird habitat."),
+  recipe("Birdbath", "Hive", "Habitat", "🌿", "A birdbath and hive make a garden more useful as wildlife habitat."),
+  recipe("Hive", "Fauna", "Biodiversity", "🦋", "A hive among varied fauna adds to biodiversity."),
+  recipe("Fauna", "Habitat", "Wildlife", "🦊", "Wild fauna living in its natural habitat is wildlife."),
+  recipe("Kennel", "Animal", "Pet", "🐾", "An animal cared for in a kennel is a pet."),
+  recipe("Livestock", "Barn", "Farm", "🌾", "A barn housing livestock is part of a working farm."),
+
+  // Aquatic habitats and green spaces.
+  recipe("Fishery", "Koi Pond", "Koi", "🐟", "An ornamental fishery centered on a koi pond raises koi."),
+  recipe("Aquarium", "Fish", "Habitat", "🌿", "An aquarium containing fish is a managed aquatic habitat."),
+  recipe("Koi Pond", "Lily Pond", "Pond", "🏞️", "Koi and lilies can share a garden pond."),
+  recipe("Lily Pond", "Root Network", "Wetland", "🪷", "Pond plants and their root network create a small wetland."),
+  recipe("Root Network", "Vertical Garden", "Green Wall", "🌿", "A rooted vertical garden grows into a living green wall."),
+  recipe("Botanical Garden", "Greenbelt", "Park", "🏞️", "A botanical garden within a greenbelt creates a public park."),
+  recipe("Greenbelt", "City", "Urban Ecology", "🌿", "A greenbelt supporting nature inside a city is part of urban ecology."),
+
+  // Fire ecology and survival traces.
+  recipe("Wildfire", "Fireweed", "Ecology", "🌿", "Fireweed returning after wildfire demonstrates fire ecology."),
+  recipe("Firewood", "Driftwood", "Campfire", "🔥", "Dry driftwood gathered as firewood makes a campfire."),
+  recipe("Footprint", "Wildfire", "Survival", "🏕️", "Footprints escaping a wildfire tell a story of survival."),
+  recipe("Phoenix", "Ashes", "Fire", "🔥", "A phoenix rising from ashes rekindles fire."),
+
+  // Materials, fuel, and fabrication.
+  recipe("Alloy", "Hardware", "Machine", "⚙️", "Alloy hardware assembled into moving parts forms a machine."),
+  recipe("Clay", "Kiln", "Pottery", "🏺", "A kiln fires shaped clay into pottery."),
+  recipe("Kiln", "Charcoal", "Fire", "🔥", "Charcoal burning inside a kiln sustains a hot fire."),
+  recipe("Coal", "Coal", "Fossil Fuel", "⛽", "Coal is a carbon-rich fossil fuel."),
+  recipe("Coal", "Fossil Fuel", "Energy", "⚡", "Coal used as a fossil fuel releases energy."),
+  recipe("Fossil Fuel", "Biofuel", "Power", "🔋", "Fossil fuel and biofuel can both be converted into power."),
+  recipe("Biofuel", "Engine", "Machine", "⚙️", "Biofuel powering an engine drives a machine."),
+  recipe("Cobblestone", "Construction", "Masonry", "🧱", "Cobblestone assembled in construction becomes masonry."),
+  recipe("Plaster", "Obsidian", "Sculpture", "🗿", "Plaster and obsidian can be shaped into contrasting sculpture."),
+  recipe("Silt", "Water", "Mud", "🟤", "Fine silt mixed with water becomes mud."),
+  recipe("Ashes", "Ember", "Fire", "🔥", "A live ember hidden in ashes can rekindle a fire."),
+  recipe("Geyser", "Water", "Steam", "♨️", "Water heated beneath a geyser erupts with steam."),
+  recipe("Ember", "Forge Bot", "Fire", "🔥", "A forge bot tends an ember until it becomes a working fire."),
+  recipe("Forge Bot", "Cobblestone", "Golem", "🗿", "A forge bot assembling cobblestone evokes a mechanical golem."),
+
+  // Direct continuations for useful discoveries that still had only one exit.
+  // Each pair is independently causal or compositional; none relies on a
+  // merely shared scene, a missing key ingredient, or a synonym swap.
+  recipe("Black Ice", "Automobile", "Accident", "⚠️", "An automobile losing traction on black ice can cause an accident."),
+  recipe("Asteroid", "Probe", "Spacecraft", "🛰️", "A probe dispatched to investigate an asteroid is a scientific spacecraft."),
+  recipe("Bathroom", "Water Supply", "Plumbing", "🚰", "A water supply routed into bathroom fixtures becomes plumbing."),
+  recipe("Blossom", "Vase", "Bouquet", "💐", "Blossoms arranged together in a vase form a bouquet."),
+  recipe("Bookshelf", "Textbook", "Library", "📚", "A bookshelf stocked and organized with textbooks becomes a reference library."),
+  recipe("Cabin", "Resort", "Lodge", "🏔️", "A cabin operated as part of a resort becomes a guest lodge."),
+  recipe("Cactus", "Flowerbed", "Desert Garden", "🌵", "Cacti cultivated together in a flowerbed form a desert garden."),
+  recipe("Cell", "Organism", "Life", "🧬", "Cells organized into a functioning organism sustain life."),
+  recipe("Charcoal", "Firewood", "Campfire", "🔥", "Charcoal and dry firewood together fuel a campfire."),
+  recipe("Circuit", "Smart Home", "Network", "🖧", "Circuits linking a smart home's devices form a control network."),
+  recipe("Civilization", "Ruins", "History", "📜", "Ruins left by a civilization preserve evidence of its history."),
+  recipe("Coast", "Harbor", "Port", "⚓", "A sheltered harbor developed along a coast becomes a port."),
+  recipe("Concrete", "Framework", "Construction", "🏗️", "Concrete poured around a structural framework creates durable construction."),
+  recipe("Darkness", "Lantern", "Light", "💡", "A lantern burning in darkness produces usable light."),
+  recipe("Dormancy", "Monsoon", "Growth", "🌱", "Monsoon rain ends seasonal dormancy and triggers new growth."),
+  recipe("Electrical Grid", "Hydroelectricity", "Power", "🔋", "An electrical grid carrying hydroelectricity supplies usable power."),
+  recipe("Exoplanet", "Lander", "Probe", "🛰️", "A lander sent to investigate an exoplanet is a planetary probe."),
+  recipe("Fireweed", "Inferno", "Ecology", "🌿", "Fireweed returning after an inferno demonstrates fire-adapted ecology."),
+  recipe("Fishery", "Harvest", "Food", "🍽️", "A managed harvest from a fishery produces food."),
+  recipe("Flood", "Silt", "Floodplain", "🏞️", "Repeated floods deposit silt and build a floodplain."),
+  recipe("Frozen Food", "Kitchen", "Dinner", "🍽️", "Frozen food prepared in a kitchen becomes dinner."),
+  recipe("Furniture", "Apartment", "Home", "🏡", "Furnishing an apartment turns an empty dwelling into a home."),
+  recipe("Illustration", "Open Book", "Picture Book", "📖", "Illustrations filling an open book make it a picture book."),
+  recipe("Industrial Complex", "Manufacturing", "Industry", "🏭", "An industrial complex devoted to manufacturing supports industry."),
+  recipe("Motor", "Locomotive", "Train", "🚆", "A motor driving a locomotive powers a train."),
+  recipe("Rail Bridge", "Rail Network", "Railway", "🛤️", "Rail bridges connect separated sections of a rail network into a railway."),
+  recipe("Sound", "Smartphone", "Call", "📞", "A smartphone carrying live sound between people creates a call."),
+  recipe("Skyscraper", "Megacity", "Skyline", "🌆", "Skyscrapers rising across a megacity form its skyline.")
+]);

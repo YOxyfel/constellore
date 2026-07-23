@@ -3,6 +3,8 @@
 !.env.example
 node_modules/
 coverage/
+playwright-report/
+test-results/
 *.log
 data/
 .agents/
@@ -11,6 +13,8 @@ data/
 .vscode/
 .idea/
 dist-pages/
+dist-itch/
+/constellore-html5.zip
 legal/
 LAUNCH.md
 .DS_Store

@@ -1,0 +1,36 @@
+name: Bug or accessibility issue
+description: Report broken controls, layout, performance, keyboard, or assistive-technology behavior.
+title: "Beta bug: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: "Do not include a Recovery Kit, run token, address, payment detail, or other private information."
+  - type: textarea
+    id: action
+    attributes:
+      label: What were you trying to do?
+    validations:
+      required: true
+  - type: textarea
+    id: result
+    attributes:
+      label: What happened, and what did you expect?
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Device, operating system, and browser
+    validations:
+      required: true
+  - type: input
+    id: assistive
+    attributes:
+      label: Keyboard or assistive technology
+      description: Optional; for example TalkBack, VoiceOver, NVDA, switch control, or keyboard only.
+  - type: input
+    id: build
+    attributes:
+      label: Build version
+

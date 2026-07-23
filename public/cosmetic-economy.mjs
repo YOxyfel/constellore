@@ -14,8 +14,47 @@ export const COSMETIC_CATALOG = Object.freeze([
 ]);
 
 export const REAL_MONEY_CATALOG = Object.freeze([
-  Object.freeze({ id: "constellore_founders_pass", kind: "entitlement", label: "Founder's Pass", grants: Object.freeze(["founder_cosmetics", "daily_wish", "daily_sense_bonus"]) })
+  Object.freeze({ id: "constellore_founders_pass", kind: "entitlement", label: "Founder's Pass", grants: Object.freeze(["founder_cosmetics"]) })
 ]);
+
+export const EARNABLE_BADGES = Object.freeze([
+  Object.freeze({ id: "first-orbit", icon: "✦", label: "First Light", description: "Complete First Orbit training." }),
+  Object.freeze({ id: "routefinder", icon: "◇", label: "Routefinder", description: "Reach your first real target." }),
+  Object.freeze({ id: "wordsmith", icon: "❋", label: "Wordsmith", description: "Discover 25 unique words." }),
+  Object.freeze({ id: "recipe-keeper", icon: "★", label: "Recipe Keeper", description: "Earn 25 recipe-mastery stars." }),
+  Object.freeze({ id: "seven-suns", icon: "☼", label: "Seven Suns", description: "Hold a seven-day daily streak." }),
+  Object.freeze({ id: "riftwalker", icon: "↯", label: "Riftwalker", description: "Complete a weekly expedition." }),
+  Object.freeze({ id: "cosmic-archive", icon: "◎", label: "Cosmic Archive", description: "Discover 100 unique words." })
+]);
+
+export function earnedBadges(raw = {}) {
+  const source = raw && typeof raw === "object" && !Array.isArray(raw) ? raw : {};
+  const firstOrbitCompleted = Boolean(source.firstOrbitCompleted ?? source.firstOrbit?.completed);
+  const wins = Math.max(0, Math.floor(Number(source.wins) || 0));
+  const discoveries = Math.max(0, Math.floor(Number(source.discoveries) || 0));
+  const masteryStars = Math.max(0, Math.floor(Number(source.masteryStars) || 0));
+  const dailyStreak = Math.max(0, Math.floor(Number(source.dailyStreak) || 0));
+  const weeklyComplete = Boolean(source.weeklyComplete ?? source.weekly?.complete);
+  const unlocked = new Set([
+    ...(firstOrbitCompleted ? ["first-orbit"] : []),
+    ...(wins >= 1 ? ["routefinder"] : []),
+    ...(discoveries >= 25 ? ["wordsmith"] : []),
+    ...(masteryStars >= 25 ? ["recipe-keeper"] : []),
+    ...(dailyStreak >= 7 ? ["seven-suns"] : []),
+    ...(weeklyComplete ? ["riftwalker"] : []),
+    ...(discoveries >= 100 ? ["cosmic-archive"] : [])
+  ]);
+  return EARNABLE_BADGES.map((badge) => ({ ...badge, earned: unlocked.has(badge.id) }));
+}
+
+/** Automatically earned profile aura; it never affects game mechanics. */
+export function progressionAuraClass(raw = {}) {
+  const count = earnedBadges(raw).filter((badge) => badge.earned).length;
+  if (count >= 6) return "aura-prism";
+  if (count >= 3) return "aura-nebula";
+  if (count >= 1) return "aura-first-light";
+  return "aura-none";
+}
 
 const defaults = Object.freeze({ theme: "void", board: "starlit", trail: "classic", sound: "cosmic" });
 const byId = new Map(COSMETIC_CATALOG.map((item) => [item.id, item]));

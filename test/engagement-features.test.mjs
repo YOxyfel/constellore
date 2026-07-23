@@ -4,11 +4,14 @@ import test from "node:test";
 import {
   FEEDBACK_CUES,
   QUICK_TIP_LIMIT,
+  assistancePolicy,
   buildGhost,
+  combineAssistance,
   feedbackCuePolicy,
   ghostSnapshot,
   ghostTrailPreviewState,
   grantSenseCharges,
+  lifetimeProgression,
   rankSenseCandidates,
   reconcileCloudProgression,
   refillSenseWallet,
@@ -16,7 +19,8 @@ import {
   sanitizeSenseWallet,
   selectQuickTip,
   selectWordGift,
-  spendSenseCharge
+  spendSenseCharge,
+  weeklyRatingPresentation
 } from "../public/engagement-features.mjs";
 
 test("cloud progression never resurrects spent balances or consumed shields", () => {
@@ -76,13 +80,14 @@ test("Sense daily refill is capped and idempotent for one calendar date", () => 
   assert.deepEqual(repeated.wallet, first.wallet);
 });
 
-test("spending a Sense charge marks a score-ineligible assisted run", () => {
+test("spending a Sense charge keeps a reduced Open score", () => {
   const result = spendSenseCharge({ charges: 2, earned: 4, spent: 1 });
   assert.equal(result.spent, true);
   assert.equal(result.assisted, true);
   assert.equal(result.assist, "sense");
-  assert.equal(result.division, "assisted");
-  assert.equal(result.scoreEligible, false);
+  assert.equal(result.division, "open");
+  assert.equal(result.scoreEligible, true);
+  assert.equal(result.scoreMultiplier, .75);
   assert.equal(result.wallet.charges, 1);
   assert.equal(result.wallet.spent, 2);
 
@@ -95,6 +100,46 @@ test("spending a Sense charge marks a score-ineligible assisted run", () => {
   assert.equal(granted.granted, 1);
   assert.equal(granted.wallet.charges, 9);
   assert.equal(granted.wallet.earned, 3);
+});
+
+test("assistance policy is explicit and never increases after stronger help", () => {
+  assert.equal(assistancePolicy("tip").scoreMultiplier, 1);
+  assert.equal(assistancePolicy("wish").scoreMultiplier, .8);
+  assert.equal(assistancePolicy("market").scoreMultiplier, .8);
+  assert.equal(assistancePolicy("ai").scoreMultiplier, .8);
+  assert.equal(assistancePolicy("gift").scoreMultiplier, .5);
+  assert.equal(assistancePolicy("reveal").scoreEligible, false);
+
+  const senseThenWish = combineAssistance("sense", "wish");
+  assert.equal(senseThenWish.id, "sense");
+  assert.equal(senseThenWish.division, "open");
+  assert.equal(senseThenWish.scoreMultiplier, .75);
+  assert.equal(senseThenWish.scoreEligible, true);
+
+  const giftThenReveal = combineAssistance("gift", "reveal");
+  assert.equal(giftThenReveal.id, "reveal");
+  assert.equal(giftThenReveal.division, "study");
+  assert.equal(giftThenReveal.scoreMultiplier, 0);
+  assert.equal(giftThenReveal.scoreEligible, false);
+});
+
+test("lifetime rank continues beyond the named progression cap", () => {
+  const firstEternal = lifetimeProgression({ stardust: 48_000 });
+  const laterEternal = lifetimeProgression({ stardust: 150_000, wins: 100, discoveries: 500, masteryStars: 200 });
+  assert.equal(firstEternal.name, "Eternal Cartographer 1");
+  assert.ok(laterEternal.level > firstEternal.level);
+  assert.match(laterEternal.name, /^Eternal Cartographer \d+$/);
+  assert.ok(laterEternal.nextAt > laterEternal.points);
+});
+
+test("weekly rating is a transparent resettable momentum layer", () => {
+  const quiet = weeklyRatingPresentation({}, { date: new Date("2026-07-22T12:00:00Z") });
+  const active = weeklyRatingPresentation({ stage: 3, complete: true, dailyStreak: 7, masteryStars: 100 }, { date: new Date("2026-07-22T12:00:00Z") });
+  assert.equal(quiet.weekKey, "2026-W30");
+  assert.equal(quiet.resetsWeekly, true);
+  assert.ok(active.rating > quiet.rating);
+  assert.equal(active.name, "Radiant Orbit");
+  assert.match(active.season, /^2026 · SEASON /);
 });
 
 test("Sense ranking is deterministic, route-aware, and never reveals a ready recipe pair", () => {

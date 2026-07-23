@@ -1,6 +1,130 @@
 export const SENSE_WALLET_VERSION = 1;
 export const MAX_SENSE_CHARGES = 9;
 
+export const ASSISTANCE_POLICIES = Object.freeze({
+  none: Object.freeze({ id: "none", label: "Pure", division: "pure", scoreMultiplier: 1, scoreEligible: true, study: false }),
+  tip: Object.freeze({ id: "tip", label: "Route Signal", division: "pure", scoreMultiplier: 1, scoreEligible: true, study: false }),
+  open: Object.freeze({ id: "open", label: "Open", division: "open", scoreMultiplier: .85, scoreEligible: true, study: false }),
+  wish: Object.freeze({ id: "wish", label: "Wish", division: "open", scoreMultiplier: .8, scoreEligible: true, study: false }),
+  market: Object.freeze({ id: "market", label: "Vault Word", division: "open", scoreMultiplier: .8, scoreEligible: true, study: false }),
+  ai: Object.freeze({ id: "ai", label: "AI Assist", division: "open", scoreMultiplier: .8, scoreEligible: true, study: false }),
+  sense: Object.freeze({ id: "sense", label: "Star Compass", division: "open", scoreMultiplier: .75, scoreEligible: true, study: false }),
+  gift: Object.freeze({ id: "gift", label: "Word Gift", division: "open", scoreMultiplier: .5, scoreEligible: true, study: false }),
+  reveal: Object.freeze({ id: "reveal", label: "Cosmos Reveal", division: "study", scoreMultiplier: 0, scoreEligible: false, study: true }),
+  training: Object.freeze({ id: "training", label: "Training", division: "study", scoreMultiplier: 0, scoreEligible: false, study: true })
+});
+
+export function assistancePolicy(value = "none") {
+  const id = String(value || "none").toLowerCase();
+  return { ...(ASSISTANCE_POLICIES[id] || ASSISTANCE_POLICIES.none) };
+}
+
+/** Keeps the strongest assistance used in an orbit and its lowest score rate. */
+export function combineAssistance(current = "none", next = "none") {
+  const left = assistancePolicy(current);
+  const right = assistancePolicy(next);
+  const selected = right.scoreMultiplier < left.scoreMultiplier ? right : left;
+  return {
+    ...selected,
+    scoreMultiplier: Math.min(left.scoreMultiplier, right.scoreMultiplier),
+    scoreEligible: left.scoreEligible && right.scoreEligible,
+    study: left.study || right.study,
+    division: left.study || right.study ? "study" : left.division === "open" || right.division === "open" ? "open" : "pure"
+  };
+}
+
+const LIFETIME_RANKS = Object.freeze([
+  Object.freeze({ name: "Stargazer I", at: 0 }),
+  Object.freeze({ name: "Stargazer II", at: 250 }),
+  Object.freeze({ name: "Pathfinder", at: 750 }),
+  Object.freeze({ name: "Constellation Keeper", at: 1_500 }),
+  Object.freeze({ name: "Reality Weaver", at: 3_000 }),
+  Object.freeze({ name: "Loreweaver", at: 6_000 }),
+  Object.freeze({ name: "Celestial Archivist", at: 12_000 }),
+  Object.freeze({ name: "Universe Cartographer", at: 24_000 }),
+  Object.freeze({ name: "Eternal Cartographer", at: 48_000 })
+]);
+
+/**
+ * Long-tail presentation rank. It combines durable collection and play
+ * accomplishments, then continues in named Eternal tiers instead of capping.
+ */
+export function lifetimeProgression(raw = {}) {
+  const source = raw && typeof raw === "object" && !Array.isArray(raw) ? raw : {};
+  const stardust = clampInteger(source.stardust, 0, 1_000_000_000, 0);
+  const wins = clampInteger(source.wins, 0, 1_000_000, 0);
+  const discoveries = clampInteger(source.discoveries, 0, 10_000, 0);
+  const masteryStars = clampInteger(source.masteryStars, 0, 100_000, 0);
+  const points = Math.min(1_000_000_000, stardust + wins * 40 + discoveries * 2 + masteryStars * 20);
+  let levelIndex = LIFETIME_RANKS.findLastIndex((rank) => points >= rank.at);
+  levelIndex = Math.max(0, levelIndex);
+  const finalRank = LIFETIME_RANKS.at(-1);
+  let name = LIFETIME_RANKS[levelIndex].name;
+  let currentAt = LIFETIME_RANKS[levelIndex].at;
+  let nextAt = LIFETIME_RANKS[levelIndex + 1]?.at ?? null;
+  let nextName = LIFETIME_RANKS[levelIndex + 1]?.name ?? null;
+  let level = levelIndex + 1;
+  if (points >= finalRank.at) {
+    const eternalTier = Math.floor((points - finalRank.at) / 48_000) + 1;
+    level = LIFETIME_RANKS.length + eternalTier - 1;
+    name = `Eternal Cartographer ${eternalTier}`;
+    currentAt = finalRank.at + (eternalTier - 1) * 48_000;
+    nextAt = currentAt + 48_000;
+    nextName = `Eternal Cartographer ${eternalTier + 1}`;
+  }
+  const span = Math.max(1, (nextAt ?? currentAt + 1) - currentAt);
+  const progress = nextAt == null ? 100 : Math.min(100, Math.max(0, Math.round(((points - currentAt) / span) * 100)));
+  return {
+    points,
+    level,
+    name,
+    currentAt,
+    nextAt,
+    nextName,
+    remaining: nextAt == null ? 0 : Math.max(0, nextAt - points),
+    progress
+  };
+}
+
+function isoWeekKey(value) {
+  const input = value instanceof Date && Number.isFinite(value.getTime()) ? value : new Date();
+  const date = new Date(Date.UTC(input.getUTCFullYear(), input.getUTCMonth(), input.getUTCDate()));
+  const day = date.getUTCDay() || 7;
+  date.setUTCDate(date.getUTCDate() + 4 - day);
+  const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
+  const week = Math.ceil((((date - yearStart) / 86400000) + 1) / 7);
+  return `${date.getUTCFullYear()}-W${String(week).padStart(2, "0")}`;
+}
+
+/** A resettable, non-punitive weekly momentum presentation beside lifetime rank. */
+export function weeklyRatingPresentation(raw = {}, { date = new Date() } = {}) {
+  const source = raw && typeof raw === "object" && !Array.isArray(raw) ? raw : {};
+  const stage = clampInteger(source.stage ?? source.weeklyStage, 0, 3, 0);
+  const dailyStreak = clampInteger(source.dailyStreak, 0, 100_000, 0);
+  const masteryStars = clampInteger(source.masteryStars, 0, 100_000, 0);
+  const complete = Boolean(source.complete ?? source.weeklyComplete);
+  const rating = 1_000 + stage * 140 + (complete ? 220 : 0) + Math.min(7, dailyStreak) * 18 + Math.min(100, masteryStars) * 2;
+  const bands = [
+    { at: 0, name: "Quiet Orbit" },
+    { at: 1_100, name: "Rising Orbit" },
+    { at: 1_350, name: "Bright Orbit" },
+    { at: 1_650, name: "Radiant Orbit" }
+  ];
+  const band = [...bands].reverse().find((entry) => rating >= entry.at) || bands[0];
+  const next = bands.find((entry) => entry.at > rating) || null;
+  const safeDate = date instanceof Date && Number.isFinite(date.getTime()) ? date : new Date();
+  return {
+    weekKey: isoWeekKey(safeDate),
+    season: `${safeDate.getUTCFullYear()} · SEASON ${Math.floor(safeDate.getUTCMonth() / 3) + 1}`,
+    rating,
+    name: band.name,
+    nextAt: next?.at ?? null,
+    remaining: next ? next.at - rating : 0,
+    progress: next ? Math.round(((rating - band.at) / Math.max(1, next.at - band.at)) * 100) : 100,
+    resetsWeekly: true
+  };
+}
+
 function clampInteger(value, minimum, maximum, fallback = minimum) {
   const number = Number(value);
   if (!Number.isFinite(number)) return fallback;
@@ -88,8 +212,9 @@ export function spendSenseCharge(raw) {
     reason: "spent",
     assisted: true,
     assist: "sense",
-    division: "assisted",
-    scoreEligible: false
+    division: "open",
+    scoreEligible: true,
+    scoreMultiplier: ASSISTANCE_POLICIES.sense.scoreMultiplier
   };
 }
 

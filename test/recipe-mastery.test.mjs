@@ -6,6 +6,7 @@ import {
   RECIPE_MASTERY_VERSION,
   buildMasteryCollections,
   collectionProgress,
+  lifetimeMasteryProgress,
   recipeKey,
   recordRecipeDiscovery,
   sanitizeRecipeMasteryState,
@@ -26,6 +27,24 @@ test("recipe keys are normalized, collision-safe, and ingredient-order independe
   assert.notEqual(recipeKey("a+b", "c", "result"), recipeKey("a", "b+c", "result"));
   assert.notEqual(recipeKey("Earth", "Water", "Mud"), recipeKey("Earth", "Water", "Swamp"));
   assert.equal(recipeKey("", "Water", "Mud"), "");
+});
+
+test("lifetime mastery counts the full archive and repeats beyond its final named tier", () => {
+  const recipes = Array.from({ length: 300 }, (_, index) => ({
+    a: `Source ${index}`,
+    b: `Catalyst ${index}`,
+    word: `Result ${index}`,
+    stars: 3,
+    discoveries: 3,
+    proofs: [`a${index}`, `b${index}`, `c${index}`]
+  }));
+  const progress = lifetimeMasteryProgress({ version: RECIPE_MASTERY_VERSION, recipes });
+  assert.equal(progress.stars, 900);
+  assert.equal(progress.recipes, 300);
+  assert.equal(progress.masteredRecipes, 300);
+  assert.equal(progress.title, "Infinite Alchemist 1");
+  assert.equal(progress.nextAt, 1_600);
+  assert.equal(progress.remaining, 700);
 });
 
 test("independent discoveries award one star each and cap mastery at three", () => {

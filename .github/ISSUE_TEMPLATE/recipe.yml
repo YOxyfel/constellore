@@ -1,0 +1,49 @@
+name: Recipe or missing combination
+description: Report an illogical result or an expected pair that did not combine.
+title: "Recipe feedback: "
+labels: ["recipe"]
+body:
+  - type: markdown
+    attributes:
+      value: "Do not include a Recovery Kit, run token, address, or other personal information."
+  - type: input
+    id: first
+    attributes:
+      label: First word
+      placeholder: Species
+    validations:
+      required: true
+  - type: input
+    id: second
+    attributes:
+      label: Second word
+      placeholder: Air
+    validations:
+      required: true
+  - type: input
+    id: actual
+    attributes:
+      label: Actual result
+      description: Write “nothing” if the pair did not combine.
+    validations:
+      required: true
+  - type: input
+    id: expected
+    attributes:
+      label: Expected result
+      placeholder: Bird
+    validations:
+      required: true
+  - type: dropdown
+    id: runtime
+    attributes:
+      label: Edition
+      options: ["GitHub Pages local practice", "itch.io HTML5", "Online beta", "Local development"]
+    validations:
+      required: true
+  - type: input
+    id: build
+    attributes:
+      label: Build version
+      description: Shown in Updates/About or the website footer.
+

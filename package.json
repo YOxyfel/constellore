@@ -1,19 +1,33 @@
 {
   "name": "constellore",
-  "version": "1.7.0",
-  "description": "A mobile-first cosmic word-combination puzzle game.",
+  "version": "3.0.0-beta.1",
+  "description": "A mobile-first, target-based word-route puzzle game.",
   "private": true,
   "type": "module",
   "scripts": {
     "start": "node server.mjs",
     "dev": "node --watch server.mjs",
     "preview:pages": "node scripts/serve-pages-preview.mjs",
+    "release:sync": "node scripts/sync-public-release.mjs",
+    "assets:release": "node scripts/generate-release-assets.mjs",
     "build:pages": "node scripts/build-pages.mjs",
-    "check:pages": "node scripts/verify-pages-build.mjs",
+    "check:pages": "node scripts/verify-pages-build.mjs && node scripts/check-performance-budget.mjs",
+    "build:itch": "node scripts/build-itch.mjs",
+    "check:itch": "node scripts/verify-itch-build.mjs",
+    "check:release": "node scripts/verify-release-readiness.mjs",
+    "build:release": "npm run release:sync && npm run check:release && npm run build:pages && npm run check:pages && npm run build:itch && npm run check:itch",
     "test": "node --test",
-    "check": "node --check game-services.mjs && node --check server.mjs && node --check public/app.js && node --check public/frictionless.mjs && node --check public/shift-board.mjs && node --check public/mission-briefing.mjs && node --check public/local-beta.mjs && node --check public/cosmic-twists.mjs && node --check public/recipe-mastery.mjs && node --check public/engagement-features.mjs && node --check public/first-orbit.mjs && node --check public/universe-director.mjs && node --check public/constellation-card.mjs && node --check public/cosmetic-economy.mjs && node --check public/recipe-feedback.mjs && node --check public/pending-scores.mjs && node --check Website/site.js && node --check scripts/build-pages.mjs && node --check scripts/build-local-world.mjs && node --check scripts/verify-pages-build.mjs && node --check scripts/serve-pages-preview.mjs && node --test"
+    "test:e2e": "playwright test",
+    "test:e2e:chromium": "playwright test --project=chromium-mobile",
+    "test:e2e:pages": "playwright test --config=playwright.pages.config.mjs --project=chromium-mobile",
+    "check:syntax": "node scripts/check-syntax.mjs",
+    "check": "npm run check:syntax && node --test"
   },
   "engines": {
     "node": ">=20"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.12.1",
+    "@playwright/test": "^1.61.1"
   }
 }

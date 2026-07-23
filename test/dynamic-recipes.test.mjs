@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { once } from "node:events";
+import { request as httpRequest } from "node:http";
 import {
   DYNAMIC_RECIPE_LIMIT,
   cacheDynamicRecipe,
@@ -60,12 +61,27 @@ test("AI recipes stay bounded without corrupting authored or active-run routes",
   const baseUrl = `http://127.0.0.1:${address.port}`;
   let auth = {};
   const request = async (path, { method = "GET", body } = {}) => {
-    const response = await fetch(`${baseUrl}${path}`, {
-      method,
-      headers: { ...auth, ...(body ? { "content-type": "application/json" } : {}) },
-      body: body ? JSON.stringify(body) : undefined
+    const encodedBody = body ? JSON.stringify(body) : "";
+    const { status, text } = await new Promise((resolve, reject) => {
+      const outgoing = httpRequest(`${baseUrl}${path}`, {
+        method,
+        headers: {
+          ...auth,
+          ...(body ? { "content-type": "application/json", "content-length": Buffer.byteLength(encodedBody) } : {})
+        }
+      }, (incoming) => {
+        const chunks = [];
+        incoming.on("data", (chunk) => chunks.push(chunk));
+        incoming.on("end", () => resolve({
+          status: incoming.statusCode || 0,
+          text: Buffer.concat(chunks).toString("utf8")
+        }));
+      });
+      outgoing.on("error", reject);
+      if (encodedBody) outgoing.write(encodedBody);
+      outgoing.end();
     });
-    return { response, payload: await response.json() };
+    return { response: { status }, payload: JSON.parse(text) };
   };
 
   const registration = await request("/api/player/register", { method: "POST" });

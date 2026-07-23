@@ -1,15 +1,24 @@
-import { createCtrlHoverController } from "./ctrl-hover.mjs?v=1.0.0";
-import { createShiftBoardController } from "./shift-board.mjs?v=1.1.0";
-import { findOpenSpawn, orderInventory, packOrbit, pickMagneticTarget } from "./frictionless.mjs?v=1.0.0";
-import { buildMasteryCollections, recordRecipeDiscovery, sanitizeRecipeMasteryState, summarizeMasteryCollections } from "./recipe-mastery.mjs?v=1.0.0";
-import { QUICK_TIP_LIMIT, buildGhost, feedbackCuePolicy, ghostSnapshot, ghostTrailPreviewState, grantSenseCharges, reconcileCloudProgression, refillSenseWallet, sanitizeFeedbackPreferences, sanitizeSenseWallet, spendSenseCharge } from "./engagement-features.mjs?v=1.2.0";
-import { firstOrbitProgress, firstOrbitWrongPairMessage, resolveFirstOrbitCombination, sanitizeFirstOrbitState } from "./first-orbit.mjs?v=1.0.0";
-import { buildConstellationCard, constellationCardFilename, constellationCardShareText, renderConstellationCardSvg } from "./constellation-card.mjs?v=1.0.0";
-import { COSMETIC_CATALOG, cosmeticClasses, cosmeticOptions, sanitizeCosmeticLoadout, transformFeedbackAudio } from "./cosmetic-economy.mjs?v=1.0.0";
-import { createRecipeFeedbackRequest } from "./recipe-feedback.mjs?v=1.0.0";
-import { selectUniverse } from "./universe-director.mjs?v=1.0.0";
-import { listPendingScoreRecords, removePendingScoreRecord, savePendingScoreRecord } from "./pending-scores.mjs?v=1.0.0";
-import { buildMissionBriefing } from "./mission-briefing.mjs?v=1.0.1";
+import { createCtrlHoverController } from "./ctrl-hover.mjs?v=3.0.0-beta.1";
+import { createShiftBoardController } from "./shift-board.mjs?v=3.0.0-beta.1";
+import { findOpenSpawn, orderInventory, packOrbit, pickMagneticTarget } from "./frictionless.mjs?v=3.0.0-beta.1";
+import { buildMasteryCollections, lifetimeMasteryProgress, recordRecipeDiscovery, sanitizeRecipeMasteryState, summarizeMasteryCollections } from "./recipe-mastery.mjs?v=3.0.0-beta.1";
+import { QUICK_TIP_LIMIT, assistancePolicy, buildGhost, combineAssistance, feedbackCuePolicy, ghostSnapshot, ghostTrailPreviewState, grantSenseCharges, lifetimeProgression, reconcileCloudProgression, refillSenseWallet, sanitizeFeedbackPreferences, sanitizeSenseWallet, spendSenseCharge, weeklyRatingPresentation } from "./engagement-features.mjs?v=3.0.0-beta.1";
+import { firstOrbitProgress, firstOrbitWrongPairMessage, resolveFirstOrbitCombination, sanitizeFirstOrbitState } from "./first-orbit.mjs?v=3.0.0-beta.1";
+import { secondOrbitProgress, sanitizeSecondOrbitState } from "./second-orbit.mjs?v=3.0.0-beta.1";
+import { exploreGame, mergeExploreInventory, sanitizeExploreInventory } from "./explore-sandbox.mjs?v=3.0.0-beta.1";
+import { buildConstellationCard, constellationCardFilename, constellationCardShareText, renderConstellationCardSvg } from "./constellation-card.mjs?v=3.0.0-beta.1";
+import { COSMETIC_CATALOG, cosmeticClasses, cosmeticOptions, earnedBadges, progressionAuraClass, sanitizeCosmeticLoadout, transformFeedbackAudio } from "./cosmetic-economy.mjs?v=3.0.0-beta.1";
+import { createRecipeFeedbackRequest, recipeFingerprint, sanitizeRecipeRating } from "./recipe-feedback.mjs?v=3.0.0-beta.1";
+import { selectUniverse } from "./universe-director.mjs?v=3.0.0-beta.1";
+import { listPendingScoreRecords, removePendingScoreRecord, savePendingScoreRecord } from "./pending-scores.mjs?v=3.0.0-beta.1";
+import { buildMissionBriefing } from "./mission-briefing.mjs?v=3.0.0-beta.1";
+import { advanceVoyageProgress, constellationVoyage, constellationVoyageCatalog, currentVoyageStage, sanitizeVoyageProgress, voyageProgress } from "./constellation-voyages.mjs?v=3.0.0-beta.1";
+import { annotateCosmicEventResult, cosmicEventCollectionProgress, cosmicEventTargets, currentCosmicEvent } from "./cosmic-events.mjs?v=3.0.0-beta.1";
+import { explainRecipeNearMiss, explainSuccessfulRecipe } from "./recipe-insight.mjs?v=3.0.0-beta.1";
+import { buildLivingAtlas, buildRouteProgress } from "./living-atlas.mjs?v=3.0.0-beta.1";
+import { buildCommunityResults } from "./community-results.mjs?v=3.0.0-beta.1";
+import { comparePersonalBest, createRouteSignature, gradeSignatureRoute, sanitizeRouteSignature } from "./signature-routes.mjs?v=3.0.0-beta.1";
+import { createHomeMenuState } from "./home-menu.mjs?v=3.0.0-beta.1";
 
 const starterEmoji = { Earth: "🌍", Water: "💧", Fire: "🔥", Air: "💨" };
 const starterCategory = { Earth: "nature", Water: "force", Fire: "force", Air: "force" };
@@ -20,6 +29,17 @@ const todayKey = new Date().toISOString().slice(0, 10);
 const sessionId = globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 const MAX_BOARD_NODES = 180;
 const MAX_SHIFT_COPIES_PER_DRAG = 24;
+const LOCAL_ANALYTICS_KEY = "constellore-local-event-counts-v1";
+const LOCAL_RECIPE_FEEDBACK_KEY = "constellore-local-recipe-feedback-v1";
+const LOCAL_EXPECTED_PAIRS_KEY = "constellore-local-expected-pairs-v1";
+const ANALYTICS_COHORT_KEY = "constellore-analytics-cohort-v1";
+const ANALYTICS_PREFERENCE_KEY = "constellore-analytics-preference-v1";
+const PENDING_RECOVERY_KIT_KEY = "constellore-pending-recovery-kit-v1";
+const VOYAGE_REWARD = 35;
+const EVENT_COLLECTION_REWARD = 60;
+const MAX_TRANSIENT_TRAILS = 120;
+const COMMERCE_LAUNCH_READY = document.body.dataset.commerce === "enabled";
+const ANALYTICS_DIMENSIONS = new Set(["mode", "division", "source", "result", "completed", "installed", "replay", "free", "status", "scope", "location", "phase", "ranked", "reward", "success"]);
 
 const MASTERY_CATALOG = [
   ["Earth", "Water", "Mud", "🟤", "nature"], ["Air", "Water", "Mist", "🌫️", "nature"],
@@ -46,7 +66,7 @@ const MASTERY_CATALOG = [
 ].map(([a, b, word, emoji, category]) => ({ a, b, word, emoji, category }));
 
 const defaultProfile = {
-  version: 5,
+  version: 7,
   playerId: "",
   playerToken: "",
   cloudProfileVersion: 0,
@@ -75,7 +95,14 @@ const defaultProfile = {
   feedbackPreferences: { sound: true, haptics: true },
   rivalGhostEnabled: true,
   firstOrbit: { seen: false, completed: false },
-  weekly: { key: "", stage: 0, complete: false }
+  secondOrbit: { seen: false, completed: false },
+  exploreWords: [],
+  weekly: { key: "", stage: 0, complete: false },
+  voyageProgress: sanitizeVoyageProgress({}),
+  selectedVoyageId: "first-cities",
+  eventProgress: { weekKey: "", eventId: "", words: [], rewarded: false },
+  signatureBests: [],
+  rewardedRunIds: []
 };
 
 const state = {
@@ -115,8 +142,10 @@ const state = {
   shareCard: null,
   installPrompt: null,
   run: null,
+  pause: { active: false, confirmAction: "" },
   assist: "none",
   scoringDisabled: false,
+  scoreMultiplier: 1,
   reveal: {
     active: false,
     paused: false,
@@ -143,7 +172,9 @@ const state = {
   leaderboardDivision: "pure",
   sense: { words: [], timer: null, active: false },
   powerups: { tipsUsed: 0, tipIds: [], giftUsed: false, giftUnavailable: false, giftItem: null, busy: false },
-  recipeFeedback: { move: 0, timer: null, pendingTimer: null, submitted: false },
+  expectedPair: { a: "", b: "", key: "", submitted: false, timer: null },
+  expectedPairReports: new Set(),
+  recipeFeedback: { move: 0, step: null, timer: null, pendingTimer: null, submitted: false },
   scoreSubmission: { runId: "", activeSaved: false, pendingSaved: false, inFlight: false, exitAction: null, exitLabel: "" },
   recoveryKit: null,
   cloudReady: false,
@@ -152,7 +183,14 @@ const state = {
   cloudGeneration: 0,
   cloudController: null,
   cloudRevision: 0,
-  ghost: { enabled: true, model: null, timerId: null, lastRelation: "", started: false, requestGeneration: 0, requestController: null }
+  ghost: { enabled: true, model: null, timerId: null, lastRelation: "", started: false, requestGeneration: 0, requestController: null, nextRival: null, estimatedSteps: 0 },
+  journeyContext: null,
+  journeyView: "voyage",
+  signature: null,
+  community: null,
+  eventRewardGranted: 0,
+  cosmicEvent: null,
+  eventServerTime: ""
 };
 
 let profile = loadProfile();
@@ -168,6 +206,10 @@ let clearUndoTimer = null;
 let armedPowerupShortcut = { kind: "", expiresAt: 0, timer: null };
 let runSaveTimer = null;
 let cloudSyncTimer = null;
+let pauseCloseRestoreFocus = true;
+let boardGeometryVersion = 0;
+let analyticsPreference = readAnalyticsPreference();
+let analyticsCohortId = readAnalyticsCohort();
 const pendingScoreRetryPromises = new Map();
 const ACTIVE_RUN_KEY = isStaticBeta ? "constellore-local-active-run-v1" : "constellore-active-run-v1";
 const LEGACY_PENDING_SCORES_KEY = "constellore-pending-scores-v1";
@@ -182,6 +224,7 @@ const els = {
   tidyBoard: $("#tidyBoard"), resetBoard: $("#resetBoard"), dropPairPreview: $("#dropPairPreview"),
   tapChainStatus: $("#tapChainStatus"), tapChainText: $("#tapChainText"), boardUndo: $("#boardUndo"),
   alchemyNote: $("#alchemyNote"), boardAnnouncement: $("#boardAnnouncement"), wordList: $("#wordList"), collectionCount: $("#collectionCount"),
+  expectedPairFeedback: $("#expectedPairFeedback"), expectedPairButton: $("#expectedPairButton"),
   inventorySearch: $("#inventorySearch"), inventorySearchClear: $("#inventorySearchClear"), inventorySearchStatus: $("#inventorySearchStatus"),
   modeName: $("#modeName"), targetWord: $("#targetWord"), universePill: $("#universePill"), lawPill: $("#lawPill"), movesValue: $("#movesValue"),
   timerHud: $("#timerHud"), timerValue: $("#timerValue"), pathCount: $("#pathCount"),
@@ -196,7 +239,7 @@ const els = {
   ghostPreview: $("#ghostPreview"), ghostPreviewStatus: $("#ghostPreviewStatus"), ghostPreviewCount: $("#ghostPreviewCount"), ghostPreviewPercent: $("#ghostPreviewPercent"),
   ghostPreviewProgress: $("#ghostPreviewProgress"), ghostPreviewBar: $("#ghostPreviewBar"), ghostPreviewSteps: $("#ghostPreviewSteps"),
   paywallDialog: $("#paywallDialog"), wishDialog: $("#wishDialog"), atlasDialog: $("#atlasDialog"),
-  missionBriefingDialog: $("#missionBriefingDialog"),
+  missionBriefingDialog: $("#missionBriefingDialog"), pauseDialog: $("#pauseDialog"), journeyDialog: $("#journeyDialog"),
   profileDialog: $("#profileDialog"), shareDialog: $("#shareDialog"), resultDialog: $("#resultDialog"),
   updatesDialog: $("#updatesDialog"),
   exchangeDialog: $("#exchangeDialog"), marketBuyDialog: $("#marketBuyDialog"), leaderboardDialog: $("#leaderboardDialog"),
@@ -209,7 +252,10 @@ const els = {
   resultStats: $("#resultStats"), resultMasteryCard: $("#resultMasteryCard"), resultMasteryText: $("#resultMasteryText"), resultPrimary: $("#resultPrimary"), resultRetry: $("#resultRetry"),
   resultShare: $("#resultShare"), rewardCard: $("#rewardCard"), rewardDust: $("#rewardDust"),
   rewardReason: $("#rewardReason"), masteryCollectionList: $("#masteryCollectionList"),
-  firstOrbitGuide: $("#firstOrbitGuide"), firstOrbitDialog: $("#firstOrbitDialog"), recipeFeedback: $("#recipeFeedback"),
+  atlasMap: $("#atlasMap"), atlasGraph: $("#atlasGraph"), atlasGraphEdges: $("#atlasGraphEdges"), atlasGraphNodes: $("#atlasGraphNodes"), atlasGraphSummary: $("#atlasGraphSummary"),
+  signatureResultCard: $("#signatureResultCard"), communityResultCard: $("#communityResultCard"), communityResultStats: $("#communityResultStats"),
+  firstOrbitGuide: $("#firstOrbitGuide"), recipeFeedback: $("#recipeFeedback"),
+  routeProgressTrail: $("#routeProgressTrail"), resultRouteTrail: $("#resultRouteTrail"),
   toast: $("#toast"), connectionBadge: $("#connectionBadge")
 };
 
@@ -227,6 +273,80 @@ const shiftBoard = createShiftBoardController({
   maxCopies: MAX_SHIFT_COPIES_PER_DRAG
 });
 
+function sanitizeSignatureBests(raw) {
+  const signatures = [];
+  const scopes = new Set();
+  for (const value of Array.isArray(raw) ? raw.slice(0, 160) : []) {
+    const signature = sanitizeRouteSignature(value);
+    if (!signature || scopes.has(signature.scopeKey)) continue;
+    scopes.add(signature.scopeKey);
+    signatures.push(signature);
+    if (signatures.length >= 120) break;
+  }
+  return signatures;
+}
+
+function sanitizeRewardedRunIds(raw) {
+  const ids = [];
+  const seen = new Set();
+  for (const value of Array.isArray(raw) ? raw.slice(0, 512) : []) {
+    const id = typeof value === "string" ? value.trim().slice(0, 96) : "";
+    if (!/^[a-z0-9][a-z0-9-]{7,95}$/i.test(id) || seen.has(id)) continue;
+    seen.add(id);
+    ids.push(id);
+    if (ids.length >= 256) break;
+  }
+  return ids;
+}
+
+function sanitizeEventProgressForEvent(raw, event) {
+  const source = raw && typeof raw === "object" && !Array.isArray(raw) ? raw : {};
+  const sameEvent = source.weekKey === event.weekKey && source.eventId === event.id;
+  const originWords = ["Earth", "Water", "Fire", "Air"].filter((word) => event.collection.words.some((entry) => inventoryKey(entry) === inventoryKey(word)));
+  const collection = cosmicEventCollectionProgress(event, [...(sameEvent && Array.isArray(source.words) ? source.words : []), ...originWords]);
+  return {
+    weekKey: event.weekKey,
+    eventId: event.id,
+    words: collection.found,
+    rewarded: sameEvent && Boolean(source.rewarded) && collection.complete
+  };
+}
+
+function sanitizeEventProgress(raw, date = new Date()) {
+  return sanitizeEventProgressForEvent(raw, currentCosmicEvent(date));
+}
+
+function sanitizeSelectedVoyage(value) {
+  const selected = constellationVoyage(value);
+  return selected?.id || constellationVoyageCatalog()[0]?.id || "first-cities";
+}
+
+function readAnalyticsPreference() {
+  try {
+    const stored = JSON.parse(localStorage.getItem(ANALYTICS_PREFERENCE_KEY) || "null");
+    return stored?.enabled === true;
+  } catch {
+    return false;
+  }
+}
+
+function readAnalyticsCohort() {
+  try {
+    const value = String(localStorage.getItem(ANALYTICS_COHORT_KEY) || "").trim();
+    return /^[a-z0-9-]{16,80}$/i.test(value) ? value : "";
+  } catch {
+    return "";
+  }
+}
+
+function ensureAnalyticsCohort() {
+  if (analyticsCohortId) return analyticsCohortId;
+  const random = globalThis.crypto?.randomUUID?.() || `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 14)}`;
+  analyticsCohortId = `cohort-${random}`.slice(0, 80);
+  try { localStorage.setItem(ANALYTICS_COHORT_KEY, analyticsCohortId); } catch { /* Optional diagnostics must work without storage. */ }
+  return analyticsCohortId;
+}
+
 function loadProfile() {
   try {
     const legacyProfile = LEGACY_PROFILE_KEYS.map((key) => localStorage.getItem(key)).find(Boolean);
@@ -235,7 +355,7 @@ function loadProfile() {
     return {
       ...structuredClone(defaultProfile),
       ...stored,
-      version: 5,
+      version: 7,
       vault: Array.isArray(stored.vault) ? stored.vault : [],
       discovered: Array.isArray(stored.discovered) ? [...new Set([...defaultProfile.discovered, ...stored.discovered])].slice(0, 1000) : [...defaultProfile.discovered],
       recipeMastery: sanitizeRecipeMasteryState(stored.recipeMastery),
@@ -244,13 +364,20 @@ function loadProfile() {
       feedbackPreferences: sanitizeFeedbackPreferences(stored.feedbackPreferences),
       rivalGhostEnabled: stored.rivalGhostEnabled !== false,
       firstOrbit: sanitizeFirstOrbitState(stored.firstOrbit),
+      secondOrbit: sanitizeSecondOrbitState(stored.secondOrbit),
+      exploreWords: sanitizeExploreInventory(stored.exploreWords, stored.discovered),
       cosmetics: sanitizeCosmeticLoadout(stored.cosmetics || { theme: stored.theme }, { founder: Boolean(stored.premium) || isStaticBeta }),
       cloudProfileVersion: Math.max(0, Math.floor(Number(stored.cloudProfileVersion) || 0)),
       cloudPending: Boolean(stored.cloudPending),
       cloudPendingFields: Array.isArray(stored.cloudPendingFields)
-        ? [...new Set(stored.cloudPendingFields.filter((field) => ["all", "firstOrbit", "mastery", "progression", "settings"].includes(field)))].slice(0, 8)
+        ? [...new Set(stored.cloudPendingFields.filter((field) => ["all", "firstOrbit", "mastery", "progression", "settings", "journeys", "signatures"].includes(field)))].slice(0, 8)
         : [],
-      weekly: { ...defaultProfile.weekly, ...(stored.weekly || {}) }
+      weekly: { ...defaultProfile.weekly, ...(stored.weekly || {}) },
+      voyageProgress: sanitizeVoyageProgress(stored.voyageProgress),
+      selectedVoyageId: sanitizeSelectedVoyage(stored.selectedVoyageId),
+      eventProgress: sanitizeEventProgress(stored.eventProgress),
+      signatureBests: sanitizeSignatureBests(stored.signatureBests),
+      rewardedRunIds: sanitizeRewardedRunIds(stored.rewardedRunIds)
     };
   } catch {
     return structuredClone(defaultProfile);
@@ -268,10 +395,73 @@ function saveProfile({ cloud = true, fields = ["all"] } = {}) {
   if (cloud) scheduleCloudProfileSync();
 }
 
-function rankFor(stardust) {
-  const ranks = ["Stargazer I", "Stargazer II", "Pathfinder", "Constellation Keeper", "Reality Weaver", "Loreweaver"];
-  const level = Math.min(ranks.length, Math.floor(Math.max(0, stardust) / 250) + 1);
-  return { level, name: ranks[level - 1], progress: level === ranks.length ? 100 : (stardust % 250) / 2.5 };
+function rankFor() {
+  const mastery = lifetimeMasteryProgress(profile.recipeMastery);
+  return lifetimeProgression({
+    stardust: 0,
+    wins: profile.wins,
+    discoveries: profile.discovered.length,
+    masteryStars: mastery.stars
+  });
+}
+
+function cappedScoreMultiplier(assist, ...values) {
+  let multiplier = assistancePolicy(assist).scoreMultiplier;
+  for (const value of values) {
+    if (value == null || value === "") continue;
+    const number = Number(value);
+    if (Number.isFinite(number)) multiplier = Math.min(multiplier, clamp(number, 0, 1));
+  }
+  return clamp(multiplier, 0, 1);
+}
+
+function firstSessionUnlocked() {
+  return homeMenuState().onboardingComplete;
+}
+
+function homeMenuState() {
+  return createHomeMenuState({
+    firstOrbit: sanitizeFirstOrbitState(profile.firstOrbit),
+    secondOrbit: sanitizeSecondOrbitState(profile.secondOrbit),
+    wins: profile.wins,
+    dailyCompleted: profile.dailyCompleted,
+    todayKey
+  });
+}
+
+function primaryOrbitState() {
+  return homeMenuState().primary;
+}
+
+function syncProgressiveDisclosure() {
+  const training = sanitizeFirstOrbitState(profile.firstOrbit);
+  const bridge = sanitizeSecondOrbitState(profile.secondOrbit);
+  const menu = homeMenuState();
+  document.body.dataset.homeStage = menu.stage;
+  document.body.classList.toggle("first-session", !menu.onboardingComplete);
+  document.body.classList.toggle("training-needed", !training.completed);
+  document.body.classList.toggle("second-orbit-needed", training.completed && !bridge.completed && profile.wins === 0);
+  document.body.classList.toggle("progress-ready", menu.progressReady);
+  document.body.classList.toggle("adventures-ready", menu.adventuresReady);
+  document.body.classList.toggle("advanced-ready", menu.advancedReady);
+  const primary = menu.primary;
+  $("#primaryOrbitKicker").textContent = primary.kicker;
+  $("#primaryOrbitTitle").textContent = primary.title;
+  $("#primaryOrbitDescription").textContent = primary.description;
+  $("#primaryOrbitButton span").textContent = primary.label;
+  $("#primaryOrbitMeta").textContent = primary.meta;
+  $("#primaryOrbitButton").dataset.action = primary.action;
+  const secondary = $("#primaryOrbitSecondary");
+  secondary.textContent = primary.secondaryLabel;
+  secondary.dataset.action = primary.secondaryAction;
+  for (const card of $$('[data-home-mode]')) {
+    card.hidden = card.dataset.homeMode === primary.action || (card.dataset.homeMode === "daily" && profile.dailyCompleted === todayKey);
+  }
+}
+
+function announceModeScreenViewed() {
+  const primary = primaryOrbitState();
+  track("mode_screen_viewed", { unlocked: firstSessionUnlocked(), primary: primary.action });
 }
 
 function currentWeekKey() {
@@ -298,11 +488,292 @@ function setupWeeklyState() {
 }
 
 function setupDailyState() {
-  const completed = profile.dailyCompleted === todayKey;
-  $("#dailyCard").classList.toggle("completed", completed);
-  $("#dailyState").textContent = completed ? "COMPLETED" : "AVAILABLE";
-  $("#dailyButton").disabled = completed;
-  $("#dailyButton span").textContent = completed ? "Return tomorrow" : "Accept challenge";
+  return profile.dailyCompleted === todayKey;
+}
+
+function selectedVoyage() {
+  profile.selectedVoyageId = sanitizeSelectedVoyage(profile.selectedVoyageId);
+  return constellationVoyage(profile.selectedVoyageId);
+}
+
+function currentEventState() {
+  const event = state.cosmicEvent || currentCosmicEvent();
+  profile.eventProgress = sanitizeEventProgressForEvent(profile.eventProgress, event);
+  return { event, collection: cosmicEventCollectionProgress(event, profile.eventProgress.words) };
+}
+
+function applyAuthoritativeEventPayload(payload, { allowReward = false } = {}) {
+  if (isStaticBeta || !payload || typeof payload !== "object" || Array.isArray(payload)) return null;
+  const rawTime = payload.eventServerTime || payload.serverTime;
+  const parsedTime = Date.parse(String(rawTime || ""));
+  if (!Number.isFinite(parsedTime)) return null;
+  const event = currentCosmicEvent(new Date(parsedTime));
+  if (payload.cosmicEvent?.id !== event.id || payload.cosmicEvent?.weekKey !== event.weekKey) return null;
+  const previous = sanitizeEventProgressForEvent(profile.eventProgress, event);
+  const rawProgress = payload.eventProgress && typeof payload.eventProgress === "object" && !Array.isArray(payload.eventProgress)
+    ? payload.eventProgress
+    : {};
+  const rawReward = payload.eventReward && typeof payload.eventReward === "object" && !Array.isArray(payload.eventReward)
+    ? payload.eventReward
+    : {};
+  const sanitized = sanitizeEventProgressForEvent({
+    weekKey: rawProgress.weekKey,
+    eventId: rawProgress.eventId,
+    words: rawProgress.words,
+    rewarded: Boolean(rawProgress.rewarded && rawReward.claimed)
+  }, event);
+  const before = new Set(previous.words.map(inventoryKey));
+  const addedWords = sanitized.words.filter((word) => !before.has(inventoryKey(word)));
+  state.cosmicEvent = event;
+  state.eventServerTime = new Date(parsedTime).toISOString();
+  profile.eventProgress = sanitized;
+  let granted = 0;
+  if (allowReward && rawReward.granted === true && Number(rawReward.amount) === EVENT_COLLECTION_REWARD && sanitized.rewarded) {
+    granted = EVENT_COLLECTION_REWARD;
+    state.eventRewardGranted += granted;
+    profile.stardust += granted;
+  }
+  if (granted || JSON.stringify(previous) !== JSON.stringify(sanitized)) {
+    saveProfile(granted ? { fields: ["progression", "journeys"] } : { cloud: false });
+  }
+  return {
+    event,
+    collection: cosmicEventCollectionProgress(event, sanitized.words),
+    progress: sanitized,
+    reward: { ...rawReward, granted: Boolean(granted) },
+    addedWords
+  };
+}
+
+async function claimCurrentCosmicEventReward(event = state.cosmicEvent) {
+  if (isStaticBeta || !event || !profile.playerId || !profile.playerToken) return null;
+  try {
+    const claimed = await fetchJson("/api/events/current/claim", {
+      method: "POST",
+      headers: authHeaders({ "Content-Type": "application/json" }),
+      body: JSON.stringify({ weekKey: event.weekKey, eventId: event.id })
+    });
+    return applyAuthoritativeEventPayload(claimed, { allowReward: true });
+  } finally {
+    // The claim and its cloud currency credit are one server transaction. Even
+    // if the success response is lost, a profile refresh recovers the balance.
+    scheduleCloudProfileSync({ changed: false, delay: 250 });
+  }
+}
+
+async function refreshCosmicEventState({ claim = true, silent = true } = {}) {
+  if (isStaticBeta || !profile.playerId || !profile.playerToken) return currentEventState();
+  try {
+    const payload = await fetchJson("/api/events/current", { headers: authHeaders() });
+    let applied = applyAuthoritativeEventPayload(payload);
+    if (claim && applied?.reward?.claimable) applied = await claimCurrentCosmicEventReward(applied.event) || applied;
+    setupJourneyState();
+    return applied;
+  } catch (error) {
+    if (!silent) showToast(error.message || "The Cosmic Event could not refresh.");
+    return null;
+  }
+}
+
+function eventTargetFor(event, collection) {
+  const found = new Set(collection.found.map((word) => inventoryKey(word)));
+  const curated = cosmicEventTargets(event).find((target) => !found.has(inventoryKey(target.word)));
+  if (curated) return curated;
+  const missingWord = collection.missing[0];
+  if (!missingWord) return null;
+  const known = MASTERY_CATALOG.find((item) => inventoryKey(item.word) === inventoryKey(missingWord));
+  return {
+    word: missingWord,
+    emoji: known?.emoji || event.icon || "✦",
+    clue: `Trace a logical route to ${missingWord} and add it to ${event.collection.name}.`,
+    tier: 3
+  };
+}
+
+function eventTargetDefinition(event, word) {
+  const curated = cosmicEventTargets(event).find((target) => inventoryKey(target.word) === inventoryKey(word));
+  if (curated) return curated;
+  const canonical = event.collection.words.find((entry) => inventoryKey(entry) === inventoryKey(word));
+  if (!canonical) return null;
+  const known = MASTERY_CATALOG.find((item) => inventoryKey(item.word) === inventoryKey(canonical));
+  return { word: canonical, emoji: known?.emoji || event.icon || "✦", clue: `Trace a logical route to ${canonical} for ${event.collection.name}.`, tier: 3 };
+}
+
+function setupJourneyState() {
+  profile.voyageProgress = sanitizeVoyageProgress(profile.voyageProgress);
+  const voyage = selectedVoyage();
+  const voyageState = voyageProgress(voyage.id, profile.voyageProgress);
+  $("#voyageHomeTitle").textContent = voyage.title;
+  $("#voyageHomeStory").textContent = voyage.summary;
+  $("#voyageHomeProgress").textContent = `${voyageState.completed} / ${voyageState.total}`;
+  $("#voyageHomeProgressBar").style.width = `${voyageState.percent}%`;
+
+  const { event, collection } = currentEventState();
+  $("#eventHomeIcon").textContent = event.icon;
+  $("#eventHomeTitle").textContent = event.name;
+  $("#eventHomeStory").textContent = event.description;
+  $("#eventHomeProgress").textContent = `${collection.discovered} / ${collection.total}`;
+  const days = Math.max(1, Math.ceil((Date.parse(event.endsAt) - Date.now()) / 86_400_000));
+  $("#eventHomeCountdown").textContent = `${days} DAY${days === 1 ? "" : "S"} LEFT`;
+  return { voyage, voyageState, event, collection };
+}
+
+function selectJourneyTab(view = "voyage") {
+  const eventView = view === "event";
+  state.journeyView = eventView ? "event" : "voyage";
+  $("#voyageJourneyTab").setAttribute("aria-selected", String(!eventView));
+  $("#eventJourneyTab").setAttribute("aria-selected", String(eventView));
+  $("#voyageJourneyTab").tabIndex = eventView ? -1 : 0;
+  $("#eventJourneyTab").tabIndex = eventView ? 0 : -1;
+  $("#voyageJourneyPanel").hidden = eventView;
+  $("#eventJourneyPanel").hidden = !eventView;
+}
+
+function renderJourneyHub(view = state.journeyView) {
+  const { voyage, voyageState, event, collection } = setupJourneyState();
+  $("#voyageDialogIcon").textContent = voyage.icon;
+  $("#voyageDialogChapter").textContent = `VOYAGE · ${voyageState.complete ? "COMPLETE" : `CHAPTER ${String(voyageState.completed + 1).padStart(2, "0")}`}`;
+  $("#voyageDialogTitle").textContent = voyage.title;
+  $("#voyageDialogStory").textContent = voyage.summary;
+  $("#voyageStageList").replaceChildren(...voyage.chapters.map((chapter, index) => {
+    const card = document.createElement("article");
+    const complete = index < voyageState.completed;
+    const current = index === voyageState.completed;
+    card.className = `journey-stage${complete ? " complete" : current ? " current" : " locked"}`;
+    card.innerHTML = `<span aria-hidden="true">${complete ? "✓" : String(index + 1).padStart(2, "0")}</span><div><strong>${escapeHtml(chapter.emoji)} ${escapeHtml(chapter.title)}</strong><small>${escapeHtml(chapter.story)}</small></div><b>${complete ? "FOUND" : current ? escapeHtml(chapter.target) : "LOCKED"}</b>`;
+    return card;
+  }));
+  $("#voyageDialogStatus").textContent = voyageState.complete
+    ? `${voyage.title} is complete. Choose another Voyage to keep tracing the campaign.`
+    : `Next destination: ${voyageState.currentStage.target}. Voyage laws change presentation only; every recipe remains canonical.`;
+  $("#startVoyageStage").disabled = voyageState.complete;
+  $("#startVoyageStage span").textContent = voyageState.complete ? "Voyage complete" : `Find ${voyageState.currentStage.target}`;
+
+  $("#eventDialogIcon").textContent = event.icon;
+  $("#eventDialogDates").textContent = `${event.weekKey} · ENDS ${new Date(event.endsAt).toLocaleDateString(undefined, { month: "short", day: "numeric" }).toUpperCase()}`;
+  $("#eventDialogTitle").textContent = event.name;
+  $("#eventDialogStory").textContent = event.description;
+  $("#eventModifierTitle").textContent = event.law.name;
+  $("#eventModifierDescription").textContent = `${event.law.description} Recipes, score rules, and ranked results remain unchanged.`;
+  $("#eventCollectionProgress").textContent = `${collection.discovered} / ${collection.total}`;
+  const found = new Set(collection.found.map((word) => inventoryKey(word)));
+  $("#eventCollectionList").replaceChildren(...event.collection.words.map((word) => {
+    const card = document.createElement("article");
+    const collected = found.has(inventoryKey(word));
+    const target = cosmicEventTargets(event).find((item) => inventoryKey(item.word) === inventoryKey(word));
+    card.className = `event-collectible${collected ? " collected" : ""}`;
+    card.innerHTML = `<span aria-hidden="true">${collected ? escapeHtml(target?.emoji || event.icon) : "◇"}</span><strong>${collected ? escapeHtml(word) : "Unknown"}</strong>`;
+    card.setAttribute("aria-label", collected ? `${word} collected` : "Undiscovered event word");
+    return card;
+  }));
+  const target = eventTargetFor(event, collection);
+  $("#eventDialogStatus").textContent = collection.complete
+    ? `${event.collection.name} is complete${profile.eventProgress.rewarded ? ". The collection reward was claimed." : ". Make one more Pure event discovery to claim its reward."}`
+    : `${event.collection.name}: ${collection.discovered} of ${collection.total} found during this event.`;
+  $("#startEventTarget").disabled = !target;
+  $("#startEventTarget span").textContent = target ? `Find ${target.word}` : "Event mapped";
+  selectJourneyTab(view);
+}
+
+function openJourneyHub(view = "voyage") {
+  if (state.startingRun) return showToast("The next orbit is still being mapped.");
+  stopTimer();
+  renderJourneyHub(view);
+  if (!els.journeyDialog.open) els.journeyDialog.showModal();
+  track("journey_opened", { kind: view === "event" ? "event" : "voyage" });
+}
+
+function chooseNextVoyage() {
+  const catalog = constellationVoyageCatalog();
+  const index = Math.max(0, catalog.findIndex((voyage) => voyage.id === profile.selectedVoyageId));
+  profile.selectedVoyageId = catalog[(index + 1) % catalog.length].id;
+  saveProfile({ fields: ["journeys"] });
+  renderJourneyHub("voyage");
+}
+
+function voyageContext(voyage, stage) {
+  if (!voyage || !stage) return null;
+  return { kind: "voyage", voyageId: voyage.id, chapterId: stage.id, target: stage.target, title: `${voyage.title} · ${stage.title}`, story: stage.story, icon: stage.emoji, law: voyage.law };
+}
+
+function eventContext(event, target) {
+  if (!event || !target) return null;
+  return { kind: "event", eventId: event.id, weekKey: event.weekKey, target: target.word, title: `${event.name} · ${target.word}`, story: target.clue, icon: target.emoji, law: event.law };
+}
+
+function normalizeJourneyContext(raw, game = null) {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+  const target = String(game?.target || raw.target || "").trim();
+  if (raw.kind === "voyage") {
+    const voyage = constellationVoyage(raw.voyageId);
+    const stage = voyage?.chapters.find((chapter) => chapter.id === raw.chapterId && inventoryKey(chapter.target) === inventoryKey(target));
+    return stage ? voyageContext(voyage, { ...stage, number: stage.chapter, total: voyage.chapters.length }) : null;
+  }
+  if (raw.kind === "event") {
+    const event = currentEventState().event;
+    const selected = event.id === raw.eventId && event.weekKey === raw.weekKey ? eventTargetDefinition(event, target) : null;
+    return selected ? eventContext(event, selected) : null;
+  }
+  return null;
+}
+
+async function beginVoyageStage() {
+  const voyage = selectedVoyage();
+  const stage = currentVoyageStage(voyage.id, profile.voyageProgress);
+  if (!stage) return showToast("This Voyage is already complete.");
+  if (els.journeyDialog.open) els.journeyDialog.close();
+  track("voyage_started", { source: "voyage", collection: voyage.id, stage: stage.number || stage.chapter || 1 });
+  await beginMode("reach", { target: stage.target, context: voyageContext(voyage, stage) });
+}
+
+async function beginEventTarget() {
+  const { event, collection } = currentEventState();
+  const target = eventTargetFor(event, collection);
+  if (!target) return showToast("This event has no remaining mapped target.");
+  if (els.journeyDialog.open) els.journeyDialog.close();
+  track("event_started", { source: "event", collection: event.id, progress: collection.discovered });
+  await beginMode("reach", { target: target.word, context: eventContext(event, target) });
+}
+
+async function recordEventDiscovery(result) {
+  if (!isStaticBeta) {
+    const applied = applyAuthoritativeEventPayload(result);
+    if (!applied) return null;
+    let claimed = null;
+    if (applied.reward?.claimable) {
+      try { claimed = await claimCurrentCosmicEventReward(applied.event); }
+      catch { /* The authoritative claim remains available for the reconnect refresh. */ }
+    }
+    const reward = Number(claimed?.reward?.granted ? claimed.reward.amount : 0) || 0;
+    const added = applied.addedWords.some((word) => inventoryKey(word) === inventoryKey(result.word));
+    const collection = claimed?.collection || applied.collection;
+    if (!added && !reward) return null;
+    track("event_discovery", { collection: applied.event.collection.id, progress: collection.discovered, completed: collection.complete });
+    return {
+      event: applied.event,
+      collection,
+      reward,
+      notice: reward
+        ? `${applied.event.collection.name} complete \u00b7 +${reward} Stardust`
+        : `${applied.event.presentation.label} \u00b7 ${result.word} joined ${applied.event.collection.name}`
+    };
+  }
+  const { event, collection } = currentEventState();
+  const annotation = annotateCosmicEventResult({ event, result });
+  if (!annotation.context?.collectionMatch || state.scoringDisabled || state.assist !== "none") return null;
+  if (collection.found.some((word) => inventoryKey(word) === inventoryKey(result.word))) return null;
+  profile.eventProgress.words = [...collection.found, result.word];
+  const updated = cosmicEventCollectionProgress(event, profile.eventProgress.words);
+  let reward = 0;
+  if (updated.complete && !profile.eventProgress.rewarded) {
+    profile.eventProgress.rewarded = true;
+    profile.stardust += EVENT_COLLECTION_REWARD;
+    reward = EVENT_COLLECTION_REWARD;
+    state.eventRewardGranted += reward;
+  }
+  saveProfile({ fields: ["journeys", ...(reward ? ["progression"] : [])] });
+  track("event_discovery", { collection: event.collection.id, progress: updated.discovered, completed: updated.complete });
+  return { event, collection: updated, reward, notice: reward ? `${event.collection.name} complete · +${reward} Stardust` : `${event.presentation.label} · ${result.word} joined ${event.collection.name}` };
 }
 
 function refillDailySense() {
@@ -336,9 +807,16 @@ function senseWordActive(itemOrWord) {
 function renderMastery() {
   const collections = masteryCollections();
   const summary = summarizeMasteryCollections(collections);
+  const lifetime = lifetimeMasteryProgress(profile.recipeMastery);
   $("#masteryStars").textContent = summary.stars;
   $("#masteryCollections").textContent = summary.completedCollections;
-  $("#profileMasteryStars").textContent = summary.stars;
+  $("#profileMasteryStars").textContent = lifetime.stars;
+  $("#masteryLifetimeTitle").textContent = lifetime.title;
+  $("#masteryLifetimeRecipes").textContent = lifetime.recipes;
+  $("#masteryLifetimeProgress").style.width = `${lifetime.progress}%`;
+  $("#masteryLifetimeNext").textContent = lifetime.nextAt
+    ? `${lifetime.remaining} recipe star${lifetime.remaining === 1 ? "" : "s"} to the next mastery tier`
+    : "Every mapped recipe remains part of your lifetime record.";
   els.masteryCollectionList.replaceChildren(...collections.map((collection) => {
     const card = document.createElement("article");
     card.className = `mastery-card${collection.progress.completed ? " complete" : ""}`;
@@ -358,7 +836,7 @@ function recordMasteryStep(step) {
   const award = recordRecipeDiscovery(profile.recipeMastery, {
     ...step,
     runId: state.run?.id || sessionId,
-    assisted: state.scoringDisabled || state.assist !== "none",
+    assisted: step.progressionEligible === false || state.scoringDisabled || state.assist !== "none",
     revealed: Boolean(step.revealed)
   });
   profile.recipeMastery = award.state;
@@ -432,6 +910,7 @@ function renderPowerups() {
   const senseCount = sanitizeSenseWallet(profile.senseWallet).charges;
   const giftReady = !state.powerups.giftUsed && !state.powerups.giftUnavailable;
   const armedKind = activeArmedPowerup();
+  els.senseButton.disabled = !activeRun;
   els.quickTipCount.textContent = `${tipsRemaining} / ${QUICK_TIP_LIMIT}`;
   els.useQuickTip.disabled = !activeRun || state.powerups.busy || tipsRemaining <= 0;
   els.wordGiftState.textContent = state.powerups.giftUsed ? "USED" : state.powerups.giftUnavailable ? "NO BRIDGE" : "1 READY";
@@ -449,31 +928,36 @@ function renderPowerups() {
   els.wordGiftShortcutCount.textContent = armedKind === "gift" ? "!" : state.powerups.giftUsed ? "✓" : giftReady ? "1" : "0";
   els.wordGiftShortcut.disabled = !activeRun || state.powerups.busy || !giftReady;
   els.wordGiftShortcut.setAttribute("aria-label", armedKind === "gift"
-    ? "Confirm Word Gift now; this switches the orbit to Study and removes score and leaderboard eligibility"
+    ? "Confirm Word Gift now; this keeps half score in the Open division"
     : state.powerups.giftUsed
-    ? "Word Gift used; this orbit is Study with zero score"
+    ? "Word Gift used; this orbit keeps half score in Open"
     : state.powerups.giftUnavailable
       ? "Word Gift unavailable for this orbit"
-      : "Use Word Gift; 1 ready; switches this orbit to Study with zero score");
-  els.wordGiftShortcut.title = state.powerups.giftUsed
-    ? "Word Gift used · Study mode"
-    : state.powerups.giftUnavailable
-      ? "No undiscovered bridge is available"
-      : "Use Word Gift · Study mode · zero score";
+      : "Use Word Gift; 1 ready; keeps half score in the Open division");
   els.wordGiftShortcut.classList.toggle("is-used", state.powerups.giftUsed);
   els.wordGiftShortcut.classList.toggle("is-empty", state.powerups.giftUnavailable);
   els.wordGiftShortcut.classList.toggle("is-armed", armedKind === "gift");
+  els.wordGiftShortcut.title = state.powerups.giftUsed
+    ? "Word Gift used · Open · 50% score"
+    : state.powerups.giftUnavailable
+      ? "No undiscovered bridge is available"
+      : "Use Word Gift · Open · keep 50% score";
 
   els.senseShortcutCount.textContent = armedKind === "sense" ? "!" : String(senseCount);
   els.senseShortcut.disabled = !activeRun || state.powerups.busy || !senseCount;
   els.senseShortcut.setAttribute("aria-label", armedKind === "sense"
-    ? "Confirm Star Compass now; this switches the orbit to Study and removes score and leaderboard eligibility"
-    : `Use Star Compass; ${senseCount} charge${senseCount === 1 ? "" : "s"}; switches this orbit to Study with zero score`);
-  els.senseShortcut.title = senseCount ? `Use Star Compass · ${senseCount} charge${senseCount === 1 ? "" : "s"} · Study mode` : "No Star Compass charges remain";
+    ? "Confirm Star Compass now; this keeps 75% score in the Open division"
+    : `Use Star Compass; ${senseCount} charge${senseCount === 1 ? "" : "s"}; keeps 75% score in the Open division`);
   els.senseShortcut.classList.toggle("is-empty", senseCount <= 0);
   els.senseShortcut.classList.toggle("is-armed", armedKind === "sense");
+  els.senseShortcut.title = senseCount ? `Use Star Compass · ${senseCount} charge${senseCount === 1 ? "" : "s"} · keep 75% score` : "No Star Compass charges remain";
   els.powerupShopShortcut.disabled = !activeRun || state.powerups.busy;
   els.powerupShopShortcut.setAttribute("aria-label", `Open Cosmic Powerups to buy more Star Compass charges; ${senseCount} currently available`);
+  const standaloneMode = learningOrbitActive() || state.mode === "explore";
+  els.senseHudCount.textContent = state.mode === "explore" ? "OFF" : learningOrbitActive() ? "LESSON" : state.scoringDisabled ? "STUDY" : `${tipsRemaining} SAFE`;
+  els.senseButton.setAttribute("aria-label", standaloneMode
+    ? `${state.mode === "explore" ? "Guidance is unavailable in persistent Explore" : "This lesson provides its own Route Signal"}`
+    : `Open Guidance; ${tipsRemaining} score-safe Route Signal${tipsRemaining === 1 ? "" : "s"} remain`);
 }
 
 function activeArmedPowerup() {
@@ -491,12 +975,16 @@ function clearArmedPowerup({ render = true } = {}) {
   if (render) renderPowerups();
 }
 
-function activateStudyPowerupShortcut(kind, action) {
-  if (state.scoringDisabled) {
-    clearArmedPowerup({ render: false });
-    return action();
-  }
-  if (activeArmedPowerup() === kind) {
+function useWordGiftShortcut() {
+  return activateOpenPowerupShortcut("gift", useWordGift);
+}
+
+function useSenseShortcut() {
+  return activateOpenPowerupShortcut("sense", useConstellationSense);
+}
+
+function activateOpenPowerupShortcut(kind, action) {
+  if (state.scoringDisabled || activeArmedPowerup() === kind) {
     clearArmedPowerup({ render: false });
     return action();
   }
@@ -508,32 +996,53 @@ function activateStudyPowerupShortcut(kind, action) {
   };
   renderPowerups();
   const label = kind === "gift" ? "Word Gift" : "Star Compass";
-  showAlchemy(`TAP AGAIN · ${label} switches this orbit to Study · 0 score.`);
+  const policy = assistancePolicy(kind);
+  showAlchemy(`TAP AGAIN · ${label} keeps ${Math.round(policy.scoreMultiplier * 100)}% score in Open.`);
   playFeedback("place");
 }
 
-function useWordGiftShortcut() {
-  return activateStudyPowerupShortcut("gift", useWordGift);
-}
-
-function useSenseShortcut() {
-  return activateStudyPowerupShortcut("sense", useConstellationSense);
-}
-
 function resetPowerupControlLabels() {
-  els.useWordGift.querySelector("span").textContent = "Summon gift · 0 score";
-  $("#useSense span").textContent = "Activate compass · 0 score";
+  els.useWordGift.querySelector("span").textContent = "Summon gift · keep 50%";
+  $("#useSense span").textContent = "Activate compass · keep 75%";
 }
 
 function renderProfile() {
   setupWeeklyState();
   setupDailyState();
-  const rank = rankFor(profile.stardust);
+  setupJourneyState();
+  const rank = rankFor();
+  const lifetimeMastery = lifetimeMasteryProgress(profile.recipeMastery);
+  const weeklyRating = weeklyRatingPresentation({
+    stage: profile.weekly.stage,
+    complete: profile.weekly.complete,
+    dailyStreak: profile.dailyStreak,
+    masteryStars: lifetimeMastery.stars
+  });
+  const badgeProgress = {
+    firstOrbit: profile.firstOrbit,
+    wins: profile.wins,
+    discoveries: profile.discovered.length,
+    masteryStars: lifetimeMastery.stars,
+    dailyStreak: profile.dailyStreak,
+    weekly: profile.weekly
+  };
   applyCosmeticLoadout();
   $("#profileLevel").textContent = rank.level;
   $("#profileDust").textContent = profile.stardust;
   $("#universeRank").textContent = rank.name;
   $("#rankProgress").style.width = `${rank.progress}%`;
+  $("#lifetimeRankName").textContent = rank.name;
+  $("#lifetimePoints").textContent = rank.points.toLocaleString("en-US");
+  $("#lifetimeRankProgress").style.width = `${rank.progress}%`;
+  $("#lifetimeRankNext").textContent = rank.nextName ? `${rank.remaining.toLocaleString("en-US")} Atlas XP to ${rank.nextName}` : "Atlas XP never decays or gets spent.";
+  $("#weeklyRatingSeason").textContent = "WEEKLY MOMENTUM";
+  $("#weeklyRatingSeason").title = `${weeklyRating.season} · ${weeklyRating.weekKey}`;
+  $("#weeklyRatingName").textContent = weeklyRating.name;
+  $("#weeklyRatingValue").textContent = weeklyRating.rating.toLocaleString("en-US");
+  $("#weeklyRatingProgress").style.width = `${weeklyRating.progress}%`;
+  $("#weeklyRatingNext").textContent = weeklyRating.nextAt
+    ? `${weeklyRating.remaining} momentum to ${weeklyRating.name === "Quiet Orbit" ? "Rising Orbit" : "the next orbit"}. Resets weekly.`
+    : "Peak weekly orbit. Lifetime rank is safe.";
   $("#totalDiscoveries").textContent = profile.discovered.length;
   $("#dailyStreak").textContent = profile.dailyStreak;
   $("#completedOrbits").textContent = profile.wins;
@@ -544,26 +1053,48 @@ function renderProfile() {
   $("#profileStreak").textContent = profile.dailyStreak;
   $("#profileShield").textContent = profile.streakShields;
   $("#profileCallsign").textContent = profile.callsign || "Offline Stargazer";
+  const badges = earnedBadges(badgeProgress);
+  $("#profileBadgeSummary").textContent = `${badges.filter((badge) => badge.earned).length} of ${badges.length} earned`;
+  $("#badgeShelf").replaceChildren(...badges.map((badge) => {
+    const item = document.createElement("article");
+    item.className = `badge-chip${badge.earned ? " earned" : ""}`;
+    item.setAttribute("aria-label", `${badge.label}: ${badge.earned ? "earned" : badge.description}`);
+    item.innerHTML = `<span aria-hidden="true">${escapeHtml(badge.earned ? badge.icon : "◇")}</span><div><strong>${escapeHtml(badge.label)}</strong><small>${escapeHtml(badge.earned ? "EARNED" : badge.description)}</small></div>`;
+    return item;
+  }));
+  document.body.classList.remove("aura-none", "aura-first-light", "aura-nebula", "aura-prism");
+  document.body.classList.add(progressionAuraClass(badgeProgress));
   const cloudSection = $("#cloudAccountSection");
+  const cloudGroup = $("#cloudProfileGroup");
   if (cloudSection) cloudSection.hidden = isStaticBeta;
+  if (cloudGroup) cloudGroup.hidden = isStaticBeta;
   if (!isStaticBeta) {
     $("#cloudPlayerId").textContent = profile.playerId || "Creating…";
     if (!state.cloudReady && !state.cloudSyncing) setCloudStatus(profile.playerId ? "Preparing cloud profile…" : "Connecting…");
     $("#syncCloudProfile").disabled = !profile.playerId || state.cloudSyncing;
     $("#restoreOwnership").disabled = !profile.playerId;
     $("#rotateRecoveryKit").disabled = !profile.playerId;
+    $("#rotateRecoveryKit").textContent = state.recoveryKit?.code ? "View unsaved recovery kit" : "Create new recovery kit";
   }
   $("#profileCredits").textContent = profile.credits;
   $("#profileVaultCount").textContent = profile.vault.length;
-  $("#profileMasteryStars").textContent = masterySummary().stars;
+  $("#profileMasteryStars").textContent = lifetimeMastery.stars;
   profile.firstOrbit = sanitizeFirstOrbitState(profile.firstOrbit);
   $("#trainingReplayStatus").textContent = profile.firstOrbit.completed ? "Completed · replay anytime" : profile.firstOrbit.seen ? "Ready when you are" : "New · about 90 seconds";
+  profile.secondOrbit = sanitizeSecondOrbitState(profile.secondOrbit);
+  $("#secondOrbitReplayStatus").textContent = profile.secondOrbit.completed
+    ? "Completed · replay anytime"
+    : profile.firstOrbit.completed
+      ? "Ready · about two minutes"
+      : "Unlocks after First Orbit";
+  $("#replaySecondOrbit").disabled = !profile.firstOrbit.completed && profile.wins === 0;
   const senseCount = sanitizeSenseWallet(profile.senseWallet).charges;
   $("#profileSenseCount").textContent = senseCount;
   $("#senseDialogCount").textContent = senseCount;
-  els.senseHudCount.textContent = "KIT";
-  $("#senseEarnNote").textContent = profile.premium ? "Founder: two charges return each UTC day." : "One charge returns each UTC day.";
-  els.senseButton.setAttribute("aria-label", `Open Cosmic Powerups kit; ${senseCount} Star Compass charge${senseCount === 1 ? "" : "s"}`);
+  const tipsRemaining = Math.max(0, QUICK_TIP_LIMIT - (Number(state.powerups?.tipsUsed) || 0));
+  els.senseHudCount.textContent = `${tipsRemaining} SAFE`;
+  $("#senseEarnNote").textContent = "One charge returns each UTC day for every player.";
+  els.senseButton.setAttribute("aria-label", `Open Guidance; ${tipsRemaining} score-safe Route Signal${tipsRemaining === 1 ? "" : "s"} remain`);
   $("#buySense").disabled = state.powerups.busy || profile.stardust < 90 || senseCount >= 9;
   renderPowerups();
   const feedbackPreferences = sanitizeFeedbackPreferences(profile.feedbackPreferences);
@@ -580,7 +1111,7 @@ function renderProfile() {
   els.rivalGhost.setAttribute("aria-label", profile.rivalGhostEnabled ? "Hide Rival Ghost pace" : "Show Rival Ghost pace");
   $("#marketBalance").textContent = profile.credits;
   $("#vaultCount").textContent = profile.vault.length;
-  $$('[data-theme]').forEach((button) => {
+  $$('button[data-theme]').forEach((button) => {
     const active = button.dataset.theme === profile.cosmetics.theme;
     button.classList.toggle("active", active);
     button.setAttribute("aria-pressed", String(active));
@@ -589,6 +1120,7 @@ function renderProfile() {
   });
   renderCosmeticLoadout();
   renderMastery();
+  syncProgressiveDisclosure();
   updateWishButton();
 }
 
@@ -605,13 +1137,6 @@ function applyServerPlayer(player) {
   profile.wishAvailable = player.wishAvailable !== false;
   profile.dailyWishUsedDate = player.dailyWishUsedDate || "";
   if (Number.isInteger(player.cloudProfileVersion)) profile.cloudProfileVersion = Math.max(0, player.cloudProfileVersion);
-  if (founderActivated) profile.streakShields += 1;
-  if (profile.premium && profile.senseFounderBonusDate !== todayKey) {
-    const bonus = grantSenseCharges(profile.senseWallet, 1, { cap: 5 });
-    profile.senseWallet = bonus.wallet;
-    profile.senseFounderBonusDate = todayKey;
-    if (bonus.granted) track("sense_earned", { source: "founder", reward: bonus.granted });
-  }
   saveProfile({ cloud: founderActivated, fields: ["progression"] });
   renderWishVault();
   return true;
@@ -627,7 +1152,35 @@ function authHeaders(extra = {}) {
   };
 }
 
+function normalizePendingRecoveryKit(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const playerId = String(value.playerId || "").trim().slice(0, 80);
+  const code = String(value.code || "").trim().slice(0, 80);
+  const version = Math.max(1, Math.min(1_000_000, Math.floor(Number(value.version) || 1)));
+  return playerId && code ? { playerId, code, version } : null;
+}
+
+function rememberPendingRecoveryKit(value) {
+  const kit = normalizePendingRecoveryKit(value);
+  state.recoveryKit = kit;
+  if (isStaticBeta) return kit;
+  try {
+    if (kit) localStorage.setItem(PENDING_RECOVERY_KIT_KEY, JSON.stringify(kit));
+    else localStorage.removeItem(PENDING_RECOVERY_KIT_KEY);
+  } catch { /* Private mode can disable storage; the in-memory prompt still works. */ }
+  return kit;
+}
+
+function restorePendingRecoveryKit(playerId) {
+  if (isStaticBeta || !playerId) return null;
+  try {
+    const kit = normalizePendingRecoveryKit(JSON.parse(localStorage.getItem(PENDING_RECOVERY_KIT_KEY) || "null"));
+    return kit?.playerId === playerId ? kit : null;
+  } catch { return null; }
+}
+
 async function ensurePlayer() {
+  if (!state.recoveryKit && profile.playerId) state.recoveryKit = restorePendingRecoveryKit(profile.playerId);
   if (profile.playerId && profile.playerToken) {
     try {
       const { player } = await fetchJson("/api/player", { headers: authHeaders() });
@@ -644,13 +1197,13 @@ async function ensurePlayer() {
   resetProfileForAccount({ playerId: registration.player.id, playerToken: registration.playerToken });
   applyServerPlayer(registration.player);
   if (registration.recoveryCode) {
-    state.recoveryKit = {
+    rememberPendingRecoveryKit({
       playerId: registration.player.id,
       code: registration.recoveryCode,
       version: registration.recoveryVersion || 1
-    };
-    requestAnimationFrame(showRecoveryKit);
+    });
   }
+  renderDiagnosticsPreference();
   return registration.player;
 }
 
@@ -671,10 +1224,17 @@ function cloudProfileSnapshot() {
       dailyStreak: Math.min(100_000, Math.max(0, Math.floor(Number(profile.dailyStreak) || 0))),
       lastDailyDate: safeDate(profile.lastDailyDate),
       dailyCompleted: safeDate(profile.dailyCompleted),
-      streakShields: Math.min(1_000, Math.max(0, Math.floor(Number(profile.streakShields) || 0)))
+      streakShields: Math.min(1_000, Math.max(0, Math.floor(Number(profile.streakShields) || 0))),
+      rewardedRunIds: sanitizeRewardedRunIds(profile.rewardedRunIds)
     },
     weekly: { key: String(profile.weekly?.key || ""), stage: Math.min(3, Math.max(0, Math.floor(Number(profile.weekly?.stage) || 0))), complete: Boolean(profile.weekly?.complete) },
-    recipeMastery: sanitizeRecipeMasteryState(profile.recipeMastery)
+    recipeMastery: sanitizeRecipeMasteryState(profile.recipeMastery),
+    journeys: {
+      selectedVoyageId: sanitizeSelectedVoyage(profile.selectedVoyageId),
+      voyageProgress: sanitizeVoyageProgress(profile.voyageProgress),
+      eventProgress: sanitizeEventProgress(profile.eventProgress)
+    },
+    signatureBests: sanitizeSignatureBests(profile.signatureBests).filter((signature) => signature.scoreEligible)
   };
 }
 
@@ -699,7 +1259,7 @@ function resetProfileForAccount({ playerId = profile.playerId, playerToken = pro
   };
 }
 
-function mergeCloudProfile(remote, { replace = false, preferLocalSettings = false, preferLocalProgression = false } = {}) {
+function mergeCloudProfile(remote, { replace = false, preferLocalSettings = false, preferLocalProgression = false, preferLocalJourneys = false, preferLocalSignatures = false } = {}) {
   if (!remote || typeof remote !== "object" || Array.isArray(remote)) return;
   if (replace) resetProfileForAccount({ preserveServer: true });
   if (Array.isArray(remote.discovered)) {
@@ -714,7 +1274,12 @@ function mergeCloudProfile(remote, { replace = false, preferLocalSettings = fals
     profile.masteryCelebrated = [...new Set([...(replace ? [] : profile.masteryCelebrated), ...remote.masteryCelebrated.map(String)])].slice(0, 64);
   }
   if (remote.progression && typeof remote.progression === "object" && !Array.isArray(remote.progression)) {
+    const localRewardedRunIds = sanitizeRewardedRunIds(profile.rewardedRunIds);
+    const remoteRewardedRunIds = sanitizeRewardedRunIds(remote.progression.rewardedRunIds);
     Object.assign(profile, reconcileCloudProgression(profile, remote.progression, { replace, preferLocal: preferLocalProgression }));
+    profile.rewardedRunIds = replace
+      ? remoteRewardedRunIds
+      : sanitizeRewardedRunIds([...localRewardedRunIds, ...remoteRewardedRunIds]);
   }
   if (remote.firstOrbit) {
     const incoming = sanitizeFirstOrbitState(remote.firstOrbit);
@@ -732,6 +1297,42 @@ function mergeCloudProfile(remote, { replace = false, preferLocalSettings = fals
   if ((remote.cosmetics || remote.theme) && (replace || !preferLocalSettings)) {
     profile.cosmetics = sanitizeCosmeticLoadout(remote.cosmetics || { theme: remote.theme }, { founder: founderCosmeticsOwned() });
     profile.theme = profile.cosmetics.theme;
+  }
+  if (remote.journeys && typeof remote.journeys === "object" && !Array.isArray(remote.journeys)) {
+    const localVoyages = sanitizeVoyageProgress(profile.voyageProgress);
+    const incomingVoyages = sanitizeVoyageProgress(remote.journeys.voyageProgress);
+    profile.voyageProgress = replace ? incomingVoyages : sanitizeVoyageProgress({
+      voyages: Object.fromEntries(Object.keys(localVoyages.voyages).map((id) => [id, {
+        completed: Math.max(localVoyages.voyages[id]?.completed || 0, incomingVoyages.voyages[id]?.completed || 0)
+      }]))
+    });
+    if (replace || !preferLocalJourneys) profile.selectedVoyageId = sanitizeSelectedVoyage(remote.journeys.selectedVoyageId);
+    const incomingEvent = sanitizeEventProgress(remote.journeys.eventProgress);
+    const localEvent = sanitizeEventProgress(profile.eventProgress);
+    // Once the event endpoint has supplied server truth, a lagging cloud
+    // snapshot must not replace it during boot, recovery, or claim retry.
+    profile.eventProgress = !isStaticBeta && state.cosmicEvent
+      ? sanitizeEventProgressForEvent(localEvent, state.cosmicEvent)
+      : replace ? incomingEvent : sanitizeEventProgress({
+          weekKey: incomingEvent.weekKey,
+          eventId: incomingEvent.eventId,
+          words: [...localEvent.words, ...incomingEvent.words],
+          rewarded: localEvent.rewarded || incomingEvent.rewarded
+        });
+  }
+  if (Array.isArray(remote.signatureBests)) {
+    if (replace) profile.signatureBests = sanitizeSignatureBests(remote.signatureBests);
+    else {
+      const byScope = new Map();
+      for (const signature of [...profile.signatureBests, ...remote.signatureBests].map(sanitizeRouteSignature).filter(Boolean)) {
+        const previous = byScope.get(signature.scopeKey);
+        byScope.set(signature.scopeKey, previous ? comparePersonalBest(signature, previous).best : signature);
+      }
+      // `byScope` already contains the best candidate across local pending and
+      // cloud-verified entries. Prepending the local list here would let the
+      // first-wins sanitizer replace a higher remote score with a lower draft.
+      profile.signatureBests = sanitizeSignatureBests([...byScope.values()]);
+    }
   }
 }
 
@@ -772,10 +1373,14 @@ async function syncCloudProfile({ manual = false, replaceRemote = false } = {}) 
       const legacyPending = Boolean(profile.cloudPending && pendingFields.size === 0);
       const localSettingsPending = !replaceRemote && Boolean(profile.cloudPending && (legacyPending || pendingFields.has("all") || pendingFields.has("settings")));
       const localProgressionPending = !replaceRemote && Boolean(profile.cloudPending && (legacyPending || pendingFields.has("all") || pendingFields.has("progression")));
+      const localJourneysPending = !replaceRemote && Boolean(profile.cloudPending && (legacyPending || pendingFields.has("all") || pendingFields.has("journeys")));
+      const localSignaturesPending = !replaceRemote && Boolean(profile.cloudPending && (legacyPending || pendingFields.has("all") || pendingFields.has("signatures")));
       mergeCloudProfile(remote.profile, {
         replace: replaceRemote && attempt === 0,
         preferLocalSettings: localSettingsPending,
-        preferLocalProgression: localProgressionPending
+        preferLocalProgression: localProgressionPending,
+        preferLocalJourneys: localJourneysPending,
+        preferLocalSignatures: localSignaturesPending
       });
       if (!sameIdentity()) return null;
       const snapshot = cloudProfileSnapshot();
@@ -867,7 +1472,7 @@ async function restoreOwnership({ silent = false } = {}) {
     applyServerPlayer(result.player);
     if (!silent) {
       setCloudStatus("Ownership restored from the server");
-      showToast("Founder cosmetics, earned credits, and Vault words restored.");
+      showToast("Supporter cosmetics, earned credits, and Vault words restored.");
       track("ownership_restored", { products: result.entitlements?.products?.length || 0, words: result.entitlements?.vault?.length || 0 });
     }
     return result;
@@ -888,12 +1493,14 @@ async function initializeCloudServices() {
 
 function handleOnline() {
   updateConnection();
+  if (!isStaticBeta && profile.playerId && profile.playerToken) void refreshCosmicEventState();
   if (!isStaticBeta && state.cloudReady && profile.playerId && profile.playerToken) scheduleCloudProfileSync({ changed: false, delay: 250 });
   if (!isStaticBeta && profile.playerId && profile.playerToken) void retryPendingScoreUploads().then(announcePendingScoreRecovery);
 }
 
-function showRecoveryKit() {
+function showRecoveryKit({ force = false } = {}) {
   if (!state.recoveryKit?.code || isStaticBeta) return;
+  if (!force && profile.wins < 1) return;
   $("#recoveryPlayerId").textContent = state.recoveryKit.playerId;
   $("#recoveryCode").textContent = state.recoveryKit.code;
   $("#copyRecoveryKit span").textContent = "Copy recovery kit";
@@ -914,27 +1521,31 @@ async function copyRecoveryKit() {
 }
 
 function acknowledgeRecoveryKit() {
-  state.recoveryKit = null;
+  rememberPendingRecoveryKit(null);
   $("#recoveryPlayerId").textContent = "Cleared";
   $("#recoveryCode").textContent = "Cleared from this screen";
   $("#recoveryDialog").close();
+  renderProfile();
   if (state.pendingMission) {
     $("#missionBriefingStatus").textContent = "";
     requestAnimationFrame(presentMissionBriefing);
   }
-  else if (!state.game && !sanitizeFirstOrbitState(profile.firstOrbit).seen) requestAnimationFrame(openFirstOrbitWelcome);
 }
 
 async function rotateRecoveryKit() {
+  if (state.recoveryKit?.code) {
+    showRecoveryKit({ force: true });
+    return;
+  }
   try {
     const result = await fetchJson("/api/player/recovery/rotate", {
       method: "POST",
       headers: authHeaders({ "Content-Type": "application/json" }),
       body: "{}"
     });
-    state.recoveryKit = { playerId: profile.playerId, code: result.recoveryCode, version: result.recoveryVersion };
+    rememberPendingRecoveryKit({ playerId: profile.playerId, code: result.recoveryCode, version: result.recoveryVersion });
     track("recovery_rotated", { version: result.recoveryVersion });
-    showRecoveryKit();
+    showRecoveryKit({ force: true });
   } catch (error) {
     showToast(error.message);
   }
@@ -964,17 +1575,21 @@ async function recoverAccount(event) {
     resetProfileForAccount({ playerId: result.player.id, playerToken: result.playerToken });
     clearActiveRunSnapshot();
     applyServerPlayer(result.player);
-    state.recoveryKit = { playerId: result.player.id, code: result.recoveryCode, version: result.recoveryVersion };
+    rememberPendingRecoveryKit({ playerId: result.player.id, code: result.recoveryCode, version: result.recoveryVersion });
     await restoreOwnership({ silent: true });
     await syncCloudProfile({ replaceRemote: true });
+    // Cloud restoration may contain an older event snapshot. Apply server event
+    // truth last so account recovery cannot roll progress or reward state back.
+    await refreshCosmicEventState();
     const dailySense = refillDailySense();
     if (dailySense.refilled) saveProfile({ cloud: false });
     state.cloudReady = true;
+    if (state.cloudDirty) scheduleCloudProfileSync({ changed: false, delay: 250 });
     announcePendingScoreRecovery(await retryPendingScoreUploads());
     message.textContent = "";
     $("#recoverCodeInput").value = "";
     track("account_recovered", { recoveryVersion: result.recoveryVersion });
-    showRecoveryKit();
+    showRecoveryKit({ force: true });
   } catch (error) {
     message.textContent = error.message;
   } finally {
@@ -989,26 +1604,26 @@ async function loadConfig() {
   $("#founderPrice").textContent = config.founderPrice;
   const checkoutButton = $("#checkoutButton");
   const checkoutLabel = $("#checkoutButton span");
-  checkoutButton.disabled = false;
+  checkoutButton.disabled = !COMMERCE_LAUNCH_READY;
   if (profile.premium) {
-    checkoutLabel.textContent = "Founder's Pass owned";
+    checkoutLabel.textContent = "Supporter Pack owned";
     checkoutButton.disabled = true;
-    $("#billingNote").textContent = "Your lifetime pass is active. One personal Wish renews each UTC day.";
-  } else if (config.testStoreEnabled && !config.billingEnabled && !billingAdapter()) {
+    $("#billingNote").textContent = "Your lifetime cosmetic collection is active. Competitive rules remain identical for every player.";
+  } else if (COMMERCE_LAUNCH_READY && config.testStoreEnabled && !config.billingEnabled && !billingAdapter()) {
     checkoutLabel.textContent = "Unlock test pass";
     $("#billingNote").textContent = "Development store: unlock a server test entitlement. No charge.";
-  } else if (!config.billingEnabled && !billingAdapter()) {
+  } else if (!COMMERCE_LAUNCH_READY || (!config.billingEnabled && !billingAdapter())) {
     checkoutLabel.textContent = "Coming after the beta";
     checkoutButton.disabled = true;
-    $("#billingNote").textContent = "Purchases are safely disabled during the free beta. Your first Wish is still free.";
+    $("#billingNote").textContent = "Purchases are safely disabled during the free beta. No checkout or ads are active.";
   }
   renderCreditPacks();
-  $("#rewardWish").hidden = !(config.rewardedAdsEnabled && adsAdapter()?.showRewarded);
+  $("#rewardWish").hidden = !(COMMERCE_LAUNCH_READY && config.rewardedAdsEnabled && adsAdapter()?.showRewarded);
 }
 
 async function fetchJson(url, options = {}, timeout = 20000) {
   if (isStaticBeta) {
-    localRuntimePromise ||= import("./local-beta.mjs");
+    localRuntimePromise ||= import("./local-beta.mjs?v=3.0.0-beta.1");
     const runtime = await localRuntimePromise;
     return runtime.localRequest(url, options);
   }
@@ -1038,12 +1653,79 @@ async function fetchJson(url, options = {}, timeout = 20000) {
   }
 }
 
+function renderDiagnosticsPreference() {
+  const button = $("#diagnosticsPreference");
+  if (!button) return;
+  button.setAttribute("aria-pressed", String(analyticsPreference));
+  button.classList.toggle("active", analyticsPreference);
+  button.querySelector("span").textContent = analyticsPreference ? "✦" : "◇";
+  button.querySelector("small").textContent = analyticsPreference ? "ON" : "OFF";
+}
+
+function toggleDiagnosticsPreference() {
+  analyticsPreference = !analyticsPreference;
+  try { localStorage.setItem(ANALYTICS_PREFERENCE_KEY, JSON.stringify({ version: 1, enabled: analyticsPreference })); } catch { /* Preference remains active for this session. */ }
+  if (analyticsPreference) ensureAnalyticsCohort();
+  renderDiagnosticsPreference();
+  showToast(analyticsPreference ? "Optional diagnostics enabled. Thank you for helping tune the cosmos." : "Optional diagnostics turned off.", { scope: "global" });
+}
+
+function exportDiagnostics() {
+  let localCounts = null;
+  if (isStaticBeta) {
+    try { localCounts = JSON.parse(localStorage.getItem(LOCAL_ANALYTICS_KEY) || "null")?.counts || {}; }
+    catch { localCounts = {}; }
+  }
+  downloadJson(`constellore-diagnostics-settings-${todayKey}.json`, {
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    optionalDiagnosticsEnabled: analyticsPreference,
+    cohortId: analyticsPreference ? ensureAnalyticsCohort() : null,
+    localCounts
+  });
+}
+
+function resetAnalyticsIdentity() {
+  try { localStorage.removeItem(ANALYTICS_COHORT_KEY); } catch { /* In-memory reset still applies. */ }
+  analyticsCohortId = "";
+  if (analyticsPreference) ensureAnalyticsCohort();
+  showToast("Analytics ID reset. Past aggregate counts cannot be linked to this device again.", { scope: "global" });
+}
+
+function boundedAnalyticsProperties(properties) {
+  const output = {};
+  for (const [key, value] of Object.entries(properties && typeof properties === "object" ? properties : {}).slice(0, 16)) {
+    if (!ANALYTICS_DIMENSIONS.has(key)) continue;
+    if (typeof value === "boolean") output[key] = value;
+    else if (Number.isFinite(Number(value)) && value !== "") output[key] = clamp(Math.round(Number(value)), -1_000_000, 1_000_000);
+    else if (typeof value === "string" && /^[a-z0-9 _.-]{1,32}$/i.test(value)) output[key] = value.toLowerCase();
+  }
+  return output;
+}
+
 function track(name, properties = {}) {
-  if (isStaticBeta) return;
-  const body = JSON.stringify({ name, sessionId, properties });
+  if (!analyticsPreference) return;
+  const event = String(name || "").toLowerCase();
+  if (!/^[a-z][a-z0-9_]{0,47}$/.test(event)) return;
+  if (isStaticBeta) {
+    try {
+      const parsed = JSON.parse(localStorage.getItem(LOCAL_ANALYTICS_KEY) || "null");
+      const counts = parsed?.counts && typeof parsed.counts === "object" && !Array.isArray(parsed.counts) ? parsed.counts : {};
+      const bounded = Object.fromEntries(Object.entries(counts)
+        .filter(([key, value]) => /^[a-z][a-z0-9_]{0,47}$/.test(key) && Number.isFinite(Number(value)))
+        .slice(0, 79)
+        .map(([key, value]) => [key, Math.min(1_000_000, Math.max(0, Math.floor(Number(value))))]));
+      bounded[event] = Math.min(1_000_000, (bounded[event] || 0) + 1);
+      localStorage.setItem(LOCAL_ANALYTICS_KEY, JSON.stringify({ version: 1, counts: bounded }));
+    } catch { /* Local diagnostics are optional and never interrupt play. */ }
+    return;
+  }
+  const analyticsUrl = new URL("/api/analytics", location.origin);
+  if (analyticsUrl.origin !== location.origin) return;
+  const body = JSON.stringify({ name: event, sessionId, cohortId: ensureAnalyticsCohort(), properties: boundedAnalyticsProperties(properties) });
   try {
-    if (navigator.sendBeacon) navigator.sendBeacon("/api/analytics", new Blob([body], { type: "application/json" }));
-    else fetch("/api/analytics", { method: "POST", headers: { "Content-Type": "application/json" }, body, keepalive: true }).catch(() => {});
+    if (navigator.sendBeacon) navigator.sendBeacon(analyticsUrl, new Blob([body], { type: "application/json" }));
+    else fetch(analyticsUrl, { method: "POST", headers: { "Content-Type": "application/json" }, body, keepalive: true, credentials: "same-origin" }).catch(() => {});
   } catch { /* Analytics must never interrupt play. */ }
 }
 
@@ -1113,26 +1795,43 @@ function firstOrbitActive() {
   return Boolean(state.game && state.mode === "training");
 }
 
+function secondOrbitActive() {
+  return Boolean(state.game && state.mode === "second-orbit");
+}
+
+function learningOrbitActive() {
+  return firstOrbitActive() || secondOrbitActive();
+}
+
 function firstOrbitWordActive(itemOrWord) {
-  if (!firstOrbitActive() || state.finished) return false;
+  if (!learningOrbitActive() || state.finished) return false;
   const key = inventoryKey(itemOrWord);
-  return firstOrbitProgress(state.history).spotlightWords.some((word) => inventoryKey(word) === key);
+  const progress = secondOrbitActive() ? secondOrbitProgress(state.history) : firstOrbitProgress(state.history);
+  return progress.spotlightWords.some((word) => inventoryKey(word) === key);
 }
 
 function syncFirstOrbitGuide() {
-  const active = firstOrbitActive() && !state.finished;
+  const active = learningOrbitActive() && !state.finished;
   els.gameScreen.classList.toggle("training-orbit", firstOrbitActive());
+  els.gameScreen.classList.toggle("second-orbit", secondOrbitActive());
   els.firstOrbitGuide.hidden = !active;
   if (!active) return;
-  const progress = firstOrbitProgress(state.history);
+  const second = secondOrbitActive();
+  const progress = second ? secondOrbitProgress(state.history) : firstOrbitProgress(state.history);
   const step = progress.step;
   if (!step) return;
+  $("#orbitLessonLabel").innerHTML = second
+    ? '<i aria-hidden="true">◇</i> SECOND ORBIT · 0 SCORE'
+    : '<i aria-hidden="true">&#10022;</i> TRAINING ORBIT · 0 SCORE';
+  $("#skipFirstOrbit").textContent = second ? "Leave lesson" : "Skip training";
   $("#firstOrbitStep").textContent = `STEP ${progress.index + 1} OF ${progress.total}`;
   $("#firstOrbitGuideTitle").textContent = step.title;
   $("#firstOrbitInstruction").textContent = step.instruction;
   $("#firstOrbitTip").textContent = step.tip;
   $("#firstOrbitProgressBar").style.width = `${progress.percent}%`;
   const progressBar = els.firstOrbitGuide.querySelector("[role='progressbar']");
+  progressBar.setAttribute("aria-label", `${second ? "Second" : "First"} Orbit lesson progress`);
+  progressBar.setAttribute("aria-valuemax", String(progress.total));
   progressBar.setAttribute("aria-valuenow", String(progress.index));
   for (const button of els.wordList.querySelectorAll(".inventory-word")) {
     const highlighted = firstOrbitWordActive(button.dataset.word);
@@ -1154,23 +1853,8 @@ function rememberFirstOrbitSeen() {
   saveProfile({ fields: ["firstOrbit"] });
 }
 
-function openFirstOrbitWelcome() {
-  if (state.game || els.firstOrbitDialog.open) return;
-  els.firstOrbitDialog.showModal();
-}
-
-function dismissFirstOrbitWelcome() {
-  rememberFirstOrbitSeen();
-  if (els.firstOrbitDialog.open) els.firstOrbitDialog.close();
-}
-
-function startFirstOrbit() {
-  if (state.startingRun) return;
-  rememberFirstOrbitSeen();
-  if (els.firstOrbitDialog.open) els.firstOrbitDialog.close();
-  if (els.profileDialog.open) els.profileDialog.close();
-  const startedAt = new Date().toISOString();
-  startWithGame({
+function firstOrbitGame() {
+  return {
     mode: "training",
     modeName: "First Orbit · Training",
     target: "Wall",
@@ -1184,8 +1868,41 @@ function startFirstOrbit() {
     aiEnabled: false,
     universe: selectUniverse(101),
     scoreEligible: false,
+    rewardEligible: false,
+    ranked: false,
     training: true
-  }, {
+  };
+}
+
+function secondOrbitGame() {
+  return {
+    mode: "second-orbit",
+    modeName: "Second Orbit · Lesson",
+    target: "Mountain",
+    emoji: "⛰️",
+    starters: ["Earth", "Water", "Fire", "Air"],
+    seed: 202,
+    tier: 1,
+    timeLimit: null,
+    moveLimit: null,
+    law: null,
+    aiEnabled: false,
+    universe: selectUniverse(202),
+    scoreEligible: false,
+    rewardEligible: false,
+    leaderboardEligible: false,
+    ranked: false,
+    training: true
+  };
+}
+
+function startFirstOrbit() {
+  if (state.startingRun) return;
+  rememberFirstOrbitSeen();
+  if (els.profileDialog.open) els.profileDialog.close();
+  const startedAt = new Date().toISOString();
+  track("first_orbit_started", { replay: Boolean(profile.firstOrbit.completed) });
+  startWithGame(firstOrbitGame(), {
     id: `training-${sessionId}-${Date.now()}`,
     token: "local-training",
     ranked: false,
@@ -1202,7 +1919,48 @@ function startFirstOrbit() {
   requestAnimationFrame(() => els.wordList.querySelector(".inventory-word.tutorial-hot")?.focus({ preventScroll: true }));
 }
 
+function startSecondOrbit() {
+  if (state.startingRun || (!profile.firstOrbit.completed && profile.wins === 0)) return;
+  profile.secondOrbit = { ...sanitizeSecondOrbitState(profile.secondOrbit), seen: true };
+  saveProfile({ cloud: false });
+  if (els.profileDialog.open) els.profileDialog.close();
+  track("second_orbit_started", { replay: Boolean(profile.secondOrbit.completed) });
+  startWithGame(secondOrbitGame(), null);
+  syncFirstOrbitGuide();
+  requestAnimationFrame(() => els.wordList.querySelector(".inventory-word.tutorial-hot")?.focus({ preventScroll: true }));
+}
+
+function openFirstOrbitBriefing(trigger = null) {
+  openMissionBriefing(firstOrbitGame(), { mode: "training", training: true }, trigger);
+  if (state.pendingMission) state.pendingMission.training = true;
+}
+
+function openSecondOrbitBriefing(trigger = null) {
+  openMissionBriefing(secondOrbitGame(), { mode: "second-orbit", localLesson: true }, trigger);
+  if (state.pendingMission) state.pendingMission.secondOrbit = true;
+}
+
+function startExplore() {
+  if (state.startingRun) return;
+  const game = exploreGame(Math.floor(Math.random() * 1_000_000));
+  game.universe = selectUniverse(game.seed);
+  track("explore_started", { discoveries: profile.discovered.length });
+  startWithGame(game, null);
+}
+
+function openExploreBriefing(trigger = null) {
+  const game = exploreGame(Math.floor(Math.random() * 1_000_000));
+  game.universe = selectUniverse(game.seed);
+  openMissionBriefing(game, { mode: "explore", localSandbox: true }, trigger);
+  if (state.pendingMission) state.pendingMission.explore = true;
+}
+
 function skipFirstOrbit() {
+  if (secondOrbitActive()) {
+    returnHome();
+    showToast("Second Orbit paused · replay it anytime from your profile.");
+    return;
+  }
   if (!firstOrbitActive()) return;
   rememberFirstOrbitSeen();
   returnHome();
@@ -1211,7 +1969,7 @@ function skipFirstOrbit() {
 
 function presentMissionBriefing() {
   const pending = state.pendingMission;
-  if (!pending || state.recoveryKit?.code || $("#recoveryDialog").open || els.missionBriefingDialog.open) return;
+  if (!pending || $("#recoveryDialog").open || els.missionBriefingDialog.open) return;
   els.missionBriefingDialog.scrollTop = 0;
   $("#missionBriefingScroll").scrollTop = 0;
   els.missionBriefingDialog.showModal();
@@ -1219,13 +1977,20 @@ function presentMissionBriefing() {
   track("mission_briefing_viewed", { mode: pending.game.mode, target: pending.game.target, ranked: Boolean(pending.game.leaderboardEligible) });
 }
 
-function openMissionBriefing(game, request, trigger = null) {
+function openMissionBriefing(game, request, trigger = null, context = null) {
   const briefing = buildMissionBriefing(game, { localOnly: isStaticBeta });
-  state.pendingMission = { game, request: { ...request }, trigger, returnToModes: !els.gameScreen.hidden };
-  $("#missionBriefingMode").textContent = briefing.modeLabel;
+  const journeyContext = normalizeJourneyContext(context, game);
+  const journeyKindLabel = journeyContext?.kind === "event" ? "COSMIC EVENT" : journeyContext?.kind === "voyage" ? "VOYAGE" : "";
+  const journeyClue = journeyContext?.kind === "event"
+    ? "A game-curated destination from this week's Cosmic Event."
+    : journeyContext?.kind === "voyage"
+      ? "A game-curated destination from your active Constellation Voyage."
+      : "";
+  state.pendingMission = { game, request: { ...request }, trigger, context: journeyContext, returnToModes: !els.gameScreen.hidden };
+  $("#missionBriefingMode").textContent = journeyKindLabel ? `${journeyKindLabel} \u00b7 MISSION BRIEF` : briefing.modeLabel;
   $("#missionBriefingEmoji").textContent = briefing.emoji;
   $("#missionBriefingTarget").textContent = briefing.target;
-  $("#missionBriefingClue").textContent = game.clue || "A destination waits at the edge of this constellation.";
+  $("#missionBriefingClue").textContent = journeyClue || game.clue || "A destination waits at the edge of this constellation.";
   $("#missionBriefingRule").textContent = briefing.instruction;
   $("#missionBriefingLimit").textContent = briefing.limitValue;
   $("#missionBriefingLimitDetail").textContent = briefing.limitDetail;
@@ -1234,9 +1999,19 @@ function openMissionBriefing(game, request, trigger = null) {
   $("#missionBriefingScoreLabel").textContent = briefing.scoringLabel;
   $("#missionBriefingScore").textContent = briefing.scoringValue;
   $("#missionBriefingScoreDetail").textContent = briefing.scoringDetail;
+  const division = $("#missionBriefingDivision");
+  division.className = `mission-division ${briefing.division.id}`;
+  $("#missionBriefingDivisionLabel").textContent = briefing.division.label;
+  $("#missionBriefingDivisionTitle").textContent = briefing.division.title;
+  $("#missionBriefingDivisionDetail").textContent = briefing.division.detail;
+  $("#missionBriefingLimitSummary").textContent = `${briefing.limitValue} · ${briefing.division.label}`;
   $("#missionBriefingInteraction").textContent = briefing.interactionRule;
   $("#missionBriefingModeRule").textContent = briefing.modeRule;
   $("#missionBriefingFairness").textContent = briefing.fairnessNote;
+  $("#missionJourneyContext").hidden = !journeyContext;
+  $("#missionJourneyType").textContent = journeyContext?.kind === "event" ? "COSMIC EVENT TARGET" : "VOYAGE STAGE";
+  $("#missionJourneyTitle").textContent = journeyContext?.title || "";
+  $("#missionJourneyStory").textContent = journeyContext?.story || "";
   const law = game.law;
   $("#missionBriefingLaw").hidden = !law;
   $("#missionBriefingLawName").textContent = law?.name || "";
@@ -1246,7 +2021,7 @@ function openMissionBriefing(game, request, trigger = null) {
   status.classList.remove("error");
   $("#beginMission").disabled = false;
   $("#cancelMission").disabled = false;
-  $("#beginMission span").textContent = "Begin mission";
+  $("#beginMission span").textContent = `Start toward ${briefing.target}`;
   els.missionBriefingDialog.scrollTop = 0;
   $("#missionBriefingScroll").scrollTop = 0;
   presentMissionBriefing();
@@ -1313,6 +2088,24 @@ async function refreshMissionPreview(pending) {
 async function confirmMissionBriefing() {
   const pending = state.pendingMission;
   if (!pending || state.startingRun) return;
+  if (pending.training) {
+    state.pendingMission = null;
+    if (els.missionBriefingDialog.open) els.missionBriefingDialog.close("start");
+    startFirstOrbit();
+    return;
+  }
+  if (pending.secondOrbit) {
+    state.pendingMission = null;
+    if (els.missionBriefingDialog.open) els.missionBriefingDialog.close("start");
+    startSecondOrbit();
+    return;
+  }
+  if (pending.explore) {
+    state.pendingMission = null;
+    if (els.missionBriefingDialog.open) els.missionBriefingDialog.close("start");
+    startExplore();
+    return;
+  }
   const begin = $("#beginMission");
   const cancel = $("#cancelMission");
   const status = $("#missionBriefingStatus");
@@ -1324,20 +2117,11 @@ async function confirmMissionBriefing() {
   status.textContent = "Creating your verified starting point…";
   try {
     if (!profile.playerId || !profile.playerToken) await ensurePlayer();
-    if (state.recoveryKit?.code) {
-      begin.disabled = false;
-      cancel.disabled = false;
-      begin.querySelector("span").textContent = "Begin mission";
-      status.textContent = "Save your one-time Recovery Kit, then this mission will reopen.";
-      if (els.missionBriefingDialog.open) els.missionBriefingDialog.close("recovery");
-      showRecoveryKit();
-      return;
-    }
     const started = await createRun(pending.request);
     applyServerPlayer(started.player);
     state.pendingMission = null;
     if (els.missionBriefingDialog.open) els.missionBriefingDialog.close("start");
-    startWithGame(started.game, started.run);
+    startWithGame(started.game, started.run, { context: pending.context });
   } catch (error) {
     if (error.code === "mission_stale") {
       try {
@@ -1345,7 +2129,7 @@ async function confirmMissionBriefing() {
         status.textContent = "The mission changed while this briefing was open. Refreshing it now...";
         begin.querySelector("span").textContent = "Refreshing mission...";
         const refreshed = await refreshMissionPreview(pending);
-        openMissionBriefing(refreshed.game, refreshed.request, pending.trigger);
+        openMissionBriefing(refreshed.game, refreshed.request, pending.trigger, pending.context);
         $("#missionBriefingStatus").textContent = "Mission refreshed. Review the updated details, then begin when ready.";
         return;
       } catch (refreshError) {
@@ -1365,11 +2149,20 @@ async function confirmMissionBriefing() {
 
 async function beginMode(mode, options = {}) {
   if (state.startingRun) return;
+  if (mode === "second-orbit") {
+    openSecondOrbitBriefing(options.trigger || document.querySelector('[data-mode="second-orbit"]'));
+    return;
+  }
+  if (mode === "explore") {
+    openExploreBriefing(options.trigger || document.querySelector('[data-mode="explore"]'));
+    return;
+  }
   if (mode === "daily" && profile.dailyCompleted === todayKey) return;
   if (mode === "weekly" && profile.weekly.complete) return;
   state.startingRun = true;
   if (state.game) updateHud();
   const button = document.querySelector(`[data-mode="${mode}"]`);
+  const trigger = options.trigger || button;
   const label = button?.classList.contains("mode-action") ? button.querySelector("span") : null;
   const original = label?.textContent;
   if (button) button.disabled = true;
@@ -1380,10 +2173,10 @@ async function beginMode(mode, options = {}) {
     if (options.skipBriefing) {
       const started = await createRun(request);
       applyServerPlayer(started.player);
-      startWithGame(started.game, started.run);
+      startWithGame(started.game, started.run, { context: options.context });
     } else {
       const preview = await requestMissionPreview(request);
-      openMissionBriefing(preview.game, preview.request, button);
+      openMissionBriefing(preview.game, preview.request, trigger, options.context);
     }
   } catch (error) {
     showToast(error.message);
@@ -1443,13 +2236,15 @@ function buildActiveRunSnapshot({ completed = false } = {}) {
     version: 1,
     savedAt: new Date().toISOString(),
     game: structuredClone(state.game),
+    journeyContext: state.journeyContext ? structuredClone(state.journeyContext) : null,
     run: {
       id: state.run.id,
       token: state.run.token,
       startedAt: state.run.startedAt,
       deadlineAt: state.run.deadlineAt,
       assist: state.assist,
-      scoreEligible: state.run.scoreEligible !== false && !state.scoringDisabled
+      scoreEligible: state.run.scoreEligible !== false && !state.scoringDisabled,
+      scoreMultiplier: state.scoreMultiplier
     },
     progress: {
       moves: state.moves,
@@ -1466,7 +2261,8 @@ function buildActiveRunSnapshot({ completed = false } = {}) {
       giftUnavailable: Boolean(state.powerups.giftUnavailable),
       giftItem: snapshotItem(state.powerups.giftItem),
       assist: state.assist,
-      scoringDisabled: state.scoringDisabled
+      scoringDisabled: state.scoringDisabled,
+      scoreMultiplier: state.scoreMultiplier
     },
     visuals: {
       nodes: state.nodes.slice(0, MAX_BOARD_NODES).filter((node) => !node.revealRole && !node.item.ghost).map((node) => ({
@@ -1589,7 +2385,15 @@ async function flushPendingScoreUploads(playerId, playerToken) {
         continue;
       }
       markPendingScoreUploaded(playerId, pending.runId);
-      if (profile.playerId === playerId && profile.playerToken === playerToken) applyServerPlayer(result.player);
+      if (profile.playerId === playerId && profile.playerToken === playerToken) {
+        applyServerPlayer(result.player);
+        // A recovered upload may finish long after its result screen closed.
+        // Persist server truth without attaching it to whichever run is open now.
+        adoptVerifiedSignature(result.verifiedSignature || result.placement?.entry?.signature, {
+          runId: pending.runId,
+          updateCurrent: false
+        });
+      }
       track("score_upload_recovered", { mode: pending.mode, target: pending.target });
       uploaded += 1;
     } catch (error) {
@@ -1643,6 +2447,78 @@ function readActiveRunSnapshot() {
   }
 }
 
+function decorateRestoredHistory(rawHistory) {
+  const event = currentEventState().event;
+  return (Array.isArray(rawHistory) ? rawHistory.slice(-500) : []).map((rawStep, index) => {
+    const step = rawStep && typeof rawStep === "object" && !Array.isArray(rawStep) ? rawStep : {};
+    const a = String(step.a || "").trim().slice(0, 80);
+    const b = String(step.b || "").trim().slice(0, 80);
+    const word = String(step.word || "").trim().slice(0, 80);
+    if (!a || !b || !word) return null;
+    const item = state.words.find((entry) => inventoryKey(entry.word) === inventoryKey(word));
+    const source = String(step.source || item?.source || "world").slice(0, 40);
+    const category = String(step.category || item?.category || "").slice(0, 40);
+    const twisted = Boolean(step.twisted);
+    const eventAnnotation = annotateCosmicEventResult({ event, result: { word, source } });
+    const journeyMatch = Boolean(state.journeyContext && inventoryKey(state.journeyContext.target) === inventoryKey(word));
+    const insight = twisted ? null : explainSuccessfulRecipe({
+      a,
+      b,
+      word,
+      source,
+      ...(categoryForInsightWord(a) ? { categoryA: categoryForInsightWord(a) } : {}),
+      ...(categoryForInsightWord(b) ? { categoryB: categoryForInsightWord(b) } : {}),
+      ...(insightCategoryFor(category) ? { category: insightCategoryFor(category) } : {})
+    });
+    return {
+      move: Math.max(1, Math.floor(Number(step.move) || index + 1)),
+      a,
+      b,
+      word,
+      emoji: String(step.emoji || item?.emoji || "✦").slice(0, 24),
+      category,
+      note: String(step.note || item?.note || "").slice(0, 180),
+      source,
+      newDiscovery: step.newDiscovery === true,
+      twisted,
+      canonicalWord: String(step.canonicalWord || "").slice(0, 80),
+      revealed: Boolean(step.revealed),
+      feedbackEligible: step.feedbackEligible === true,
+      progressionEligible: step.progressionEligible === true,
+      eventEligible: step.eventEligible === true,
+      insight: insight?.text || "",
+      contextual: Boolean(journeyMatch || eventAnnotation.context?.collectionMatch),
+      context: journeyMatch ? state.journeyContext.kind : eventAnnotation.context?.collectionMatch ? eventAnnotation.context.eventId : "",
+      rarity: twisted ? 90 : eventAnnotation.context?.collectionMatch ? 55 : 0
+    };
+  }).filter(Boolean);
+}
+
+function reconcileRestoredMastery(history) {
+  let mastery = profile.recipeMastery;
+  let awarded = false;
+  for (const step of Array.isArray(history) ? history : []) {
+    const result = recordRecipeDiscovery(mastery, {
+      ...step,
+      runId: state.run?.id || sessionId,
+      assisted: step.progressionEligible !== true,
+      revealed: Boolean(step.revealed)
+    });
+    mastery = result.state;
+    awarded ||= result.awardedStar;
+  }
+  if (!awarded) return false;
+  profile.recipeMastery = mastery;
+  const snapshot = renderMastery();
+  for (const collection of snapshot.collections) {
+    if (!collection.progress.completed || profile.masteryCelebrated.includes(collection.id)) continue;
+    profile.masteryCelebrated.push(collection.id);
+    profile.senseWallet = grantSenseCharges(profile.senseWallet, 1).wallet;
+  }
+  saveProfile({ fields: ["mastery"] });
+  return true;
+}
+
 function hydrateRestoredRun(payload, snapshot) {
   const progress = payload.progress || {};
   const authoritativeWords = Array.isArray(progress.discovered) ? progress.discovered.map(snapshotItem).filter(Boolean) : [];
@@ -1652,7 +2528,9 @@ function hydrateRestoredRun(payload, snapshot) {
     if (!byWord.has(key)) byWord.set(key, { word: starter, emoji: starterEmoji[starter] || "✦", category: starterCategory[starter] || null, source: "origin" });
   }
   state.words = [...byWord.values()];
-  state.history = Array.isArray(progress.history) ? progress.history.slice(-500).map((step) => ({ ...step })) : [];
+  state.history = decorateRestoredHistory(progress.history);
+  state.newDiscoveries = state.history.reduce((total, step) => total + (step.newDiscovery ? 1 : 0), 0);
+  reconcileRestoredMastery(state.history);
   state.moves = Math.max(0, Number(progress.moves) || 0);
   state.wished = Boolean(progress.usedBend || progress.usedWish || progress.wished);
   state.bendItem = snapshotItem(progress.bendItem);
@@ -1665,7 +2543,8 @@ function hydrateRestoredRun(payload, snapshot) {
   state.powerups.giftItem = snapshotItem(progress.giftItem) || snapshotItem(matchingSnapshot.giftItem);
   state.powerups.busy = false;
   clearArmedPowerup({ render: false });
-  state.scoringDisabled = payload.run?.scoreEligible === false || payload.game?.scoreEligible === false || Boolean(progress.scoringDisabled) || ["reveal", "sense", "gift"].includes(state.assist);
+  state.scoringDisabled = payload.run?.scoreEligible === false || payload.game?.scoreEligible === false || Boolean(progress.scoringDisabled);
+  state.scoreMultiplier = state.scoringDisabled ? 0 : cappedScoreMultiplier(state.assist, payload.run?.scoreMultiplier, progress.scoreMultiplier);
   const completedAt = Date.parse(progress.completedAt || "");
   if (progress.completed && Number.isFinite(completedAt) && Number.isFinite(state.startedAt)) {
     state.finishedElapsedSeconds = Math.max(1, Math.round((completedAt - state.startedAt) / 1000));
@@ -1712,11 +2591,18 @@ async function restoreInterruptedRun(snapshot) {
     const payload = await fetchJson("/api/run/resume", {
       method: "POST",
       headers: authHeaders({ "Content-Type": "application/json" }),
-      body: JSON.stringify({ runId: snapshot.run.id, runToken: snapshot.run.token, snapshot })
+      body: JSON.stringify(isStaticBeta
+        ? { runId: snapshot.run.id, runToken: snapshot.run.token, snapshot }
+        : { runId: snapshot.run.id, runToken: snapshot.run.token })
     });
     applyServerPlayer(payload.player);
-    startWithGame(payload.game, payload.run, { restored: true });
+    const restoredEvent = applyAuthoritativeEventPayload(payload);
+    startWithGame(payload.game, payload.run, { restored: true, context: snapshot.journeyContext });
     hydrateRestoredRun(payload, snapshot);
+    if (restoredEvent?.reward?.claimable) {
+      try { await claimCurrentCosmicEventReward(restoredEvent.event); }
+      catch { /* Reconnect refresh retries the server-side idempotent claim. */ }
+    }
     showToast(`Restored your path to ${payload.game.target}.`);
     track("run_restored", { mode: payload.game.mode, target: payload.game.target, moves: state.moves });
     if (payload.progress?.completed) requestAnimationFrame(() => finishGame(true, "", { skipSubmit: Boolean(payload.progress.submitted) }));
@@ -1729,7 +2615,28 @@ async function restoreInterruptedRun(snapshot) {
   }
 }
 
-function startWithGame(game, run, { restored = false } = {}) {
+function missionModeLabel(game) {
+  const mode = String(game?.mode || "reach").toLowerCase();
+  if (mode === "quick") return "REACH · SPRINT";
+  if (mode === "moves") return "REACH · PRECISION";
+  if (mode === "training") return "FIRST ORBIT";
+  if (mode === "second-orbit") return "SECOND ORBIT";
+  if (mode === "explore") return "EXPLORE · SANDBOX";
+  return String(game?.modeName || mode || "REACH").toUpperCase();
+}
+
+function reusableExploreInventory() {
+  const described = profile.discovered.map((word) => {
+    if (starterEmoji[word]) return { word, emoji: starterEmoji[word], category: starterCategory[word], source: "origin" };
+    const recipe = MASTERY_CATALOG.find((entry) => inventoryKey(entry.word) === inventoryKey(word));
+    return recipe
+      ? { word: recipe.word, emoji: recipe.emoji, category: recipe.category, source: "universe" }
+      : { word, emoji: "✦", category: null, source: "universe" };
+  });
+  return sanitizeExploreInventory(profile.exploreWords, described);
+}
+
+function startWithGame(game, run, { restored = false, context = null } = {}) {
   game.universe ||= selectUniverse(game.seed);
   cancelActiveTrayDrag();
   cancelActiveBoardDrag();
@@ -1741,14 +2648,23 @@ function startWithGame(game, run, { restored = false } = {}) {
   resetRevealPlayback();
   clearSenseGlow();
   resetRecipeFeedback();
-  [els.missionBriefingDialog, els.revealDialog, els.resultDialog, els.leaderboardDialog, els.shareDialog, els.atlasDialog, els.senseDialog, els.wishDialog, els.paywallDialog, els.exchangeDialog, els.marketBuyDialog, els.firstOrbitDialog]
+  resetExpectedPairFeedback();
+  [els.missionBriefingDialog, els.pauseDialog, els.journeyDialog, els.revealDialog, els.resultDialog, els.leaderboardDialog, els.shareDialog, els.atlasDialog, els.senseDialog, els.wishDialog, els.paywallDialog, els.exchangeDialog, els.marketBuyDialog]
     .forEach((dialog) => { if (dialog?.open) dialog.close(); });
   state.game = game;
   state.run = run;
+  state.pause = { active: false, confirmAction: "" };
+  state.journeyContext = normalizeJourneyContext(context, game);
+  state.signature = null;
+  state.community = null;
+  state.eventRewardGranted = 0;
   state.assist = run?.assist || "none";
   state.scoringDisabled = run?.scoreEligible === false || game?.scoreEligible === false;
+  state.scoreMultiplier = state.scoringDisabled ? 0 : cappedScoreMultiplier(state.assist, run?.scoreMultiplier, game?.scoreMultiplier);
   state.mode = game.mode;
-  state.words = game.starters.map((word) => ({ word, emoji: starterEmoji[word] || "✦", category: starterCategory[word], source: "origin" }));
+  state.words = game.mode === "explore"
+    ? reusableExploreInventory()
+    : game.starters.map((word) => ({ word, emoji: starterEmoji[word] || "✦", category: starterCategory[word], source: "origin" }));
   state.nodes = [];
   state.history = [];
   state.trails = [];
@@ -1768,6 +2684,7 @@ function startWithGame(game, run, { restored = false } = {}) {
   state.bendItem = null;
   state.rewardedWish = false;
   state.powerups = { tipsUsed: 0, tipIds: [], giftUsed: false, giftUnavailable: false, giftItem: null, busy: false };
+  state.expectedPairReports = new Set();
   clearArmedPowerup({ render: false });
   resetPowerupControlLabels();
   state.startedAt = run?.startedAt ? Date.parse(run.startedAt) : Date.now();
@@ -1781,27 +2698,176 @@ function startWithGame(game, run, { restored = false } = {}) {
   els.startScreen.hidden = true;
   els.gameScreen.hidden = false;
   els.gameScreen.classList.toggle("training-orbit", game.mode === "training");
+  els.gameScreen.classList.toggle("second-orbit", game.mode === "second-orbit");
+  els.gameScreen.classList.toggle("explore-orbit", game.mode === "explore");
+  els.gameScreen.classList.toggle("first-ranked-orbit", !["training", "second-orbit", "explore"].includes(game.mode) && profile.wins === 0);
+  els.gameScreen.classList.remove("orbit-paused");
   els.board.scrollTop = 0;
   els.board.scrollLeft = 0;
-  els.modeName.textContent = game.modeName.toUpperCase();
-  els.targetWord.textContent = game.target;
-  els.universePill.hidden = game.mode === "training";
-  els.universePill.textContent = game.mode === "training" ? "" : `${game.universe.icon} ${game.universe.name} · ${game.universe.season.name}`;
-  els.universePill.title = game.mode === "training" ? "" : `${game.universe.law.name}: ${game.universe.law.description}`;
+  els.modeName.textContent = missionModeLabel(game);
+  els.targetWord.textContent = game.mode === "explore" ? "FREE EXPLORE" : game.target;
+  els.universePill.hidden = ["training", "second-orbit"].includes(game.mode);
+  els.universePill.textContent = ["training", "second-orbit"].includes(game.mode) ? "" : `${game.universe.icon} ${game.universe.name} · ${game.universe.season.name}`;
+  els.universePill.title = ["training", "second-orbit"].includes(game.mode) ? "" : `${game.universe.law.name}: ${game.universe.law.description}`;
+  $("#journeyPill").hidden = !state.journeyContext;
+  $("#journeyPill").textContent = state.journeyContext
+    ? `${state.journeyContext.icon || "✦"} ${state.journeyContext.kind === "event" ? "EVENT" : "VOYAGE"} · ${state.journeyContext.title}`
+    : "";
   els.timerHud.hidden = !game.timeLimit;
-  els.lawPill.hidden = !game.law && game.mode !== "training";
-  els.lawPill.textContent = game.mode === "training" ? "0 SCORE · NO REWARDS" : game.law ? `${game.law.name}: ${game.law.description}` : "";
+  els.lawPill.hidden = !game.law && !["training", "second-orbit", "explore"].includes(game.mode);
+  els.lawPill.textContent = ["training", "second-orbit"].includes(game.mode)
+    ? "0 SCORE · NO REWARDS"
+    : game.mode === "explore"
+      ? "PERSISTENT · UNRANKED"
+      : game.law ? `${game.law.name}: ${game.law.description}` : "";
   renderInventory();
+  els.wordList.scrollTop = 0;
+  els.wordList.scrollLeft = 0;
   renderBoard();
   renderAtlas();
   updateHud();
+  renderPowerups();
   updateMilestone();
   syncFirstOrbitGuide();
   requestAnimationFrame(startCosmos);
-  if (game.mode !== "training") void startRivalGhost();
+  if (competitiveGhostEligible()) void startRivalGhost();
+  requestAnimationFrame(() => {
+    els.wordList.scrollTop = 0;
+    els.wordList.scrollLeft = 0;
+  });
   if (game.timeLimit) startTimer();
   scheduleRunSave();
   if (!restored) track("run_started", { mode: game.mode, target: game.target, stage: game.stage ?? null, aiEnabled: game.aiEnabled });
+}
+
+function pauseMenuAvailable() {
+  const openDialog = document.querySelector("dialog[open]");
+  return Boolean(
+    state.game
+    && !els.gameScreen.hidden
+    && !state.finished
+    && !state.startingRun
+    && !state.reveal.active
+    && !state.reveal.pending
+    && !state.busyPairs.size
+    && !state.powerups.busy
+    && !openDialog
+  );
+}
+
+function resetPauseConfirmation({ focus = false } = {}) {
+  const previousAction = state.pause.confirmAction;
+  state.pause.confirmAction = "";
+  $("#pauseConfirmation").hidden = true;
+  $("#pauseRestart").classList.remove("is-confirming");
+  $("#pauseExit").classList.remove("is-confirming");
+  $("#pauseRestart span").textContent = "Restart this target";
+  $("#pauseExit").textContent = "Exit to mode selection";
+  if (focus && previousAction) $(previousAction === "restart" ? "#pauseRestart" : "#pauseExit").focus();
+}
+
+function confirmPauseAction(action) {
+  if (state.pause.confirmAction === action) return true;
+  state.pause.confirmAction = action;
+  const restart = action === "restart";
+  const ranked = Boolean(state.run?.ranked && !state.scoringDisabled);
+  $("#pauseConfirmation").hidden = false;
+  $("#pauseConfirmationTitle").textContent = restart ? "Restart this target?" : "Leave this orbit?";
+  $("#pauseConfirmationText").textContent = restart
+    ? `${ranked ? "This starts a fresh verified attempt. " : ""}Your current board, moves, and discoveries from this run will be discarded.`
+    : `${ranked ? "This attempt will not post a score. " : ""}Your current board progress will be abandoned.`;
+  $("#pauseRestart").classList.toggle("is-confirming", restart);
+  $("#pauseExit").classList.toggle("is-confirming", !restart);
+  $("#pauseRestart span").textContent = restart ? "Confirm restart" : "Restart this target";
+  $("#pauseExit").textContent = restart ? "Exit to mode selection" : "Confirm exit to modes";
+  return false;
+}
+
+function populatePauseMenu() {
+  const elapsedSeconds = Math.max(0, Math.round((Date.now() - state.startedAt) / 1000));
+  const timed = Boolean(state.game?.timeLimit);
+  const ranked = Boolean(state.run?.ranked && !state.scoringDisabled);
+  $("#pauseTitle").textContent = timed ? "Orbit menu open." : "Your constellation is held.";
+  $("#pauseTarget").textContent = state.game?.target || "Unknown target";
+  $("#pauseMode").textContent = String(state.game?.modeName || state.mode || "ORBIT").toUpperCase();
+  $("#pauseMoves").textContent = String(state.moves);
+  $("#pauseDiscoveries").textContent = String(state.newDiscoveries);
+  $("#pauseClockLabel").textContent = timed ? "TIME LEFT" : "ELAPSED";
+  $("#pauseClock").textContent = formatTime(timed ? Math.max(0, state.remainingSeconds) : elapsedSeconds);
+  $("#pauseClockMessage").textContent = timed
+    ? "This timed mode keeps running against its verified deadline. Resume before the clock expires."
+    : ranked
+      ? "Your board is locked, but verified score time continues so leaderboard results stay fair."
+      : "There is no countdown. Your board and discoveries are safely held until you resume.";
+}
+
+function openPauseMenu() {
+  if (!pauseMenuAvailable()) {
+    if (state.busyPairs.size || state.powerups.busy) showToast("Let the current constellation settle, then open the orbit menu.");
+    return false;
+  }
+  cancelActiveTrayDrag();
+  cancelActiveBoardDrag();
+  cancelActivePointerGestures();
+  cancelTapChain();
+  ctrlHover.reset({ abandonPending: true });
+  shiftBoard.reset();
+  clearArmedPowerup({ render: true });
+  flushRunSave();
+  stopTimer();
+  state.pause.active = true;
+  pauseCloseRestoreFocus = true;
+  resetPauseConfirmation();
+  populatePauseMenu();
+  els.gameScreen.classList.add("orbit-paused");
+  renderInventory();
+  renderBoard();
+  els.pauseDialog.showModal();
+  requestAnimationFrame(() => $("#resumePausedRun")?.focus({ preventScroll: true }));
+  track("run_menu_opened", { mode: state.mode, moves: state.moves });
+  return true;
+}
+
+function finishPauseClose() {
+  const restoreFocus = pauseCloseRestoreFocus;
+  const wasActive = state.pause.active;
+  state.pause.active = false;
+  pauseCloseRestoreFocus = true;
+  resetPauseConfirmation();
+  els.gameScreen.classList.remove("orbit-paused");
+  if (state.game && !state.finished) {
+    renderInventory();
+    renderBoard();
+  }
+  if (wasActive) track("run_menu_closed", { mode: state.mode, moves: state.moves });
+  if (restoreFocus && state.game && !state.finished) requestAnimationFrame(() => $("#pauseRunButton")?.focus({ preventScroll: true }));
+}
+
+function closePauseMenu() {
+  if (!state.pause.active && !els.pauseDialog.open) return;
+  if (els.pauseDialog.open) els.pauseDialog.close();
+  else {
+    finishPauseClose();
+    setTimeout(resumeTimerIfNeeded, 0);
+  }
+}
+
+function handlePauseShortcut(event) {
+  if (event.key !== "Escape" || event.defaultPrevented || event.repeat) return;
+  const target = event.target;
+  const editable = target?.matches?.('input, textarea, select, [contenteditable]:not([contenteditable="false"])') || target?.isContentEditable;
+  if (editable && target !== els.inventorySearch) return;
+  if (target === els.inventorySearch && state.inventoryQuery) return;
+  if (target === els.inventorySearch) target.blur();
+  if (els.pauseDialog.open) {
+    event.preventDefault();
+    els.pauseDialog.close();
+    return;
+  }
+  if (state.selectedNodeId != null) return;
+  if (!pauseMenuAvailable()) return;
+  event.preventDefault();
+  openPauseMenu();
 }
 
 function returnHome() {
@@ -1811,6 +2877,8 @@ function returnHome() {
     showToast("Upload or queue this score before starting another orbit.");
     return;
   }
+  const showRecoveryAfterExit = Boolean(state.finished && state.recoveryKit?.code && profile.wins > 0);
+  pauseCloseRestoreFocus = false;
   cancelActiveTrayDrag();
   cancelActiveBoardDrag();
   dismissClearUndo();
@@ -1824,23 +2892,77 @@ function returnHome() {
   clearBoardNotices();
   clearSenseGlow();
   resetRecipeFeedback();
+  resetExpectedPairFeedback();
   stopRivalGhost();
   cancelAnimationFrame(state.cosmosFrame);
   state.cosmosFrame = null;
   state.game = null;
   state.run = null;
+  state.pause = { active: false, confirmAction: "" };
+  state.journeyContext = null;
+  state.signature = null;
+  state.community = null;
+  state.eventRewardGranted = 0;
   state.pendingMission = null;
   state.nodes = [];
   resetPowerupControlLabels();
   clearActiveRunSnapshot();
-  els.gameScreen.classList.remove("training-orbit");
+  els.gameScreen.classList.remove("training-orbit", "second-orbit", "explore-orbit", "first-ranked-orbit", "orbit-paused");
   els.firstOrbitGuide.hidden = true;
   els.gameScreen.hidden = true;
   els.startScreen.hidden = false;
-  [els.missionBriefingDialog, els.resultDialog, els.atlasDialog, els.senseDialog, els.shareDialog, els.wishDialog, els.paywallDialog, els.exchangeDialog, els.marketBuyDialog, els.leaderboardDialog, els.revealDialog].forEach((dialog) => { if (dialog?.open) dialog.close(); });
+  [els.missionBriefingDialog, els.pauseDialog, els.journeyDialog, els.resultDialog, els.atlasDialog, els.senseDialog, els.shareDialog, els.wishDialog, els.paywallDialog, els.exchangeDialog, els.marketBuyDialog, els.leaderboardDialog, els.revealDialog].forEach((dialog) => { if (dialog?.open) dialog.close(); });
   renderProfile();
+  if (!isStaticBeta && profile.playerId && profile.playerToken) void refreshCosmicEventState();
   window.scrollTo({ top: 0, behavior: "smooth" });
-  requestAnimationFrame(() => els.startScreen.querySelector(".mode-grid [data-mode]:not(:disabled)")?.focus({ preventScroll: true }));
+  announceModeScreenViewed();
+  requestAnimationFrame(() => {
+    $("#primaryOrbitButton")?.focus({ preventScroll: true });
+    if (showRecoveryAfterExit) showRecoveryKit();
+  });
+}
+
+async function beginPrimaryOrbit() {
+  if (state.startingRun) return;
+  const button = $("#primaryOrbitButton");
+  const action = primaryOrbitState().action;
+  button.disabled = true;
+  try {
+    if (action === "training") openFirstOrbitBriefing(button);
+    else await beginMode(action, { trigger: button });
+  } finally {
+    button.disabled = false;
+    syncProgressiveDisclosure();
+  }
+}
+
+function openModePicker() {
+  const picker = $("#modePicker");
+  if (!picker || picker.closest("[hidden]")) return;
+  picker.open = true;
+}
+
+async function beginPrimarySecondary() {
+  if (state.startingRun) return;
+  const button = $("#primaryOrbitSecondary");
+  const action = primaryOrbitState().secondaryAction;
+  if (action === "modes") return openModePicker();
+  if (action === "training") return openFirstOrbitBriefing(button);
+  if (action === "reach") {
+    rememberFirstOrbitSeen();
+    syncProgressiveDisclosure();
+    return beginMode("reach", { trigger: button });
+  }
+}
+
+function openHubMenu() {
+  const dialog = $("#hubMenuDialog");
+  if (!dialog.open) dialog.showModal();
+}
+
+function closeHubMenu() {
+  const dialog = $("#hubMenuDialog");
+  if (dialog?.open) dialog.close();
 }
 
 function pendingScoreBlocksExit() {
@@ -1860,7 +2982,20 @@ async function retryGame() {
     return;
   }
   const mode = state.game.mode;
-  const options = { seed: state.game.seed, target: ["reach", "challenge"].includes(mode) ? state.game.target : undefined, skipBriefing: true };
+  track("run_retried", { mode, target: state.game.target });
+  if (mode === "training") {
+    startFirstOrbit();
+    return;
+  }
+  if (mode === "second-orbit") {
+    startSecondOrbit();
+    return;
+  }
+  if (mode === "explore") {
+    startExplore();
+    return;
+  }
+  const options = { seed: state.game.seed, target: ["reach", "challenge"].includes(mode) ? state.game.target : undefined, context: state.journeyContext, skipBriefing: true };
   const resultActions = [els.resultPrimary, els.resultRetry, $("#resultLeaderboard"), els.resultShare, $("#resultReveal")];
   resultActions.forEach((control) => { control.disabled = true; });
   try { await beginMode(mode, options); }
@@ -1871,16 +3006,17 @@ async function retryGame() {
 
 function startTimer() {
   stopTimer();
-  els.timerValue.textContent = formatTime(state.remainingSeconds);
-  state.timerId = setInterval(() => {
-    if (state.finished || state.reveal.active || state.reveal.pending) return;
+  const tick = () => {
+    if (state.finished || state.pause.active || state.reveal.active || state.reveal.pending) return;
     state.remainingSeconds = state.run?.deadlineAt
       ? Math.max(0, Math.ceil((Date.parse(state.run.deadlineAt) - Date.now()) / 1000))
       : Math.max(0, Math.ceil((state.startedAt + Number(state.game?.timeLimit || 0) * 1000 - Date.now()) / 1000));
     els.timerValue.textContent = formatTime(Math.max(0, state.remainingSeconds));
     els.timerValue.classList.toggle("urgent", state.remainingSeconds <= 15);
     if (state.remainingSeconds <= 0) finishGame(false, "Time slipped beyond your orbit.");
-  }, 250);
+  };
+  tick();
+  if (!state.finished) state.timerId = setInterval(tick, 250);
 }
 
 function stopTimer() {
@@ -1888,18 +3024,124 @@ function stopTimer() {
   state.timerId = null;
 }
 
+function downloadJson(filename, value) {
+  const blob = new Blob([JSON.stringify(value, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 0);
+}
+
+function exportLocalDiagnostics() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(LOCAL_ANALYTICS_KEY) || "null") || { version: 1, counts: {} };
+    const recipeFeedback = JSON.parse(localStorage.getItem(LOCAL_RECIPE_FEEDBACK_KEY) || "null") || { version: 1, recipes: {} };
+    const expectedPairs = JSON.parse(localStorage.getItem(LOCAL_EXPECTED_PAIRS_KEY) || "null") || { version: 1, pairs: {} };
+    downloadJson(`constellore-local-events-${todayKey}.json`, {
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      counts: parsed.counts || {},
+      recipeFeedback: recipeFeedback.recipes || {},
+      expectedPairs: expectedPairs.pairs || {}
+    });
+  } catch { showToast("Local diagnostics could not be exported.", { scope: "global" }); }
+}
+
+function resetLocalDiagnostics() {
+  try {
+    localStorage.removeItem(LOCAL_ANALYTICS_KEY);
+    localStorage.removeItem(LOCAL_RECIPE_FEEDBACK_KEY);
+    localStorage.removeItem(LOCAL_EXPECTED_PAIRS_KEY);
+  } catch { /* Storage can be unavailable. */ }
+  showToast("Local diagnostics reset.", { scope: "global" });
+}
+
+function exportLocalPractice() {
+  const snapshot = structuredClone(profile);
+  delete snapshot.playerToken;
+  delete snapshot.cloudPending;
+  delete snapshot.cloudPendingFields;
+  downloadJson(`constellore-local-save-${todayKey}.json`, { version: 1, exportedAt: new Date().toISOString(), profile: snapshot });
+}
+
+function resetLocalPractice() {
+  if (!window.confirm("Reset every local discovery, badge, score, and setting on this device? This cannot be undone.")) return;
+  try {
+    localStorage.removeItem(PROFILE_KEY);
+    localStorage.removeItem(ACTIVE_RUN_KEY);
+    localStorage.removeItem(LOCAL_ANALYTICS_KEY);
+    localStorage.removeItem(LOCAL_RECIPE_FEEDBACK_KEY);
+    localStorage.removeItem(LOCAL_EXPECTED_PAIRS_KEY);
+    localStorage.removeItem(ANALYTICS_COHORT_KEY);
+    localStorage.removeItem(ANALYTICS_PREFERENCE_KEY);
+    localStorage.removeItem(PENDING_RECOVERY_KIT_KEY);
+  } catch { /* Reload still restores safe defaults when storage is blocked. */ }
+  location.reload();
+}
+
+async function exportPlayerData() {
+  if (!profile.playerId || !profile.playerToken) return showToast("Cloud identity is not ready yet.", { scope: "global" });
+  try {
+    const data = await fetchJson("/api/player/export", { headers: authHeaders() });
+    downloadJson(`constellore-player-data-${todayKey}.json`, data);
+  } catch (error) { showToast(error.message || "Player data could not be exported.", { scope: "global" }); }
+}
+
+async function deletePlayerData() {
+  if (!profile.playerId || !profile.playerToken) return;
+  if (!window.confirm("Permanently delete this free Constellore account, its progress, scores, and recovery access? This cannot be undone.")) return;
+  try {
+    await fetchJson("/api/player/profile", {
+      method: "DELETE",
+      headers: authHeaders({ "Content-Type": "application/json" }),
+      body: JSON.stringify({ confirm: "DELETE" })
+    });
+    try {
+      localStorage.removeItem(PROFILE_KEY);
+      localStorage.removeItem(ACTIVE_RUN_KEY);
+      localStorage.removeItem(PENDING_RECOVERY_KIT_KEY);
+    } catch { /* The reload below still clears in-memory ownership. */ }
+    location.reload();
+  } catch (error) { showToast(error.message || "This account could not be deleted.", { scope: "global" }); }
+}
+
 function updateStudyHud() {
   if (!state.game) return;
-  const training = state.game.mode === "training";
-  const study = !training && state.scoringDisabled;
+  const training = learningOrbitActive();
+  const exploring = state.game.mode === "explore";
+  const study = !training && !exploring && state.scoringDisabled;
+  const partial = !training && !exploring && !study && state.scoreMultiplier < 1;
+  const divisionId = exploring ? "practice" : training || study ? "study" : partial ? "open" : state.run?.ranked && !isStaticBeta ? "pure" : "practice";
+  const divisionLabels = { pure: "PURE", open: `OPEN · ${Math.round(state.scoreMultiplier * 100)}%`, practice: "PRACTICE", study: "STUDY · 0 SCORE" };
+  const divisionPill = $("#runDivisionPill");
+  divisionPill.className = `run-division-pill ${divisionId}`;
+  divisionPill.textContent = divisionLabels[divisionId];
+  divisionPill.title = divisionId === "pure"
+    ? "Verified run without score-changing Guidance"
+    : divisionId === "open"
+      ? "Score-changing Guidance is declared"
+      : divisionId === "study"
+        ? "No score, rewards, or leaderboard entry"
+        : "Unranked practice route";
   els.lawPill.classList.toggle("study-status", study);
+  els.lawPill.classList.toggle("partial-status", partial);
   els.universePill.hidden = training || study;
   if (training) {
     els.lawPill.hidden = false;
     els.lawPill.textContent = "0 SCORE · NO REWARDS";
+  } else if (exploring) {
+    els.lawPill.hidden = false;
+    els.lawPill.textContent = "PERSISTENT · UNRANKED";
   } else if (study) {
     els.lawPill.hidden = false;
     els.lawPill.textContent = "◇ STUDY · 0 SCORE";
+  } else if (partial) {
+    els.lawPill.hidden = false;
+    els.lawPill.textContent = `◇ OPEN · ${Math.round(state.scoreMultiplier * 100)}% SCORE`;
   } else {
     els.lawPill.hidden = !state.game.law;
     els.lawPill.textContent = state.game.law ? `${state.game.law.name}: ${state.game.law.description}` : "";
@@ -1914,7 +3156,7 @@ function updateHud() {
   if (state.game.timeLimit) els.timerValue.textContent = formatTime(state.remainingSeconds);
   if (els.revealPathButton) {
     const alreadyRevealed = state.reveal.revealed;
-    els.revealPathButton.disabled = !state.game || state.finished || state.startingRun || state.reveal.active || state.reveal.pending || alreadyRevealed;
+    els.revealPathButton.disabled = !state.game || !state.run || state.finished || state.startingRun || state.reveal.active || state.reveal.pending || alreadyRevealed;
     els.revealPathButton.classList.toggle("assisted", state.scoringDisabled);
     els.revealPathButton.querySelector("b").textContent = state.scoringDisabled && alreadyRevealed ? "0 SCORE" : "REVEAL";
   }
@@ -1922,12 +3164,66 @@ function updateHud() {
   updateWishButton();
 }
 
+function renderRouteStarStrip(container, model) {
+  if (!container) return;
+  const stars = [];
+  const origin = document.createElement("i");
+  origin.className = "origin-star";
+  origin.textContent = "✦";
+  origin.title = "Four starting elements";
+  stars.push(origin);
+  if (model.omitted) {
+    const omitted = document.createElement("i");
+    omitted.className = "omitted-stars";
+    omitted.textContent = `+${model.omitted}`;
+    omitted.title = `${model.omitted} earlier recipe${model.omitted === 1 ? "" : "s"}`;
+    stars.push(omitted);
+  }
+  for (const step of model.steps) {
+    const star = document.createElement("i");
+    star.className = `route-step-star${step.twisted ? " twisted" : ""}${step.revealed ? " revealed" : ""}`;
+    star.textContent = step.emoji;
+    star.title = `Star ${step.number}: ${step.word}`;
+    stars.push(star);
+  }
+  const target = document.createElement("i");
+  target.className = `target-star${model.targetReached ? " reached" : ""}`;
+  target.textContent = model.targetReached ? state.game?.emoji || "✦" : "?";
+  target.title = model.targetReached ? `${model.target} reached` : `${model.target} destination beacon`;
+  stars.push(target);
+  container.replaceChildren(...stars);
+}
+
 function updateMilestone(won = false) {
   if (!state.game) return;
-  const estimated = Math.max(5, (state.game.tier || 2) * 3 + 1);
-  const progress = won ? 100 : Math.min(92, state.history.length / estimated * 100);
-  els.milestoneBar.style.width = `${progress}%`;
-  els.milestoneText.textContent = state.history.length ? `${state.history.length} stars traced · ${state.newDiscoveries} new to your universe` : "Your constellation begins here";
+  if (state.mode === "explore") {
+    const combinations = state.history.length;
+    els.milestoneBar.style.width = `${Math.min(100, combinations * 8)}%`;
+    els.milestoneText.textContent = combinations
+      ? `${combinations} recipe${combinations === 1 ? "" : "s"} added to this sandbox`
+      : "Combine freely · every discovery will be here next time";
+    $("#routeStepCount").textContent = `${state.words.length} WORD${state.words.length === 1 ? "" : "S"}`;
+    const model = buildRouteProgress({ history: state.history, target: "", limit: window.innerWidth <= 700 ? 4 : 6 });
+    renderRouteStarStrip(els.routeProgressTrail, { ...model, target: "Explore", targetReached: false });
+    return;
+  }
+  const model = buildRouteProgress({ history: state.history, target: state.game.target, limit: window.innerWidth <= 700 ? 4 : 6 });
+  els.milestoneBar.style.width = `${won ? 100 : model.lineFill}%`;
+  els.milestoneText.textContent = model.targetReached || won
+    ? `${state.game.target} reached · constellation complete`
+    : model.combinations
+      ? `${model.combinations} recipe${model.combinations === 1 ? "" : "s"} traced toward ${state.game.target}`
+      : `Trace your path to ${state.game.target}`;
+  $("#routeStepCount").textContent = `${model.combinations} STAR${model.combinations === 1 ? "" : "S"}`;
+  renderRouteStarStrip(els.routeProgressTrail, model);
+}
+
+function renderResultRoute() {
+  if (!state.game) return;
+  const model = buildRouteProgress({ history: state.history, target: state.game.target, limit: 7 });
+  $("#resultRouteTitle").textContent = model.targetReached ? `Your route to ${state.game.target}` : `Your orbit toward ${state.game.target}`;
+  $("#resultRouteSummary").textContent = `${model.combinations} recipe${model.combinations === 1 ? "" : "s"} · ${state.newDiscoveries} new discover${state.newDiscoveries === 1 ? "y" : "ies"}`;
+  renderRouteStarStrip(els.resultRouteTrail, model);
 }
 
 function clearSenseGlow() {
@@ -1950,7 +3246,7 @@ function applySenseGlow(words) {
 
 function openPowerups() {
   if (!state.game || state.finished) return;
-  if (state.startingRun || state.reveal.active || state.reveal.pending || state.busyPairs.size) return showToast("Let the current constellation settle first.");
+  if (state.startingRun || state.pause.active || state.reveal.active || state.reveal.pending || state.busyPairs.size) return showToast("Let the current constellation settle first.");
   clearArmedPowerup({ render: false });
   stopTimer();
   els.quickTipMessage.classList.remove("error");
@@ -1959,21 +3255,25 @@ function openPowerups() {
     : "Route Signal finds your next reachable bridge and names at most one word you already discovered.";
   els.wordGiftMessage.classList.remove("error");
   els.wordGiftMessage.textContent = state.powerups.giftUsed
-    ? `${state.powerups.giftItem?.word || "Your bridge word"} was gifted. This orbit is permanently Study.`
+    ? `${state.powerups.giftItem?.word || "Your bridge word"} was gifted. This orbit keeps half score in Open.`
     : state.powerups.giftUnavailable
       ? "Every safe bridge for this target is already known, so no Word Gift is available."
-    : "Using this permanently changes the orbit to Study.";
+    : "Word Gift keeps half score in Open; only automatic Reveal becomes Study.";
   $("#senseMessage").classList.remove("error");
   $("#senseMessage").textContent = "";
+  const strongerHelp = document.querySelector(".guidance-stronger");
+  if (strongerHelp) strongerHelp.open = false;
   renderProfile();
   els.senseDialog.scrollTop = 0;
   els.senseDialog.showModal();
-  track("powerups_opened", { mode: state.mode });
+  track("sense_opened", { mode: state.mode, surface: "guidance" });
 }
 
 function openPowerupShop() {
   openPowerups();
   if (!els.senseDialog.open) return;
+  const strongerHelp = document.querySelector(".guidance-stronger");
+  if (strongerHelp) strongerHelp.open = true;
   requestAnimationFrame(() => {
     const buyButton = $("#buySense");
     const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
@@ -2038,6 +3338,7 @@ async function useWordGift() {
   const orbitGeneration = state.orbitGeneration;
   const priorAssist = state.assist;
   const priorScoringDisabled = state.scoringDisabled;
+  const priorScoreMultiplier = state.scoreMultiplier;
   const priorRun = { ...state.run };
   const label = els.useWordGift.querySelector("span");
   const original = label.textContent;
@@ -2045,11 +3346,13 @@ async function useWordGift() {
   label.textContent = "Summoning a bridge…";
   els.wordGiftMessage.classList.remove("error");
   els.wordGiftMessage.textContent = "The cosmos is selecting an undiscovered bridge without exposing its recipe…";
-  // Gift is a strong route intervention. Commit Study locally before the
-  // request so a lost success response can never preserve a ranked-looking run.
-  state.assist = ["reveal", "sense"].includes(priorAssist) ? priorAssist : "gift";
-  state.scoringDisabled = true;
-  state.run = { ...state.run, ranked: false, assisted: true, scoreEligible: false, leaderboardEligible: false };
+  // Commit the declared Open penalty before requesting the bridge, so a lost
+  // response can never leave a Pure-looking score.
+  const pendingPolicy = combineAssistance(priorAssist, "gift");
+  state.assist = pendingPolicy.id;
+  state.scoringDisabled = Boolean(priorScoringDisabled || pendingPolicy.study);
+  state.scoreMultiplier = state.scoringDisabled ? 0 : Math.min(priorScoreMultiplier, pendingPolicy.scoreMultiplier);
+  state.run = { ...state.run, assist: state.assist, assisted: true, division: state.scoringDisabled ? "study" : pendingPolicy.division, scoreEligible: !state.scoringDisabled && pendingPolicy.scoreEligible, scoreMultiplier: state.scoreMultiplier };
   updateHud();
   renderPowerups();
   scheduleRunSave();
@@ -2067,32 +3370,44 @@ async function useWordGift() {
     if (!existing) state.words.push(item);
     state.powerups.giftUsed = true;
     state.powerups.giftItem = item;
-    state.assist = result.assist || state.assist || "gift";
-    state.scoringDisabled = result.scoringDisabled !== false;
-    state.run = { ...state.run, ranked: false, assisted: true, scoreEligible: false, leaderboardEligible: false };
+    const confirmedPolicy = combineAssistance(pendingPolicy.id, result.assist || "gift");
+    state.assist = confirmedPolicy.id;
+    state.scoringDisabled = Boolean(state.scoringDisabled || confirmedPolicy.study || result.scoringDisabled === true || result.scoreEligible === false);
+    state.scoreMultiplier = state.scoringDisabled ? 0 : cappedScoreMultiplier(state.assist, state.scoreMultiplier, confirmedPolicy.scoreMultiplier, result.scoreMultiplier);
+    state.run = {
+      ...state.run,
+      assist: state.assist,
+      assisted: true,
+      division: state.scoringDisabled ? "study" : result.division || confirmedPolicy.division,
+      ranked: result.ranked ?? state.run.ranked,
+      scoreEligible: !state.scoringDisabled,
+      scoreMultiplier: state.scoreMultiplier,
+      leaderboardEligible: state.scoringDisabled ? false : result.leaderboardEligible ?? state.run.leaderboardEligible
+    };
     renderInventory();
     renderAtlas();
     updateHud();
     scheduleRunSave();
     if (els.senseDialog.open) els.senseDialog.close();
     placeFromTray(item);
-    showAlchemy(`✦ WORD GIFT · ${item.word} joined your Study orbit. Its recipe remains yours to discover.`);
     playFeedback("sense", { analytics: true });
-    track("word_gift_used", { mode: state.mode, word: item.word });
+    showAlchemy(`✦ WORD GIFT · ${item.word} joined your Open orbit · ${Math.round(state.scoreMultiplier * 100)}% score.`);
+    track("word_gift_used", { mode: state.mode, word: item.word, scoreMultiplier: state.scoreMultiplier });
   } catch (error) {
     if (state.run?.id !== runId || state.orbitGeneration !== orbitGeneration) return;
     const confirmedBeforeForfeit = Number(error.status) >= 400 && Number(error.status) < 500;
     if (confirmedBeforeForfeit) {
       state.assist = priorAssist;
       state.scoringDisabled = priorScoringDisabled;
+      state.scoreMultiplier = priorScoreMultiplier;
       state.run = priorRun;
       if (error.code === "gift_unavailable") state.powerups.giftUnavailable = true;
       els.wordGiftMessage.textContent = error.message;
     } else {
-      els.wordGiftMessage.textContent = "The reply was interrupted. Fair play stays protected; retry Word Gift to recover the same bridge.";
+      els.wordGiftMessage.textContent = "The reply was interrupted. The visible Open penalty remains; retry to recover the same bridge.";
     }
     els.wordGiftMessage.classList.add("error");
-    if (!els.senseDialog.open) showToast(error.code === "gift_unavailable" ? "No undiscovered bridge is available for this orbit." : "Word Gift could not confirm. This orbit remains Study; retry to recover it.");
+    if (!els.senseDialog.open) showToast(error.code === "gift_unavailable" ? "No undiscovered bridge is available for this orbit." : "Word Gift could not confirm. The Open penalty remains; retry to recover it.");
     updateHud();
     scheduleRunSave();
   } finally {
@@ -2121,18 +3436,21 @@ async function useConstellationSense() {
   const priorWallet = sanitizeSenseWallet(profile.senseWallet);
   const priorAssist = state.assist;
   const priorScoringDisabled = state.scoringDisabled;
+  const priorScoreMultiplier = state.scoreMultiplier;
   const priorRun = { ...state.run };
   state.powerups.busy = true;
   button.disabled = true;
   renderPowerups();
   label.textContent = "Listening to the cosmos…";
   $("#senseMessage").textContent = "";
-  // Sense forfeits fair-play rewards. Commit that locally before the request so
-  // a lost success response cannot leave an apparently score-eligible orbit.
+  // Commit the declared Open penalty before requesting the signal, so a lost
+  // success response can never leave a Pure-looking score.
   profile.senseWallet = preview.wallet;
-  state.assist = "sense";
-  state.scoringDisabled = true;
-  state.run = { ...state.run, ranked: false, assisted: true, scoreEligible: false, leaderboardEligible: false };
+  const pendingPolicy = combineAssistance(priorAssist, "sense");
+  state.assist = pendingPolicy.id;
+  state.scoringDisabled = Boolean(priorScoringDisabled || pendingPolicy.study);
+  state.scoreMultiplier = state.scoringDisabled ? 0 : Math.min(priorScoreMultiplier, pendingPolicy.scoreMultiplier);
+  state.run = { ...state.run, assist: state.assist, assisted: true, division: state.scoringDisabled ? "study" : pendingPolicy.division, scoreEligible: !state.scoringDisabled && pendingPolicy.scoreEligible, scoreMultiplier: state.scoreMultiplier };
   saveProfile({ cloud: false });
   updateHud();
   scheduleRunSave();
@@ -2143,9 +3461,22 @@ async function useConstellationSense() {
       body: JSON.stringify({ runId, runToken: priorRun.token })
     });
     if (state.run?.id !== runId || state.orbitGeneration !== orbitGeneration) return;
-    state.assist = result.assist || "sense";
-    state.scoringDisabled = result.scoringDisabled !== false;
-    state.run = { ...state.run, ranked: false, assisted: true, scoreEligible: false, leaderboardEligible: false };
+    const confirmedPolicy = combineAssistance(pendingPolicy.id, result.assist || "sense");
+    state.assist = confirmedPolicy.id;
+    state.scoringDisabled = Boolean(state.scoringDisabled || confirmedPolicy.study || result.scoringDisabled === true || result.scoreEligible === false);
+    state.scoreMultiplier = state.scoringDisabled
+      ? 0
+      : cappedScoreMultiplier(state.assist, state.scoreMultiplier, confirmedPolicy.scoreMultiplier, result.scoreMultiplier);
+    state.run = {
+      ...state.run,
+      assist: state.assist,
+      assisted: true,
+      division: state.scoringDisabled ? "study" : result.division || confirmedPolicy.division,
+      ranked: result.ranked ?? state.run.ranked,
+      scoreEligible: !state.scoringDisabled,
+      scoreMultiplier: state.scoreMultiplier,
+      leaderboardEligible: state.scoringDisabled ? false : result.leaderboardEligible ?? state.run.leaderboardEligible
+    };
     saveProfile({ cloud: false });
     updateHud();
     scheduleRunSave();
@@ -2153,9 +3484,9 @@ async function useConstellationSense() {
     applySenseGlow(candidates);
     els.senseDialog.close();
     const names = candidates.map((entry) => entry.word).filter(Boolean).join(", ");
-    showAlchemy(names ? `STAR COMPASS · ${names} resonate for ten seconds.` : "STAR COMPASS · Follow the brightest recent discoveries.");
+    showAlchemy(names ? `STAR COMPASS · ${names} resonate for ten seconds · ${Math.round(state.scoreMultiplier * 100)}% score.` : `STAR COMPASS · Follow the brightest recent discoveries · ${Math.round(state.scoreMultiplier * 100)}% score.`);
     playFeedback("sense", { analytics: true });
-    track("sense_used", { mode: state.mode, words: candidates.length });
+    track("sense_used", { mode: state.mode, words: candidates.length, scoreMultiplier: state.scoreMultiplier });
   } catch (error) {
     const confirmedBeforeForfeit = Number(error.status) >= 400 && Number(error.status) < 500;
     if (state.run?.id !== runId || state.orbitGeneration !== orbitGeneration) {
@@ -2172,16 +3503,17 @@ async function useConstellationSense() {
       profile.senseWallet = priorWallet;
       state.assist = priorAssist;
       state.scoringDisabled = priorScoringDisabled;
+      state.scoreMultiplier = priorScoreMultiplier;
       state.run = priorRun;
       saveProfile({ cloud: false });
       updateHud();
       scheduleRunSave();
       $("#senseMessage").textContent = error.message;
     } else {
-      $("#senseMessage").textContent = "The signal response was interrupted. To protect fair play, this orbit remains assisted and the Compass charge stays spent.";
+      $("#senseMessage").textContent = "The signal response was interrupted. The visible Open penalty remains and the Compass charge stays spent.";
       scheduleRunSave();
     }
-    if (!els.senseDialog.open) showToast(confirmedBeforeForfeit ? error.message : "Star Compass could not confirm. This orbit remains Study.");
+    if (!els.senseDialog.open) showToast(confirmedBeforeForfeit ? error.message : "Star Compass could not confirm. The Open penalty remains.");
   } finally {
     if (state.run?.id === runId && state.orbitGeneration === orbitGeneration) {
       state.powerups.busy = false;
@@ -2213,11 +3545,16 @@ function buySenseCharge() {
 }
 
 function ghostStepEstimate() {
-  return Math.max(5, Number(state.game?.tier || 2) * 3 + 1);
+  const candidates = [
+    state.game?.routeLength,
+    state.game?.minimumMoves,
+    state.game?.verifiedRouteLength
+  ];
+  const actual = candidates.map(Number).find((value) => Number.isFinite(value) && value > 0);
+  return actual ? clamp(Math.round(actual), 1, 100) : Math.max(5, Number(state.game?.tier || 2) * 3 + 1);
 }
 
-function ghostTimeline({ elapsedMs, moves }) {
-  const steps = ghostStepEstimate();
+function ghostTimeline({ elapsedMs, moves, steps = ghostStepEstimate() }) {
   return Array.from({ length: steps + 1 }, (_, index) => {
     const progress = index / steps;
     return {
@@ -2227,6 +3564,21 @@ function ghostTimeline({ elapsedMs, moves }) {
       milestone: index
     };
   });
+}
+
+function ghostLeaderboardScope(mode = state.mode) {
+  return mode === "daily" ? "daily" : mode === "weekly" ? "weekly" : "sprint";
+}
+
+function queuedCommunityRival() {
+  const queued = state.ghost.nextRival;
+  state.ghost.nextRival = null;
+  if (!queued || !state.game) return null;
+  const targetMatches = String(queued.target || "").toLocaleLowerCase() === String(state.game.target || "").toLocaleLowerCase();
+  const scopeMatches = queued.scope === ghostLeaderboardScope();
+  const divisionMatches = ["pure", "open"].includes(queued.division);
+  if (!targetMatches || !scopeMatches || !divisionMatches) return null;
+  return queued;
 }
 
 function hideGhostPreview() {
@@ -2242,8 +3594,12 @@ function hideGhostPreview() {
   els.ghostPreviewSteps.replaceChildren();
 }
 
+function competitiveGhostEligible() {
+  return Boolean(profile.wins >= 3 && state.game && !["training", "second-orbit", "explore", "reach"].includes(state.mode) && !state.scoringDisabled);
+}
+
 function renderGhostPreview(projectedProgress, estimated) {
-  if (!state.game || !state.ghost.model || !profile.rivalGhostEnabled || state.game.mode === "training" || state.finished) return hideGhostPreview();
+  if (!competitiveGhostEligible() || !state.ghost.model || !profile.rivalGhostEnabled || state.finished) return hideGhostPreview();
   const continuousProgress = clamp(Number(projectedProgress) || 0, 0, 1);
   const continuousSteps = continuousProgress * estimated;
   const completedSteps = Math.min(estimated, Math.floor(continuousSteps + Number.EPSILON));
@@ -2283,7 +3639,7 @@ function renderGhostPreview(projectedProgress, estimated) {
 
 async function startRivalGhost() {
   stopRivalGhost();
-  if (!state.game || state.finished) return;
+  if (!competitiveGhostEligible() || state.finished) return;
   if (!profile.rivalGhostEnabled) {
     hideGhostPreview();
     els.rivalGhost.hidden = false;
@@ -2302,11 +3658,14 @@ async function startRivalGhost() {
   els.ghostCallsign.textContent = "RIVAL GHOST";
   els.ghostStatus.textContent = "Mapping an asynchronous pace…";
   els.ghostPace.textContent = "—";
-  let rival = null;
+  let rival = queuedCommunityRival();
   let source = "benchmark";
-  if (!isStaticBeta) {
+  if (rival) source = `nearby-${rival.division}`;
+  if (!rival && !isStaticBeta) {
     try {
-      const board = await fetchJson("/api/leaderboard?scope=all&division=pure&limit=100", { headers: authHeaders(), signal: requestController.signal });
+      const scope = ghostLeaderboardScope();
+      const division = state.assist === "none" ? "pure" : "open";
+      const board = await fetchJson(`/api/leaderboard?scope=${encodeURIComponent(scope)}&division=${encodeURIComponent(division)}&limit=100`, { headers: authHeaders(), signal: requestController.signal });
       rival = (board.entries || []).find((entry) => entry.target?.toLowerCase() === state.game.target.toLowerCase() && entry.callsign !== profile.callsign)
         || null;
       if (rival) source = "verified";
@@ -2316,8 +3675,10 @@ async function startRivalGhost() {
   if (generation !== state.orbitGeneration || requestGeneration !== state.ghost.requestGeneration || !profile.rivalGhostEnabled || !state.game || state.finished) return;
   const fallbackTime = Math.max(42_000, Math.min(150_000, (48 + Number(state.game.tier || 2) * 13) * 1000));
   const elapsedMs = Math.max(10_000, Number(rival?.elapsedMs) || fallbackTime);
-  const moves = Math.max(4, Number(rival?.moves) || ghostStepEstimate() + 2);
-  state.ghost.model = buildGhost(ghostTimeline({ elapsedMs, moves }), { label: rival?.callsign || "Cosmos Scout" });
+  const estimatedSteps = ghostStepEstimate();
+  const moves = Math.max(estimatedSteps, Number(rival?.moves) || estimatedSteps + 2);
+  state.ghost.estimatedSteps = estimatedSteps;
+  state.ghost.model = buildGhost(ghostTimeline({ elapsedMs, moves, steps: estimatedSteps }), { label: rival?.callsign || "Cosmos Scout" });
   state.ghost.lastRelation = "";
   state.ghost.started = true;
   renderRivalGhost();
@@ -2327,7 +3688,7 @@ async function startRivalGhost() {
 }
 
 function renderRivalGhost() {
-  if (!state.game || !state.ghost.model || state.finished) return;
+  if (!competitiveGhostEligible() || !state.ghost.model || state.finished) return;
   els.rivalGhost.hidden = false;
   els.rivalGhost.setAttribute("aria-pressed", String(profile.rivalGhostEnabled));
   els.rivalGhost.setAttribute("aria-label", profile.rivalGhostEnabled ? "Hide Rival Ghost pace" : "Show Rival Ghost pace");
@@ -2338,7 +3699,7 @@ function renderRivalGhost() {
     els.ghostPace.textContent = "OFF";
     return;
   }
-  const estimated = ghostStepEstimate();
+  const estimated = state.ghost.estimatedSteps || ghostStepEstimate();
   const playerProgress = Math.min(.98, state.history.length / estimated);
   const snapshot = ghostSnapshot(state.ghost.model, {
     elapsedMs: Math.max(0, Date.now() - state.startedAt),
@@ -2373,12 +3734,14 @@ function stopRivalGhost({ completed } = {}) {
   }
   state.ghost.started = false;
   state.ghost.model = null;
+  state.ghost.estimatedSteps = 0;
   state.ghost.lastRelation = "";
   els.rivalGhost.hidden = true;
   hideGhostPreview();
 }
 
 function toggleRivalGhost() {
+  if (!competitiveGhostEligible()) return;
   profile.rivalGhostEnabled = !profile.rivalGhostEnabled;
   saveProfile({ fields: ["settings"] });
   if (profile.rivalGhostEnabled) void startRivalGhost();
@@ -2413,6 +3776,9 @@ function touchInventory(itemOrWord, { focus = false } = {}) {
 }
 
 function renderInventory() {
+  const focusedWord = els.wordList.contains(document.activeElement)
+    ? document.activeElement.closest?.(".inventory-word")?.dataset.word || ""
+    : "";
   const visible = orderInventory(state.words, {
     starters: state.game?.starters || ["Earth", "Water", "Fire", "Air"],
     recent: recentInventoryWords(),
@@ -2425,7 +3791,7 @@ function renderInventory() {
     button.className = `inventory-word${["wish", "market"].includes(item.source) ? " wish" : ""}${item.source === "gift" ? " gift" : ""}${item.source === "twist" ? " twist" : ""}${item.ghost ? " reveal-ghost" : ""}${senseWordActive(item) ? " sense-hot" : ""}${firstOrbitWordActive(item) ? " tutorial-hot" : ""}`;
     button.dataset.word = inventoryKey(item);
     const revealLocked = state.reveal.active || state.reveal.pending;
-    const unavailable = state.finished || revealLocked || item.ghost;
+    const unavailable = state.finished || state.pause.active || revealLocked || item.ghost;
     button.draggable = false;
     button.disabled = unavailable;
     button.setAttribute("aria-label", item.ghost ? `${item.word}, temporary revealed word. Not saved or playable.` : unavailable ? `${item.word}. Unavailable while this orbit is locked.` : `Add ${item.word}${item.source === "gift" ? ", Word Gift bridge" : ""} to the cosmos. Drag onto a board word to combine immediately.`);
@@ -2458,6 +3824,10 @@ function renderInventory() {
   els.inventorySearchStatus.textContent = state.inventoryQuery
     ? `${visible.length} of ${state.words.length} discovered words shown.`
     : `${state.words.length} discovered words.`;
+  if (focusedWord) {
+    const restoredFocus = [...els.wordList.querySelectorAll(".inventory-word")].find((button) => button.dataset.word === focusedWord);
+    restoredFocus?.focus({ preventScroll: true });
+  }
   const focusKey = state.inventoryFocusWord;
   if (focusKey) {
     const focusElement = [...els.wordList.querySelectorAll(".inventory-word")].find((button) => button.dataset.word === focusKey);
@@ -2472,7 +3842,19 @@ function renderInventory() {
 }
 
 function renderBoard(newId = null) {
-  els.boardItems.replaceChildren(...state.nodes.map((node) => createBoardNode(node, node.id === newId)));
+  const focusedId = els.boardItems.contains(document.activeElement) ? document.activeElement.closest?.(".board-word")?.dataset.id : "";
+  const existing = new Map([...els.boardItems.querySelectorAll(".board-word")].map((element) => [element.dataset.id, element]));
+  const ordered = state.nodes.map((node) => {
+    const key = String(node.id);
+    let element = existing.get(key);
+    if (!element || element.dataset.word !== inventoryKey(node.item)) element = createBoardNode(node, node.id === newId);
+    else syncBoardNodeElement(element, node, node.id === newId);
+    existing.delete(key);
+    return element;
+  });
+  existing.forEach((element) => element.remove());
+  els.boardItems.append(...ordered);
+  boardGeometryVersion += 1;
   els.boardGuide.classList.toggle("hidden", state.nodes.length > 0);
   els.boardGuide.setAttribute("aria-hidden", String(state.nodes.length > 0));
   syncCtrlHoverState(ctrlHover.snapshot());
@@ -2480,6 +3862,7 @@ function renderBoard(newId = null) {
   syncSelectedNodeState();
   updateBoardTools();
   syncFirstOrbitGuide();
+  if (focusedId) requestAnimationFrame(() => els.boardItems.querySelector(`[data-id="${CSS.escape(focusedId)}"]`)?.focus({ preventScroll: true }));
 }
 
 function syncSelectedNodeState() {
@@ -2514,7 +3897,7 @@ function dismissClearUndo() {
 }
 
 function updateBoardTools() {
-  const locked = !state.game || state.finished || state.startingRun || state.reveal.active || state.reveal.pending || state.busyPairs.size > 0;
+  const locked = !state.game || state.finished || state.startingRun || state.pause.active || state.reveal.active || state.reveal.pending || state.busyPairs.size > 0;
   els.tidyBoard.disabled = locked || state.nodes.length < 2;
   els.resetBoard.disabled = locked || state.nodes.length === 0;
   els.senseButton.disabled = locked;
@@ -2571,7 +3954,7 @@ function rectanglesOverlap(leftValue, rightValue, gap = 0) {
 }
 
 function visibleBoardOverlayRectangles(boardRect = els.board.getBoundingClientRect()) {
-  const candidates = [els.rivalGhost, els.ghostPreview, document.querySelector(".board-tools"), document.querySelector(".run-milestone"), els.tapChainStatus, els.boardUndo, els.recipeFeedback, els.alchemyNote, els.firstOrbitGuide];
+  const candidates = [els.rivalGhost, els.ghostPreview, document.querySelector(".board-tools"), document.querySelector(".run-milestone"), els.tapChainStatus, els.boardUndo, els.recipeFeedback, els.expectedPairFeedback, els.alchemyNote, els.firstOrbitGuide];
   return candidates.map((element) => {
     if (!element || element.hidden) return null;
     if (element === els.alchemyNote && !element.classList.contains("show")) return null;
@@ -2645,6 +4028,7 @@ function tidyOrbit(options = {}) {
     element.style.zIndex = node.z;
     setTimeout(() => element.classList.remove("tidying"), 280);
   }
+  boardGeometryVersion += 1;
   scheduleRunSave();
   if (!options?.silent) {
     showAlchemy("Orbit tidied · score unchanged.");
@@ -2676,12 +4060,13 @@ function constrainBoardNodes() {
     element.style.setProperty("--x", `${node.x}px`);
     element.style.setProperty("--y", `${node.y}px`);
   }
+  boardGeometryVersion += 1;
   if (boardNodesOverlap()) tidyOrbit({ silent: true });
   scheduleRunSave();
 }
 
 function ctrlHoverAvailable() {
-  return Boolean(state.game && !els.gameScreen.hidden && !state.finished && !state.startingRun && !state.reveal.active && !state.reveal.pending);
+  return Boolean(state.game && !els.gameScreen.hidden && !state.finished && !state.startingRun && !state.pause.active && !state.reveal.active && !state.reveal.pending);
 }
 
 function shiftBoardAvailable() {
@@ -2737,6 +4122,7 @@ function removeShiftBoardNode(node) {
   if (state.selectedNodeId === current.id) state.selectedNodeId = null;
   state.nodes = state.nodes.filter((entry) => entry.id !== current.id);
   els.boardItems.querySelector(`[data-id="${current.id}"]`)?.remove();
+  boardGeometryVersion += 1;
   els.boardGuide.classList.toggle("hidden", state.nodes.length > 0);
   els.boardGuide.setAttribute("aria-hidden", String(state.nodes.length > 0));
   syncSelectedNodeState();
@@ -2770,6 +4156,7 @@ function duplicateShiftBoardNode(source, point, { copyNumber = 1, size } = {}) {
   };
   state.nodes.push(copy);
   els.boardItems.append(createBoardNode(copy, true));
+  boardGeometryVersion += 1;
   els.boardGuide.classList.add("hidden");
   els.boardGuide.setAttribute("aria-hidden", "true");
   updateBoardTools();
@@ -2852,16 +4239,15 @@ function releaseCtrlHover(event) {
   if (changed && els.alchemyNote.textContent.startsWith("CTRL FUSION")) els.alchemyNote.classList.remove("show");
 }
 
-function createBoardNode(node, isNew) {
-  const button = document.createElement("button");
-  button.type = "button";
+function syncBoardNodeElement(button, node, isNew = false) {
   button.className = `board-word${isNew ? " appear" : ""}${isNew && node.shiftStamped ? " shift-stamped" : ""}${["wish", "market"].includes(node.item.source) ? " wish" : ""}${node.item.source === "gift" ? " gift" : ""}${node.item.source === "twist" || node.cosmicTwist ? " cosmic-twist" : ""}${node.item.ghost ? " reveal-ghost" : ""}${node.revealRole ? ` reveal-${node.revealRole}` : ""}${state.selectedNodeId === node.id ? " keyboard-selected" : ""}${senseWordActive(node.item) ? " sense-hot" : ""}${firstOrbitWordActive(node.item) ? " tutorial-hot" : ""}`;
   button.dataset.id = node.id;
+  button.dataset.word = inventoryKey(node.item);
   button.style.setProperty("--x", `${node.x}px`);
   button.style.setProperty("--y", `${node.y}px`);
   button.style.zIndex = node.z;
   const revealedNode = Boolean(node.revealRole || node.item.ghost);
-  const unavailable = state.finished || state.reveal.active || state.reveal.pending || revealedNode;
+  const unavailable = state.finished || state.pause.active || state.reveal.active || state.reveal.pending || revealedNode;
   button.disabled = unavailable;
   button.setAttribute("aria-label", revealedNode
     ? `${node.item.word}, revealed constellation word. Not playable.`
@@ -2869,7 +4255,18 @@ function createBoardNode(node, isNew) {
       ? `${node.item.word}. Unavailable while this orbit is locked.`
       : `${node.item.word}${node.item.source === "gift" ? ", Word Gift bridge" : node.item.source === "twist" || node.cosmicTwist ? ", Cosmic Twist discovery" : ""}. Drag onto another word to combine. Hold Shift while hovering to remove; grab it first and then hold Shift while dragging to copy.`);
   button.setAttribute("aria-pressed", String(state.selectedNodeId === node.id));
-  button.innerHTML = `<span class="emoji">${escapeHtml(node.item.emoji)}</span><span>${escapeHtml(node.item.word)}</span>`;
+  const renderKey = `${node.item.emoji}␟${node.item.word}`;
+  if (button.dataset.renderedWord !== renderKey) {
+    button.innerHTML = `<span class="emoji">${escapeHtml(node.item.emoji)}</span><span>${escapeHtml(node.item.word)}</span>`;
+    button.dataset.renderedWord = renderKey;
+  }
+  return button;
+}
+
+function createBoardNode(node, isNew) {
+  const button = document.createElement("button");
+  button.type = "button";
+  syncBoardNodeElement(button, node, isNew);
   button.addEventListener("pointerdown", (event) => startNodeDrag(event, node, button));
   button.addEventListener("pointerenter", (event) => {
     if (!handleShiftBoardEnter(node, event)) handleCtrlHoverEnter(node, event);
@@ -2884,7 +4281,7 @@ function createBoardNode(node, isNew) {
 }
 
 async function selectNodeForTap(node) {
-  if (state.finished || state.reveal.active || state.reveal.pending || ctrlHover.snapshot().active || shiftBoard.snapshot().held) return;
+  if (state.finished || state.pause.active || state.reveal.active || state.reveal.pending || ctrlHover.snapshot().active || shiftBoard.snapshot().held) return;
   resetRecipeFeedback();
   if (!state.selectedNodeId) {
     state.selectedNodeId = node.id;
@@ -2909,6 +4306,7 @@ async function selectNodeForTap(node) {
 }
 
 async function activateTrayItem(item) {
+  if (state.pause.active) return;
   resetRecipeFeedback();
   const selected = state.nodes.find((node) => node.id === state.selectedNodeId);
   if (!selected) {
@@ -2931,9 +4329,9 @@ async function activateTrayItem(item) {
 }
 
 function placeFromTray(item, point, placement = {}) {
-  if (state.finished || state.reveal.active || state.reveal.pending || item.ghost) return;
+  if (state.finished || state.pause.active || state.reveal.active || state.reveal.pending || item.ghost) return;
   const rect = els.board.getBoundingClientRect();
-  const guideRect = firstOrbitActive() && !els.firstOrbitGuide.hidden ? els.firstOrbitGuide.getBoundingClientRect() : null;
+  const guideRect = learningOrbitActive() && !els.firstOrbitGuide.hidden ? els.firstOrbitGuide.getBoundingClientRect() : null;
   const safeTop = guideRect ? clamp(guideRect.bottom - rect.top + 9, 7, Math.max(7, rect.height - 55)) : 7;
   const spread = state.nodes.length % 7;
   const boardPoint = Number.isFinite(Number(placement?.boardPoint?.x)) && Number.isFinite(Number(placement?.boardPoint?.y))
@@ -3005,13 +4403,13 @@ function cancelActivePointerGestures() {
   shiftBoard.reset();
 }
 
-function pointInsideBoard(point) {
-  const rect = els.board.getBoundingClientRect();
+function pointInsideBoard(point, cachedRect = null) {
+  const rect = cachedRect || els.board.getBoundingClientRect();
   return point.x >= rect.left && point.x <= rect.right && point.y >= rect.top && point.y <= rect.bottom;
 }
 
-function trayShiftBoardPoint(point, size) {
-  const rect = els.board.getBoundingClientRect();
+function trayShiftBoardPoint(point, size, cachedRect = null) {
+  const rect = cachedRect || els.board.getBoundingClientRect();
   const width = Math.max(1, Number(size?.width) || 1);
   const height = Math.max(1, Number(size?.height) || 1);
   return {
@@ -3046,14 +4444,26 @@ function eligibleDropCandidates(excludeId = null) {
   });
 }
 
+function captureDropGeometry(excludeId = null) {
+  return {
+    version: boardGeometryVersion,
+    boardRect: els.board.getBoundingClientRect(),
+    candidates: eligibleDropCandidates(excludeId)
+  };
+}
+
+function refreshDropGeometry(geometry, excludeId = null) {
+  return geometry?.version === boardGeometryVersion ? geometry : captureDropGeometry(excludeId);
+}
+
 function rectEdgeDistance(point, rect) {
   return Math.hypot(Math.max(rect.left - point.x, 0, point.x - rect.right), Math.max(rect.top - point.y, 0, point.y - rect.bottom));
 }
 
-function resolveDropCandidate({ point, sourceElement = null, excludeId = null, pointerType = "mouse" }) {
-  const candidates = eligibleDropCandidates(excludeId);
+function resolveDropCandidate({ point, sourceElement = null, sourceRect: cachedSourceRect = null, excludeId = null, pointerType = "mouse", geometry = null }) {
+  const candidates = geometry?.candidates || eligibleDropCandidates(excludeId);
   if (!candidates.length) return { selected: null, ambiguous: false, contenders: [] };
-  const sourceRect = sourceElement?.getBoundingClientRect();
+  const sourceRect = cachedSourceRect || sourceElement?.getBoundingClientRect();
   const anchor = sourceRect
     ? { x: sourceRect.left + sourceRect.width / 2, y: sourceRect.top + sourceRect.height / 2 }
     : { x: point.x, y: point.y };
@@ -3088,7 +4498,7 @@ function resolveDropCandidate({ point, sourceElement = null, excludeId = null, p
   return { selected: null, ambiguous: magnetic.ambiguous, contenders };
 }
 
-function setDropTarget(resolution, sourceItem) {
+function setDropTarget(resolution, sourceItem, geometry = null) {
   clearDropTargets();
   if (!resolution) return;
   for (const contender of resolution.contenders || []) {
@@ -3097,8 +4507,10 @@ function setDropTarget(resolution, sourceItem) {
   if (!resolution.selected && !resolution.ambiguous) return;
   const target = resolution.selected;
   const targetElement = target && els.boardItems.querySelector(`[data-id="${target.id}"]`);
-  const boardRect = els.board.getBoundingClientRect();
-  const targetRect = targetElement?.getBoundingClientRect();
+  const boardRect = geometry?.boardRect || els.board.getBoundingClientRect();
+  const targetRect = target
+    ? geometry?.candidates?.find(({ node }) => String(node.id) === String(target.id))?.rect || targetElement?.getBoundingClientRect()
+    : null;
   els.dropPairPreview.textContent = resolution.ambiguous
     ? "Move closer to choose a word"
     : `${sourceItem?.word || "Word"} + ${target.item.word} → ?`;
@@ -3109,8 +4521,9 @@ function setDropTarget(resolution, sourceItem) {
 }
 
 function dropTrayItem(item, point, pointerType = "mouse", placement = {}) {
-  if (state.finished || state.reveal.active || state.reveal.pending || item.ghost || !pointInsideBoard(point)) return;
-  const resolution = resolveDropCandidate({ point, pointerType });
+  const geometry = refreshDropGeometry(placement.geometry);
+  if (state.finished || state.pause.active || state.reveal.active || state.reveal.pending || item.ghost || !pointInsideBoard(point, geometry.boardRect)) return;
+  const resolution = resolveDropCandidate({ point, pointerType, geometry });
   if (resolution.ambiguous) {
     showAlchemy("Move closer to choose a word.", true);
     return;
@@ -3123,7 +4536,7 @@ function dropTrayItem(item, point, pointerType = "mouse", placement = {}) {
 }
 
 function startTrayPointerDrag(event, item, element, suppressClick) {
-  if (event.button !== 0 || (!event.isPrimary && event.pointerType !== "mouse") || state.finished || state.reveal.active || state.reveal.pending || item.ghost) return;
+  if (event.button !== 0 || (!event.isPrimary && event.pointerType !== "mouse") || state.finished || state.pause.active || state.reveal.active || state.reveal.pending || item.ghost) return;
   resetRecipeFeedback();
   cancelActiveTrayDrag();
   let shiftArmedByPointer = false;
@@ -3142,17 +4555,19 @@ function startTrayPointerDrag(event, item, element, suppressClick) {
   let ghost = null;
   let shiftDragStarted = false;
   let dragSize = null;
+  let dropGeometry = null;
   let shiftPointerInsideBoard = false;
   let cleaned = false;
 
   const updateShiftTrail = (point) => {
     if (!shiftDragStarted || !activeTrayShiftSource) return;
+    dropGeometry = refreshDropGeometry(dropGeometry);
     const inside = pointInsideBoard(point);
     if (!inside) {
       shiftPointerInsideBoard = false;
       return;
     }
-    const boardPoint = trayShiftBoardPoint(point, dragSize);
+    const boardPoint = trayShiftBoardPoint(point, dragSize, dropGeometry.boardRect);
     activeTrayShiftSource.x = boardPoint.x;
     activeTrayShiftSource.y = boardPoint.y;
     if (!shiftPointerInsideBoard) {
@@ -3194,7 +4609,8 @@ function startTrayPointerDrag(event, item, element, suppressClick) {
       ghost.style.top = `${lastPoint.y}px`;
       document.body.append(ghost);
       dragSize = measureBoardWord(item);
-      const origin = trayShiftBoardPoint(lastPoint, dragSize);
+      dropGeometry = captureDropGeometry();
+      const origin = trayShiftBoardPoint(lastPoint, dragSize, dropGeometry.boardRect);
       activeTrayShiftSource = {
         id: `tray-shift-${state.orbitGeneration}-${pointerId}`,
         item,
@@ -3211,7 +4627,8 @@ function startTrayPointerDrag(event, item, element, suppressClick) {
     ghost.style.left = `${lastPoint.x}px`;
     ghost.style.top = `${lastPoint.y}px`;
     updateShiftTrail(lastPoint);
-    setDropTarget(resolveDropCandidate({ point: lastPoint, pointerType }), item);
+    dropGeometry = refreshDropGeometry(dropGeometry);
+    setDropTarget(resolveDropCandidate({ point: lastPoint, pointerType, geometry: dropGeometry }), item, dropGeometry);
   };
 
   const cleanup = () => {
@@ -3233,9 +4650,12 @@ function startTrayPointerDrag(event, item, element, suppressClick) {
     if (upEvent.pointerId !== pointerId) return;
     lastPoint = { x: upEvent.clientX, y: upEvent.clientY };
     if (moved) suppressClick();
-    const shouldDrop = dragging && pointInsideBoard(lastPoint);
+    dropGeometry = dragging ? refreshDropGeometry(dropGeometry) : dropGeometry;
+    const shouldDrop = dragging && pointInsideBoard(lastPoint, dropGeometry?.boardRect);
     if (dragging) updateShiftTrail(lastPoint);
+    dropGeometry = dragging ? refreshDropGeometry(dropGeometry) : dropGeometry;
     const placement = shouldDrop && dragSize ? { boardPoint: trayShiftBoardPoint(lastPoint, dragSize), size: dragSize } : {};
+    if (shouldDrop) placement.geometry = dropGeometry;
     cleanup();
     if (shouldDrop) dropTrayItem(item, lastPoint, pointerType, placement);
   };
@@ -3268,7 +4688,15 @@ function addNode(item, x, y, options = {}) {
     ...nodeOptions
   };
   state.nodes.push(node);
-  renderBoard(node.id);
+  els.boardItems.append(createBoardNode(node, true));
+  boardGeometryVersion += 1;
+  els.boardGuide.classList.add("hidden");
+  els.boardGuide.setAttribute("aria-hidden", "true");
+  syncCtrlHoverState(ctrlHover.snapshot());
+  syncShiftBoardState(shiftBoard.snapshot());
+  syncSelectedNodeState();
+  updateBoardTools();
+  syncFirstOrbitGuide();
   scheduleRunSave();
   return node;
 }
@@ -3278,7 +4706,7 @@ function startNodeDrag(event, node, element) {
     event.preventDefault();
     return;
   }
-  if (event.button !== 0 || (!event.isPrimary && event.pointerType !== "mouse") || state.finished || state.reveal.active || state.reveal.pending || node.revealRole || node.item.ghost || state.busyPairs.has(node.id)) return;
+  if (event.button !== 0 || (!event.isPrimary && event.pointerType !== "mouse") || state.finished || state.pause.active || state.reveal.active || state.reveal.pending || node.revealRole || node.item.ghost || state.busyPairs.has(node.id)) return;
   resetRecipeFeedback();
   event.preventDefault();
   cancelActiveBoardDrag();
@@ -3288,6 +4716,7 @@ function startNodeDrag(event, node, element) {
   const nodeRect = element.getBoundingClientRect();
   const nodeWidth = nodeRect.width;
   const nodeHeight = nodeRect.height;
+  let dropGeometry = captureDropGeometry(node.id);
   const startX = event.clientX;
   const startY = event.clientY;
   const offsetX = event.clientX - nodeRect.left;
@@ -3326,7 +4755,8 @@ function startNodeDrag(event, node, element) {
     if (highlight && !highlightFrame) {
       highlightFrame = requestAnimationFrame(() => {
         highlightFrame = 0;
-        markDropTarget(node, element, pointerType);
+        dropGeometry = refreshDropGeometry(dropGeometry, node.id);
+        markDropTarget(node, element, pointerType, dropGeometry, { width: nodeWidth, height: nodeHeight });
       });
     }
   };
@@ -3347,7 +4777,16 @@ function startNodeDrag(event, node, element) {
   const end = (upEvent) => {
     if (upEvent.pointerId !== pointerId) return;
     updatePosition(upEvent, false);
-    const resolution = moved ? resolveDropCandidate({ point: { x: upEvent.clientX, y: upEvent.clientY }, sourceElement: element, excludeId: node.id, pointerType }) : null;
+    dropGeometry = refreshDropGeometry(dropGeometry, node.id);
+    const sourceRect = {
+      left: boardRect.left + node.x,
+      top: boardRect.top + node.y,
+      right: boardRect.left + node.x + nodeWidth,
+      bottom: boardRect.top + node.y + nodeHeight,
+      width: nodeWidth,
+      height: nodeHeight
+    };
+    const resolution = moved ? resolveDropCandidate({ point: { x: upEvent.clientX, y: upEvent.clientY }, sourceElement: element, sourceRect, excludeId: node.id, pointerType, geometry: dropGeometry }) : null;
     cleanup();
     if (resolution?.selected) void combineNodes(node, resolution.selected);
     else if (resolution?.ambiguous) showAlchemy("Move closer to choose a word.", true);
@@ -3365,14 +4804,25 @@ function startNodeDrag(event, node, element) {
   element.addEventListener("lostpointercapture", cancel);
 }
 
-function markDropTarget(source, element, pointerType) {
-  const rect = element.getBoundingClientRect();
+function markDropTarget(source, element, pointerType, geometry = null, sourceSize = null) {
+  const boardRect = geometry?.boardRect || els.board.getBoundingClientRect();
+  const width = Number(sourceSize?.width) || element.offsetWidth;
+  const height = Number(sourceSize?.height) || element.offsetHeight;
+  const rect = {
+    left: boardRect.left + source.x,
+    top: boardRect.top + source.y,
+    right: boardRect.left + source.x + width,
+    bottom: boardRect.top + source.y + height,
+    width,
+    height
+  };
   setDropTarget(resolveDropCandidate({
     point: { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 },
-    sourceElement: element,
+    sourceRect: rect,
     excludeId: source.id,
-    pointerType
-  }), source.item);
+    pointerType,
+    geometry
+  }), source.item, geometry);
 }
 
 function clearDropTargets() {
@@ -3381,9 +4831,33 @@ function clearDropTargets() {
   els.dropPairPreview.classList.remove("ambiguous");
 }
 
+function insightCategoryFor(value) {
+  const category = String(value || "").toLowerCase();
+  return ["force", "nature", "life", "structure"].includes(category) ? category : "";
+}
+
+function categoryForInsightWord(word) {
+  const active = state.words.find((item) => inventoryKey(item.word) === inventoryKey(word));
+  if (active) return insightCategoryFor(active.category);
+  if (starterCategory[word]) return insightCategoryFor(starterCategory[word]);
+  const recipe = MASTERY_CATALOG.find((item) => inventoryKey(item.word) === inventoryKey(word));
+  return insightCategoryFor(recipe?.category);
+}
+
+function authoredInsightCatalog() {
+  return MASTERY_CATALOG.map((recipe) => ({
+    ...recipe,
+    source: "world",
+    ...(categoryForInsightWord(recipe.a) ? { categoryA: categoryForInsightWord(recipe.a) } : {}),
+    ...(categoryForInsightWord(recipe.b) ? { categoryB: categoryForInsightWord(recipe.b) } : {}),
+    ...(insightCategoryFor(recipe.category) ? { category: insightCategoryFor(recipe.category) } : {})
+  }));
+}
+
 async function combineNodes(a, b) {
-  if (state.finished || state.reveal.active || state.reveal.pending || state.busyPairs.has(a.id) || state.busyPairs.has(b.id)) return;
+  if (state.finished || state.pause.active || state.reveal.active || state.reveal.pending || state.busyPairs.has(a.id) || state.busyPairs.has(b.id)) return;
   if (state.game.moveLimit && state.moves >= state.game.moveLimit) return finishGame(false, "No moves remain in this orbit.");
+  resetExpectedPairFeedback();
   dismissClearUndo();
   const orbitGeneration = state.orbitGeneration;
   state.busyPairs.add(a.id);
@@ -3413,7 +4887,11 @@ async function combineNodes(a, b) {
           b: b.item.word,
           categoryA: a.item.category,
           categoryB: b.item.category,
-          discovered: state.words.map((item) => item.word),
+          discovered: [...new Set([
+            a.item.word,
+            b.item.word,
+            ...state.words.slice(-38).map((item) => item.word)
+          ])].slice(0, 40),
           runId: state.run?.id,
           runToken: state.run?.token
         })
@@ -3427,38 +4905,88 @@ async function combineNodes(a, b) {
     await wait(170);
     if (orbitGeneration !== state.orbitGeneration || !state.game) return null;
     state.moves += 1;
+    if (state.moves === 1) track("first_combination", { mode: state.mode, training: learningOrbitActive() });
     let known = state.words.find((item) => item.word.toLowerCase() === result.word.toLowerCase());
     const newToRun = !known;
-    const globallyKnown = profile.discovered.some((word) => word.toLowerCase() === result.word.toLowerCase());
+    const locallyKnown = profile.discovered.some((word) => word.toLowerCase() === result.word.toLowerCase());
+    const newDiscovery = !isStaticBeta && typeof result.newDiscovery === "boolean" ? result.newDiscovery : !locallyKnown;
     if (!known) {
       result.discoveredAt ||= new Date().toISOString();
       state.words.push(result);
       known = result;
-      if (!globallyKnown) {
-        state.newDiscoveries += 1;
-        if (!state.scoringDisabled) {
-          profile.discovered.push(result.word);
-          saveProfile({ fields: ["mastery"] });
-        }
+      if (newDiscovery) state.newDiscoveries += 1;
+      if (!locallyKnown && !state.scoringDisabled) {
+        profile.discovered.push(result.word);
+        profile.discovered = profile.discovered.slice(0, 1000);
       }
     } else if (result.twisted) {
       Object.assign(known, result);
+    }
+    if (state.mode === "explore") {
+      profile.exploreWords = mergeExploreInventory(profile.exploreWords, known);
+      if (!profile.discovered.some((word) => inventoryKey(word) === inventoryKey(known))) profile.discovered.push(known.word);
+      profile.discovered = profile.discovered.slice(0, 1000);
+      saveProfile({ fields: ["mastery"] });
+    } else if (!locallyKnown && !state.scoringDisabled) {
+      saveProfile({ fields: ["mastery"] });
     }
     touchInventory(a.item);
     touchInventory(b.item);
     touchInventory(known, { focus: newToRun });
     renderInventory();
-    if (result.division === "open" && state.assist === "none") state.assist = "open";
-    const historyStep = { a: a.item.word, b: b.item.word, word: result.word, emoji: result.emoji, category: result.category || known.category || "", source: result.source, newDiscovery: !globallyKnown, twisted: Boolean(result.twisted), canonicalWord: result.twist?.canonicalWord || "", feedbackEligible: result.feedbackEligible === true };
+    if (result.division === "open") {
+      const declaredPolicy = combineAssistance(state.assist, "open");
+      const policy = combineAssistance(declaredPolicy.id, result.assist || "open");
+      state.assist = policy.id;
+      state.scoreMultiplier = cappedScoreMultiplier(state.assist, state.scoreMultiplier, declaredPolicy.scoreMultiplier, policy.scoreMultiplier, result.scoreMultiplier);
+      state.run = { ...state.run, assist: state.assist, assisted: true, division: "open", scoreMultiplier: state.scoreMultiplier };
+    }
+    const eventAnnotation = annotateCosmicEventResult({ event: currentEventState().event, result });
+    const journeyMatch = Boolean(state.journeyContext && inventoryKey(state.journeyContext.target) === inventoryKey(result.word));
+    const insight = !result.twisted ? explainSuccessfulRecipe({
+      a: a.item.word,
+      b: b.item.word,
+      word: result.word,
+      source: result.source,
+      ...(categoryForInsightWord(a.item.word) ? { categoryA: categoryForInsightWord(a.item.word) } : {}),
+      ...(categoryForInsightWord(b.item.word) ? { categoryB: categoryForInsightWord(b.item.word) } : {}),
+      ...(insightCategoryFor(result.category || known.category) ? { category: insightCategoryFor(result.category || known.category) } : {})
+    }) : null;
+    const historyStep = {
+      a: a.item.word,
+      b: b.item.word,
+      word: result.word,
+      emoji: result.emoji,
+      category: result.category || known.category || "",
+      source: result.source,
+      newDiscovery,
+      progressionEligible: result.progressionEligible === true,
+      eventEligible: result.eventEligible === true,
+      twisted: Boolean(result.twisted),
+      canonicalWord: result.twist?.canonicalWord || "",
+      feedbackEligible: result.feedbackEligible === true,
+      insight: insight?.text || "",
+      contextual: Boolean(journeyMatch || eventAnnotation.context?.collectionMatch),
+      context: journeyMatch ? state.journeyContext.kind : eventAnnotation.context?.collectionMatch ? eventAnnotation.context.eventId : "",
+      rarity: result.twisted ? 90 : eventAnnotation.context?.collectionMatch ? 55 : 0
+    };
     state.history.push(historyStep);
     const mastery = recordMasteryStep(historyStep);
     state.trails.push({ ax: a.x + 44, ay: a.y + 20, bx: b.x + 44, by: b.y + 20, x: x + 44, y: y + 20 });
+    if (state.trails.length > MAX_TRANSIENT_TRAILS) state.trails.splice(0, state.trails.length - MAX_TRANSIENT_TRAILS);
     state.nodes = state.nodes.filter((node) => node.id !== a.id && node.id !== b.id);
+    aElement?.remove();
+    bElement?.remove();
+    boardGeometryVersion += 1;
     const resultNode = addNode(known, x, y, { cosmicTwist: Boolean(result.twisted) });
     const universeLabel = result.universeContext?.label ? ` · ${result.universeContext.label}` : "";
     showAlchemy(result.twisted
       ? `✦ COSMIC TWIST · ${a.item.word} + ${b.item.word} found ${result.emoji} ${result.word} instead of ${result.twist.canonicalWord}. Mix them again for ${result.twist.canonicalWord}.`
-      : `${a.item.word} + ${b.item.word} = ${result.emoji} ${result.word}${universeLabel}`, false, Boolean(result.twisted));
+      : `${a.item.word} + ${b.item.word} = ${result.emoji} ${result.word}${universeLabel}${insight?.text ? ` · ${insight.text}` : ""}`, false, Boolean(result.twisted));
+    const eventDiscovery = learningOrbitActive() || state.mode === "explore" ? null : await recordEventDiscovery(result);
+    if (eventDiscovery?.notice) {
+      queueAlchemyNotice(eventDiscovery.notice, false, true, { key: `event:${inventoryKey(result.word)}`, retain: true, maxAge: 12_000 });
+    }
     if (mastery?.notice) {
       if (result.completed) state.resultMasteryNotice = mastery.notice;
       else queueAlchemyNotice(mastery.notice, false, false, { key: `mastery:${inventoryKey(mastery.notice)}`, retain: true, maxAge: 10_000 });
@@ -3467,9 +4995,9 @@ async function combineNodes(a, b) {
     updateHud();
     updateMilestone();
     renderAtlas();
-    const won = Boolean(result.completed);
-    track("combination_completed", { mode: state.mode, a: a.item.word, b: b.item.word, result: result.word, source: result.source, newDiscovery: !globallyKnown, twisted: Boolean(result.twisted) });
-    if (!won && !firstOrbitActive() && historyStep.feedbackEligible) offerRecipeFeedback(historyStep, state.moves);
+    const won = Boolean(result.completed || (secondOrbitActive() && inventoryKey(result.word) === inventoryKey(state.game.target)));
+    track("combination_completed", { mode: state.mode, a: a.item.word, b: b.item.word, result: result.word, source: result.source, newDiscovery, twisted: Boolean(result.twisted) });
+    if (!won && !learningOrbitActive() && historyStep.feedbackEligible) offerRecipeFeedback(historyStep, state.moves);
     if (won) setTimeout(() => finishGame(true), 480);
     else if (state.game.moveLimit && state.moves >= state.game.moveLimit) setTimeout(() => finishGame(false, "No moves remain in this orbit."), 350);
     return { node: resultNode, completed: won };
@@ -3481,7 +5009,16 @@ async function combineNodes(a, b) {
       element?.classList.add("rejected");
       setTimeout(() => element?.classList.remove("rejected"), 380);
     }
-    showAlchemy(error.message, true);
+    const nearMiss = error.code === "combination_missing" ? explainRecipeNearMiss({
+      a: a.item.word,
+      b: b.item.word,
+      ...(categoryForInsightWord(a.item.word) ? { categoryA: categoryForInsightWord(a.item.word) } : {}),
+      ...(categoryForInsightWord(b.item.word) ? { categoryB: categoryForInsightWord(b.item.word) } : {}),
+      discovered: state.words,
+      recipes: authoredInsightCatalog()
+    }) : null;
+    showAlchemy(nearMiss?.text || error.message, true);
+    if (error.code === "combination_missing" && !learningOrbitActive()) offerExpectedPairFeedback(a.item.word, b.item.word);
     playFeedback("reject");
     track("combination_rejected", { mode: state.mode, a: a.item.word, b: b.item.word });
     return null;
@@ -3496,10 +5033,75 @@ async function combineNodes(a, b) {
   }
 }
 
+function expectedPairKey(a, b) {
+  return [inventoryKey(a), inventoryKey(b)].sort().join("+").slice(0, 120);
+}
+
+function resetExpectedPairFeedback() {
+  clearTimeout(state.expectedPair?.timer);
+  state.expectedPair = { a: "", b: "", key: "", submitted: false, timer: null };
+  if (els.expectedPairFeedback) {
+    els.expectedPairFeedback.hidden = true;
+    els.expectedPairButton.disabled = false;
+  }
+  clearBoardAnnouncement("expected-pair");
+}
+
+function offerExpectedPairFeedback(a, b) {
+  const key = expectedPairKey(a, b);
+  if (!key || state.expectedPairReports.has(key) || !els.expectedPairFeedback) return;
+  resetRecipeFeedback();
+  state.expectedPair = { a: String(a).slice(0, 48), b: String(b).slice(0, 48), key, submitted: false, timer: null };
+  $("#expectedPairRecipe").textContent = `${state.expectedPair.a} + ${state.expectedPair.b}`;
+  els.expectedPairButton.textContent = "Expected this to work";
+  els.expectedPairFeedback.hidden = false;
+  announceBoardMessage(`No authored result for ${state.expectedPair.a} plus ${state.expectedPair.b}. You can report that you expected it to work.`, "expected-pair");
+  state.expectedPair.timer = setTimeout(() => {
+    if (els.expectedPairFeedback?.contains(document.activeElement)) return;
+    resetExpectedPairFeedback();
+  }, 9_000);
+}
+
+function recordLocalExpectedPair(a, b) {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(LOCAL_EXPECTED_PAIRS_KEY) || "null");
+    const pairs = parsed?.pairs && typeof parsed.pairs === "object" && !Array.isArray(parsed.pairs) ? parsed.pairs : {};
+    const bounded = Object.fromEntries(Object.entries(pairs).filter(([key, value]) => key.length <= 120 && Number.isFinite(Number(value))).slice(-255));
+    const key = expectedPairKey(a, b);
+    bounded[key] = Math.min(1000, Math.max(0, Math.floor(Number(bounded[key]) || 0)) + 1);
+    localStorage.setItem(LOCAL_EXPECTED_PAIRS_KEY, JSON.stringify({ version: 1, pairs: bounded }));
+  } catch { /* The explicit local report is optional. */ }
+}
+
+function submitExpectedPairFeedback() {
+  const report = state.expectedPair;
+  if (!report?.key || report.submitted || state.expectedPairReports.has(report.key)) return;
+  report.submitted = true;
+  state.expectedPairReports.add(report.key);
+  els.expectedPairButton.disabled = true;
+  els.expectedPairButton.textContent = "Reported · thank you";
+  const properties = { mode: String(state.mode || "").slice(0, 24), a: report.a, b: report.b };
+  if (isStaticBeta) recordLocalExpectedPair(report.a, report.b);
+  else if (analyticsPreference) track("combination_expected", properties);
+  else {
+    const url = new URL("/api/analytics", location.origin);
+    if (url.origin === location.origin) fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "same-origin",
+      keepalive: true,
+      body: JSON.stringify({ name: "combination_expected", sessionId, properties, explicit: true })
+    }).catch(() => {});
+  }
+  announceBoardMessage(`${report.a} plus ${report.b} was reported once for this orbit.`, "expected-pair");
+  clearTimeout(report.timer);
+  report.timer = setTimeout(resetExpectedPairFeedback, 2_400);
+}
+
 function resetRecipeFeedback() {
   clearTimeout(state.recipeFeedback.timer);
   clearTimeout(state.recipeFeedback.pendingTimer);
-  state.recipeFeedback = { move: 0, timer: null, pendingTimer: null, submitted: false };
+  state.recipeFeedback = { move: 0, step: null, timer: null, pendingTimer: null, submitted: false };
   if (els.recipeFeedback) {
     els.recipeFeedback.hidden = true;
     els.recipeFeedback.querySelectorAll("button").forEach((button) => { button.disabled = false; });
@@ -3516,9 +5118,10 @@ function scheduleRecipeFeedbackExpiry(delay = 7600) {
 }
 
 function offerRecipeFeedback(step, move) {
-  if (isStaticBeta || !step?.feedbackEligible || !els.recipeFeedback || !state.run?.id || !state.run?.token || !Number.isInteger(move) || move < 1) return;
+  if (!step?.feedbackEligible || step.twisted || step.revealed || !els.recipeFeedback || !state.run?.id || !state.run?.token || !Number.isInteger(move) || move < 1) return;
   resetRecipeFeedback();
   state.recipeFeedback.move = move;
+  state.recipeFeedback.step = { a: step.a, b: step.b, word: step.word };
   $("#recipeFeedbackRecipe").textContent = `${step.a} + ${step.b} → ${step.word}`;
   const revealFeedback = () => {
     if (!state.game || state.finished || state.recipeFeedback.move !== move) return;
@@ -3531,6 +5134,30 @@ function offerRecipeFeedback(step, move) {
     scheduleRecipeFeedbackExpiry();
   };
   state.recipeFeedback.pendingTimer = setTimeout(revealFeedback, 1650);
+}
+
+function recordLocalRecipeVote(step, rating) {
+  const fingerprint = recipeFingerprint(step);
+  const safeRating = sanitizeRecipeRating(rating);
+  if (!fingerprint || !safeRating) return;
+  try {
+    const parsed = JSON.parse(localStorage.getItem(LOCAL_RECIPE_FEEDBACK_KEY) || "null");
+    const source = parsed?.recipes && typeof parsed.recipes === "object" && !Array.isArray(parsed.recipes) ? parsed.recipes : {};
+    const recipes = {};
+    const entries = Object.entries(source);
+    const prioritized = [entries.find(([key]) => key === fingerprint), ...entries.filter(([key]) => key !== fingerprint)].filter(Boolean).slice(0, 199);
+    for (const [key, value] of prioritized) {
+      if (!/^[a-z0-9]{7,16}$/.test(key) || !value || typeof value !== "object" || Array.isArray(value)) continue;
+      recipes[key] = {
+        logical: clamp(Math.floor(Number(value.logical) || 0), 0, 100_000),
+        surprising: clamp(Math.floor(Number(value.surprising) || 0), 0, 100_000),
+        bad: clamp(Math.floor(Number(value.bad) || 0), 0, 100_000)
+      };
+    }
+    recipes[fingerprint] ||= { logical: 0, surprising: 0, bad: 0 };
+    recipes[fingerprint][safeRating] = Math.min(100_000, recipes[fingerprint][safeRating] + 1);
+    localStorage.setItem(LOCAL_RECIPE_FEEDBACK_KEY, JSON.stringify({ version: 1, recipes }));
+  } catch { /* Recipe QA is optional and never interrupts play. */ }
 }
 
 async function submitRecipeFeedback(rating) {
@@ -3550,6 +5177,7 @@ async function submitRecipeFeedback(rating) {
       headers: authHeaders({ "Content-Type": "application/json" }),
       body: JSON.stringify(request)
     });
+    if (isStaticBeta) recordLocalRecipeVote(state.recipeFeedback.step, rating);
     track("recipe_feedback_submitted", { rating });
   } catch {
     showToast("Recipe feedback will be available again on a later discovery.");
@@ -3607,7 +5235,7 @@ function openRevealPath() {
   };
   $("#revealModeWarning").textContent = state.scoringDisabled
     ? "This orbit is already unranked. The revealed words will still remain temporary."
-    : warnings[state.mode] || "This orbit will become a permanent Assisted run.";
+    : warnings[state.mode] || "This orbit will become a zero-score Study run.";
   els.revealDialog.showModal();
 }
 
@@ -3645,7 +5273,8 @@ async function confirmRevealPath() {
     if (state.reveal !== revealState || state.run?.id !== runId || state.game?.target !== target) return;
     state.assist = "reveal";
     state.scoringDisabled = true;
-    state.run = { ...state.run, ranked: false, scoreEligible: false, assisted: true };
+    state.scoreMultiplier = 0;
+    state.run = { ...state.run, assist: "reveal", ranked: false, scoreEligible: false, scoreMultiplier: 0, leaderboardEligible: false, assisted: true, division: "study" };
     clearActiveRunSnapshot();
     stopTimer();
     if (mode === "daily") {
@@ -3920,7 +5549,7 @@ function skipRevealAnimation() {
 }
 
 function calculateReward() {
-  if (state.scoringDisabled) return { reward: 0, reason: "Assisted path · no progression rewards" };
+  if (state.scoringDisabled) return { reward: 0, reason: "Study path · no progression rewards" };
   let reward = state.game.reward || 70;
   const reasons = [];
   if (state.newDiscoveries) {
@@ -3957,8 +5586,228 @@ function updateDailyStreak() {
   profile.dailyCompleted = todayKey;
 }
 
+function buildSignatureResult(won, { training = false, revealed = false } = {}) {
+  state.signature = null;
+  if (!won || training || !state.history.length) return null;
+  const input = {
+    history: state.history,
+    target: state.game?.target,
+    completed: true,
+    moves: state.moves,
+    parMoves: Math.max(1, 3 + (Number(state.game?.tier) || 1) * 3),
+    game: state.game,
+    mode: state.mode,
+    challengeId: state.game?.challengeId || state.run?.challengeId,
+    assist: state.assist,
+    scoreMultiplier: state.scoreMultiplier,
+    scoringDisabled: state.scoringDisabled,
+    revealed
+  };
+  const grade = gradeSignatureRoute(input);
+  const signature = createRouteSignature(input);
+  if (!signature) return null;
+  const awaitingVerification = Boolean(signature.scoreEligible && state.run?.ranked && !isStaticBeta);
+  let comparison = { comparable: true, improved: false, reason: "study", delta: 0, best: null };
+  if (signature.scoreEligible) {
+    const previous = profile.signatureBests.find((entry) => entry.scopeKey === signature.scopeKey) || null;
+    comparison = comparePersonalBest(signature, previous);
+    if (comparison.improved && !awaitingVerification) {
+      profile.signatureBests = sanitizeSignatureBests([signature, ...profile.signatureBests.filter((entry) => entry.scopeKey !== signature.scopeKey)]);
+      saveProfile({ fields: ["signatures"] });
+    }
+  }
+  state.signature = { grade, signature, comparison, awaitingVerification, runId: state.run?.id || "" };
+  track("signature_graded", { mode: state.mode, score: signature.score, tier: signature.tier, improved: comparison.improved, eligible: signature.scoreEligible });
+  return state.signature;
+}
+
+function renderSignatureResult() {
+  const result = state.signature;
+  els.signatureResultCard.hidden = !result;
+  if (!result) return;
+  const { grade, signature, comparison } = result;
+  const symbols = { study: "0", spark: "✦", orbit: "C", constellation: "B", nova: "A", singularity: "S" };
+  $("#signatureResultGrade").textContent = symbols[signature.tier] || "✦";
+  $("#signatureResultTitle").textContent = signature.tierLabel;
+  $("#signatureResultScore").textContent = signature.scoreEligible ? String(signature.score) : "STUDY";
+  $("#signatureResultSummary").textContent = signature.scoreEligible
+    ? `${grade.metrics.uniqueResults} distinct results across ${grade.metrics.categories} idea families.`
+    : "This route can be studied and replayed, but it cannot become a scored personal best.";
+  const metrics = [
+    ["Efficiency", grade.dimensions.efficiency],
+    ["Discovery", grade.dimensions.novelty],
+    ["Originality", grade.dimensions.variety],
+    ["Fair play", grade.dimensions.purity]
+  ];
+  $("#signatureResultMetrics").replaceChildren(...metrics.map(([label, value]) => {
+    const item = document.createElement("span");
+    item.innerHTML = `<small>${escapeHtml(label)}</small><strong>${Number(value)}</strong>`;
+    return item;
+  }));
+  $("#signaturePersonalBest").textContent = result.awaitingVerification
+    ? "Server verification will confirm this Signature and personal best."
+    : !signature.scoreEligible
+    ? "Study signatures are descriptive only."
+    : comparison.reason === "first"
+      ? "First personal signature recorded for this destination."
+      : comparison.improved
+        ? `New personal best · +${Math.max(0, comparison.delta)} signature points.`
+        : `Personal best remains ${comparison.best?.score ?? signature.score}.`;
+}
+
+function adoptVerifiedSignature(raw, { runId = "", updateCurrent = true } = {}) {
+  const signature = sanitizeRouteSignature(raw);
+  if (!signature) return null;
+  const previous = profile.signatureBests.find((entry) => entry.scopeKey === signature.scopeKey) || null;
+  const comparison = comparePersonalBest(signature, previous);
+  if (signature.scoreEligible && comparison.improved) {
+    profile.signatureBests = sanitizeSignatureBests([signature, ...profile.signatureBests.filter((entry) => entry.scopeKey !== signature.scopeKey)]);
+    saveProfile({ fields: ["signatures"] });
+  }
+  const currentRunMatches = Boolean(
+    updateCurrent
+    && state.signature
+    && (!runId || state.signature.runId === runId)
+  );
+  if (currentRunMatches) {
+    state.signature = {
+      ...state.signature,
+      signature,
+      comparison,
+      awaitingVerification: false,
+      grade: {
+        ...state.signature.grade,
+        dimensions: { ...signature.dimensions },
+        metrics: {
+          ...state.signature.grade.metrics,
+          moves: signature.moves,
+          idealMoves: signature.idealMoves,
+          newDiscoveries: signature.discoveries,
+          categories: signature.categories,
+          contextualSteps: signature.contextualSteps
+        }
+      }
+    };
+  }
+  return { signature, comparison, updatedCurrent: currentRunMatches };
+}
+
+function communityStat(label, value) {
+  const item = document.createElement("span");
+  const name = document.createElement("small");
+  const score = document.createElement("strong");
+  name.textContent = label;
+  score.textContent = value;
+  item.append(name, score);
+  return item;
+}
+
+function renderCommunityResult(community = null, { loading = false, status = "" } = {}) {
+  if (Array.isArray(community)) community = buildCommunityResults(community, { playerId: profile.playerId });
+  const phase = status || (loading ? "uploading" : community ? "verified" : isStaticBeta ? "local" : "verified-empty");
+  state.community = phase === "verified" ? community : null;
+  const eligible = Boolean(state.finished && state.game && !firstOrbitActive() && !state.scoringDisabled && state.assist !== "reveal");
+  const shouldShow = phase !== "hidden" && eligible && (isStaticBeta || state.run?.ranked);
+  els.communityResultCard.hidden = !shouldShow;
+  if (!shouldShow) return;
+  const race = $("#raceCommunityGhost");
+  if (phase === "uploading") {
+    $("#communityResultTitle").textContent = "Mapping verified routes…";
+    els.communityResultStats.replaceChildren(communityStat("STATUS", "UPLOADING"));
+    $("#communityResultNote").textContent = "Your result stays safe locally while the community sky is checked.";
+    race.hidden = true;
+    return;
+  }
+  if (isStaticBeta) {
+    $("#communityResultTitle").textContent = "Community sky opens in the online release";
+    els.communityResultStats.replaceChildren(
+      communityStat("THIS BUILD", isStaticBeta ? "LOCAL" : "1"),
+      communityStat("YOUR PATH", "ORIGINAL")
+    );
+    $("#communityResultNote").textContent = "Pages and itch practice never invent player counts or upload your route. Verified asynchronous comparisons require the online service.";
+    race.hidden = true;
+    return;
+  }
+  if (["pending", "error"].includes(phase)) {
+    const pending = phase === "pending";
+    $("#communityResultTitle").textContent = pending ? "Community upload pending" : "Community check interrupted";
+    els.communityResultStats.replaceChildren(communityStat("STATUS", pending ? "SAVED LOCALLY" : "NOT VERIFIED"));
+    $("#communityResultNote").textContent = pending
+      ? "No position is claimed until the saved route reaches the server and a verified sky is returned."
+      : "No verified community position is available for this attempt. Retry the score upload to compare routes.";
+    race.hidden = true;
+    return;
+  }
+  if (phase === "unavailable") {
+    $("#communityResultTitle").textContent = "Community comparison not loaded";
+    els.communityResultStats.replaceChildren(communityStat("STATUS", "NOT LOADED"));
+    $("#communityResultNote").textContent = "This completed route has no fresh community response on this screen, so no position is claimed.";
+    race.hidden = true;
+    return;
+  }
+  if (!community) {
+    $("#communityResultTitle").textContent = "No comparable verified routes returned";
+    els.communityResultStats.replaceChildren(
+      communityStat("COMPARABLE ROUTES", "0"),
+      communityStat("STATUS", "VERIFIED EMPTY")
+    );
+    $("#communityResultNote").textContent = "The server verified this result, but returned no routes in the same comparison group.";
+    race.hidden = true;
+    return;
+  }
+  $("#communityResultTitle").textContent = community.player
+    ? community.completedRoutes === 1 && community.player.rank === 1
+      ? "First route in this community sky"
+      : `Top ${community.player.topPercent}% of this community sky`
+    : `${community.completedRoutes} verified routes mapped`;
+  els.communityResultStats.replaceChildren(
+    communityStat("COMPLETIONS", Number(community.completedRoutes || 0).toLocaleString()),
+    communityStat("AVG MOVES", String(community.averageMoves || "—")),
+    communityStat("ROUTE VARIETY", `${community.signatureVarietyPercent || 0}%`)
+  );
+  $("#communityResultNote").textContent = community.mostOriginal
+    ? `Most original visible route: ${community.mostOriginal.callsign} · ${community.mostOriginal.tier}. Comparisons are asynchronous, never live multiplayer.`
+    : "Comparisons use completed asynchronous routes, never live multiplayer.";
+  race.hidden = !community.nearby;
+  if (["daily", "weekly"].includes(state.mode)) race.hidden = true;
+}
+
+function queueNearbyCommunityRace() {
+  const nearby = state.community?.nearby;
+  if (!nearby || !state.game) return false;
+  const division = ["pure", "open"].includes(state.leaderboardDivision) ? state.leaderboardDivision : "pure";
+  state.ghost.nextRival = {
+    callsign: String(nearby.callsign || "Nearby Stargazer").slice(0, 48),
+    moves: clamp(Number(nearby.moves) || 1, 1, 1_000),
+    elapsedMs: clamp(Number(nearby.seconds) * 1_000 || 1_000, 1_000, 86_400_000),
+    target: String(state.game.target || "").slice(0, 80),
+    scope: ghostLeaderboardScope(state.mode),
+    division
+  };
+  return true;
+}
+
+function continueJourneyFromResult(view) {
+  if (els.resultDialog.open) els.resultDialog.close();
+  returnHome();
+  requestAnimationFrame(() => {
+    const recoveryDialog = $("#recoveryDialog");
+    if (recoveryDialog.open) {
+      recoveryDialog.addEventListener("close", () => openJourneyHub(view), { once: true });
+      return;
+    }
+    openJourneyHub(view);
+  });
+}
+
 function finishGame(won, reason = "", { skipSubmit = false } = {}) {
   if (state.finished) return;
+  if (els.pauseDialog.open) {
+    pauseCloseRestoreFocus = false;
+    els.pauseDialog.close();
+  }
+  state.pause.active = false;
+  els.gameScreen.classList.remove("orbit-paused");
   ctrlHover.reset({ abandonPending: true });
   cancelActiveTrayDrag();
   cancelActiveBoardDrag();
@@ -3975,9 +5824,13 @@ function finishGame(won, reason = "", { skipSubmit = false } = {}) {
   updateMilestone(won);
   const elapsed = state.finishedElapsedSeconds || Math.max(1, Math.round((Date.now() - state.startedAt) / 1000));
   state.finishedElapsedSeconds = elapsed;
-  const training = firstOrbitActive();
+  const firstTraining = firstOrbitActive();
+  const secondTraining = secondOrbitActive();
+  const training = firstTraining || secondTraining;
   const assisted = Boolean(training || state.scoringDisabled || state.assist === "reveal");
+  const partialAssist = !assisted && state.scoreMultiplier < 1;
   const revealed = assisted && state.reveal.revealed;
+  buildSignatureResult(won, { training, revealed });
   const pendingRankedSubmit = Boolean(won && !assisted && !skipSubmit && state.run?.ranked);
   if (pendingRankedSubmit) {
     const saved = saveCompletedRunSnapshot();
@@ -3988,19 +5841,26 @@ function finishGame(won, reason = "", { skipSubmit = false } = {}) {
     clearActiveRunSnapshot();
   }
   let reward = null;
+  let voyageProgressAdvanced = false;
+  const rewardRunId = String(state.run?.id || "").trim();
+  const progressionAlreadyGranted = Boolean(rewardRunId && sanitizeRewardedRunIds(profile.rewardedRunIds).includes(rewardRunId));
   state.resultAction = returnHome;
   $("#rankResultCard").hidden = isStaticBeta || !won || assisted;
-  $("#resultLeaderboard").hidden = isStaticBeta || !won || assisted;
+  $("#resultLeaderboard").hidden = isStaticBeta || !won || assisted || !state.run?.ranked;
   $("#assistResultCard").hidden = !assisted;
+  $("#partialAssistResultCard").hidden = !partialAssist;
+  if (partialAssist) {
+    const policy = assistancePolicy(state.assist);
+    $("#partialAssistScore").textContent = `${Math.round(state.scoreMultiplier * 100)}% SCORE`;
+    $("#partialAssistDetail").textContent = `${policy.label} kept this result score-eligible in Open. Stardust and verified score use the same visible reduction.`;
+  }
   if (assisted) $("#assistResultCard small").textContent = training
-    ? "Training is never scored and grants no leaderboard place, Stardust, mastery, permanent discoveries, streak progress, or rewards."
+    ? "Training is never scored and grants no leaderboard place, Stardust, mastery, saved discoveries, streak progress, or rewards."
     : revealed
       ? "One visual replay is available. It returns to mode selection and grants no progression."
-      : state.powerups.giftUsed || state.assist === "gift"
-        ? "A Word Gift supplied a crucial bridge. This Study orbit grants no score, leaderboard place, rewards, or progression."
-        : "Star Compass guided this Study orbit. It grants no score, leaderboard place, rewards, or progression.";
+      : "This Study orbit grants no score, leaderboard place, rewards, or progression.";
   $("#resultReveal").hidden = won || assisted || !state.run;
-  if (won && !assisted) {
+  if (won && !assisted && !progressionAlreadyGranted) {
     reward = calculateReward();
     if (state.mode === "daily") updateDailyStreak();
     if (state.mode === "weekly") {
@@ -4018,20 +5878,65 @@ function finishGame(won, reason = "", { skipSubmit = false } = {}) {
         };
       }
     }
-    profile.stardust += reward.reward;
+    if (state.journeyContext?.kind === "voyage") {
+      const advanced = advanceVoyageProgress(profile.voyageProgress, {
+        voyageId: state.journeyContext.voyageId,
+        target: state.game.target
+      });
+      if (advanced.advanced) {
+        voyageProgressAdvanced = true;
+        profile.voyageProgress = advanced.progress;
+        reward.reward += VOYAGE_REWARD;
+        reward.reason += advanced.reason === "voyage_complete" ? " · Voyage complete" : " · Voyage chapter";
+        state.resultAction = () => continueJourneyFromResult("voyage");
+        track("voyage_completed", { collection: state.journeyContext.voyageId, stage: state.journeyContext.chapterId, complete: advanced.reason === "voyage_complete" });
+      }
+    } else if (state.journeyContext?.kind === "event") {
+      state.resultAction = () => continueJourneyFromResult("event");
+    }
+    if (partialAssist) {
+      const baseReward = reward.reward;
+      reward.reward = Math.max(1, Math.round(baseReward * state.scoreMultiplier));
+      reward.reason += ` · Open ${Math.round(state.scoreMultiplier * 100)}% of ${baseReward}`;
+    }
+    if (state.eventRewardGranted) {
+      reward.reward += state.eventRewardGranted;
+      reward.reason += ` · event collection +${state.eventRewardGranted}`;
+    }
+    profile.stardust += reward.reward - state.eventRewardGranted;
     profile.wins += 1;
-    saveProfile({ fields: ["progression"] });
+    profile.rewardedRunIds = sanitizeRewardedRunIds([rewardRunId, ...profile.rewardedRunIds]);
+    saveProfile({ fields: ["progression", ...(state.journeyContext ? ["journeys"] : [])] });
+  } else if (won && !assisted) {
+    reward = { reward: 0, reason: "Progression already granted for this completed orbit." };
+    if (state.journeyContext?.kind === "event") state.resultAction = () => continueJourneyFromResult("event");
   } else if (won && training) {
-    profile.firstOrbit = { seen: true, completed: true };
-    saveProfile({ fields: ["firstOrbit"] });
+    if (firstTraining) {
+      profile.firstOrbit = { seen: true, completed: true };
+      saveProfile({ fields: ["firstOrbit"] });
+      track("first_orbit_completed", { moves: state.moves, seconds: elapsed });
+      state.resultAction = () => {
+        if (els.resultDialog.open) els.resultDialog.close();
+        openSecondOrbitBriefing(els.resultPrimary);
+      };
+    } else {
+      profile.secondOrbit = { seen: true, completed: true };
+      saveProfile({ cloud: false });
+      track("second_orbit_completed", { moves: state.moves, seconds: elapsed });
+      const nextMode = profile.dailyCompleted === todayKey ? "reach" : "daily";
+      state.resultAction = () => {
+        if (els.resultDialog.open) els.resultDialog.close();
+        void beginMode(nextMode);
+      };
+    }
   } else if (won && revealed) {
     state.resultAction = replayRevealPathOnce;
   }
   els.resultEmoji.textContent = won ? state.game.emoji : state.mode === "quick" ? "⌛" : "◇";
   els.resultKicker.textContent = training && won
-    ? "FIRST ORBIT COMPLETE · TRAINING"
+    ? `${firstTraining ? "FIRST" : "SECOND"} ORBIT COMPLETE · TRAINING`
     : revealed
-    ? "PATH REVEALED · ASSISTED"
+    ? "PATH REVEALED · STUDY"
     : won
     ? isStaticBeta
       ? "LOCAL TARGET REACHED"
@@ -4039,29 +5944,49 @@ function finishGame(won, reason = "", { skipSubmit = false } = {}) {
         ? `STAGE ${state.game.stage + 1} COMPLETE`
         : "TARGET REACHED"
     : "ORBIT ENDED";
-  els.resultTitle.textContent = training && won ? "You built your first constellation." : revealed ? `The cosmos revealed ${state.game.target}.` : won ? `You found ${state.game.target}.` : reason;
+  els.resultTitle.textContent = training && won
+    ? firstTraining ? "You built your first constellation." : "You reached Mountain on your own route."
+    : revealed ? `The cosmos revealed ${state.game.target}.` : won ? `You found ${state.game.target}.` : reason;
   const timeStat = state.game.timeLimit || state.mode === "challenge" ? ` · ${formatTime(elapsed)} elapsed` : "";
   els.resultStats.textContent = training
     ? `${state.history.length} guided combinations · ${formatTime(elapsed)} elapsed · 0 score`
     : revealed
     ? `${state.reveal.route.length} combinations traced · 0 score · no discoveries saved`
-    : `${state.words.length} discoveries · ${state.moves} moves${timeStat}${state.wished ? " · 1 Wish" : ""}`;
+    : `${state.words.length} discoveries · ${state.moves} moves${timeStat}${state.wished ? " · 1 Wish" : ""}${partialAssist ? ` · Open ${Math.round(state.scoreMultiplier * 100)}%` : ""}`;
   els.resultMasteryCard.hidden = !won || !state.resultMasteryNotice;
   els.resultMasteryText.textContent = won ? state.resultMasteryNotice : "";
+  renderSignatureResult();
+  const communityUploadExpected = Boolean(won && !assisted && !isStaticBeta && state.run?.ranked && !skipSubmit);
+  renderCommunityResult(null, {
+    loading: communityUploadExpected,
+    status: !won ? "hidden" : !communityUploadExpected && !isStaticBeta && state.run?.ranked ? "unavailable" : ""
+  });
   els.rewardCard.hidden = !won || assisted;
   if (reward) {
     els.rewardDust.textContent = reward.reward;
     els.rewardReason.textContent = reward.reason;
   }
-  els.resultPrimary.querySelector("span").textContent = training ? "Explore game modes" : revealed ? "Replay constellation once" : won && state.mode === "weekly" && !profile.weekly.complete ? "Continue expedition" : won ? "Choose another mode" : "Back to modes";
+  els.resultPrimary.querySelector("span").textContent = training
+    ? firstTraining
+      ? "Continue to Second Orbit"
+      : profile.dailyCompleted === todayKey ? "Start a relaxed orbit" : "Play today's word"
+    : revealed ? "Replay constellation once"
+    : won && state.journeyContext?.kind === "voyage" && voyageProgressAdvanced ? "Continue Voyage"
+    : won && state.journeyContext?.kind === "event" ? "View event collection"
+    : won && state.mode === "weekly" && !profile.weekly.complete ? "Continue expedition"
+    : won ? "Choose another mode"
+    : "Back to modes";
   els.resultRetry.hidden = training || (revealed ? false : assisted || (won && (state.mode === "daily" || state.mode === "weekly")));
   els.resultRetry.textContent = revealed ? "Back to modes" : won ? "Replay this target" : "Try again";
   els.resultShare.hidden = !won || training;
   const openRun = !assisted && (state.assist !== "none" || state.wished);
   els.resultShare.querySelector("span").textContent = assisted ? "Share Study card" : openRun ? "Share Open card" : "Challenge a friend";
+  renderResultRoute();
+  $("#resultDetails").open = false;
   els.resultDialog.showModal();
+  requestAnimationFrame(() => els.resultPrimary.focus({ preventScroll: true }));
   if (won && !assisted && !skipSubmit) submitRankedScore();
-  track(won ? "target_reached" : "run_failed", { mode: state.mode, target: state.game.target, moves: state.moves, seconds: elapsed, wished: state.wished, reward: reward?.reward || 0, assisted, revealed });
+  track(won ? "target_reached" : "run_failed", { mode: state.mode, target: state.game.target, moves: state.moves, seconds: elapsed, wished: state.wished, reward: reward?.reward || 0, assisted, revealed, scoreMultiplier: state.scoreMultiplier });
 }
 
 async function submitRankedScore() {
@@ -4096,6 +6021,8 @@ async function submitRankedScore() {
     els.resultRetry.hidden = true;
   }
   const division = state.assist === "none" ? "pure" : "open";
+  state.leaderboardDivision = division;
+  state.leaderboardScope = submission.mode === "daily" ? "daily" : submission.mode === "weekly" ? "weekly" : "sprint";
   $("#resultDivision").textContent = `${division.toUpperCase()} - SERVER VERIFIED`;
   $("#resultRank").textContent = "#--";
   $("#resultScore").textContent = "VERIFYING";
@@ -4114,7 +6041,16 @@ async function submitRankedScore() {
     if (!result.ranked) throw new Error(result.reason || "This orbit is not ranked.");
     markPendingScoreUploaded(submission.playerId, submission.runId);
     const sameIdentity = profile.playerId === submission.playerId && profile.playerToken === submission.playerToken;
-    if (sameIdentity) applyServerPlayer(result.player);
+    let verifiedAdoption = null;
+    if (sameIdentity) {
+      applyServerPlayer(result.player);
+      // The authoritative Signature belongs to the submitted run even when the
+      // result dialog has already closed or placement rendering is unavailable.
+      verifiedAdoption = adoptVerifiedSignature(result.verifiedSignature, {
+        runId: submission.runId,
+        updateCurrent: state.run?.id === submission.runId
+      });
+    }
     if (state.run?.id !== submission.runId) {
       showToast("Your saved score reached the leaderboard.");
       return;
@@ -4133,6 +6069,9 @@ async function submitRankedScore() {
     $("#resultDivision").textContent = `${result.placement.entry.division.toUpperCase()} - SERVER VERIFIED`;
     $("#resultRank").textContent = `#${result.placement.rank}`;
     $("#resultScore").textContent = Number(result.placement.entry.score).toLocaleString();
+    if (verifiedAdoption?.updatedCurrent || (!verifiedAdoption && adoptVerifiedSignature(result.placement.entry.signature))) renderSignatureResult();
+    renderCommunityResult(result.placement.community || null);
+    track("community_viewed", { source: "community", completedRoutes: result.placement.community?.completedRoutes || 0, topPercent: result.placement.community?.player?.topPercent || 0 });
     const totalCredits = Number(result.creditReward || 0) + Number(result.weeklyBonus || 0);
     $("#resultRankMessage").textContent = result.weeklyBonus
       ? `Personal best recorded - +${totalCredits} Star Credits, including the 4-day bonus`
@@ -4144,6 +6083,7 @@ async function submitRankedScore() {
     track("score_uploaded", { mode: submission.mode, division: result.placement.entry.division, score: result.placement.entry.score, rank: result.placement.rank });
   } catch (error) {
     if (state.run?.id === submission.runId) {
+      renderCommunityResult(null, { status: state.scoreSubmission.pendingSaved ? "pending" : "error" });
       $("#resultScore").textContent = "PENDING";
       if (state.scoreSubmission.pendingSaved) {
         $("#resultRankMessage").textContent = `${error.message} Your local run result is still saved and will retry after reconnecting.`;
@@ -4164,41 +6104,52 @@ async function submitRankedScore() {
   }
 }
 
+function creatorAssistanceEligible() {
+  return Boolean(state.game && !["training", "second-orbit", "explore"].includes(state.mode) && !state.run?.ranked && !state.scoringDisabled);
+}
+
 function updateWishButton() {
   if (!els.wishState) return;
   const button = $("#wishWord");
   const used = state.wished;
+  const eligible = creatorAssistanceEligible();
+  if (button) button.hidden = !eligible;
   button?.classList.toggle("used", used);
-  if (button) button.disabled = state.finished || state.reveal.active || state.reveal.pending;
+  if (button) button.disabled = !eligible || state.finished || state.reveal.active || state.reveal.pending;
   if (isStaticBeta) {
     els.wishState.textContent = used ? "USED" : "PRACTICE";
     return;
   }
   if (used) els.wishState.textContent = "USED";
-  else if (profile.premium) els.wishState.textContent = profile.wishAvailable ? "DAILY" : "TOMORROW";
-  else if (!profile.freeWishUsed) els.wishState.textContent = "FIRST FREE";
-  else els.wishState.textContent = "PASS";
+  else if (!profile.freeWishUsed || state.rewardedWish) els.wishState.textContent = state.rewardedWish ? "EARNED" : "FIRST FREE";
+  else els.wishState.textContent = "PRACTICE ONLY";
 }
 
 function openPremium() {
   stopTimer();
   track("paywall_viewed", { location: els.gameScreen.hidden ? "home" : "run" });
+  track("supporter_interest", { location: els.gameScreen.hidden ? "home" : "run" });
   els.paywallDialog.showModal();
 }
 
 function openWish() {
   if (!state.game || state.finished || state.reveal.active || state.reveal.pending) return;
+  if (!creatorAssistanceEligible()) return showToast("Creator words are available only in unranked Practice or Creator’s Lab.");
   if (state.wished) return showToast("Only one Wish can bend each orbit.");
   track("wish_opened", { mode: state.mode, free: !profile.freeWishUsed });
   stopTimer();
   renderWishVault();
-  const canWriteWish = profile.wishAvailable || state.rewardedWish;
+  const canWriteWish = isStaticBeta || !profile.freeWishUsed || state.rewardedWish;
   $("#wishForm").hidden = !canWriteWish;
   if (canWriteWish || profile.vault.length) els.wishDialog.showModal();
-  else openPremium();
+  else {
+    resumeTimerIfNeeded();
+    showToast("Your free Practice Wish is used. Creator’s Lab still lets you choose the next target.");
+  }
 }
 
 async function checkoutPremium() {
+  if (!COMMERCE_LAUNCH_READY) return showToast("Purchases stay disabled during the free beta.", { scope: "global" });
   if (profile.premium) return;
   const billing = billingAdapter();
   track("checkout_started", { provider: billing ? "native" : config.billingEnabled ? "web" : "sandbox" });
@@ -4210,7 +6161,7 @@ async function checkoutPremium() {
       await ensurePlayer();
       if (profile.premium) {
         if (els.paywallDialog.open) els.paywallDialog.close();
-        showToast("Founder's Pass activated.");
+        showToast("Supporter Pack activated.");
       } else showToast("The store confirmed payment; server entitlement sync is still pending.");
     } else if (config.billingEnabled && config.checkoutUrl) {
       window.open(config.checkoutUrl, "_blank", "noopener,noreferrer");
@@ -4219,7 +6170,7 @@ async function checkoutPremium() {
       const { player } = await fetchJson("/api/player/test-entitlement", { method: "POST", headers: authHeaders() });
       applyServerPlayer(player);
       if (els.paywallDialog.open) els.paywallDialog.close();
-      showToast("Development Founder's Pass activated. No charge.");
+      showToast("Development Supporter Pack activated. No charge.");
     } else {
       showToast("Store connection required for this purchase.");
     }
@@ -4230,6 +6181,7 @@ async function checkoutPremium() {
 
 async function makeWish(event) {
   event.preventDefault();
+  if (!creatorAssistanceEligible()) return showToast("Creator words cannot enter a ranked orbit.");
   const input = $("#wishInput");
   const message = $("#wishMessage");
   const submit = event.currentTarget.querySelector("button[type=submit]");
@@ -4249,15 +6201,21 @@ async function makeWish(event) {
     state.words.push(item);
     state.wished = true;
     state.bendItem = item;
-    state.assist = item.assist || "wish";
+    const declaredPolicy = combineAssistance(state.assist, "wish");
+    const policy = combineAssistance(declaredPolicy.id, item.assist || "wish");
+    state.assist = policy.id;
+    state.scoreMultiplier = cappedScoreMultiplier(state.assist, state.scoreMultiplier, declaredPolicy.scoreMultiplier, policy.scoreMultiplier, item.scoreMultiplier);
+    state.run = { ...state.run, assist: state.assist, assisted: true, division: "open", scoreEligible: true, scoreMultiplier: state.scoreMultiplier };
     applyServerPlayer(item.player);
     renderInventory();
+    updateHud();
+    scheduleRunSave();
     els.wishDialog.close();
     input.value = "";
     message.textContent = "";
     placeFromTray(item);
     showAlchemy(`✧ ${item.word} bent into your universe.`);
-    track("wish_used", { mode: state.mode, word: item.word, entitlement: profile.premium ? "pass" : state.rewardedWish ? "reward" : "free" });
+    track("wish_used", { mode: state.mode, word: item.word, entitlement: state.rewardedWish ? "reward" : "free" });
   } catch (error) {
     message.textContent = error.message;
   } finally {
@@ -4267,6 +6225,7 @@ async function makeWish(event) {
 }
 
 async function earnRewardedWish() {
+  if (!COMMERCE_LAUNCH_READY) return showToast("Ads stay disabled during the free beta.");
   try {
     const earned = await adsAdapter()?.showRewarded("constellore_wish");
     if (!earned) return;
@@ -4296,6 +6255,7 @@ function renderWishVault() {
 
 async function activateMarketWord(wordId) {
   if (!state.game || state.finished || state.reveal.active || state.reveal.pending) return showToast("Start an orbit before activating a Vault word.");
+  if (!creatorAssistanceEligible()) return showToast("Vault words are available only in unranked Practice or Creator’s Lab.");
   if (state.wished) return showToast("Only one Reality Bend may be used in a run.");
   const owned = profile.vault.find((item) => item.id === wordId);
   if (!owned) return showToast("That word is not in your Vault.");
@@ -4309,13 +6269,19 @@ async function activateMarketWord(wordId) {
     state.words.push(result.item);
     state.wished = true;
     state.bendItem = result.item;
-    state.assist = result.assist || "market";
+    const declaredPolicy = combineAssistance(state.assist, "market");
+    const policy = combineAssistance(declaredPolicy.id, result.assist || "market");
+    state.assist = policy.id;
+    state.scoreMultiplier = cappedScoreMultiplier(state.assist, state.scoreMultiplier, declaredPolicy.scoreMultiplier, policy.scoreMultiplier, result.scoreMultiplier);
+    state.run = { ...state.run, assist: state.assist, assisted: true, division: "open", scoreEligible: true, scoreMultiplier: state.scoreMultiplier };
     renderInventory();
+    updateHud();
+    scheduleRunSave();
     renderWishVault();
     if (els.wishDialog.open) els.wishDialog.close();
     if (els.exchangeDialog.open) els.exchangeDialog.close();
     placeFromTray(result.item);
-    showAlchemy(`${result.item.word} entered from your permanent Word Vault.`);
+    showAlchemy(`${result.item.word} entered from your persistent beta Word Vault.`);
     track("market_word_used", { mode: state.mode, word: result.item.word });
   } catch (error) {
     showToast(error.message);
@@ -4348,7 +6314,7 @@ async function openExchange(view = state.marketView) {
   if (els.wishDialog.open) els.wishDialog.close();
   if (!els.exchangeDialog.open) els.exchangeDialog.showModal();
   els.marketMessage.classList.remove("error");
-  els.marketMessage.textContent = "Loading the current global quotes...";
+  els.marketMessage.textContent = "Loading the shared earn-only rotation...";
   track("market_opened", { location: els.gameScreen.hidden ? "home" : "run" });
   try {
     if (!profile.playerId || !profile.playerToken) await ensurePlayer();
@@ -4377,24 +6343,24 @@ function renderMarket() {
   els.marketBalance.textContent = state.market.balance;
   $("#vaultCount").textContent = allItems.filter((item) => item.owned).length;
   els.marketMessage.classList.remove("error");
-  els.marketMessage.textContent = search ? `${items.length} matching useful word${items.length === 1 ? "" : "s"}.` : state.marketView === "vault" ? "Permanent licenses owned by this player." : "Global prices are shared by every player and update once per minute.";
+  els.marketMessage.textContent = search ? `${items.length} matching useful word${items.length === 1 ? "" : "s"}.` : state.marketView === "vault" ? "Persistent beta licenses owned by this player." : "Shared prices rotate periodically. Star Credits are earned through verified play and are never sold.";
   if (!items.length) {
     const empty = document.createElement("div");
     empty.className = "market-empty";
-    empty.textContent = state.marketView === "vault" ? "Your Vault is empty. Buy a word once and keep it permanently." : "No useful words match that search.";
+    empty.textContent = state.marketView === "vault" ? "Your Vault is empty. Buy a word once and keep it for this beta." : "No useful words match that search.";
     els.marketList.replaceChildren(empty);
     return;
   }
   els.marketList.replaceChildren(...items.map((item) => {
     const trendClass = item.changePercent > 0 ? "up" : item.changePercent < 0 ? "down" : "flat";
-    const trendText = item.changePercent > 0 ? `UP ${item.changePercent}% / MIN` : item.changePercent < 0 ? `DOWN ${Math.abs(item.changePercent)}% / MIN` : "FLAT / MIN";
+    const trendText = item.changePercent > 0 ? `UP ${item.changePercent}% THIS ROTATION` : item.changePercent < 0 ? `DOWN ${Math.abs(item.changePercent)}% THIS ROTATION` : "STEADY THIS ROTATION";
     const article = document.createElement("article");
     article.className = `market-item${item.owned ? " owned" : ""}`;
     article.innerHTML = `<span class="market-item-emoji">${escapeHtml(item.emoji)}</span><div class="market-word"><strong>${escapeHtml(item.word)}</strong><small>${escapeHtml(item.reason)}</small></div><span class="market-utility"><b>UTILITY ${item.usefulness}/5</b><span>${"*".repeat(item.usefulness)}</span></span><div class="market-trend ${trendClass}">${sparklineSvg(item.trend)}<span>${trendText}</span></div><div class="market-price"><strong>${Number(item.price).toLocaleString()} C</strong><small>${item.owned ? "OWNED" : "CURRENT QUOTE"}</small></div>`;
     const action = document.createElement("button");
     action.type = "button";
     action.className = "market-item-action";
-    const canActivate = item.owned && state.game && !state.finished && !state.wished;
+    const canActivate = item.owned && state.game && !state.finished && !state.wished && creatorAssistanceEligible();
     action.textContent = item.owned ? canActivate ? "USE NOW" : "OWNED" : "BUY WORD";
     action.disabled = item.owned && !canActivate;
     action.addEventListener("click", () => item.owned ? activateMarketWord(item.id) : openMarketBuy(item));
@@ -4447,7 +6413,7 @@ async function confirmMarketPurchase() {
     });
     applyServerPlayer(result.player);
     track("word_purchased", { word: result.item.word, credits: result.price });
-    showToast(`${result.item.word} is permanently yours.`);
+    showToast(`${result.item.word} was added to your persistent beta Vault.`);
     els.marketBuyDialog.close();
     await openExchange("vault");
   } catch (error) {
@@ -4478,6 +6444,8 @@ async function loadLeaderboard() {
   els.leaderboardMessage.textContent = "Mapping verified scores...";
   try {
     const params = new URLSearchParams({ scope: state.leaderboardScope, division: state.leaderboardDivision });
+    const challengeId = state.game?.challengeId || state.run?.challengeId;
+    if (challengeId) params.set("challengeId", String(challengeId));
     const board = await fetchJson(`/api/leaderboard?${params}`, { headers: authHeaders() });
     renderLeaderboard(board);
   } catch (error) {
@@ -4489,7 +6457,10 @@ async function loadLeaderboard() {
 
 function renderLeaderboard(board) {
   const entries = board.entries || [];
-  els.leaderboardMessage.textContent = entries.length ? `${entries.length} verified personal best${entries.length === 1 ? "" : "s"}.` : "No verified score has reached this ladder yet.";
+  const community = board.community;
+  els.leaderboardMessage.textContent = entries.length
+    ? `${entries.length} verified personal best${entries.length === 1 ? "" : "s"}${community?.completedRoutes ? ` · ${community.completedRoutes} asynchronous routes · ${community.signatureVarietyPercent}% Signature variety` : ""}.`
+    : "No verified score has reached this ladder yet.";
   if (!entries.length) {
     const row = document.createElement("tr");
     row.innerHTML = `<td colspan="4"><div class="leaderboard-empty">Be the first constellation on this board.</div></td>`;
@@ -4512,23 +6483,74 @@ function renderLeaderboard(board) {
   }
   $("#leaderboardNote").textContent = board.division === "pure"
     ? "Pure runs use only forged discoveries and no injected concepts."
-    : "Open runs used one Wish, permanent Vault word, or another declared assist.";
+    : "Open runs used one Wish, Vault word, Compass, Gift, AI route, or another declared assist.";
+  if (community?.completedRoutes) track("community_viewed", { source: "community", completedRoutes: community.completedRoutes, topPercent: community.player?.topPercent || 0 });
 }
 
 function resumeTimerIfNeeded() {
-  if (state.game?.timeLimit && !state.finished && !state.reveal.active && !state.reveal.pending && !els.gameScreen.hidden && !els.missionBriefingDialog.open && !els.paywallDialog.open && !els.wishDialog.open && !els.atlasDialog.open && !els.senseDialog.open && !els.shareDialog.open && !els.profileDialog.open && !els.exchangeDialog.open && !els.marketBuyDialog.open && !els.leaderboardDialog.open && !els.revealDialog.open && !$("#recoveryDialog").open) startTimer();
+  if (state.game?.timeLimit && !state.finished && !state.startingRun && !state.pause.active && !state.reveal.active && !state.reveal.pending && !els.gameScreen.hidden && !els.missionBriefingDialog.open && !els.pauseDialog.open && !els.journeyDialog.open && !els.paywallDialog.open && !els.wishDialog.open && !els.atlasDialog.open && !els.senseDialog.open && !els.shareDialog.open && !els.profileDialog.open && !els.exchangeDialog.open && !els.marketBuyDialog.open && !els.leaderboardDialog.open && !els.revealDialog.open && !$("#recoveryDialog").open) startTimer();
 }
 
 function renderAtlas() {
-  $("#atlasEmpty").hidden = state.history.length > 0;
-  $("#atlasSummary").hidden = state.history.length === 0;
+  const hasHistory = state.history.length > 0;
+  const compactGraph = window.innerWidth <= 700;
+  const graph = buildLivingAtlas({
+    history: state.history,
+    target: state.game?.target || "",
+    lockedCount: hasHistory ? Math.min(6, Math.max(2, 6 - Math.floor(state.history.length / 4))) : 0,
+    width: compactGraph ? 480 : 760,
+    height: compactGraph ? 360 : 420
+  });
+  $("#atlasEmpty").hidden = hasHistory;
+  $("#atlasSummary").hidden = !hasHistory;
+  els.atlasMap.hidden = !hasHistory;
   $("#atlasDiscoveries").textContent = state.newDiscoveries;
   $("#atlasMoves").textContent = state.moves;
   $("#atlasPath").replaceChildren(...state.history.map((step, index) => {
     const item = document.createElement("li");
-    item.innerHTML = `<span class="atlas-star">${escapeHtml(step.emoji)}</span><small>STAR ${String(index + 1).padStart(2, "0")}${step.newDiscovery ? " · NEW" : ""}${step.twisted ? " · COSMIC TWIST" : ""}</small><strong>${escapeHtml(step.word)}</strong><span>${escapeHtml(step.a)} + ${escapeHtml(step.b)}${step.twisted ? ` · expected ${escapeHtml(step.canonicalWord)}` : ""}</span>`;
+    item.innerHTML = `<span class="atlas-star">${escapeHtml(step.emoji)}</span><small>STAR ${String(index + 1).padStart(2, "0")}${step.newDiscovery ? " · NEW" : ""}${step.twisted ? " · COSMIC TWIST" : ""}</small><strong>${escapeHtml(step.word)}</strong><span>${escapeHtml(step.a)} + ${escapeHtml(step.b)}${step.twisted ? ` · expected ${escapeHtml(step.canonicalWord)}` : ""}</span>${step.insight ? `<small class="recipe-insight">${escapeHtml(step.insight)}</small>` : ""}`;
     return item;
   }));
+  if (hasHistory) {
+    const svgNamespace = "http://www.w3.org/2000/svg";
+    const nodesById = new Map(graph.nodes.map((node) => [node.id, node]));
+    els.atlasGraph.setAttribute("viewBox", `0 0 ${graph.width} ${graph.height}`);
+    els.atlasGraphEdges.replaceChildren(...graph.edges.map((edge) => {
+      const from = nodesById.get(edge.from);
+      const to = nodesById.get(edge.to);
+      const line = document.createElementNS(svgNamespace, "line");
+      line.setAttribute("x1", from.x);
+      line.setAttribute("y1", from.y);
+      line.setAttribute("x2", to.x);
+      line.setAttribute("y2", to.y);
+      line.setAttribute("class", `atlas-edge${edge.twisted ? " twisted" : ""}${edge.revealed ? " revealed" : ""}`);
+      return line;
+    }));
+    els.atlasGraphNodes.replaceChildren(...graph.nodes.map((node) => {
+      const group = document.createElementNS(svgNamespace, "g");
+      group.setAttribute("class", `atlas-node${node.starter ? " starter" : ""}${node.target ? " target" : ""}${node.locked ? " locked" : ""}`);
+      group.setAttribute("transform", `translate(${node.x} ${node.y})`);
+      const title = document.createElementNS(svgNamespace, "title");
+      title.textContent = node.locked ? "Undiscovered recipe silhouette" : `${node.label}${node.target ? " · destination" : ""}`;
+      const circle = document.createElementNS(svgNamespace, "circle");
+      circle.setAttribute("r", node.target ? "19" : node.locked ? "10" : "14");
+      const emoji = document.createElementNS(svgNamespace, "text");
+      emoji.setAttribute("class", "atlas-node-emoji");
+      emoji.setAttribute("y", "6");
+      emoji.textContent = node.locked ? "?" : node.emoji || "✦";
+      const label = document.createElementNS(svgNamespace, "text");
+      label.setAttribute("y", node.target ? "39" : "34");
+      label.textContent = node.locked ? "" : node.label.length > 18 ? `${node.label.slice(0, 17)}…` : node.label;
+      group.append(title, circle, emoji, label);
+      return group;
+    }));
+    els.atlasGraphSummary.textContent = graph.summary.targetReached
+      ? `${graph.summary.words} visible stars · ${graph.summary.combinations} performed recipes · destination reached.`
+      : `${graph.summary.words} visible stars · ${graph.summary.combinations} performed recipes · the destination beacon reveals no hidden route.`;
+  } else {
+    els.atlasGraphEdges.replaceChildren();
+    els.atlasGraphNodes.replaceChildren();
+  }
   renderMastery();
 }
 
@@ -4536,6 +6558,8 @@ function selectAtlasTab(view = "orbit") {
   const mastery = view === "mastery";
   $("#orbitAtlasTab").setAttribute("aria-selected", String(!mastery));
   $("#masteryAtlasTab").setAttribute("aria-selected", String(mastery));
+  $("#orbitAtlasTab").tabIndex = mastery ? -1 : 0;
+  $("#masteryAtlasTab").tabIndex = mastery ? 0 : -1;
   $("#orbitAtlasPanel").hidden = mastery;
   $("#masteryAtlasPanel").hidden = !mastery;
   if (mastery) track("mastery_opened", { location: state.game ? "run" : "home" });
@@ -4666,6 +6690,7 @@ function downloadConstellationCard() {
 function openProfile() {
   stopTimer();
   renderProfile();
+  els.profileDialog.querySelectorAll(".profile-disclosure[open]").forEach((section) => { section.open = false; });
   els.profileDialog.showModal();
 }
 
@@ -4933,10 +6958,9 @@ function configureStaticBetaUi() {
   document.body.classList.add("local-beta");
   const banner = $("#practiceBanner");
   if (banner) banner.hidden = false;
-  ["marketButton", "leaderboardButton", "viewLeaderboards", "startPremium", "browseExchange", "resultLeaderboard"]
+  $("#localDiagnosticsSection").hidden = false;
+  ["marketButton", "leaderboardButton", "startPremium", "browseExchange", "resultLeaderboard"]
     .forEach((id) => { const element = document.getElementById(id); if (element) element.hidden = true; });
-  const socialCopy = document.querySelector(".social-row > div p");
-  if (socialCopy) socialCopy.textContent = "Practice runs stay on this device. Verified rankings will arrive with the online account service.";
   const wishLabel = $("#wishWord b");
   if (wishLabel) wishLabel.textContent = "Practice Wish";
   const wishHeading = $("#wishDialog h2");
@@ -4944,6 +6968,56 @@ function configureStaticBetaUi() {
   const wishIntro = document.querySelector("#wishDialog > p");
   if (wishIntro) wishIntro.textContent = "Add one known concept to this local orbit. It may open a shortcut, but the result remains unranked.";
   $("#profileCallsign").textContent = "Local Stargazer";
+}
+
+async function loadBuildIdentity() {
+  const output = $("#buildVersion");
+  if (!output) return;
+  let version = String(document.body.dataset.buildVersion || "").trim();
+  let buildId = String(document.body.dataset.buildId || "").trim();
+  if (!version || version === "development") {
+    try {
+      const response = await fetch("./release.json", { cache: "no-store", credentials: "same-origin" });
+      if (response.ok) {
+        const release = await response.json();
+        version = String(release.version || version).trim();
+        buildId = String(release.buildId || buildId).trim();
+      }
+    } catch { /* Source checkout and offline play can safely use the embedded label. */ }
+  }
+  output.textContent = (buildId || version || "development").toUpperCase();
+  output.title = version && buildId && version !== buildId ? `Version ${version}` : "Constellore build";
+}
+
+function focusExploreLaunch() {
+  const hub = $("#exploreHub");
+  if (!hub) return false;
+  document.body.classList.add("intent-explore");
+  hub.open = true;
+  const creator = hub.querySelector(".custom-target-disclosure");
+  if (creator) creator.open = true;
+  hub.classList.add("launch-intent");
+  requestAnimationFrame(() => {
+    hub.querySelector("summary")?.focus({ preventScroll: true });
+    hub.scrollIntoView({ behavior: "smooth", block: "center" });
+  });
+  setTimeout(() => hub.classList.remove("launch-intent"), 2400);
+  return true;
+}
+
+async function handleLaunchIntent(params) {
+  const mode = String(params.get("mode") || "").toLowerCase();
+  if (mode === "daily") {
+    if (profile.dailyCompleted === todayKey) {
+      focusExploreLaunch();
+      showToast("Today’s shared word is complete. Explore another guaranteed route.", { scope: "global" });
+      return true;
+    }
+    await beginMode("daily");
+    return true;
+  }
+  if (mode === "explore" || mode === "creator") return focusExploreLaunch();
+  return false;
 }
 
 function formatTime(seconds) {
@@ -4960,7 +7034,7 @@ function clearGlobalToast() {
 }
 
 function showToast(message, { scope = "auto" } = {}) {
-  const boardCanOwnNotice = state.game && !els.gameScreen.hidden && !state.finished && !state.reveal.active && !state.reveal.pending && !document.querySelector("dialog[open]");
+  const boardCanOwnNotice = state.game && !els.gameScreen.hidden && !state.finished && !state.pause.active && !state.reveal.active && !state.reveal.pending && !document.querySelector("dialog[open]");
   if (scope !== "global" && boardCanOwnNotice) {
     showAlchemy(message);
     return;
@@ -4978,10 +7052,28 @@ function clamp(value, min, max) { return Math.min(Math.max(value, min), max); }
 function escapeHtml(value) { return String(value).replace(/[&<>'"]/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[character]); }
 
 $$('[data-mode]').forEach((button) => button.addEventListener("click", () => beginMode(button.dataset.mode)));
+$("#primaryOrbitButton").addEventListener("click", beginPrimaryOrbit);
+$("#primaryOrbitSecondary").addEventListener("click", beginPrimarySecondary);
+$("#hubMenuButton").addEventListener("click", openHubMenu);
 $("#customTargetForm").addEventListener("submit", beginCustomTarget);
 $("#beginMission").addEventListener("click", confirmMissionBriefing);
 $("#cancelMission").addEventListener("click", cancelMissionBriefing);
-$("#homeButton").addEventListener("click", returnHome);
+$("#pauseRunButton").addEventListener("click", openPauseMenu);
+$("#resumePausedRun").addEventListener("click", closePauseMenu);
+$("#cancelPauseAction").addEventListener("click", () => resetPauseConfirmation({ focus: true }));
+$("#pauseRestart").addEventListener("click", () => {
+  if (!confirmPauseAction("restart")) return;
+  pauseCloseRestoreFocus = false;
+  closePauseMenu();
+  if (state.mode === "training") startFirstOrbit();
+  else void retryGame();
+});
+$("#pauseExit").addEventListener("click", () => {
+  if (!confirmPauseAction("exit")) return;
+  pauseCloseRestoreFocus = false;
+  closePauseMenu();
+  returnHome();
+});
 els.resetBoard.addEventListener("click", clearBoardWithUndo);
 els.tidyBoard.addEventListener("click", tidyOrbit);
 $("#undoBoardClear").addEventListener("click", undoBoardClear);
@@ -4991,6 +7083,8 @@ els.quickTipShortcut.addEventListener("click", useQuickTip);
 els.wordGiftShortcut.addEventListener("click", useWordGiftShortcut);
 els.senseShortcut.addEventListener("click", useSenseShortcut);
 els.powerupShopShortcut.addEventListener("click", openPowerupShop);
+els.expectedPairButton.addEventListener("click", submitExpectedPairFeedback);
+$("#dismissExpectedPair").addEventListener("click", resetExpectedPairFeedback);
 els.useQuickTip.addEventListener("click", useQuickTip);
 els.useWordGift.addEventListener("click", useWordGift);
 $("#useSense").addEventListener("click", useConstellationSense);
@@ -5018,7 +7112,11 @@ els.inventorySearchClear.addEventListener("click", () => {
   scheduleRunSave();
 });
 $("#atlasButton").addEventListener("click", () => openAtlas("orbit"));
-$("#viewMastery").addEventListener("click", () => openAtlas("mastery"));
+$("#resultAtlas").addEventListener("click", () => {
+  if (els.resultDialog.open) els.resultDialog.close();
+  openAtlas("orbit");
+});
+$("#viewMastery").addEventListener("click", () => { closeHubMenu(); openAtlas("mastery"); });
 $("#orbitAtlasTab").addEventListener("click", () => selectAtlasTab("orbit"));
 $("#masteryAtlasTab").addEventListener("click", () => selectAtlasTab("mastery"));
 [$("#orbitAtlasTab"), $("#masteryAtlasTab")].forEach((tab) => tab.addEventListener("keydown", (event) => {
@@ -5029,12 +7127,15 @@ $("#masteryAtlasTab").addEventListener("click", () => selectAtlasTab("mastery"))
   next.focus();
 }));
 $("#shareRunButton").addEventListener("click", openShare);
-$("#revealPathButton").addEventListener("click", openRevealPath);
+$("#revealPathButton").addEventListener("click", () => {
+  if (els.senseDialog.open) els.senseDialog.close();
+  requestAnimationFrame(openRevealPath);
+});
 $("#confirmReveal").addEventListener("click", confirmRevealPath);
 $("#revealPause").addEventListener("click", toggleRevealPause);
 $("#revealSpeed").addEventListener("click", cycleRevealSpeed);
 $("#revealSkip").addEventListener("click", skipRevealAnimation);
-$("#startPremium").addEventListener("click", () => profile.premium ? openProfile() : openPremium());
+$("#startPremium").addEventListener("click", () => { closeHubMenu(); profile.premium ? openProfile() : openPremium(); });
 $("#wishWord").addEventListener("click", openWish);
 $("#checkoutButton").addEventListener("click", checkoutPremium);
 $("#wishForm").addEventListener("submit", makeWish);
@@ -5043,22 +7144,44 @@ $("#profileButton").addEventListener("click", openProfile);
 $("#syncCloudProfile").addEventListener("click", () => syncCloudProfile({ manual: true }));
 $("#restoreOwnership").addEventListener("click", () => restoreOwnership());
 $("#rotateRecoveryKit").addEventListener("click", rotateRecoveryKit);
+$("#exportPlayerData").addEventListener("click", exportPlayerData);
+$("#deletePlayerData").addEventListener("click", deletePlayerData);
+$("#exportLocalPractice").addEventListener("click", exportLocalPractice);
+$("#resetLocalPractice").addEventListener("click", resetLocalPractice);
+$("#exportLocalDiagnostics").addEventListener("click", exportLocalDiagnostics);
+$("#resetLocalDiagnostics").addEventListener("click", resetLocalDiagnostics);
+$("#diagnosticsPreference").addEventListener("click", toggleDiagnosticsPreference);
+$("#exportDiagnostics").addEventListener("click", exportDiagnostics);
+$("#resetAnalyticsIdentity").addEventListener("click", resetAnalyticsIdentity);
 $("#recoverAccountForm").addEventListener("submit", recoverAccount);
 $("#copyRecoveryKit").addEventListener("click", copyRecoveryKit);
 $("#confirmRecoverySaved").addEventListener("click", acknowledgeRecoveryKit);
-$("#beginFirstOrbit").addEventListener("click", startFirstOrbit);
-$("#dismissFirstOrbit").addEventListener("click", dismissFirstOrbitWelcome);
 $("#replayFirstOrbit").addEventListener("click", startFirstOrbit);
+$("#replaySecondOrbit").addEventListener("click", startSecondOrbit);
 $("#skipFirstOrbit").addEventListener("click", skipFirstOrbit);
 $("#feedbackToggle").addEventListener("click", () => toggleFeedbackPreference("sound"));
 $("#soundPreference").addEventListener("click", () => toggleFeedbackPreference("sound"));
 $("#hapticPreference").addEventListener("click", () => toggleFeedbackPreference("haptics"));
-$("#marketButton").addEventListener("click", () => openExchange("market"));
-$("#leaderboardButton").addEventListener("click", () => openLeaderboard());
+$("#marketButton").addEventListener("click", () => { closeHubMenu(); openExchange("market"); });
+$("#leaderboardButton").addEventListener("click", () => { closeHubMenu(); openLeaderboard(); });
 $("#updatesButton").addEventListener("click", () => {
+  closeHubMenu();
   if (!els.updatesDialog.open) els.updatesDialog.showModal();
 });
-$("#viewLeaderboards").addEventListener("click", () => openLeaderboard());
+$("#voyageHubButton").addEventListener("click", () => openJourneyHub("voyage"));
+$("#eventHubButton").addEventListener("click", () => openJourneyHub("event"));
+$("#voyageJourneyTab").addEventListener("click", () => renderJourneyHub("voyage"));
+$("#eventJourneyTab").addEventListener("click", () => renderJourneyHub("event"));
+[$("#voyageJourneyTab"), $("#eventJourneyTab")].forEach((tab) => tab.addEventListener("keydown", (event) => {
+  if (!["ArrowLeft", "ArrowRight"].includes(event.key)) return;
+  event.preventDefault();
+  const next = tab.id === "voyageJourneyTab" ? $("#eventJourneyTab") : $("#voyageJourneyTab");
+  renderJourneyHub(next.id === "eventJourneyTab" ? "event" : "voyage");
+  next.focus();
+}));
+$("#chooseNextVoyage").addEventListener("click", chooseNextVoyage);
+$("#startVoyageStage").addEventListener("click", beginVoyageStage);
+$("#startEventTarget").addEventListener("click", beginEventTarget);
 $("#browseExchange").addEventListener("click", () => openExchange("market"));
 $("#confirmMarketBuy").addEventListener("click", confirmMarketPurchase);
 $$('[data-recipe-rating]').forEach((button) => button.addEventListener("click", () => submitRecipeFeedback(button.dataset.recipeRating)));
@@ -5079,7 +7202,7 @@ $("#leaderboardScope").addEventListener("change", (event) => {
   state.leaderboardScope = event.currentTarget.value;
   loadLeaderboard();
 });
-$("#createChallenge").addEventListener("click", createChallengeFromHome);
+$("#createChallenge").addEventListener("click", () => { closeHubMenu(); createChallengeFromHome(); });
 $("#copyChallenge").addEventListener("click", copyChallenge);
 $("#downloadCard").addEventListener("click", downloadConstellationCard);
 $("#nativeShare").addEventListener("click", nativeShare);
@@ -5095,12 +7218,26 @@ $("#resultReveal").addEventListener("click", () => {
 });
 $("#resultPrimary").addEventListener("click", () => state.resultAction?.());
 $("#resultRetry").addEventListener("click", () => state.reveal.replayAvailable ? returnHome() : retryGame());
+$("#raceCommunityGhost").addEventListener("click", () => {
+  if (!queueNearbyCommunityRace()) return showToast("That nearby route is no longer available.");
+  profile.rivalGhostEnabled = true;
+  saveProfile({ fields: ["settings"] });
+  track("community_viewed", { source: "community", action: "race" });
+  if (els.resultDialog.open) els.resultDialog.close();
+  void retryGame();
+});
 $("#resultLeaderboard").addEventListener("click", () => {
   if (state.startingRun) return;
   if (els.resultDialog.open) els.resultDialog.close();
   openLeaderboard(state.leaderboardScope, state.leaderboardDivision);
 });
-$$('[data-theme]').forEach((button) => button.addEventListener("click", () => chooseTheme(button.dataset.theme)));
+$$('button[data-theme]').forEach((button) => button.addEventListener("click", () => chooseTheme(button.dataset.theme)));
+els.profileDialog.querySelectorAll(".profile-disclosure").forEach((section) => section.addEventListener("toggle", () => {
+  if (!section.open) return;
+  els.profileDialog.querySelectorAll(".profile-disclosure[open]").forEach((other) => {
+    if (other !== section) other.open = false;
+  });
+}));
 $$('[data-close]').forEach((button) => button.addEventListener("click", () => {
   if (button.dataset.close === "revealDialog" && state.reveal.pending) return;
   document.getElementById(button.dataset.close).close();
@@ -5109,6 +7246,8 @@ els.missionBriefingDialog.addEventListener("cancel", (event) => {
   event.preventDefault();
   cancelMissionBriefing();
 });
+els.pauseDialog.addEventListener("cancel", (event) => { event.preventDefault(); closePauseMenu(); });
+els.pauseDialog.addEventListener("close", () => { finishPauseClose(); setTimeout(() => resumeTimerIfNeeded(), 0); });
 els.revealDialog.addEventListener("cancel", (event) => {
   if (state.reveal.pending) event.preventDefault();
 });
@@ -5125,8 +7264,7 @@ els.resultDialog.addEventListener("cancel", (event) => {
   }
 });
 $("#recoveryDialog").addEventListener("cancel", (event) => event.preventDefault());
-[els.paywallDialog, els.wishDialog, els.atlasDialog, els.senseDialog, els.shareDialog, els.profileDialog, els.marketBuyDialog, els.leaderboardDialog, els.revealDialog, $("#recoveryDialog")].forEach((dialog) => dialog.addEventListener("close", () => setTimeout(resumeTimerIfNeeded, 0)));
-els.firstOrbitDialog.addEventListener("close", rememberFirstOrbitSeen);
+[els.paywallDialog, els.wishDialog, els.atlasDialog, els.senseDialog, els.shareDialog, els.profileDialog, els.journeyDialog, els.marketBuyDialog, els.leaderboardDialog, els.revealDialog, $("#recoveryDialog")].forEach((dialog) => dialog.addEventListener("close", () => setTimeout(resumeTimerIfNeeded, 0)));
 els.exchangeDialog.addEventListener("close", () => {
   clearInterval(state.marketTimer);
   state.marketTimer = null;
@@ -5137,11 +7275,13 @@ window.addEventListener("resize", () => {
   requestAnimationFrame(() => {
     constrainBoardNodes();
     startCosmos();
+    if (els.atlasDialog.open) renderAtlas();
   });
 });
 document.addEventListener("pointerdown", primeFeedbackAudio, { once: true, passive: true });
 window.addEventListener("pointerdown", rememberPointerPosition, { capture: true, passive: true });
 window.addEventListener("pointermove", rememberPointerPosition, { passive: true });
+window.addEventListener("keydown", handlePauseShortcut);
 window.addEventListener("keydown", activateShiftBoard);
 window.addEventListener("keydown", activateCtrlHover);
 window.addEventListener("keydown", (event) => {
@@ -5177,6 +7317,7 @@ document.addEventListener("visibilitychange", () => {
 window.addEventListener("beforeinstallprompt", (event) => { event.preventDefault(); state.installPrompt = event; $("#installButton").hidden = false; });
 $("#installButton").addEventListener("click", async () => {
   if (!state.installPrompt) return;
+  closeHubMenu();
   state.installPrompt.prompt();
   const choice = await state.installPrompt.userChoice;
   if (choice.outcome === "accepted") track("pwa_installed");
@@ -5186,6 +7327,7 @@ $("#installButton").addEventListener("click", async () => {
 
 async function boot() {
   configureStaticBetaUi();
+  void loadBuildIdentity();
   const dailySense = refillDailySense();
   if (dailySense.refilled) saveProfile({ cloud: false });
   else renderProfile();
@@ -5194,22 +7336,23 @@ async function boot() {
   await loadConfig();
   try { await ensurePlayer(); }
   catch { showToast("Leaderboard and Word Exchange need a connection."); }
+  if (profile.playerId && profile.playerToken) await refreshCosmicEventState();
   if (profile.playerId && profile.playerToken) await initializeCloudServices();
   announcePendingScoreRecovery(await retryPendingScoreUploads());
   if ("serviceWorker" in navigator && window.top === window.self) {
-    const serviceWorkerUrl = isStaticBeta ? "./service-worker.js" : "/play/service-worker.js";
+    const serviceWorkerUrl = isStaticBeta ? "./service-worker.js?v=3.0.0-beta.1" : "/play/service-worker.js?v=3.0.0-beta.1";
     const serviceWorkerScope = isStaticBeta ? "./" : "/play/";
     navigator.serviceWorker.register(serviceWorkerUrl, { scope: serviceWorkerScope }).catch(() => {});
   }
   track("app_opened", { installed: matchMedia("(display-mode: standalone)").matches });
+  announceModeScreenViewed();
   const params = new URLSearchParams(location.search);
   const challengeRequested = params.get("challenge") === "1" && params.get("target");
   const restored = challengeRequested ? false : await restoreInterruptedRun(readActiveRunSnapshot());
   if (!restored && challengeRequested) {
     track("challenge_opened", { target: params.get("target") });
     void beginMode("challenge", { target: params.get("target"), seed: Number(params.get("seed")) || stableHash(params.get("target")) });
-  }
-  if (!restored && !challengeRequested && !state.recoveryKit?.code && !sanitizeFirstOrbitState(profile.firstOrbit).seen) requestAnimationFrame(openFirstOrbitWelcome);
+  } else if (!restored) await handleLaunchIntent(params);
   if (window.parent !== window) window.parent.postMessage({ type: "constellore:ready", localOnly: isStaticBeta }, location.origin);
 }
 

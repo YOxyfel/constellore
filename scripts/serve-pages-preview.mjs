@@ -4,7 +4,9 @@ import { extname, join, normalize, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = normalize(fileURLToPath(new URL("../dist-pages/", import.meta.url))).replace(/[\\/]+$/, "");
-const prefix = "/constellore/";
+const configuredPrefix = String(process.env.CONSTELLORE_PAGES_PREFIX || "/constellore/").trim();
+if (!/^\/(?:[A-Za-z0-9._~-]+\/)*$/.test(configuredPrefix)) throw new Error("CONSTELLORE_PAGES_PREFIX must be a root-relative directory path ending in /.");
+const prefix = configuredPrefix;
 const port = Number(process.env.PORT || 4185);
 const mime = {
   ".html": "text/html; charset=utf-8",
@@ -13,7 +15,9 @@ const mime = {
   ".mjs": "text/javascript; charset=utf-8",
   ".json": "application/json; charset=utf-8",
   ".webmanifest": "application/manifest+json; charset=utf-8",
+  ".png": "image/png",
   ".svg": "image/svg+xml",
+  ".txt": "text/plain; charset=utf-8",
   ".xml": "application/xml; charset=utf-8"
 };
 

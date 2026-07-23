@@ -24,6 +24,10 @@ const eligible = {
 
 test("Cosmic Twist catalog contains contextual alternatives to real canonical recipes", () => {
   assert.deepEqual(cosmicTwistOptions("brick", "BRICK").map((item) => item.word), ["Concrete", "Great Wall", "Fortress"]);
+  assert.equal(cosmicTwistOptions("Brick", "Brick").find((item) => item.word === "Concrete")?.category, "structure");
+  assert.equal(cosmicTwistOptions("House", "House").find((item) => item.word === "Community")?.category, "life");
+  assert.equal(cosmicTwistOptions("Star", "Star").find((item) => item.word === "Binary Star")?.category, "nature");
+  assert.equal(cosmicTwistOptions("Rocket", "Rocket").find((item) => item.word === "Comet")?.category, "nature");
   assert.ok(cosmicTwistOptions("Water", "Water").some((item) => item.word === "Whirlpool"));
   assert.ok(cosmicTwistOptions("Fire", "Fire").some((item) => item.word === "Firestorm"));
 

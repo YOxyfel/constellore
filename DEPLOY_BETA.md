@@ -2,7 +2,7 @@
 
 This scaffold publishes Constellore as a **free-to-players beta** on one paid Render Starter web-service instance in Frankfurt. It does not create any account or cloud resource, and it does not make the current JSON economy safe for real-money purchases.
 
-The v1.7.0 beta includes First Orbit training, deterministic Universe Director presentation, aggregate recipe ratings, anonymous Recovery Kits with cloud-profile sync, downloadable Constellation Cards, and cosmetic loadouts. These features are available for product testing; they do not change the storage or commerce limitations described below.
+The v3.0.0-beta.1 build makes the target route the central product: it introduces the simplified first session, World Graph 3, one progressive Guidance ladder, visible route milestones, exact-challenge ranked integrity, expiring/revocable device sessions, provisional anomaly handling, privacy-safe cohort and missing-pair analytics, six-hour earn-only Exchange quotes, AI recipe quarantine, and automated browser/release gates. These features are ready for beta testing; they do not remove the storage, operations, commerce, legal, or real-user evidence requirements described below.
 
 The configuration follows Render's current [Blueprint YAML reference](https://render.com/docs/blueprint-spec), [Node web-service guidance](https://render.com/docs/web-services), and [persistent-disk documentation](https://render.com/docs/disks).
 
@@ -11,7 +11,7 @@ The configuration follows Render's current [Blueprint YAML reference](https://re
 - One `starter` Node web service named `constellore-beta` in `frankfurt`.
 - One manually deployed instance (`numInstances: 1`). Automatic deploys are off so an untested commit cannot replace the public beta.
 - `npm install --omit=dev` for the build and `npm start` for the server.
-- HTTP health checks at `/healthz`.
+- Liveness at `/livez` and Render readiness checks at `/readyz` (the legacy `/healthz` alias remains available).
 - A 1 GB disk mounted at `/var/data`, with the game store at `/var/data/constellore.json`.
 - Privacy-reduced safe backups at startup and once per day under `/var/data/backups`, retaining seven files by default.
 - Production mode, with checkout fulfillment, the development test store, and rewarded ads explicitly disabled.
@@ -31,7 +31,7 @@ Keep `REWARDED_ADS_ENABLED=false` and `CONSTELLORE_ENABLE_TEST_STORE=false`. Pro
 
 Important: Render preserves environment variables that already exist but are omitted from a later Blueprint sync. If this Blueprint is attached to an existing service, inspect its Environment page and **delete** any old checkout URL or OpenAI key before deploying. Never commit API keys, payment credentials, tax documents, or account recovery codes.
 
-The Exchange UI and Star Credit balances may be tested as gameplay systems, but no player should be charged. Star Credits are earned from verified play and are never a cash product. Do not advertise cash-bought words, cash value, competitive advantages, or a working Founder's Pass checkout during this beta.
+The Exchange UI and Star Credit balances may be tested as gameplay systems, but no player should be charged. Star Credits are earned from verified play and are never a cash product. Do not advertise cash-bought words, cash value, competitive advantages, or a working Supporter Pack checkout during this beta.
 
 `CONSTELLORE_ADMIN_TOKEN` is optional. Leave it unset to make the admin endpoints look absent. If an operator needs the aggregate analytics, aggregate recipe-feedback, or on-demand backup endpoints, create a high-entropy secret of at least 24 bytes in Render's secret environment UI and send it only in an authorization header. Never put it in Pages variables, browser code, screenshots, URLs, or the repository.
 
@@ -43,17 +43,17 @@ Do not add Postgres, Key Value, preview services, extra instances, a Pro workspa
 
 ## Deploy safely
 
-1. Put the repository on GitHub or GitLab and run `npm test` locally. Never commit `.env`, `data/`, logs, internal launch plans, or unfinished legal drafts.
+1. Put the repository on GitHub or GitLab and run `npm run check` locally. Never commit `.env`, `data/`, logs, internal launch plans, or unfinished legal drafts.
 2. In Render, choose **New > Blueprint**, connect that repository, and select its default branch.
 3. Review the plan before applying: one web service, Starter, Frankfurt, one instance, one 1 GB disk, and no other resources.
 4. Confirm the Environment page has only the non-secret beta variables in `render.yaml`. Remove `OPENAI_API_KEY` and `NEBULA_CHECKOUT_URL` if they were inherited. Also remove or set `CONSTELLORE_COMMERCE_FULFILLMENT_READY=false`; a checkout URL and this readiness flag must never be enabled until verified fulfillment exists.
 5. Apply the Blueprint and watch the first deploy. Later releases require a deliberate **Manual Deploy** because automatic deploys are disabled.
-6. Open the generated `onrender.com` URL only after the service reports healthy.
-7. In the GitHub repository, set the Actions variable `PUBLIC_BETA_URL` to that Render URL. Set `PUBLIC_INTEREST_API_URL` to the same hostname plus `/api/interest`, for example `https://constellore-beta.onrender.com/api/interest`.
+6. Open the generated `onrender.com` URL only after the service reports healthy. Keep it private QA-only until the pseudonymous-account privacy notice, terms, and a tested private support route are public.
+7. In the GitHub repository, set the Actions variable `PUBLIC_BETA_URL` to the full Render game URL ending in `/play/`, for example `https://constellore-beta.onrender.com/play/`—not the server root.
 8. Confirm Render has `INTEREST_ALLOWED_ORIGINS=https://yoxyfel.github.io`. If a custom website domain is added later, append its exact origin with a comma; do not use `*`.
 9. Rerun **Deploy marketing site to Pages**. The website now sends players to the full server beta and its on-site Launch Wishlist uses the server-backed aggregate. If the interest URL is absent, Pages deliberately falls back to the repository's real GitHub star count instead of inventing a shared counter.
 
-Render assigns a public `onrender.com` address and terminates HTTPS for web services. The app already reads Render's `PORT` variable and exposes `/healthz`; no port secret or custom `PORT` value is needed. See [Web Services](https://render.com/docs/web-services).
+Render assigns a public `onrender.com` address and terminates HTTPS for web services. The app already reads Render's `PORT` variable and exposes `/livez` for liveness and `/readyz` for readiness; `/healthz` remains a compatibility alias for readiness. No port secret or custom `PORT` value is needed. See [Web Services](https://render.com/docs/web-services).
 
 ## Verify the beta
 
@@ -61,25 +61,27 @@ Replace the example hostname with the one shown by Render:
 
 ```powershell
 $base = "https://constellore-beta.onrender.com"
-Invoke-RestMethod "$base/healthz"
+Invoke-RestMethod "$base/livez"
+Invoke-RestMethod "$base/readyz"
 Invoke-RestMethod "$base/api/config"
 ```
 
 Expected checks:
 
-- `/healthz` returns HTTP 200 with `ok: true`.
+- `/livez` returns HTTP 200 with `ok: true` while the process is alive.
+- `/readyz` returns HTTP 200 only when the content graph and configured store are ready. `/healthz` returns the same readiness result for compatibility.
 - `/api/config` reports production beta behavior: billing disabled, the test store disabled, rewarded ads disabled, and AI disabled.
 - `/api/config` also reports an empty credit-pack catalog, `starCreditsSoldForCash: false`, and no ranked advantages in its commerce policy.
 - `/api/interest` reports only aggregate launch-interest totals; adding the same browser signal twice does not increase the active count.
 - `/` shows the public Constellore marketing site and every Play Beta call-to-action reaches `/play/`.
 - `/play/` loads the playable beta directly and survives a browser refresh.
-- A fresh guest is shown one Recovery Kit, cannot accidentally dismiss it before acknowledging that it was saved, and can rotate it from Profile.
+- A fresh guest receives one Recovery Kit. It is kept only in that browser until acknowledged, can be opened from Profile immediately, is prompted after the first real win, cannot be dismissed without acknowledgement, and can then be rotated from Profile.
 - A fresh guest can complete First Orbit, start and finish a game, refresh the page, and still see its versioned cloud progress.
 - The same seed shows the same authored universe, while its law changes only contextual presentation and never a recipe or score.
 - A real, non-revealed, non-user-authored combination can be rated once as Logical, Surprising, or Bad; repeating either the move or recipe in one orbit is rejected.
 - A completed route can preview and download a Constellation Card; a zero-score assisted completion is labelled Study and a Reality-Bent completion is labelled Open.
-- Free cosmetic loadout choices work, Founder cosmetics remain locked, and Star Credits have no cash purchase control.
-- The Founder's Pass control says it is coming after the beta and cannot open a checkout.
+- Free cosmetic loadout choices work, Supporter Pack cosmetics remain locked, and Star Credits have no cash purchase control.
+- The Supporter Pack control says it is coming after the beta and cannot open a checkout.
 - A manual redeploy may cause a short interruption, but guest/server data survives because it is under `/var/data`.
 
 If the admin API is deliberately enabled, verify it from an operator terminal rather than a browser URL:
@@ -97,16 +99,17 @@ After every release, also run a mobile-sized browser smoke test and one desktop 
 
 ## Optional Cloudflare domain, after the Render URL works
 
-The preferred single-origin layout is `oxyfel.com` for the marketing site and `oxyfel.com/play/` for the beta. If a temporary Render hostname or `play.oxyfel.com` is used first, the same `/` and `/play/` routes still work. Do not configure a custom hostname until the domain is purchased and the Render beta is healthy.
+Choose one layout and keep `PUBLIC_BETA_URL` aligned with it. The preferred single-origin layout is `oxyfel.com` for marketing and `oxyfel.com/play/` for the game. The simpler beta-only layout below uses `play.oxyfel.com` for the Render service, so its game URL is `https://play.oxyfel.com/play/`. Do not configure either layout until the domain is purchased and the Render beta is healthy.
 
 1. Add `play.oxyfel.com` under the Render service's **Custom Domains** settings first.
 2. In Cloudflare DNS, create a `CNAME` named `play` targeting the exact `onrender.com` hostname Render gives you.
 3. Keep the record **DNS only** while Render verifies the domain and issues TLS. Set Cloudflare SSL/TLS mode to **Full**. After Render shows a valid certificate, proxying is optional.
 4. Do not create an `AAAA` record for this Render hostname; remove a conflicting one if Cloudflare imported it.
+5. After TLS works, set `PUBLIC_BETA_URL=https://play.oxyfel.com/play/`, add `https://play.oxyfel.com` to the exact API-origin allowlists that need it, rebuild Pages, and test every CTA signed out.
 
 These steps follow Render's [Cloudflare DNS guide](https://render.com/docs/configure-cloudflare-dns) and [custom-domain guide](https://render.com/docs/custom-domains). Cloudflare's own [DNS record instructions](https://developers.cloudflare.com/dns/manage-dns-records/how-to/create-dns-records/) explain the record fields.
 
-For the beta, leave Cloudflare caching at its default and do **not** enable a broad “Cache Everything” rule. If proxying is enabled later, explicitly bypass edge caching for `/api/*` and `/healthz`; these are live, player-specific or operational responses. Also avoid forcing long cache times on `/service-worker.js` or HTML until asset versioning and update behavior have been release-tested. Cloudflare documents rule behavior in [Cache Rules](https://developers.cloudflare.com/cache/how-to/cache-rules/).
+For the beta, leave Cloudflare caching at its default and do **not** enable a broad “Cache Everything” rule. If proxying is enabled later, explicitly bypass edge caching for `/api/*`, `/livez`, `/readyz`, and the legacy `/healthz`; these are live, player-specific or operational responses. Also avoid forcing long cache times on `/service-worker.js` or HTML until asset versioning and update behavior have been release-tested. Cloudflare documents rule behavior in [Cache Rules](https://developers.cloudflare.com/cache/how-to/cache-rules/).
 
 ## Why this is not money-ready
 

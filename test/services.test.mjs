@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { GameStore, MARKET_CATALOG, RunRegistry, calculateStarscore, callsignFor, marketPrice } from "../game-services.mjs";
+import { GameStore, MARKET_CATALOG, MARKET_REPRICE_INTERVAL_MS, RunRegistry, calculateStarscore, callsignFor, isoWeekKey, marketPrice } from "../game-services.mjs";
 
 test("generated public callsigns have a scalable anonymous discriminator", () => {
   const callsigns = Array.from({ length: 2_000 }, (_, index) => callsignFor(`player-${index.toString(16).padStart(12, "0")}`));
@@ -64,14 +64,27 @@ test("interest storage rejects identifiers and dimensions outside the public con
   assert.equal(store.interestAggregate().total, 0);
 });
 
-test("minute market prices are deterministic, bounded, and usefulness-weighted", () => {
-  const minute = 30_000_000;
+test("interest storage prunes stale inactive records and refuses unbounded growth", async () => {
+  const store = await new GameStore(":memory:").init();
+  store.data.interest.records["stale"] = { campaign: "web-release", active: false, firstDate: "2025-01-01", lastChangedDate: "2025-01-02", firstSource: "website" };
+  await store.recordInterest({ anonymousId: "123e4567-e89b-42d3-a456-426614174001", campaign: "web-release", source: "website", action: "add" }, new Date("2026-07-22T12:00:00Z"));
+  assert.equal("stale" in store.data.interest.records, false);
+
+  store.data.interest.records = Object.fromEntries(Array.from({ length: 25_000 }, (_, index) => [`active-${index}`, { campaign: "web-release", active: true, firstDate: "2026-07-22", lastChangedDate: "2026-07-22", firstSource: "website" }]));
+  await assert.rejects(
+    store.recordInterest({ anonymousId: "123e4567-e89b-42d3-a456-426614174002", campaign: "web-release", source: "website", action: "add" }, new Date("2026-07-22T12:00:00Z")),
+    (error) => error.serviceCode === "interest_capacity"
+  );
+});
+
+test("six-hour market prices are deterministic, bounded, and usefulness-weighted", () => {
+  const period = 30_000_000;
   const moon = MARKET_CATALOG.find((item) => item.id === "moon");
   const ocean = MARKET_CATALOG.find((item) => item.id === "ocean");
-  assert.equal(marketPrice(moon, minute), marketPrice(moon, minute));
-  assert.ok(marketPrice(moon, minute) >= moon.basePrice * .8);
-  assert.ok(marketPrice(moon, minute) <= moon.basePrice * 1.2);
-  assert.ok(marketPrice(moon, minute) > marketPrice(ocean, minute), "more useful words should generally have a higher base cost");
+  assert.equal(marketPrice(moon, period), marketPrice(moon, period));
+  assert.ok(marketPrice(moon, period) >= moon.basePrice * .8);
+  assert.ok(marketPrice(moon, period) <= moon.basePrice * 1.2);
+  assert.ok(marketPrice(moon, period) > marketPrice(ocean, period), "more useful words should generally have a higher base cost");
 });
 
 test("the expanded Exchange is unique, categorized, strictly bounded, and smooth", () => {
@@ -83,11 +96,11 @@ test("the expanded Exchange is unique, categorized, strictly bounded, and smooth
   for (const item of MARKET_CATALOG) {
     assert.ok(categories.has(item.category), `${item.word} should use an allowed semantic category`);
     let previous = marketPrice(item, 30_000_000, .5);
-    for (let minute = 30_000_001; minute < 30_000_241; minute += 1) {
-      const current = marketPrice(item, minute, .5);
+    for (let period = 30_000_001; period < 30_000_241; period += 1) {
+      const current = marketPrice(item, period, .5);
       assert.ok(current >= item.basePrice * .8, `${item.word} should stay above its price floor`);
       assert.ok(current <= item.basePrice * 1.2, `${item.word} should stay below its price ceiling`);
-      assert.ok(Math.abs(current - previous) <= 5, `${item.word} should move by at most one five-credit tick per minute`);
+      assert.ok(Math.abs(current - previous) <= 5, `${item.word} should move by at most one five-credit tick per six-hour period`);
       previous = current;
     }
   }
@@ -107,7 +120,7 @@ test("wallet quotes purchase permanent licenses atomically and idempotently", as
   assert.equal(store.publicPlayer(player.id).vault.length, 1);
 });
 
-test("demand affects the next minute without invalidating current signed quotes", async (t) => {
+test("demand affects the next six-hour period without invalidating current signed quotes", async (t) => {
   const fixedNow = 1_800_000_030_000;
   t.mock.method(Date, "now", () => fixedNow);
   const store = await new GameStore(":memory:").init();
@@ -117,13 +130,13 @@ test("demand affects the next minute without invalidating current signed quotes"
   const secondQuote = store.marketSnapshot(secondPlayer.id).items.find((item) => item.id === "ocean");
 
   await store.buyLicense(firstPlayer.id, firstQuote.quoteId, "first-ocean-purchase");
-  const sameMinute = store.marketSnapshot(secondPlayer.id).items.find((item) => item.id === "ocean");
-  assert.equal(sameMinute.price, secondQuote.price);
+  const samePeriod = store.marketSnapshot(secondPlayer.id).items.find((item) => item.id === "ocean");
+  assert.equal(samePeriod.price, secondQuote.price);
   await assert.doesNotReject(store.buyLicense(secondPlayer.id, secondQuote.quoteId, "second-ocean-purchase"));
 
-  const nextMinute = store.marketSnapshot(secondPlayer.id, fixedNow + 60_000).items.find((item) => item.id === "ocean");
-  assert.notEqual(nextMinute.quoteId, secondQuote.quoteId);
-  assert.ok(store.data.demand.ocean.ema > 0, "completed-minute purchases should lift subsequent demand");
+  const nextPeriod = store.marketSnapshot(secondPlayer.id, fixedNow + MARKET_REPRICE_INTERVAL_MS).items.find((item) => item.id === "ocean");
+  assert.notEqual(nextPeriod.quoteId, secondQuote.quoteId);
+  assert.ok(store.data.demand.ocean.ema > 0, "completed-period purchases should lift subsequent demand");
 });
 
 test("an idempotency key cannot be reused for a different quote", async () => {
@@ -144,7 +157,7 @@ test("expired market quotes are rejected without changing the wallet", async () 
   const store = await new GameStore(":memory:").init();
   const player = await store.registerPlayer();
   const startingBalance = player.credits;
-  const expiredSnapshot = store.marketSnapshot(player.id, Date.now() - 60_000);
+  const expiredSnapshot = store.marketSnapshot(player.id, Date.now() - MARKET_REPRICE_INTERVAL_MS);
   const quote = expiredSnapshot.items.find((item) => item.id === "moon");
 
   await assert.rejects(
@@ -155,7 +168,7 @@ test("expired market quotes are rejected without changing the wallet", async () 
   assert.equal(store.ownsLicense(player.id, "moon"), false);
 });
 
-test("personal Wishes are free once and then renew daily for Founders", async () => {
+test("personal Wishes are free once and never renew from a paid cosmetic entitlement", async () => {
   const store = await new GameStore(":memory:").init();
   const player = await store.registerPlayer();
   const firstDay = new Date("2026-07-16T12:00:00.000Z");
@@ -167,9 +180,7 @@ test("personal Wishes are free once and then renew daily for Founders", async ()
 
   await store.setFounderPass(player.id, true);
   assert.equal(store.canUseWish(player.id, firstDay), false, "buying the pass should not create a second Wish on the same day");
-  assert.equal(store.canUseWish(player.id, nextDay), true);
-  await store.consumeWish(player.id, nextDay);
-  assert.equal(store.canUseWish(player.id, nextDay), false);
+  assert.equal(store.canUseWish(player.id, nextDay), false, "the cosmetic pass must not renew gameplay assistance on a later day");
 });
 
 test("ranked credit rewards cannot be replay-farmed and grant a four-day weekly bonus", async () => {
@@ -236,6 +247,8 @@ test("server runs retain a canonical restore ledger and the exact Reality Bend",
     note: "Water softens earth.",
     source: "world",
     newDiscovery: true,
+    progressionEligible: false,
+    eventEligible: false,
     twisted: false,
     canonicalWord: "",
     revealed: false,
@@ -246,6 +259,23 @@ test("server runs retain a canonical restore ledger and the exact Reality Bend",
   progress.history[0].word = "Tampered";
   assert.equal(run.bendItem.word, "Moon", "restore payloads must not mutate authoritative run state");
   assert.equal(run.history[0].word, "Mud");
+});
+
+test("AI and AI-route discoveries enter Open at 80% without weakening a stronger assist", async () => {
+  const store = await new GameStore(":memory:").init();
+  const player = await store.registerPlayer();
+  const runs = new RunRegistry(store);
+  const game = { mode: "reach", target: "Forest", tier: 1, starters: ["Earth", "Water", "Fire", "Air"] };
+
+  const routed = runs.start(player.id, game, { ranked: false });
+  runs.recordCombination(routed.run, { word: "Clay", emoji: "🧱", category: "structure", source: "ai-route" }, { a: "Earth", b: "Water" });
+  assert.equal(routed.run.assist, "ai");
+  assert.equal(calculateStarscore({ game, moves: 1, elapsedSeconds: 0, assist: routed.run.assist }), 84_000);
+
+  const gifted = runs.start(player.id, game, { ranked: false });
+  runs.gift(gifted.run, { word: "Glass", emoji: "🔍", category: "structure" });
+  runs.recordCombination(gifted.run, { word: "Plasma", emoji: "✨", category: "force", source: "ai" }, { a: "Fire", b: "Air" });
+  assert.equal(gifted.run.assist, "gift", "AI may never upgrade a previously committed half-score Gift run");
 });
 
 test("revealed routes are recorded in authoritative restore history once", async () => {
@@ -302,11 +332,41 @@ test("leaderboards keep each player's best verified result", async () => {
   assert.equal(board.playerEntry.rank, 1);
 });
 
+test("leaderboards can compare one exact challenge instead of mixing targets or modes", async () => {
+  const store = await new GameStore(":memory:").init();
+  const first = await store.registerPlayer();
+  const second = await store.registerPlayer();
+  const now = new Date().toISOString();
+  const common = { division: "pure", assist: "none", dailyKey: now.slice(0, 10), weeklyKey: isoWeekKey(), createdAt: now };
+  await store.addScore({ ...common, id: "exact-one", runId: "run-exact-one", playerId: first.id, callsign: first.callsign, challengeId: "quick:alpha", mode: "quick", target: "Forest", score: 90_000, moves: 6, elapsedMs: 30_000 });
+  await store.addScore({ ...common, id: "exact-two", runId: "run-exact-two", playerId: second.id, callsign: second.callsign, challengeId: "moves:alpha", mode: "moves", target: "Rocket", score: 120_000, moves: 8, elapsedMs: 20_000 });
+
+  const exact = store.leaderboard("sprint", "pure", 10, first.id, { challengeId: "quick:alpha" });
+  assert.equal(exact.entries.length, 1);
+  assert.equal(exact.entries[0].challengeId, "quick:alpha");
+  assert.equal(exact.entries[0].callsign, first.callsign);
+  assert.equal(exact.playerEntry.rank, 1);
+
+  const quickOnly = store.leaderboard("sprint", "pure", 10, first.id, { mode: "quick" });
+  assert.equal(quickOnly.entries.length, 1);
+  assert.equal(quickOnly.entries[0].mode, "quick");
+});
+
 test("assisted Starscores are lower than otherwise identical pure scores", () => {
   const game = { tier: 3 };
   const pure = calculateStarscore({ game, moves: 8, elapsedSeconds: 40, assisted: false });
   const open = calculateStarscore({ game, moves: 8, elapsedSeconds: 40, assisted: true });
+  const market = calculateStarscore({ game, moves: 8, elapsedSeconds: 40, assist: "market" });
+  const ai = calculateStarscore({ game, moves: 8, elapsedSeconds: 40, assist: "ai" });
+  const compass = calculateStarscore({ game, moves: 8, elapsedSeconds: 40, assist: "sense" });
+  const gift = calculateStarscore({ game, moves: 8, elapsedSeconds: 40, assist: "gift" });
+  const reveal = calculateStarscore({ game, moves: 8, elapsedSeconds: 40, assist: "reveal" });
   assert.ok(pure > open);
+  assert.ok(open > market);
+  assert.equal(market, ai);
+  assert.ok(open > compass);
+  assert.ok(compass > gift);
+  assert.equal(reveal, 0);
 });
 
 test("Reveal Path irreversibly completes and disqualifies a server run", async () => {
@@ -345,4 +405,35 @@ test("challenge forfeits are idempotent and survive store reloads", async (conte
   const reloaded = await new GameStore(path).init();
   assert.equal(reloaded.hasForfeitedChallenge(player.id, "daily:2026-07-17"), true);
   assert.deepEqual(reloaded.forfeitedChallenge(player.id, "daily:2026-07-17"), first);
+});
+
+test("free players can export and delete their stored profile without leaking credentials", async () => {
+  const store = await new GameStore(":memory:").init();
+  const player = await store.registerPlayer();
+  const exported = store.playerDataExport(player.id);
+  assert.equal(exported.player.id, player.id);
+  assert.equal(exported.cloudProfile.version, 0);
+  assert.equal("token" in exported.player, false);
+  assert.equal(JSON.stringify(exported).includes(store.data.secret), false);
+
+  assert.deepEqual(await store.deleteFreePlayerData(player.id), { deleted: true });
+  assert.equal(store.data.players[player.id], undefined);
+  assert.throws(() => store.playerDataExport(player.id), (error) => error.serviceCode === "player_missing");
+});
+
+test("reviewable AI recipes persist across service restarts", async (context) => {
+  const directory = await mkdtemp(join(tmpdir(), "constellore-dynamic-recipes-"));
+  const path = join(directory, "store.json");
+  context.after(() => rm(directory, { recursive: true, force: true }));
+  const store = await new GameStore(path).init();
+  const recipe = { a: "Moon", b: "Water", word: "Tide", emoji: "🌊", note: "The moon pulls the water.", source: "ai" };
+  assert.deepEqual(await store.rememberDynamicRecipes([recipe]), { stored: 1 });
+
+  const reloaded = await new GameStore(path).init();
+  assert.equal(reloaded.dynamicRecipeCatalog().length, 0, "unreviewed AI recipes must not re-enter the playable cache after restart");
+  const quarantined = reloaded.dynamicRecipeReviewQueue();
+  assert.equal(quarantined.length, 1);
+  assert.equal(quarantined[0].word, recipe.word);
+  assert.equal(quarantined[0].status, "quarantined");
+  assert.equal(quarantined[0].provenance, "live-unranked-ai");
 });

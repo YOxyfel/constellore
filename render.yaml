@@ -5,9 +5,9 @@ services:
     plan: starter
     region: frankfurt
     numInstances: 1
-    buildCommand: npm install --omit=dev
+    buildCommand: npm ci --omit=dev --ignore-scripts
     startCommand: npm start
-    healthCheckPath: /healthz
+    healthCheckPath: /readyz
     autoDeployTrigger: "off"
     envVars:
       - key: NODE_ENV

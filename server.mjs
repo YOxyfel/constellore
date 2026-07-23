@@ -1,14 +1,16 @@
 import { createServer } from "node:http";
-import { createHash, timingSafeEqual } from "node:crypto";
+import { createHash, randomUUID, timingSafeEqual } from "node:crypto";
 import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { basename, dirname, extname, join, normalize } from "node:path";
 import { fileURLToPath } from "node:url";
 import { ANALYTICS_EVENT_NAMES, CREATIVE_COMMERCE_CATALOG, GameStore, MARKET_CATALOG, RunRegistry, isoWeekKey, serviceError } from "./game-services.mjs";
 import { cosmicTwistSeedFor, selectCosmicTwist } from "./public/cosmic-twists.mjs";
-import { rankSenseCandidates, selectRouteNavigationTip, selectWordGift } from "./public/engagement-features.mjs";
+import { assistancePolicy, rankSenseCandidates, selectRouteNavigationTip, selectWordGift } from "./public/engagement-features.mjs";
 import { recipeFingerprint, sanitizeRecipeRating } from "./public/recipe-feedback.mjs";
 import { annotateUniverseResult, buildUniverseManifest, selectUniverse, validateUniverseRoute } from "./public/universe-director.mjs";
+import { AiRequestGate, MemoryRateLimiter, safeConcept, safeDiscoveryContext, trustedWriteOrigin } from "./server-safety.mjs";
+import { EXPANDED_RECIPES } from "./content/expanded-recipes.mjs";
 
 const projectRoot = fileURLToPath(new URL(".", import.meta.url));
 const root = join(projectRoot, "public");
@@ -19,18 +21,41 @@ const constelloreStorePath = join(projectRoot, "data", "constellore.json");
 const legacyStorePath = join(projectRoot, "data", "wordforge.json");
 const localStorePath = existsSync(constelloreStorePath) || !existsSync(legacyStorePath) ? constelloreStorePath : legacyStorePath;
 const storePath = process.env.CONSTELLORE_DATA_PATH || process.env.WORDFORGE_DATA_PATH || (isMainModule ? localStorePath : ":memory:");
+const packageMetadata = JSON.parse(await readFile(join(projectRoot, "package.json"), "utf8"));
 const gameStore = await new GameStore(storePath).init();
 const runRegistry = new RunRegistry(gameStore);
 await runRegistry.flush();
 const backupDirectory = storePath === ":memory:" ? "" : (process.env.CONSTELLORE_BACKUP_DIR || join(dirname(storePath), "backups"));
 const backupRetention = Math.min(30, Math.max(1, Number(process.env.CONSTELLORE_BACKUP_KEEP) || 7));
+const APP_VERSION = process.env.CONSTELLORE_VERSION || packageMetadata.version || "3.0.0-beta.1";
+const BUILD_VERSION = process.env.CONSTELLORE_BUILD_VERSION || process.env.GIT_COMMIT || process.env.RENDER_GIT_COMMIT || "local-dev";
+const GRAPH_VERSION = process.env.CONSTELLORE_GRAPH_VERSION || `world-${APP_VERSION}`;
+const RANKED_RULES_VERSION = "ranked-v3";
 const STARTERS = ["Earth", "Water", "Fire", "Air"];
 const recipes = new Map();
 const dynamicRecipes = new Map();
+let authoredSolutionPlansCache = null;
 export const DYNAMIC_RECIPE_LIMIT = 256;
+const AI_COMBINATION_PROMPT_VERSION = "combine-v3-family-safe-1";
+const AI_ROUTE_PROMPT_VERSION = "route-v3-family-safe-1";
+const aiRequestGate = new AiRequestGate({
+  maximumConcurrent: Math.min(8, Math.max(1, Number(process.env.CONSTELLORE_AI_MAX_CONCURRENT) || 3)),
+  dailyLimit: Math.min(10_000, Math.max(1, Number(process.env.CONSTELLORE_AI_DAILY_LIMIT) || 500))
+});
 
 const add = (a, b, word, emoji, note) => {
-  recipes.set(keyFor(a, b), { a, b, word, emoji, note, source: "world" });
+  const key = keyFor(a, b);
+  const existing = recipes.get(key);
+  if (existing) {
+    if (existing.word.toLowerCase() !== String(word).trim().toLowerCase()) {
+      throw new Error(`Conflicting authored recipe for ${a} + ${b}: ${existing.word} / ${word}`);
+    }
+    return existing;
+  }
+  const recipe = { a, b, word, emoji, note, source: "world" };
+  recipes.set(key, recipe);
+  authoredSolutionPlansCache = null;
+  return recipe;
 };
 
 add("Earth", "Water", "Mud", "🟤", "Water softens earth into mud.");
@@ -261,6 +286,8 @@ add("Lightning", "Metal", "Electricity", "⚡", "Metal carries lightning as elec
 add("Light", "Prism", "Spectrum", "🌈", "A prism separates light into a spectrum.");
 add("Rainbow", "Rainbow", "Color", "🎨", "Rainbows together become pure color.");
 
+add("Earth", "Great Wall", "Landmark", "\u{1F5FF}", "The Great Wall rooted across the earth becomes a landmark.");
+
 // Exchange licenses are permanent, so each catalog addition gets a dependable
 // authored neighborhood instead of relying on a generic semantic fallback.
 const marketAnchors = [
@@ -296,7 +323,7 @@ const marketAnchors = [
     ["Earth", "Ore", "⛏️", "Metal embedded in earth is ore."],
     ["Water", "Rust", "🟠", "Water oxidizes exposed metal into rust."],
     ["Fire", "Steel", "🔩", "Fire tempers metal into steel."],
-    ["Air", "Oxidation", "🟠", "Air reacting with metal causes oxidation."],
+    ["Air", "Rust", "🟠", "Air slowly oxidizes exposed metal into rust."],
     ["Metal", "Alloy", "⚙️", "Metals blended together form an alloy."]
   ]],
   ["Electricity", [
@@ -438,18 +465,74 @@ for (const [word, anchors] of marketAnchors) {
   for (const [other, result, emoji, note] of anchors) add(word, other, result, emoji, note);
 }
 
-const targetCatalog = [
-  { target: "Rainbow", emoji: "🌈", clue: "Color born where rain meets light.", tier: 1 },
-  { target: "Forest", emoji: "🌲", clue: "One becomes many, rooted together.", tier: 1 },
-  { target: "Phoenix", emoji: "🔥", clue: "A legendary creature where wings meet flame.", tier: 2 },
-  { target: "Telescope", emoji: "🔭", clue: "Shape sand with heat, then look upward.", tier: 2 },
-  { target: "Lightning", emoji: "🌩️", clue: "Power gathering inside violent weather.", tier: 2 },
-  { target: "City", emoji: "🏙️", clue: "Build outward: material, shelter, settlement.", tier: 3 },
-  { target: "Rocket", emoji: "🚀", clue: "A machine made to leave the sky behind.", tier: 3 },
-  { target: "Space Station", emoji: "🛰️", clue: "Build a home, build a rocket, then leave Earth.", tier: 4 }
-];
+// Hand-reviewed, dependency-ordered content broadens experimentation without
+// making official play depend on generic semantic roulette. `add` rejects any
+// pair that would silently redefine an earlier authored result.
+for (const recipe of EXPANDED_RECIPES) {
+  add(recipe.a, recipe.b, recipe.word, recipe.emoji, recipe.note);
+}
 
 const emojiByWord = { Earth: "🌍", Water: "💧", Fire: "🔥", Air: "💨" };
+
+const officialTarget = (target, clue, tier) => ({ target, emoji: emojiForWord(target), clue, tier });
+
+// Ranked destinations are authored, route-verified concepts rather than
+// arbitrary outputs from the experimental semantic mixer. Each difficulty
+// band contains enough destinations to keep daily and sprint play rotating.
+const targetCatalog = [
+  officialTarget("Mud", "Soften the ground with something that flows.", 1),
+  officialTarget("Steam", "Let heat meet water.", 1),
+  officialTarget("Brick", "Shape wet earth, then harden it with fire.", 1),
+  officialTarget("Stone", "Cool something molten with water.", 1),
+  officialTarget("Cloud", "Lift warm vapor into the air.", 1),
+  officialTarget("Life", "Wake the earth with energy.", 1),
+  officialTarget("Light", "Send energy racing through the air.", 1),
+  officialTarget("Volcano", "Gather lava until it builds a mountain of fire.", 1),
+
+  officialTarget("Rain", "Fill a cloud with more water.", 2),
+  officialTarget("Mountain", "Pile stone upon stone.", 2),
+  officialTarget("Plant", "Give life somewhere to take root.", 2),
+  officialTarget("Bird", "Let life adapt to the air.", 2),
+  officialTarget("Storm", "Charge a cloud with energy.", 2),
+  officialTarget("Phoenix", "A legendary creature where wings meet flame.", 2),
+  officialTarget("Glass", "Transform sand with fierce heat.", 2),
+  officialTarget("House", "Enclose space with walls.", 2),
+  officialTarget("Garden", "Cultivate plants across a fertile field.", 2),
+  officialTarget("River", "Send water down from a mountain.", 2),
+  officialTarget("Hurricane", "Feed a storm with a vast body of water.", 2),
+
+  officialTarget("Forest", "One tree becomes many, rooted together.", 3),
+  officialTarget("Rainbow", "Color is born where rain meets light.", 3),
+  officialTarget("Lightning", "Release energy from a violent storm.", 3),
+  officialTarget("Galaxy", "Gather stars on a cosmic scale.", 3),
+  officialTarget("Telescope", "Shape sand with heat, then look upward.", 3),
+  officialTarget("City", "Build outward: material, shelter, settlement.", 3),
+  officialTarget("Ecosystem", "Sustain a forest with the air around it.", 3),
+  officialTarget("Jungle", "Give a forest abundant rain.", 3),
+  officialTarget("Solar System", "Gather planets into one stellar family.", 3),
+  officialTarget("Universe", "Let space extend into itself without end.", 3),
+  officialTarget("Comet", "Send frozen water traveling through space.", 3),
+
+  officialTarget("Iceberg", "Set ice afloat in water.", 4),
+  officialTarget("Observatory", "Bring telescopes together to study the sky.", 4),
+  officialTarget("Rocket", "Build a machine made to leave the sky behind.", 4),
+  officialTarget("Electricity", "Let metal carry lightning.", 4),
+  officialTarget("Spacecraft", "Power a rocket beyond the sky.", 4),
+  officialTarget("Astronomy", "Study a star through a telescope.", 4),
+
+  officialTarget("Plasma", "Drive electricity through intense fire.", 5),
+  officialTarget("High Voltage", "Concentrate electricity upon itself.", 5),
+  officialTarget("Electric Shock", "Let electricity find a path through water.", 5),
+  officialTarget("Space Station", "Build a home, build a rocket, then leave Earth.", 5)
+];
+
+// A full non-repeating month of medium-to-expert destinations. Tier-one
+// concepts remain onboarding/sprint material rather than Daily repeats.
+const dailyTargets = targetCatalog.filter((entry) => entry.tier >= 2);
+
+export function officialTargetCatalog() {
+  return targetCatalog.map((entry) => ({ ...entry }));
+}
 
 const cosmicLaws = [
   { id: "first-light", name: "First Light", description: "Your first new discovery earns double Stardust." },
@@ -461,8 +544,12 @@ const cosmicLaws = [
 const weeklyTargets = [
   ["Forest", "Telescope", "Rocket"],
   ["Rainbow", "Lightning", "City"],
-  ["Telescope", "Phoenix", "Space Station"],
-  ["Forest", "City", "Rocket"]
+  ["Phoenix", "Garden", "Spacecraft"],
+  ["Volcano", "Ecosystem", "Space Station"],
+  ["Storm", "Iceberg", "Comet"],
+  ["Glass", "Observatory", "Solar System"],
+  ["House", "Hurricane", "Astronomy"],
+  ["Mountain", "Galaxy", "Electric Shock"]
 ];
 
 const semanticGroups = {
@@ -472,7 +559,29 @@ const semanticGroups = {
   structure: new Set(["brick", "pottery", "glass", "telescope", "wall", "house", "village", "city", "metal", "machine", "rocket", "space station", "dam", "kiln", "vase", "sculpture", "aquarium", "lens", "observatory", "firewall", "fortress", "fireplace", "houseboat", "home", "port", "megacity", "steel", "alloy", "plane", "engine", "factory", "jet", "spacecraft", "fleet", "technology", "civilization", "landmark", "infrastructure", "prism", "window", "balloon", "rust", "barbecue", "computer", "sword", "robot"])
 };
 
+for (const word of ["fusion", "erosion", "thunder"]) semanticGroups.force.add(word);
+for (const word of ["family", "nest"]) semanticGroups.life.add(word);
+semanticGroups.structure.add("obsidian");
+
 for (const item of MARKET_CATALOG) semanticGroups[item.category]?.add(item.word.toLowerCase());
+
+// Ingredient-category inference is deliberately broad, so a small number of
+// authored results need an explicit semantic identity. Keep these overrides
+// limited to unambiguous concepts whose inferred category would make later
+// contextual combinations visibly incoherent. Applying them before the
+// propagation pass also fixes dependent authored concepts without duplicating
+// every word in those chains.
+const semanticCategoryOverrides = Object.freeze({
+  force: Object.freeze(["combustion", "hydro energy", "hydropower", "sunlight", "tidal power"]),
+  nature: Object.freeze(["binary star", "comet"]),
+  life: Object.freeze([
+    "anemone", "arctic char", "blossom", "cactus", "camel", "cell", "community", "crop", "dune grass",
+    "goat", "heron", "lichen", "livestock", "lotus", "mangrove", "marram grass", "moonflower",
+    "moss", "mountain lion", "night bloom", "pet", "pigeon", "plankton", "polar bear", "population",
+    "seabird", "seaweed", "seedling", "trout", "tuna", "urban wildlife", "whale"
+  ]),
+  structure: Object.freeze(["concrete", "dinner", "farm", "generator", "wind farm"])
+});
 
 const learnedSemanticGroups = new Map();
 const pool = (category, values) => ({ category, values: values.map(([word, emoji]) => ({ word, emoji })) });
@@ -543,6 +652,9 @@ const semanticCategoryByWord = new Map();
 for (const [category, words] of Object.entries(semanticGroups)) {
   for (const word of words) semanticCategoryByWord.set(word, category);
 }
+for (const [category, words] of Object.entries(semanticCategoryOverrides)) {
+  for (const word of words) semanticCategoryByWord.set(word, category);
+}
 
 const crossCategoryOutput = new Map([
   ["force+life", "life"], ["force+nature", "nature"], ["force+structure", "structure"],
@@ -592,7 +704,9 @@ export function cacheDynamicRecipe(recipe) {
     word: String(recipe?.word || "").trim(),
     emoji: String(recipe?.emoji || "").trim(),
     note: String(recipe?.note || "").trim(),
-    source: recipe?.source === "ai-route" ? "ai-route" : "ai"
+    source: recipe?.source === "ai-route" ? "ai-route" : "ai",
+    status: recipe?.status || "quarantined",
+    provisional: recipe?.status !== "promoted"
   };
   if (!a || !b || !isSensibleResult(normalized, a, b)) return null;
 
@@ -609,6 +723,14 @@ export function cacheDynamicRecipe(recipe) {
   touchDynamicRecipe(key, normalized);
   return normalized;
 }
+
+export function removeDynamicRecipe(a, b) {
+  return dynamicRecipes.delete(keyFor(a, b));
+}
+
+// AI discoveries remain canonical across restarts instead of changing when
+// the small in-memory LRU is evicted. Ranked play never consumes this tier.
+for (const storedRecipe of gameStore.dynamicRecipeCatalog()) cacheDynamicRecipe(storedRecipe);
 
 export function registerDynamicRoute(steps, target) {
   if (!Array.isArray(steps) || steps.length < 2 || steps.length > 9) return null;
@@ -655,6 +777,13 @@ export function dynamicRecipeCacheSize() {
 
 export function curatedCombination(a, b) {
   return recipes.get(keyFor(a, b)) || dynamicRecipes.get(keyFor(a, b)) || null;
+}
+
+// The static/ranked universe consumes only this high-confidence authored tier.
+// Dynamic AI routes and semantic mixing remain available to unranked play, but
+// cannot silently redefine an official score path or the downloadable build.
+export function authoredCombination(a, b) {
+  return recipes.get(keyFor(a, b)) || null;
 }
 
 export function contextualCombination(a, b) {
@@ -717,8 +846,15 @@ export function solutionRoute(target, { includeDynamic = false } = {}) {
   const targetKey = String(target || "").trim().toLowerCase();
   if (!targetKey) return null;
 
-  const known = new Map(STARTERS.map((word) => [word.toLowerCase(), word]));
-  const parents = new Map();
+  if (!includeDynamic && authoredSolutionPlansCache) {
+    const cached = authoredSolutionPlansCache.get(targetKey);
+    return cached ? [...cached.steps.values()].map((step) => ({ ...step })) : null;
+  }
+
+  // A plan owns each prerequisite discovery once. This models the actual game,
+  // where a discovered word can be reused, and prevents insertion-order routes
+  // from overstating move cost or making guidance exceed a mode's budget.
+  const plans = new Map(STARTERS.map((word) => [word.toLowerCase(), { word, steps: new Map(), signature: "" }]));
   const candidates = [...recipes.values()];
   if (includeDynamic) {
     for (const [key, recipe] of dynamicRecipes) {
@@ -726,32 +862,54 @@ export function solutionRoute(target, { includeDynamic = false } = {}) {
     }
   }
 
+  candidates.sort((left, right) => {
+    const leftKey = `${left.word}\0${keyFor(left.a, left.b)}`.toLowerCase();
+    const rightKey = `${right.word}\0${keyFor(right.a, right.b)}`.toLowerCase();
+    return leftKey.localeCompare(rightKey);
+  });
+
+  const signatureFor = (steps) => [...steps.values()]
+    .map((step) => `${step.word.toLowerCase()}=${keyFor(step.a, step.b)}`)
+    .sort()
+    .join("|");
+  const isBetter = (candidate, existing) => !existing
+    || candidate.steps.size < existing.steps.size
+    || (candidate.steps.size === existing.steps.size && candidate.signature < existing.signature);
+
   let changed = true;
-  while (!known.has(targetKey) && changed) {
+  let rounds = 0;
+  while (changed && rounds <= candidates.length + STARTERS.length) {
     changed = false;
+    rounds += 1;
     for (const recipe of candidates) {
+      const aPlan = plans.get(recipe.a.toLowerCase());
+      const bPlan = plans.get(recipe.b.toLowerCase());
       const resultKey = recipe.word.toLowerCase();
-      if (known.has(resultKey) || !known.has(recipe.a.toLowerCase()) || !known.has(recipe.b.toLowerCase())) continue;
-      known.set(resultKey, recipe.word);
-      parents.set(resultKey, { ...recipe });
+      if (!aPlan || !bPlan || STARTERS.some((starter) => starter.toLowerCase() === resultKey)) continue;
+
+      const steps = new Map(aPlan.steps);
+      for (const [key, step] of bPlan.steps) if (!steps.has(key)) steps.set(key, step);
+      // If producing this result is already a prerequisite, this candidate is
+      // cyclic and cannot be executed from the starter inventory.
+      if (steps.has(resultKey)) continue;
+      steps.set(resultKey, {
+        a: recipe.a,
+        b: recipe.b,
+        word: recipe.word,
+        emoji: recipe.emoji,
+        note: recipe.note,
+        source: recipe.source || "world"
+      });
+      const candidate = { word: recipe.word, steps, signature: signatureFor(steps) };
+      if (!isBetter(candidate, plans.get(resultKey))) continue;
+      plans.set(resultKey, candidate);
       changed = true;
     }
   }
-  if (!known.has(targetKey)) return null;
 
-  const route = [];
-  const emitted = new Set();
-  const visit = (word) => {
-    const key = String(word).toLowerCase();
-    if (STARTERS.some((starter) => starter.toLowerCase() === key) || emitted.has(key)) return true;
-    const step = parents.get(key);
-    if (!step || !visit(step.a) || !visit(step.b)) return false;
-    route.push({ a: step.a, b: step.b, word: step.word, emoji: step.emoji, note: step.note, source: step.source || "world" });
-    emitted.add(key);
-    return true;
-  };
-
-  return visit(known.get(targetKey)) ? route : null;
+  const plan = plans.get(targetKey);
+  if (!includeDynamic) authoredSolutionPlansCache = plans;
+  return plan ? [...plan.steps.values()].map((step) => ({ ...step })) : null;
 }
 
 function trustedRecipeCatalog({ includeDynamic = false } = {}) {
@@ -768,6 +926,7 @@ function trustedRecipeCatalog({ includeDynamic = false } = {}) {
 function verifiedServerRoute(game, { includeDynamic = false } = {}) {
   const route = game ? solutionRoute(game.target, { includeDynamic }) : null;
   if (!Array.isArray(route)) return null;
+  if (game.moveLimit && route.length > game.moveLimit) return null;
   const validation = validateUniverseRoute({
     starters: game.starters,
     target: game.target,
@@ -830,7 +989,7 @@ export function buildGameForMode(mode, seed = 0, customTarget = "", stage = 0) {
     return gameFor(target, normalizedMode, { seed: Math.abs(seed), challengeId: normalizedMode === "challenge" ? stableHash(`${seed}:${canonical}`) : null });
   }
   if (normalizedMode === "daily") {
-    const target = targetCatalog.find((entry) => entry.target === "Space Station");
+    const target = dailyTargets[Math.abs(seed) % dailyTargets.length];
     return gameFor(target, "daily", { seed: Math.abs(seed), law: cosmicLaws[Math.abs(seed) % cosmicLaws.length] });
   }
   if (normalizedMode === "weekly") {
@@ -841,10 +1000,10 @@ export function buildGameForMode(mode, seed = 0, customTarget = "", stage = 0) {
     return gameFor(target, "weekly", { seed: Math.abs(seed), stage: safeStage, stageCount: 3, moveLimit: 10 + safeStage * 2, law: cosmicLaws[(Math.abs(seed) + safeStage) % cosmicLaws.length] });
   }
   const pools = {
-    reach: targetCatalog.filter((entry) => entry.tier <= 3),
+    reach: targetCatalog.filter((entry) => entry.tier <= 4),
     quick: targetCatalog.filter((entry) => entry.tier >= 1 && entry.tier <= 2),
-    moves: targetCatalog.filter((entry) => entry.tier >= 2 && entry.tier <= 3),
-    challenge: targetCatalog.filter((entry) => entry.tier >= 1 && entry.tier <= 3)
+    moves: targetCatalog.filter((entry) => entry.tier >= 2 && entry.tier <= 3 && (solutionRoute(entry.target)?.length || Infinity) <= 12),
+    challenge: targetCatalog
   };
   const pool = pools[normalizedMode];
   return gameFor(pool[Math.abs(seed) % pool.length], normalizedMode, { seed: Math.abs(seed) });
@@ -856,24 +1015,35 @@ function emojiForWord(word) {
 }
 
 async function responseJson(body) {
-  const response = await fetch("https://api.openai.com/v1/responses", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${process.env.OPENAI_API_KEY}` },
-    body: JSON.stringify(body)
-  });
-  if (!response.ok) throw new Error(`OpenAI returned ${response.status}`);
-  const payload = await response.json();
-  const outputText = payload.output_text ?? payload.output?.flatMap((item) => item.content || []).find((item) => item.type === "output_text")?.text;
-  if (!outputText) throw new Error("The AI returned no structured result.");
-  return JSON.parse(outputText);
+  const release = aiRequestGate.acquire();
+  try {
+    const response = await fetch("https://api.openai.com/v1/responses", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${process.env.OPENAI_API_KEY}` },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(Math.min(30_000, Math.max(3_000, Number(process.env.CONSTELLORE_AI_TIMEOUT_MS) || 12_000)))
+    });
+    if (!response.ok) throw new Error(`OpenAI returned ${response.status}`);
+    const payload = await response.json();
+    const outputText = payload.output_text ?? payload.output?.flatMap((item) => item.content || []).find((item) => item.type === "output_text")?.text;
+    if (!outputText) throw new Error("The AI returned no structured result.");
+    return JSON.parse(outputText);
+  } finally {
+    release();
+  }
 }
 
 async function aiCombination(a, b, discovered) {
   if (!process.env.OPENAI_API_KEY) return null;
+  const safeA = safeConcept(a, 28);
+  const safeB = safeConcept(b, 28);
+  if (!safeA || !safeB) return null;
+  const safeDiscovered = safeDiscoveryContext(discovered, { maximumItems: 30, maximumWordLength: 28 });
+  const model = process.env.OPENAI_MODEL || "gpt-5.4-nano";
   const result = await responseJson({
-    model: process.env.OPENAI_MODEL || "gpt-5.4-nano",
+    model,
     instructions: "You power a family-friendly word-combination game. Return one real, recognizable concept: a common noun, proper noun, natural phenomenon, invention, place, creature, or established idea. Never concatenate input words, invent gibberish, repeat syllables, add 'craft', or return either input unchanged. If the connection is indirect, use a well-known cultural association. Keep the explanation under 12 words.",
-    input: `Combine ${JSON.stringify(a)} + ${JSON.stringify(b)}. Already discovered: ${discovered.slice(-30).join(", ")}.`,
+    input: `Combine ${JSON.stringify(safeA)} + ${JSON.stringify(safeB)}. Already discovered: ${safeDiscovered.slice(-30).join(", ")}.`,
     text: { format: { type: "json_schema", name: "word_combination", strict: true, schema: {
       type: "object",
       properties: {
@@ -885,9 +1055,23 @@ async function aiCombination(a, b, discovered) {
     } } },
     max_output_tokens: 140
   });
-  if (!isSensibleResult(result, a, b)) return null;
-  const cached = { ...result, a, b, source: "ai" };
-  return cacheDynamicRecipe(cached);
+  if (!isSensibleResult(result, safeA, safeB)) return null;
+  const cached = cacheDynamicRecipe({
+    ...result,
+    a: safeA,
+    b: safeB,
+    source: "ai",
+    status: "quarantined",
+    promptVersion: AI_COMBINATION_PROMPT_VERSION,
+    model,
+    provenance: "live-unranked-ai"
+  });
+  if (cached?.source === "ai") await gameStore.rememberDynamicRecipes([cached], new Date(), {
+    promptVersion: AI_COMBINATION_PROMPT_VERSION,
+    model,
+    provenance: "live-unranked-ai"
+  });
+  return cached;
 }
 
 export function isSensibleWish(word) {
@@ -921,8 +1105,9 @@ async function createTargetRoute(target) {
   if (!process.env.OPENAI_API_KEY) return null;
   const cleanTarget = target.trim().replace(/\s+/g, " ");
   if (!isSafeTarget(cleanTarget)) return null;
+  const model = process.env.OPENAI_MODEL || "gpt-5.4-nano";
   const plan = await responseJson({
-    model: process.env.OPENAI_MODEL || "gpt-5.4-nano",
+    model,
     instructions: "Design a guaranteed-solvable route for a word-combination game. Start only with Earth, Water, Fire, and Air. Each step combines two currently available concepts; a concept is available if it is a starter or the result of an earlier step. Every result must be a short, real, recognizable concept. No gibberish, concatenated inputs, repeated syllables, or filler. The final result must exactly match the requested target, including capitalization. Prefer 4-8 logical steps.",
     input: `Create a route to the target ${JSON.stringify(cleanTarget)}.`,
     text: { format: { type: "json_schema", name: "target_route", strict: true, schema: {
@@ -938,6 +1123,11 @@ async function createTargetRoute(target) {
   });
   const route = registerDynamicRoute(plan.steps, cleanTarget);
   if (!route) return null;
+  await gameStore.rememberDynamicRecipes(route.filter((step) => !recipes.has(keyFor(step.a, step.b))), new Date(), {
+    promptVersion: AI_ROUTE_PROMPT_VERSION,
+    model,
+    provenance: "custom-target-route"
+  });
   const last = route.at(-1);
   return gameFor({ target: last.word, emoji: last.emoji, clue: "A destination chosen by you. The universe has made a path.", tier: 3 }, "reach");
 }
@@ -963,7 +1153,7 @@ const mime = {
   ".ico": "image/x-icon"
 };
 
-const requestWindows = new Map();
+const requestLimiter = new MemoryRateLimiter({ windowMs: 60_000, maximumKeys: 10_000 });
 const interestRequestWindows = new Map();
 const analyticsRequestWindows = new Map();
 const recoveryRequestWindows = new Map();
@@ -979,14 +1169,7 @@ const analyticsEvents = new Set(ANALYTICS_EVENT_NAMES);
 
 function rateLimited(request, limit = 180, bucket = "general") {
   const key = `${request.socket.remoteAddress || "unknown"}:${bucket}`;
-  const now = Date.now();
-  const current = requestWindows.get(key);
-  if (!current || now - current.startedAt > 60_000) {
-    requestWindows.set(key, { startedAt: now, count: 1 });
-    return false;
-  }
-  current.count += 1;
-  return current.count > limit;
+  return requestLimiter.limited(key, limit);
 }
 
 function analyticsRateLimited(request, limit = 240) {
@@ -1046,7 +1229,7 @@ function recipeFeedbackRateLimited(request, playerId) {
   return current.count > 60;
 }
 
-function interestRateLimited(request, anonymousId) {
+function interestRateLimited(request) {
   const now = Date.now();
   for (const [key, window] of interestRequestWindows) {
     if (now - window.startedAt > INTEREST_RATE_WINDOW_MS) interestRequestWindows.delete(key);
@@ -1055,7 +1238,9 @@ function interestRateLimited(request, anonymousId) {
     interestRequestWindows.delete(interestRequestWindows.keys().next().value);
   }
   const networkAddress = request.socket.remoteAddress || "unknown";
-  const key = gameStore.sign(`rate:interest:${networkAddress}:${anonymousId}`);
+  // The anonymous UUID is attacker-controlled and must not create a fresh
+  // allowance. One network bucket protects both metric quality and disk use.
+  const key = gameStore.sign(`rate:interest:${networkAddress}`);
   const current = interestRequestWindows.get(key);
   if (!current) {
     interestRequestWindows.set(key, { startedAt: now, count: 1 });
@@ -1103,7 +1288,22 @@ function setSecurityHeaders(response) {
   response.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
   response.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
   response.setHeader("Cross-Origin-Opener-Policy", "same-origin");
-  response.setHeader("Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; frame-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'self'; form-action 'self'");
+  response.setHeader("Cross-Origin-Resource-Policy", "same-origin");
+  response.setHeader("X-Frame-Options", "SAMEORIGIN");
+  // Board coordinates and progress meters use bounded CSS custom properties and
+  // element style attributes; scripts remain restricted to same-origin files.
+  response.setHeader("Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self'; frame-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'self'; form-action 'self'");
+}
+
+function structuredLog(level, type, fields = {}) {
+  const safe = {};
+  for (const [key, value] of Object.entries(fields)) {
+    if (/token|secret|authorization|cookie|recovery/i.test(key)) continue;
+    if (["string", "number", "boolean"].includes(typeof value) || value === null) safe[key] = typeof value === "string" ? value.slice(0, 240) : value;
+  }
+  const line = JSON.stringify({ timestamp: new Date().toISOString(), level, type, ...safe });
+  if (level === "error") console.error(line);
+  else console.info(line);
 }
 
 function requirePlayer(request) {
@@ -1171,7 +1371,9 @@ function officialRunDetails(mode, requestedSeed, stage = 0, requestedTarget = ""
   const safeStage = Math.min(2, Math.max(0, Number(stage) || 0));
   const ranked = ["daily", "weekly", "quick", "moves"].includes(mode);
   let seed = Number.isFinite(Number(requestedSeed)) ? Math.abs(Number(requestedSeed)) : stableHash(`${Date.now()}:${mode}`);
-  if (mode === "daily") seed = stableHash(`daily:${today}`);
+  // Sequential UTC day numbers guarantee that the official destination moves
+  // to the next catalog entry instead of merely hoping a date hash changes it.
+  if (mode === "daily") seed = Math.floor(Date.parse(`${today}T00:00:00Z`) / 86_400_000);
   if (mode === "weekly") seed = stableHash(`weekly:${week}`);
   if (["quick", "moves"].includes(mode)) seed = stableHash(`${mode}:${today}`);
   const target = ["challenge", "reach"].includes(mode) ? requestedTarget : "";
@@ -1181,7 +1383,12 @@ function officialRunDetails(mode, requestedSeed, stage = 0, requestedTarget = ""
     : mode === "weekly" ? `weekly:${week}:${safeStage}`
       : ["quick", "moves"].includes(mode) ? `${mode}:${today}`
         : `practice:${mode}:${seed}`;
-  return { game: { ...game, ranked, challengeId }, ranked, challengeId, seed };
+  return {
+    game: { ...game, ranked, challengeId, graphVersion: GRAPH_VERSION, buildVersion: BUILD_VERSION, rulesVersion: RANKED_RULES_VERSION },
+    ranked,
+    challengeId,
+    seed
+  };
 }
 
 const MISSION_PREVIEW_TTL_MS = 15 * 60_000;
@@ -1206,7 +1413,10 @@ function missionBriefingFingerprint(game) {
     scoreEligible: game.scoreEligible !== false,
     rewardEligible: game.rewardEligible !== false,
     leaderboardEligible: Boolean(game.leaderboardEligible),
-    challengeId: game.challengeId || ""
+    challengeId: game.challengeId || "",
+    graphVersion: game.graphVersion || GRAPH_VERSION,
+    buildVersion: game.buildVersion || BUILD_VERSION,
+    rulesVersion: game.rulesVersion || RANKED_RULES_VERSION
   });
 }
 
@@ -1237,7 +1447,7 @@ function createMissionPreviewToken(playerId, request, game, route = []) {
       source: step.source || "ai-route"
     })) : []
   }), "utf8").toString("base64url");
-  return `${payload}.${gameStore.sign(`mission-preview:v1:${payload}`)}`;
+  return `${payload}.${gameStore.signFor("mission-preview", payload)}`;
 }
 
 function readMissionPreviewToken(token, playerId) {
@@ -1247,7 +1457,9 @@ function readMissionPreviewToken(token, playerId) {
     if (separator < 1) throw new Error("invalid");
     const encoded = token.slice(0, separator);
     const signature = token.slice(separator + 1);
-    if (!gameStore.verify(`mission-preview:v1:${encoded}`, signature)) throw new Error("invalid");
+    const validPurposeSignature = gameStore.verifyFor("mission-preview", encoded, signature);
+    const validLegacySignature = gameStore.verify(`mission-preview:v1:${encoded}`, signature);
+    if (!validPurposeSignature && !validLegacySignature) throw new Error("invalid");
     const payload = JSON.parse(Buffer.from(encoded, "base64url").toString("utf8"));
     if (!hasExactKeys(payload, ["v", "playerId", "expiresAt", "request", "fingerprint", "route"])) throw new Error("invalid");
     if (payload.v !== 1 || payload.playerId !== playerId || !Number.isFinite(payload.expiresAt) || payload.expiresAt <= Date.now()) throw new Error("invalid");
@@ -1259,20 +1471,73 @@ function readMissionPreviewToken(token, playerId) {
 }
 
 function publicRun(run, token) {
+  const scoreMultiplier = run.scoringDisabled ? 0 : assistancePolicy(run.assist).scoreMultiplier;
   return {
     id: run.runId,
     token,
     ranked: run.ranked,
     scoringDisabled: Boolean(run.scoringDisabled),
     scoreEligible: !run.scoringDisabled,
+    scoreMultiplier,
     rewardEligible: !run.scoringDisabled,
     leaderboardEligible: Boolean(run.ranked && !run.scoringDisabled),
     assist: run.assist,
     challengeId: run.challengeId,
+    challengeKey: run.challengeBaseIdentity?.key || null,
+    challenge: run.challengeBaseIdentity?.descriptor || null,
     startedAt: new Date(run.startedAt).toISOString(),
     deadlineAt: run.game.timeLimit ? new Date(run.startedAt + run.game.timeLimit * 1000).toISOString() : null
   };
 }
+
+function configuredAppOrigins(request) {
+  const origins = new Set();
+  const host = String(request.headers.host || "").trim();
+  if (/^[A-Za-z0-9.\-\[\]:]+$/.test(host)) {
+    origins.add(`https://${host}`);
+    origins.add(`http://${host}`);
+  }
+  for (const candidate of String(process.env.APP_ALLOWED_ORIGINS || "").split(",").map((value) => value.trim()).filter(Boolean)) {
+    try {
+      const parsed = new URL(candidate);
+      if (["http:", "https:"].includes(parsed.protocol)) origins.add(parsed.origin);
+    } catch { /* Invalid deployment configuration never broadens write access. */ }
+  }
+  return [...origins];
+}
+
+function allowApiWriteOrigin(request) {
+  const origin = Array.isArray(request.headers.origin) ? request.headers.origin[0] : request.headers.origin;
+  const fetchSite = String(request.headers["sec-fetch-site"] || "").toLowerCase();
+  if (!origin && fetchSite === "cross-site") return false;
+  return trustedWriteOrigin(String(origin || "").trim(), configuredAppOrigins(request));
+}
+
+function configuredAnalyticsOrigins() {
+  const origins = new Set(configuredInterestOrigins());
+  for (const candidate of String(process.env.ANALYTICS_ALLOWED_ORIGINS || "").split(",").map((value) => value.trim()).filter(Boolean)) {
+    try {
+      const parsed = new URL(candidate);
+      if (["http:", "https:"].includes(parsed.protocol)) origins.add(parsed.origin);
+    } catch { /* Invalid configured origins remain denied. */ }
+  }
+  return origins;
+}
+
+function allowAnalyticsOrigin(request, response) {
+  const rawOrigin = String(request.headers.origin || "").trim();
+  if (!rawOrigin) return true;
+  let origin;
+  try { origin = new URL(rawOrigin); }
+  catch { return false; }
+  const sameOrigin = origin.host.toLowerCase() === String(request.headers.host || "").toLowerCase();
+  if (!sameOrigin && !configuredAnalyticsOrigins().has(origin.origin)) return false;
+  response.setHeader("Access-Control-Allow-Origin", origin.origin);
+  response.setHeader("Vary", "Origin");
+  return true;
+}
+
+export const experimentalCombination = contextualCombination;
 
 function studyAssistForReason(reason) {
   const value = String(reason || "").trim().toLowerCase();
@@ -1280,8 +1545,7 @@ function studyAssistForReason(reason) {
 }
 
 function studyForfeitMessage(assist) {
-  if (assist === "sense") return "Star Compass forfeited this orbit's score and rewards.";
-  if (assist === "gift") return "Word Gift forfeited this orbit's score and rewards.";
+  if (["sense", "gift"].includes(assist)) return "This challenge was forfeited under an earlier beta assistance rule.";
   return "Reveal Path forfeited this orbit's score and rewards.";
 }
 
@@ -1322,9 +1586,29 @@ async function jsonBody(request, maximumBytes = 50_000) {
 }
 
 export const server = createServer(async (request, response) => {
+  const requestId = randomUUID();
+  const requestStartedAt = performance.now();
+  response.setHeader("X-Request-Id", requestId);
+  response.once("finish", () => structuredLog("info", "http_request", {
+    requestId,
+    method: request.method,
+    path: String(request.url || "/").split("?", 1)[0].slice(0, 180),
+    status: response.statusCode,
+    durationMs: Math.max(0, Math.round(performance.now() - requestStartedAt))
+  }));
   setSecurityHeaders(response);
   try {
     const url = new URL(request.url, `http://${request.headers.host || "localhost"}`);
+    const isApiWrite = ["POST", "PUT", "PATCH", "DELETE"].includes(request.method) && url.pathname.startsWith("/api/");
+    const hasDedicatedCorsPolicy = url.pathname === "/api/interest" || url.pathname === "/api/analytics";
+    if (isApiWrite && !hasDedicatedCorsPolicy && !allowApiWriteOrigin(request)) {
+      return sendJson(response, 403, { error: "That origin is not allowed to change game data.", code: "write_origin_denied" });
+    }
+    const hasRequestBody = Number(request.headers["content-length"] || 0) > 0 || Boolean(request.headers["transfer-encoding"]);
+    if (hasRequestBody && ["POST", "PUT", "PATCH", "DELETE"].includes(request.method) && url.pathname.startsWith("/api/") && url.pathname !== "/api/interest") {
+      const contentType = String(request.headers["content-type"] || "").split(";", 1)[0].trim().toLowerCase();
+      if (contentType !== "application/json") throw serviceError(415, "API writes must use application/json.", "content_type_required");
+    }
     if (url.pathname === "/api/interest") {
       if (!allowInterestOrigin(request, response)) return sendJson(response, 403, { error: "That origin is not allowed.", code: "interest_origin_denied" });
       if (request.method === "OPTIONS") {
@@ -1343,7 +1627,7 @@ export const server = createServer(async (request, response) => {
         if (!body || typeof body !== "object" || Array.isArray(body) || Object.keys(body).sort().join(",") !== expectedKeys.join(",")) {
           throw serviceError(400, "Interest requests must contain only anonymousId, campaign, source, and action.", "invalid_interest_request");
         }
-        if (interestRateLimited(request, body.anonymousId)) return sendJson(response, 429, { error: "Too many interest requests. Please try again later.", code: "interest_rate_limited" });
+        if (interestRateLimited(request)) return sendJson(response, 429, { error: "Too many interest requests. Please try again later.", code: "interest_rate_limited" });
         const result = await gameStore.recordInterest(body);
         return sendJson(response, result.changed && result.interested ? 201 : 200, result);
       }
@@ -1354,7 +1638,37 @@ export const server = createServer(async (request, response) => {
       response.writeHead(308, { Location: "/play/", "Cache-Control": "no-cache" });
       return response.end();
     }
-    if (request.method === "GET" && url.pathname === "/healthz") return sendJson(response, 200, { ok: true, game: "Constellore", version: "1.7.0" });
+    if (request.method === "GET" && url.pathname === "/livez") {
+      return sendJson(response, 200, { ok: true, game: "Constellore", version: APP_VERSION, build: BUILD_VERSION, uptimeSeconds: Math.floor(process.uptime()) });
+    }
+    if (request.method === "GET" && ["/healthz", "/readyz"].includes(url.pathname)) {
+      const verifiedTargets = targetCatalog.filter((entry) => verifiedServerRoute(gameFor(entry, "reach"))).length;
+      const contentReady = targetCatalog.length >= 30 && verifiedTargets === targetCatalog.length;
+      const storage = gameStore.storageHealth();
+      const durableEnough = process.env.NODE_ENV !== "production" || storage.kind !== "memory";
+      const ready = contentReady && storage.ready && durableEnough;
+      return sendJson(response, ready ? 200 : 503, {
+        ok: ready,
+        status: ready ? "ready" : "not_ready",
+        game: "Constellore",
+        version: APP_VERSION,
+        build: BUILD_VERSION,
+        graphVersion: GRAPH_VERSION,
+        rulesVersion: RANKED_RULES_VERSION,
+        content: { ready: contentReady, targets: targetCatalog.length, verifiedTargets },
+        storage: { ...storage, durable: storage.kind !== "memory" },
+        aiEnabled: Boolean(process.env.OPENAI_API_KEY),
+        billingEnabled: billingSettings().billingEnabled
+      });
+    }
+    if (url.pathname === "/api/analytics" && request.method === "OPTIONS") {
+      if (!allowAnalyticsOrigin(request, response)) return sendJson(response, 403, { error: "That origin is not allowed.", code: "analytics_origin_denied" });
+      response.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+      response.setHeader("Access-Control-Allow-Headers", "Content-Type");
+      response.setHeader("Access-Control-Max-Age", "600");
+      response.writeHead(204);
+      return response.end();
+    }
     if (request.method === "GET" && url.pathname === "/api/config") {
       const billing = billingSettings();
       return sendJson(response, 200, {
@@ -1375,9 +1689,12 @@ export const server = createServer(async (request, response) => {
     if (request.method === "POST" && url.pathname === "/api/player/register") {
       if (rateLimited(request, 20, "player-register")) return sendJson(response, 429, { error: "Too many player registrations." });
       const registration = await gameStore.registerPlayer({ withRecoveryCode: true });
+      const session = await gameStore.issuePlayerSession(registration.player.id, { deviceLabel: "web beta" });
       return sendJson(response, 201, {
         player: registration.player,
-        playerToken: gameStore.tokenForPlayer(registration.player.id),
+        playerToken: session.playerToken,
+        sessionId: session.sessionId,
+        sessionExpiresAt: session.expiresAt,
         recoveryCode: registration.recoveryCode,
         recoveryVersion: 1
       });
@@ -1404,15 +1721,40 @@ export const server = createServer(async (request, response) => {
       if (!hasExactKeys(body, [])) throw serviceError(400, "Recovery revocation does not accept fields.", "invalid_recovery_request");
       return sendJson(response, 200, await gameStore.revokeRecovery(player.id));
     }
+    if (request.method === "POST" && url.pathname === "/api/player/session/revoke") {
+      const playerId = request.headers["x-constellore-player"] || request.headers["x-wordforge-player"];
+      const playerToken = request.headers["x-constellore-token"] || request.headers["x-wordforge-token"];
+      const player = gameStore.authenticate(playerId, playerToken);
+      if (!player) throw serviceError(401, "Your player session is no longer valid.", "invalid_player");
+      const body = await jsonBody(request, 256);
+      if (!hasExactKeys(body, [])) throw serviceError(400, "Session revocation does not accept fields.", "invalid_session_revoke_request");
+      return sendJson(response, 200, await gameStore.revokePlayerSession(player.id, playerToken));
+    }
     if (request.method === "GET" && url.pathname === "/api/player/profile") {
+      if (rateLimited(request, 120, "profile-read")) return sendJson(response, 429, { error: "Too many profile requests." });
       const player = requirePlayer(request);
       return sendJson(response, 200, gameStore.cloudProfile(player.id));
     }
     if (request.method === "PUT" && url.pathname === "/api/player/profile") {
+      if (rateLimited(request, 20, "profile-write")) return sendJson(response, 429, { error: "Too many profile updates." });
       const player = requirePlayer(request);
-      const body = await jsonBody(request, 1_000_000);
+      const body = await jsonBody(request, 256_000);
       if (!hasExactKeys(body, ["profile", "version"])) throw serviceError(400, "Cloud profile updates require only profile and version.", "invalid_cloud_profile_request");
       return sendJson(response, 200, await gameStore.updateCloudProfile(player.id, body.version, body.profile));
+    }
+    if (request.method === "GET" && url.pathname === "/api/player/export") {
+      if (rateLimited(request, 20, "player-export")) return sendJson(response, 429, { error: "Too many export requests." });
+      const player = requirePlayer(request);
+      return sendJson(response, 200, gameStore.playerDataExport(player.id));
+    }
+    if (request.method === "DELETE" && url.pathname === "/api/player/profile") {
+      if (rateLimited(request, 5, "player-delete")) return sendJson(response, 429, { error: "Too many deletion requests." });
+      const player = requirePlayer(request);
+      const body = await jsonBody(request, 256);
+      if (!hasExactKeys(body, ["confirm"]) || body.confirm !== "DELETE") throw serviceError(400, "Confirm deletion with the exact word DELETE.", "deletion_confirmation_required");
+      const result = await gameStore.deleteFreePlayerData(player.id);
+      runRegistry.revokePlayer(player.id);
+      return sendJson(response, 200, result);
     }
     if (request.method === "POST" && url.pathname === "/api/player/restore") {
       const player = requirePlayer(request);
@@ -1445,16 +1787,48 @@ export const server = createServer(async (request, response) => {
       const run = runRegistry.get(runId, player.id, runToken);
       const item = MARKET_CATALOG.find((entry) => entry.id === wordId);
       if (!item || !gameStore.ownsLicense(player.id, wordId)) throw serviceError(403, "You do not own that word.", "license_missing");
-      const result = { ...item, source: "market", note: "Activated from your permanent Word Vault." };
+      const result = { ...item, source: "market", note: "Activated from your persistent beta Word Vault." };
       runRegistry.addBend(run, result, "market");
       await runRegistry.persist(run);
       return sendJson(response, 200, { item: result, assist: run.assist, division: "open", competitive: false });
     }
+    if (request.method === "GET" && url.pathname === "/api/events/current") {
+      if (rateLimited(request, 120, "event-current")) return sendJson(response, 429, { error: "Too many Cosmic Event requests.", code: "event_rate_limited" });
+      const player = requirePlayer(request);
+      const state = gameStore.cosmicEventState(player.id);
+      return sendJson(response, 200, {
+        serverTime: state.serverTime,
+        cosmicEvent: state.event,
+        eventProgress: state.progress,
+        eventReward: state.reward
+      });
+    }
+    if (request.method === "POST" && url.pathname === "/api/events/current/claim") {
+      if (rateLimited(request, 20, "event-claim")) return sendJson(response, 429, { error: "Too many Cosmic Event claims.", code: "event_rate_limited" });
+      const player = requirePlayer(request);
+      const body = await jsonBody(request, 512);
+      if (!hasExactKeys(body, ["eventId", "weekKey"])) throw serviceError(400, "Cosmic Event claims require only eventId and weekKey.", "invalid_cosmic_event_claim");
+      const state = await gameStore.claimCosmicEventReward(player.id, body);
+      return sendJson(response, 200, {
+        serverTime: state.serverTime,
+        eventServerTime: state.eventServerTime || state.serverTime,
+        cosmicEvent: state.event,
+        eventProgress: state.progress,
+        eventReward: state.reward
+      });
+    }
     if (request.method === "GET" && url.pathname === "/api/leaderboard") {
       const scope = ["daily", "weekly", "sprint", "all"].includes(url.searchParams.get("scope")) ? url.searchParams.get("scope") : "daily";
       const division = url.searchParams.get("division") === "open" ? "open" : "pure";
-      const playerId = request.headers["x-constellore-player"] || request.headers["x-wordforge-player"] || "";
-      return sendJson(response, 200, gameStore.leaderboard(scope, division, Number(url.searchParams.get("limit") || 25), playerId));
+      const requestedChallengeId = String(url.searchParams.get("challengeId") || "").trim();
+      const challengeId = /^[a-z0-9][a-z0-9:._-]{0,159}$/i.test(requestedChallengeId) ? requestedChallengeId : "";
+      const requestedChallengeKey = String(url.searchParams.get("challengeKey") || "").trim();
+      const challengeKey = /^ch3_[A-Za-z0-9_-]{24}$/.test(requestedChallengeKey) ? requestedChallengeKey : "";
+      const mode = ["reach", "quick", "moves", "daily", "weekly", "challenge"].includes(url.searchParams.get("mode")) ? url.searchParams.get("mode") : "";
+      const claimedPlayerId = request.headers["x-constellore-player"] || request.headers["x-wordforge-player"] || "";
+      const playerToken = request.headers["x-constellore-token"] || request.headers["x-wordforge-token"] || "";
+      const playerId = gameStore.authenticate(claimedPlayerId, playerToken)?.id || "";
+      return sendJson(response, 200, gameStore.leaderboard(scope, division, Number(url.searchParams.get("limit") || 25), playerId, { challengeId, challengeKey, mode }));
     }
     if (request.method === "POST" && url.pathname === "/api/run/preview") {
       if (rateLimited(request, 160, "run-preview")) return sendJson(response, 429, { error: "Too many missions mapped." });
@@ -1478,7 +1852,11 @@ export const server = createServer(async (request, response) => {
       if (!verified) throw serviceError(422, "That target has no verified route yet.", "target_unavailable");
       const previewRequest = missionPreviewRequest(details, body);
       const previewToken = createMissionPreviewToken(player.id, previewRequest, game, verified.route);
-      return sendJson(response, 200, { game, previewToken, player: gameStore.publicPlayer(player.id) });
+      return sendJson(response, 200, {
+        game: { ...game, routeLength: verified.route.length },
+        previewToken,
+        player: gameStore.publicPlayer(player.id)
+      });
     }
     if (request.method === "POST" && url.pathname === "/api/run/start") {
       if (rateLimited(request, 100, "run-start")) return sendJson(response, 429, { error: "Too many runs started." });
@@ -1512,7 +1890,7 @@ export const server = createServer(async (request, response) => {
       if (!verified) throw serviceError(422, "That target has no verified route yet.", "target_unavailable");
       const universeManifest = buildUniverseManifest({ seed: candidateGame.seed, validation: verified.validation });
       if (!universeManifest) throw serviceError(422, "That target has no verified universe manifest.", "target_unavailable");
-      const game = { ...candidateGame, universeManifest };
+      const game = { ...candidateGame, universeManifest, routeLength: verified.route.length };
       // Ranked solution steps are validated before acceptance but deliberately
       // remain outside the run snapshot and every public response.
       const scopedSolutionRoute = !ranked ? verified.route : null;
@@ -1532,12 +1910,19 @@ export const server = createServer(async (request, response) => {
     }
     if (request.method === "POST" && url.pathname === "/api/run/resume") {
       const player = requirePlayer(request);
-      const { runId, runToken } = await jsonBody(request);
+      const body = await jsonBody(request, 1_024);
+      if (!hasExactKeys(body, ["runId", "runToken"])) throw serviceError(400, "Run resume requires only runId and runToken.", "invalid_resume_request");
+      const { runId, runToken } = body;
       const run = runRegistry.get(runId, player.id, runToken);
+      const eventState = gameStore.cosmicEventState(player.id, new Date(run.startedAt));
       return sendJson(response, 200, {
         game: run.game,
         run: publicRun(run, runToken),
         progress: runRegistry.progress(run),
+        cosmicEvent: eventState.event,
+        eventProgress: eventState.progress,
+        eventReward: eventState.reward,
+        eventServerTime: eventState.serverTime,
         player: gameStore.publicPlayer(player.id)
       });
     }
@@ -1592,17 +1977,20 @@ export const server = createServer(async (request, response) => {
       if (!candidates.length) throw serviceError(422, "No safe constellation signal is available yet.", "sense_unavailable");
 
       runRegistry.sense(run);
-      if (run.ranked) await gameStore.forfeitChallenge(player.id, run.challengeId, { reason: "sense", runId: run.runId });
       await runRegistry.persist(run);
+      const policy = assistancePolicy(run.assist);
+      const scoringDisabled = Boolean(run.scoringDisabled || run.forfeited || policy.study);
       return sendJson(response, 200, {
         candidates,
         assisted: true,
         assist: run.assist,
-        scoringDisabled: true,
-        scoreEligible: false,
-        rewardEligible: false,
-        leaderboardEligible: false,
-        ranked: false
+        scoringDisabled,
+        scoreEligible: !scoringDisabled && policy.scoreEligible,
+        scoreMultiplier: scoringDisabled ? 0 : policy.scoreMultiplier,
+        rewardEligible: !scoringDisabled,
+        leaderboardEligible: Boolean(run.ranked && !scoringDisabled),
+        ranked: Boolean(run.ranked),
+        division: scoringDisabled ? "study" : policy.division
       });
     }
     if (request.method === "POST" && url.pathname === "/api/run/gift") {
@@ -1630,8 +2018,9 @@ export const server = createServer(async (request, response) => {
           category: selected.category || semanticCategoryFor(selected.word) || null
         });
       }
-      if (run.ranked) await gameStore.forfeitChallenge(player.id, run.challengeId, { reason: "gift", runId: run.runId });
       await runRegistry.persist(run);
+      const policy = assistancePolicy(run.assist);
+      const scoringDisabled = Boolean(run.scoringDisabled || run.forfeited || policy.study);
       const publicItem = {
         word: item.word,
         emoji: item.emoji || "",
@@ -1642,11 +2031,13 @@ export const server = createServer(async (request, response) => {
         item: publicItem,
         assisted: true,
         assist: run.assist,
-        scoringDisabled: true,
-        scoreEligible: false,
-        rewardEligible: false,
-        leaderboardEligible: false,
-        ranked: false
+        scoringDisabled,
+        scoreEligible: !scoringDisabled && policy.scoreEligible,
+        scoreMultiplier: scoringDisabled ? 0 : policy.scoreMultiplier,
+        rewardEligible: !scoringDisabled,
+        leaderboardEligible: Boolean(run.ranked && !scoringDisabled),
+        ranked: Boolean(run.ranked),
+        division: scoringDisabled ? "study" : policy.division
       });
     }
     if (request.method === "POST" && url.pathname === "/api/run/reveal") {
@@ -1703,10 +2094,20 @@ export const server = createServer(async (request, response) => {
       if (!run.ranked) return sendJson(response, 200, { ranked: false, reason: "Practice runs are not uploaded." });
       if (run.submitted) {
         const division = run.assist === "none" ? "pure" : "open";
-        const placement = gameStore.rankFor(run.challengeId, division, player.id);
+        const placement = gameStore.rankFor(run.finalChallengeKey || run.challengeId, division, player.id);
         if (placement) {
-          const reward = await gameStore.grantChallengeCredits(player.id, run.challengeId, run.game.mode === "daily" ? 10 : run.game.mode === "weekly" ? 8 : 4);
-          return sendJson(response, 200, { ranked: true, recovered: true, placement, ...reward, player: gameStore.publicPlayer(player.id) });
+          const rewardKey = placement.entry.challengeBaseKey || placement.entry.challengeKey || run.challengeId;
+          const reward = placement.provisional
+            ? { creditReward: 0, weeklyBonus: 0 }
+            : await gameStore.grantChallengeCredits(player.id, rewardKey, run.game.mode === "daily" ? 10 : run.game.mode === "weekly" ? 8 : 4);
+          return sendJson(response, 200, {
+            ranked: true,
+            recovered: true,
+            verifiedSignature: run.verifiedSignature || placement.entry.signature || null,
+            placement,
+            ...reward,
+            player: gameStore.publicPlayer(player.id)
+          });
         }
         // A crash could persist the run's submitted bit just before its score.
         // Re-open only that incomplete transaction so the verified path can be
@@ -1716,9 +2117,18 @@ export const server = createServer(async (request, response) => {
       }
       const entry = runRegistry.finalize(run, player.callsign);
       const placement = await gameStore.addScore(entry);
-      const reward = await gameStore.grantChallengeCredits(player.id, run.challengeId, run.game.mode === "daily" ? 10 : run.game.mode === "weekly" ? 8 : 4);
+      const reward = entry.status === "provisional"
+        ? { creditReward: 0, weeklyBonus: 0 }
+        : await gameStore.grantChallengeCredits(player.id, entry.challengeBaseKey || entry.challengeKey, run.game.mode === "daily" ? 10 : run.game.mode === "weekly" ? 8 : 4);
       await runRegistry.flush();
-      return sendJson(response, 201, { ranked: true, placement, ...reward, player: gameStore.publicPlayer(player.id) });
+      return sendJson(response, 201, {
+        ranked: true,
+        verificationStatus: entry.status,
+        verifiedSignature: entry.signature,
+        placement,
+        ...reward,
+        player: gameStore.publicPlayer(player.id)
+      });
     }
     if (request.method === "POST" && url.pathname === "/api/recipe-feedback") {
       const player = requirePlayer(request);
@@ -1774,6 +2184,32 @@ export const server = createServer(async (request, response) => {
         limit: url.searchParams.get("limit") || 50
       }));
     }
+    if (request.method === "GET" && url.pathname === "/api/admin/rejected-pairs") {
+      requireAdmin(request);
+      if (adminRateLimited(request, 240)) return sendJson(response, 429, { error: "Too many analytics requests." });
+      return sendJson(response, 200, gameStore.rejectedPairSummary({
+        minimumReports: url.searchParams.get("minimumReports") || 1,
+        limit: url.searchParams.get("limit") || 100
+      }));
+    }
+    if (request.method === "GET" && url.pathname === "/api/admin/ai-recipes") {
+      requireAdmin(request);
+      if (adminRateLimited(request, 120)) return sendJson(response, 429, { error: "Too many recipe review requests." });
+      return sendJson(response, 200, {
+        status: url.searchParams.get("status") || "quarantined",
+        recipes: gameStore.dynamicRecipeReviewQueue({ status: url.searchParams.get("status"), limit: url.searchParams.get("limit") || 100 })
+      });
+    }
+    if (request.method === "POST" && url.pathname === "/api/admin/ai-recipes/review") {
+      requireAdmin(request);
+      if (adminRateLimited(request, 60)) return sendJson(response, 429, { error: "Too many recipe review requests." });
+      const body = await jsonBody(request, 1_024);
+      if (!hasExactKeys(body, ["action", "proposalId", "reason"])) throw serviceError(400, "Recipe review requires proposalId, action, and reason.", "invalid_recipe_review_request");
+      const recipe = await gameStore.reviewDynamicRecipe(body.proposalId, body.action, { reviewer: "admin-api", reason: body.reason });
+      if (recipe.status === "promoted") cacheDynamicRecipe(recipe);
+      else removeDynamicRecipe(recipe.a, recipe.b);
+      return sendJson(response, 200, { recipe });
+    }
     if (request.method === "POST" && url.pathname === "/api/admin/backup") {
       requireAdmin(request);
       if (adminRateLimited(request, 30)) return sendJson(response, 429, { error: "Too many backup requests." });
@@ -1783,10 +2219,14 @@ export const server = createServer(async (request, response) => {
       return sendJson(response, 201, { ...result, filename: basename(result.filename) });
     }
     if (request.method === "POST" && url.pathname === "/api/analytics") {
+      if (!allowAnalyticsOrigin(request, response)) return sendJson(response, 403, { error: "That origin is not allowed.", code: "analytics_origin_denied" });
       if (analyticsRateLimited(request, 240)) return sendJson(response, 429, { error: "Too many events." });
-      const event = await jsonBody(request);
+      const event = await jsonBody(request, 4_096);
       if (!analyticsEvents.has(event.name)) return sendJson(response, 400, { error: "Invalid event.", code: "invalid_analytics_event" });
-      const recorded = await gameStore.recordAnalyticsEvent(event);
+      const expectedA = event.name === "combination_expected" ? safeConcept(event.properties?.a, 28) : null;
+      const expectedB = event.name === "combination_expected" ? safeConcept(event.properties?.b, 28) : null;
+      const allowRejectedPairPlaintext = Boolean(expectedA && expectedB && semanticCategoryFor(expectedA) && semanticCategoryFor(expectedB));
+      const recorded = await gameStore.recordAnalyticsEvent(event, new Date(), { allowRejectedPairPlaintext });
       console.info(JSON.stringify({ type: "analytics_aggregate", name: event.name, day: recorded.day }));
       return sendJson(response, 202, { accepted: true });
     }
@@ -1795,7 +2235,7 @@ export const server = createServer(async (request, response) => {
       const player = requirePlayer(request);
       const { word, runId, runToken } = await jsonBody(request);
       const run = runRegistry.get(runId, player.id, runToken);
-      if (!gameStore.canUseWish(player.id)) throw serviceError(402, player.founderPass ? "Your next personal Wish arrives tomorrow." : "A Founder's Pass is required for another personal Wish.", "wish_entitlement_required");
+      if (!gameStore.canUseWish(player.id)) throw serviceError(402, "Your free Practice Wish has already been used. Additional Wishes must be earned through play.", "wish_entitlement_required");
       const clean = String(word || "").trim().replace(/\s+/g, " ");
       const category = registerWishConcept(clean);
       if (!category) return sendJson(response, 422, { error: "Wish for a short, recognizable real-world concept." });
@@ -1807,30 +2247,41 @@ export const server = createServer(async (request, response) => {
     }
     if (request.method === "POST" && url.pathname === "/api/custom-target") {
       if (rateLimited(request, 30, "custom-target")) return sendJson(response, 429, { error: "Too many routes requested. Try again shortly." });
-      const { target } = await jsonBody(request);
-      if (typeof target !== "string" || !isSafeTarget(target.trim())) return sendJson(response, 400, { error: "Use a short, recognizable word or phrase." });
+      const body = await jsonBody(request, 2_048);
+      if (!hasExactKeys(body, ["target"])) throw serviceError(400, "Custom targets require only a target.", "invalid_custom_target_request");
+      const target = safeConcept(body.target, 28);
+      if (!target || !isSafeTarget(target)) return sendJson(response, 400, { error: "Use a short, recognizable word or phrase." });
       const knownGame = directedServerGame(buildGameForMode("reach", 0, target));
       if (knownGame) return sendJson(response, 200, knownGame);
       if (!process.env.OPENAI_API_KEY) return sendJson(response, 422, { error: "This target needs the AI route planner. Add an API key or choose a suggested target.", suggestions: targetCatalog.slice(0, 6).map((entry) => entry.target) });
+      requirePlayer(request);
       const generatedGame = directedServerGame(await createTargetRoute(target));
       if (!generatedGame) return sendJson(response, 422, { error: "The AI could not make a sensible, guaranteed route for that target. Try a more concrete noun." });
       return sendJson(response, 200, generatedGame);
     }
     if (request.method === "POST" && url.pathname === "/api/combine") {
       if (rateLimited(request, 180, "combine")) return sendJson(response, 429, { error: "The cosmos needs a moment." });
-      const body = await jsonBody(request);
+      const body = await jsonBody(request, 8_192);
+      const allowedKeys = new Set(["a", "b", "categoryA", "categoryB", "discovered", "runId", "runToken"]);
+      if (!body || typeof body !== "object" || Array.isArray(body) || Object.keys(body).some((key) => !allowedKeys.has(key))) {
+        throw serviceError(400, "That combination request contains unsupported fields.", "invalid_combination_request");
+      }
       const { a, b, categoryA, categoryB, discovered = [], runId, runToken } = body;
-      if (typeof a !== "string" || typeof b !== "string" || !a.trim() || !b.trim()) return sendJson(response, 400, { error: "Choose two words first." });
+      const safeA = safeConcept(a, 28);
+      const safeB = safeConcept(b, 28);
+      if (!safeA || !safeB) return sendJson(response, 400, { error: "Choose two short, recognizable concepts first." });
+      const safeDiscovered = safeDiscoveryContext(discovered, { maximumItems: 40, maximumWordLength: 28 });
       let run = null;
+      let runPlayer = null;
       if (runId || runToken) {
-        const player = requirePlayer(request);
-        run = runRegistry.get(runId, player.id, runToken);
-        runRegistry.canCombine(run, a, b);
+        runPlayer = requirePlayer(request);
+        run = runRegistry.get(runId, runPlayer.id, runToken);
+        runRegistry.canCombine(run, safeA, safeB);
       }
       const allowedCategories = new Set(["force", "nature", "life", "structure"]);
-      if (!run && !semanticCategoryFor(a) && allowedCategories.has(categoryA)) learnedSemanticGroups.set(a.trim().toLowerCase(), categoryA);
-      if (!run && !semanticCategoryFor(b) && allowedCategories.has(categoryB)) learnedSemanticGroups.set(b.trim().toLowerCase(), categoryB);
-      const combinationKey = keyFor(a, b);
+      if (!run && !semanticCategoryFor(safeA) && allowedCategories.has(categoryA)) learnedSemanticGroups.set(safeA.toLowerCase(), categoryA);
+      if (!run && !semanticCategoryFor(safeB) && allowedCategories.has(categoryB)) learnedSemanticGroups.set(safeB.toLowerCase(), categoryB);
+      const combinationKey = keyFor(safeA, safeB);
       let result = recipes.get(combinationKey) || null;
       let trustedContextRecipe = result;
       if (!result && !run?.ranked) {
@@ -1841,20 +2292,48 @@ export const server = createServer(async (request, response) => {
         trustedContextRecipe = scopedRecipe;
       }
       if (!result && !run?.ranked) {
-        try { result = await aiCombination(a, b, Array.isArray(discovered) ? discovered : []); }
+        try {
+          if (process.env.OPENAI_API_KEY) requirePlayer(request);
+          result = await aiCombination(safeA, safeB, safeDiscovered);
+        }
         catch (error) { console.error(error.message); }
       }
-      if (!result) result = contextualCombination(a, b);
-      if (!result) return sendJson(response, 422, { error: "Those ideas do not form a meaningful concept yet.", rejected: true });
+      if (!result && !run?.ranked) result = contextualCombination(safeA, safeB);
+      if (!result) {
+        let rejectedAttempt = null;
+        if (run) {
+          rejectedAttempt = runRegistry.recordRejectedAttempt(run, { a: safeA, b: safeB });
+          await runRegistry.persist(run);
+        }
+        return sendJson(response, 422, {
+          error: "Those ideas do not form a meaningful concept yet.",
+          code: "combination_missing",
+          rejected: true,
+          ...(run ? {
+            attempts: run.attempts,
+            rejectedAttempts: run.rejectedAttempts,
+            errorless: false,
+            pairFingerprint: rejectedAttempt?.pairFingerprint
+          } : {})
+        });
+      }
       const { word, emoji, note, source } = result;
       const category = semanticCategoryFor(word) || registerWishConcept(word);
-      let responseResult = { word, emoji, note, source, category };
+      let responseResult = {
+        word,
+        emoji,
+        note,
+        source,
+        category,
+        provisional: ["ai", "ai-route"].includes(source) && result.status !== "promoted",
+        recipeStatus: result.status || (["ai", "ai-route"].includes(source) ? "quarantine" : "verified")
+      };
       let universeContext = null;
       if (run) {
-        runRegistry.canCombine(run, a, b);
+        runRegistry.canCombine(run, safeA, safeB);
         const twist = selectCosmicTwist({
-          a,
-          b,
+          a: safeA,
+          b: safeB,
           canonicalResult: responseResult,
           target: run.game.target,
           mode: run.game.mode,
@@ -1870,23 +2349,42 @@ export const server = createServer(async (request, response) => {
         if (trustedContextRecipe) {
           const annotation = annotateUniverseResult({
             universe: run.game.universe,
-            a,
-            b,
+            a: safeA,
+            b: safeB,
             result: responseResult,
-            recipes: [{ a, b, ...trustedContextRecipe, category }]
+            recipes: [{ a: safeA, b: safeB, ...trustedContextRecipe, category }]
           });
           universeContext = annotation?.context || null;
         }
-        const historyEntry = runRegistry.recordCombination(run, responseResult, { a, b });
+        const historyEntry = runRegistry.recordCombination(run, responseResult, { a: safeA, b: safeB });
         await runRegistry.persist(run);
-        responseResult = { ...responseResult, feedbackEligible: Boolean(historyEntry?.feedbackEligible) };
+        responseResult = {
+          ...responseResult,
+          feedbackEligible: Boolean(historyEntry?.feedbackEligible),
+          newDiscovery: historyEntry?.newDiscovery === true,
+          progressionEligible: historyEntry?.progressionEligible === true,
+          eventEligible: historyEntry?.eventEligible === true
+        };
       }
+      const eventState = run && runPlayer ? gameStore.cosmicEventState(runPlayer.id, new Date(run.startedAt)) : null;
+      const runPolicy = assistancePolicy(run?.assist || "none");
+      const scoringDisabled = Boolean(run && (run.scoringDisabled || run.forfeited || runPolicy.study));
       return sendJson(response, 200, {
         ...responseResult,
         ...(universeContext ? { universeContext } : {}),
         completed: Boolean(run?.completedAt),
         ranked: Boolean(run?.ranked),
-        division: run?.assist === "none" ? "pure" : "open"
+        assist: run?.assist || "none",
+        scoringDisabled,
+        scoreEligible: !scoringDisabled && runPolicy.scoreEligible,
+        scoreMultiplier: scoringDisabled ? 0 : runPolicy.scoreMultiplier,
+        division: scoringDisabled ? "study" : runPolicy.division,
+        ...(eventState ? {
+          cosmicEvent: eventState.event,
+          eventProgress: eventState.progress,
+          eventReward: eventState.reward,
+          eventServerTime: eventState.serverTime
+        } : {})
       });
     }
     if (!["GET", "HEAD"].includes(request.method)) return sendJson(response, 404, { error: "Not found" });
@@ -1895,6 +2393,9 @@ export const server = createServer(async (request, response) => {
       ["/", "index.html"],
       ["/website.css", "styles.css"],
       ["/website.js", "site.js"],
+      ["/privacy.html", "privacy.html"],
+      ["/terms.html", "terms.html"],
+      ["/support.html", "support.html"],
       ["/robots.txt", "robots.txt"]
     ]);
     const isPlayDocument = url.pathname === "/play" || url.pathname === "/play/";
@@ -1911,8 +2412,8 @@ export const server = createServer(async (request, response) => {
     response.end(request.method === "HEAD" ? undefined : file);
   } catch (error) {
     if (error.code === "ENOENT") return sendJson(response, 404, { error: "Not found" });
-    if (error.statusCode) return sendJson(response, error.statusCode, { error: error.message, code: error.serviceCode || "request_error", ...(error.details ? { details: error.details } : {}) });
-    console.error(error);
+    if (error.statusCode) return sendJson(response, error.statusCode, { error: error.message, code: error.serviceCode || error.code || "request_error", ...(error.details ? { details: error.details } : {}) });
+    structuredLog("error", "request_error", { requestId, method: request.method, code: error.code || "internal_error", status: 500 });
     sendJson(response, 500, { error: "Something went wrong in the cosmos." });
   }
 });
@@ -1922,15 +2423,39 @@ function sendJson(response, status, value) {
   response.end(JSON.stringify(value));
 }
 
+let backupTimer = null;
+let shutdownPromise = null;
+
+export function shutdownServer(signal = "shutdown") {
+  if (shutdownPromise) return shutdownPromise;
+  shutdownPromise = (async () => {
+    structuredLog("info", "shutdown_started", { signal });
+    if (backupTimer) clearInterval(backupTimer);
+    server.closeIdleConnections?.();
+    const closePromise = new Promise((resolve) => {
+      if (!server.listening) return resolve();
+      server.close(() => resolve());
+    });
+    const forced = setTimeout(() => server.closeAllConnections?.(), 10_000);
+    forced.unref();
+    await Promise.allSettled([runRegistry.flush(), closePromise]);
+    clearTimeout(forced);
+    structuredLog("info", "shutdown_completed", { signal });
+  })();
+  return shutdownPromise;
+}
+
 if (isMainModule) {
   try {
     await createSafeBackup();
   } catch (error) {
-    console.error(`Safe backup could not be created: ${error.message}`);
+    structuredLog("error", "backup_failed", { code: error.code || "backup_failed" });
   }
-  const backupTimer = setInterval(() => {
-    void createSafeBackup().catch((error) => console.error(`Safe backup could not be created: ${error.message}`));
+  backupTimer = setInterval(() => {
+    void createSafeBackup().catch((error) => structuredLog("error", "backup_failed", { code: error.code || "backup_failed" }));
   }, 24 * 60 * 60_000);
   backupTimer.unref();
-  server.listen(port, () => console.log(`Constellore by Oxyfel Games is running at http://localhost:${port}`));
+  process.once("SIGTERM", () => void shutdownServer("SIGTERM").then(() => { process.exitCode = 0; }));
+  process.once("SIGINT", () => void shutdownServer("SIGINT").then(() => { process.exitCode = 0; }));
+  server.listen(port, () => structuredLog("info", "server_started", { port, version: APP_VERSION, build: BUILD_VERSION, graphVersion: GRAPH_VERSION, storage: gameStore.storageHealth().kind }));
 }

@@ -6,12 +6,12 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { GameStore, RunRegistry } from "../game-services.mjs";
-import { server } from "../server.mjs";
+import { server, solutionRoute } from "../server.mjs";
 import { writeLocalWorldModule } from "../scripts/build-local-world.mjs";
 
 const giftResponseKeys = [
-  "assist", "assisted", "item", "leaderboardEligible", "ranked",
-  "rewardEligible", "scoreEligible", "scoringDisabled"
+  "assist", "assisted", "division", "item", "leaderboardEligible", "ranked",
+  "rewardEligible", "scoreEligible", "scoreMultiplier", "scoringDisabled"
 ];
 const localGiftResponseKeys = [...giftResponseKeys, "localOnly"].sort();
 const giftItemKeys = ["category", "emoji", "source", "word"];
@@ -22,25 +22,27 @@ function assertSafeGift(payload, { local = false } = {}) {
   assert.equal(payload.item.source, "gift");
   assert.ok(payload.item.word);
   assert.equal(payload.assisted, true);
-  assert.equal(payload.scoringDisabled, true);
-  assert.equal(payload.scoreEligible, false);
-  assert.equal(payload.rewardEligible, false);
-  assert.equal(payload.leaderboardEligible, false);
-  assert.equal(payload.ranked, false);
+  assert.equal(payload.division, "open");
+  assert.equal(payload.scoringDisabled, false);
+  assert.equal(payload.scoreEligible, true);
+  assert.equal(payload.scoreMultiplier, 0.5);
+  assert.equal(payload.rewardEligible, true);
+  assert.equal(payload.leaderboardEligible, !local);
+  assert.equal(payload.ranked, !local);
   for (const forbidden of ["a", "b", "ingredients", "note", "recipe", "result", "route", "target"]) {
     assert.equal(Object.hasOwn(payload, forbidden), false, `Gift response must not expose ${forbidden}`);
     assert.equal(Object.hasOwn(payload.item, forbidden), false, `Gift item must not expose ${forbidden}`);
   }
 }
 
-test("Word Gift is a durable, score-ineligible run mutation", async (context) => {
+test("Word Gift is a durable half-score Open run mutation", async (context) => {
   const directory = await mkdtemp(join(tmpdir(), "constellore-gift-store-"));
   const path = join(directory, "store.json");
   context.after(() => rm(directory, { recursive: true, force: true }));
   const store = await new GameStore(path).init();
   const player = await store.registerPlayer();
   const registry = new RunRegistry(store);
-  const game = { mode: "quick", target: "Telescope", tier: 2, starters: ["Earth", "Water", "Fire", "Air"] };
+  const game = { mode: "quick", target: "Mud", tier: 1, starters: ["Earth", "Water", "Fire", "Air"] };
   const started = registry.start(player.id, game, { ranked: true, challengeId: "quick:gift-test" });
   const item = registry.gift(started.run, { word: "Glass", emoji: "🔍", category: "structure", source: "gift", a: "forbidden", b: "forbidden" });
 
@@ -54,12 +56,12 @@ test("Word Gift is a durable, score-ineligible run mutation", async (context) =>
   });
   assert.equal(started.run.giftUsed, true);
   assert.equal(started.run.assist, "gift");
-  assert.equal(started.run.scoringDisabled, true);
-  assert.equal(started.run.forfeited, true);
-  assert.equal(started.run.forfeitReason, "gift");
+  assert.equal(started.run.scoringDisabled, false);
+  assert.equal(started.run.forfeited, false);
+  assert.equal(started.run.forfeitReason, null);
+  assert.equal(started.run.game.division, "open");
   assert.equal(started.run.discovered.get("glass").source, "gift");
   assert.deepEqual(registry.gift(started.run, { word: "Stone" }), item, "retries return the original gift");
-  assert.throws(() => registry.finalize(started.run, player.callsign), (error) => error.serviceCode === "assisted_run");
   await registry.persist(started.run);
 
   const reloadedStore = await new GameStore(path).init();
@@ -69,19 +71,17 @@ test("Word Gift is a durable, score-ineligible run mutation", async (context) =>
   assert.equal(restored.giftItem.word, "Glass");
   assert.equal(restored.discovered.get("glass").feedbackEligible, false);
   assert.equal(restored.assist, "gift");
-  assert.equal(restored.scoringDisabled, true);
+  assert.equal(restored.scoringDisabled, false);
 
-  const replay = reloadedRegistry.start(player.id, game, {
-    ranked: false,
-    challengeId: "quick:gift-test",
-    scoringDisabled: true,
-    forfeitReason: "gift"
-  });
-  assert.equal(replay.run.assist, "gift", "a forfeited challenge must not restore as Reveal");
-  assert.equal(replay.run.scoringDisabled, true);
+  reloadedRegistry.canCombine(restored, "Earth", "Water");
+  reloadedRegistry.recordCombination(restored, { word: "Mud", emoji: "🟤", category: "nature", source: "world" }, { a: "Earth", b: "Water" });
+  const entry = reloadedRegistry.finalize(restored, player.callsign);
+  assert.equal(entry.division, "open");
+  assert.equal(entry.assist, "gift");
+  assert.ok(entry.score > 0);
 });
 
-test("the authenticated Word Gift endpoint is idempotent, spoiler-safe, and forfeits the shared challenge", async (context) => {
+test("the authenticated Word Gift endpoint is idempotent, spoiler-safe, and keeps a reduced Open score", async (context) => {
   server.listen(0, "127.0.0.1");
   await once(server, "listening");
   context.after(async () => {
@@ -106,7 +106,6 @@ test("the authenticated Word Gift endpoint is idempotent, spoiler-safe, and forf
     "x-constellore-token": registration.payload.playerToken
   };
   const started = await request("/api/run/start", { body: { mode: "quick" } });
-  const parallel = await request("/api/run/start", { body: { mode: "quick" } });
   const credentials = { runId: started.payload.run.id, runToken: started.payload.run.token };
 
   const malformed = await request("/api/run/gift", { body: { ...credentials, requestedWord: "Telescope" } });
@@ -130,28 +129,45 @@ test("the authenticated Word Gift endpoint is idempotent, spoiler-safe, and forf
 
   const resumed = await request("/api/run/resume", { body: credentials });
   assert.equal(resumed.payload.run.assist, "gift");
-  assert.equal(resumed.payload.run.scoringDisabled, true);
-  assert.equal(resumed.payload.run.scoreEligible, false);
+  assert.equal(resumed.payload.run.scoringDisabled, false);
+  assert.equal(resumed.payload.run.scoreEligible, true);
+  assert.equal(resumed.payload.run.scoreMultiplier, 0.5);
+  assert.equal(resumed.payload.run.ranked, true);
   assert.equal(resumed.payload.progress.giftUsed, true);
   assert.equal(resumed.payload.progress.giftItem.word, first.payload.item.word);
 
-  const submit = await request("/api/run/submit", { body: credentials });
-  assert.equal(submit.response.status, 200);
-  assert.equal(submit.payload.assist, "gift");
-  assert.equal(submit.payload.score, 0);
-  assert.match(submit.payload.reason, /Word Gift/);
+  const completeAndSubmit = async (startedRun, extraWords = []) => {
+    const proof = { runId: startedRun.run.id, runToken: startedRun.run.token };
+    const known = new Set([...startedRun.game.starters, ...extraWords].map((word) => word.toLowerCase()));
+    for (const step of solutionRoute(startedRun.game.target)) {
+      if (known.has(step.word.toLowerCase())) continue;
+      assert.ok(known.has(step.a.toLowerCase()) && known.has(step.b.toLowerCase()), `route dependencies must exist for ${step.word}`);
+      const combined = await request("/api/combine", { body: { ...proof, a: step.a, b: step.b } });
+      assert.equal(combined.response.status, 200);
+      known.add(step.word.toLowerCase());
+    }
+    return request("/api/run/submit", { body: proof });
+  };
 
-  const parallelSubmit = await request("/api/run/submit", {
-    body: { runId: parallel.payload.run.id, runToken: parallel.payload.run.token }
-  });
-  assert.equal(parallelSubmit.response.status, 200);
-  assert.equal(parallelSubmit.payload.assist, "gift");
-  assert.equal(parallelSubmit.payload.score, 0);
+  const submit = await completeAndSubmit(started.payload, [first.payload.item.word]);
+  assert.equal(submit.response.status, 201);
+  assert.equal(submit.payload.ranked, true);
+  assert.equal(submit.payload.placement.entry.assist, "gift");
+  assert.equal(submit.payload.placement.entry.division, "open");
+  assert.ok(submit.payload.placement.entry.score > 0);
+
+  // Ranked integrity permits one active attempt per player. Start the pure
+  // comparison only after the assisted run has been finalized.
+  const parallel = await request("/api/run/start", { body: { mode: "quick" } });
+  assert.equal(parallel.response.status, 201);
+  const parallelSubmit = await completeAndSubmit(parallel.payload);
+  assert.equal(parallelSubmit.response.status, 201);
+  assert.equal(parallelSubmit.payload.placement.entry.division, "pure");
 
   const replay = await request("/api/run/start", { body: { mode: "quick" } });
-  assert.equal(replay.payload.run.ranked, false);
-  assert.equal(replay.payload.run.scoringDisabled, true);
-  assert.equal(replay.payload.run.assist, "gift");
+  assert.equal(replay.payload.run.ranked, true);
+  assert.equal(replay.payload.run.scoringDisabled, false);
+  assert.equal(replay.payload.run.assist, "none");
 });
 
 test("local-practice Word Gift mirrors the safe contract and fails closed during hostile restore", async (context) => {
@@ -176,13 +192,14 @@ test("local-practice Word Gift mirrors the safe contract and fails closed during
 
   const resumed = await firstRuntime.localRequest("/api/run/resume", { method: "POST", body: JSON.stringify(credentials) });
   assert.equal(resumed.run.assist, "gift");
-  assert.equal(resumed.run.scoreEligible, false);
+  assert.equal(resumed.run.scoreEligible, true);
+  assert.equal(resumed.run.scoreMultiplier, 0.5);
   assert.equal(resumed.progress.giftUsed, true);
 
   const snapshot = {
     version: 1,
     game: started.game,
-    run: { ...started.run, assist: "none", scoreEligible: true },
+    run: { ...started.run, assist: "sense", scoreEligible: true, scoreMultiplier: 0.75 },
     progress: {
       moves: 0,
       completed: false,
@@ -194,7 +211,7 @@ test("local-practice Word Gift mirrors the safe contract and fails closed during
       bendItem: null,
       giftUsed: true,
       giftItem: first.item,
-      assist: "none",
+      assist: "sense",
       scoringDisabled: false
     }
   };
@@ -204,8 +221,9 @@ test("local-practice Word Gift mirrors the safe contract and fails closed during
     body: JSON.stringify({ ...credentials, snapshot })
   });
   assert.equal(hostileResume.run.assist, "gift");
-  assert.equal(hostileResume.run.scoringDisabled, true);
-  assert.equal(hostileResume.run.scoreEligible, false);
+  assert.equal(hostileResume.run.scoringDisabled, false);
+  assert.equal(hostileResume.run.scoreEligible, true);
+  assert.equal(hostileResume.run.scoreMultiplier, 0.5);
   assert.equal(hostileResume.progress.giftUsed, true);
   assert.equal(hostileResume.progress.giftItem.word, first.item.word);
 });

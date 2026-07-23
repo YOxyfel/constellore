@@ -1,7 +1,10 @@
 {
+  "id": "/play/",
   "name": "Constellore",
   "short_name": "Constellore",
-  "description": "Combine elemental ideas and trace a living constellation of words.",
+  "description": "A target-based word-route puzzle with Signature Routes, visual constellations, Voyages, and weekly Cosmic Events.",
+  "lang": "en",
+  "dir": "ltr",
   "start_url": "/play/",
   "scope": "/play/",
   "display": "standalone",
@@ -9,7 +12,42 @@
   "background_color": "#070914",
   "theme_color": "#070914",
   "categories": ["games", "puzzle"],
+  "shortcuts": [
+    {
+      "name": "Today's Constellation",
+      "short_name": "Daily",
+      "description": "Open today's shared target briefing.",
+      "url": "/play/?mode=daily",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "Explore freely",
+      "short_name": "Explore",
+      "description": "Open unranked word exploration.",
+      "url": "/play/?mode=explore",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/screenshots/constellation-board-wide.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Build a route across the Constellore cosmic board"
+    },
+    {
+      "src": "/screenshots/constellation-mobile.png",
+      "sizes": "600x960",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Reach a visible target in a mobile Constellore run"
+    }
+  ],
   "icons": [
-    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ]
 }

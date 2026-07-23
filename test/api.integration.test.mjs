@@ -1,9 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { once } from "node:events";
+import { readFile } from "node:fs/promises";
 import { curatedCombination, server } from "../server.mjs";
 
 const starters = ["Earth", "Water", "Fire", "Air"];
+const releaseVersion = JSON.parse(await readFile(new URL("../package.json", import.meta.url), "utf8")).version;
 
 function verifiedRoute(target) {
   const known = new Map(starters.map((word) => [word.toLowerCase(), word]));
@@ -70,7 +72,13 @@ test("authenticated HTTP runs produce verified Pure and Open leaderboard scores"
   assert.equal(landingResponse.status, 200);
   assert.match(landingResponse.headers.get("content-type"), /^text\/html/);
   assert.match(landingResponse.headers.get("content-security-policy"), /frame-src 'self'/);
-  assert.match(await landingResponse.text(), /Build a universe[.]\s*Find the word[.]/);
+  const landingHtml = await landingResponse.text();
+  assert.match(landingHtml, /You know the word[.][\s\S]{0,80}Can you find the route[?]/);
+  assert.match(landingHtml, /Every run gives you a destination/);
+
+  const healthResponse = await fetch(`${baseUrl}/healthz`);
+  assert.equal(healthResponse.status, 200);
+  assert.equal((await healthResponse.json()).version, releaseVersion);
 
   const legacyPlayResponse = await fetch(`${baseUrl}/play`, { redirect: "manual" });
   assert.equal(legacyPlayResponse.status, 308);
@@ -86,7 +94,11 @@ test("authenticated HTTP runs produce verified Pure and Open leaderboard scores"
 
   const serviceWorkerResponse = await fetch(`${baseUrl}/play/service-worker.js`);
   assert.equal(serviceWorkerResponse.status, 200);
-  assert.match(await serviceWorkerResponse.text(), /constellore-shell-v24/);
+  const serviceWorker = await serviceWorkerResponse.text();
+  assert.match(serviceWorker, /constellore-play-/);
+  assert.match(serviceWorker, /key[.]startsWith\(CACHE_PREFIX\)/);
+  assert.match(serviceWorker, /constellore-shell-v24/);
+  assert.match(serviceWorker, /LEGACY_CACHES[.]has\(key\)/);
   const moduleResponse = await fetch(`${baseUrl}/frictionless.mjs`);
   assert.equal(moduleResponse.status, 200);
   assert.match(moduleResponse.headers.get("content-type") || "", /^text\/javascript/);
@@ -121,6 +133,21 @@ test("authenticated HTTP runs produce verified Pure and Open leaderboard scores"
     const payload = await response.json();
     return { response, payload };
   };
+
+  const hostileWrite = await request("/api/player/register", {
+    method: "POST",
+    authenticated: false,
+    headers: { Origin: "https://attacker.example" }
+  });
+  assert.equal(hostileWrite.response.status, 403);
+  assert.equal(hostileWrite.payload.code, "write_origin_denied");
+  const originlessCrossSiteWrite = await request("/api/player/register", {
+    method: "POST",
+    authenticated: false,
+    headers: { "sec-fetch-site": "cross-site" }
+  });
+  assert.equal(originlessCrossSiteWrite.response.status, 403);
+  assert.equal(originlessCrossSiteWrite.payload.code, "write_origin_denied");
 
   const analyticsSession = "integration-private-session";
   const senseAnalytics = await request("/api/analytics", {
@@ -274,7 +301,10 @@ test("authenticated HTTP runs produce verified Pure and Open leaderboard scores"
 
   const rateLimitedId = "323e4567-e89b-42d3-a456-426614174000";
   const rateBody = { ...interestBody, anonymousId: rateLimitedId, action: "remove" };
-  for (let index = 0; index < 20; index += 1) {
+  // The limiter is deliberately keyed by network address rather than the
+  // attacker-controlled anonymous UUID. The four writes above share this
+  // allowance, leaving sixteen requests in the current window.
+  for (let index = 0; index < 16; index += 1) {
     const allowed = await request("/api/interest", { method: "POST", authenticated: false, headers: { Origin: allowedOrigin }, body: rateBody });
     assert.equal(allowed.response.status, 200);
     assert.equal(allowed.payload.changed, false);
@@ -295,6 +325,20 @@ test("authenticated HTTP runs produce verified Pure and Open leaderboard scores"
   const playerCheck = await request("/api/player");
   assert.equal(playerCheck.response.status, 200);
   assert.equal(playerCheck.payload.player.id, registration.payload.player.id);
+
+  const currentEvent = await request("/api/events/current");
+  assert.equal(currentEvent.response.status, 200);
+  assert.match(currentEvent.payload.serverTime, /^\d{4}-\d{2}-\d{2}T/);
+  assert.equal(currentEvent.payload.eventProgress.weekKey, currentEvent.payload.cosmicEvent.weekKey);
+  assert.equal(currentEvent.payload.eventProgress.eventId, currentEvent.payload.cosmicEvent.id);
+  assert.equal(currentEvent.payload.eventReward.amount, 60);
+  assert.equal(currentEvent.payload.eventReward.claimed, false);
+  const incompleteEventClaim = await request("/api/events/current/claim", {
+    method: "POST",
+    body: { weekKey: currentEvent.payload.cosmicEvent.weekKey, eventId: currentEvent.payload.cosmicEvent.id }
+  });
+  assert.equal(incompleteEventClaim.response.status, 422);
+  assert.equal(incompleteEventClaim.payload.code, "cosmic_event_incomplete");
 
   const quickStart = await request("/api/run/start", { method: "POST", body: { mode: "quick" } });
   assert.equal(quickStart.response.status, 201);
@@ -327,6 +371,8 @@ test("authenticated HTTP runs produce verified Pure and Open leaderboard scores"
   assert.equal(initialResume.payload.progress.history.length, 0);
   assert.equal(initialResume.payload.progress.usedBend, false);
   assert.equal(initialResume.payload.progress.bendItem, null);
+  assert.equal(initialResume.payload.eventProgress.weekKey, initialResume.payload.cosmicEvent.weekKey);
+  assert.equal(initialResume.payload.eventReward.amount, 60);
   assert.deepEqual(initialResume.payload.progress.discovered.map((item) => item.word), starters);
   assert.ok(initialResume.payload.progress.discovered.every((item) => item.emoji && item.category && item.source === "origin"));
 
@@ -341,6 +387,28 @@ test("authenticated HTTP runs produce verified Pure and Open leaderboard scores"
   });
   assert.equal(impossible.response.status, 422);
   assert.equal(impossible.payload.code, "impossible_combination");
+
+  const parallelAttempt = await request("/api/run/start", { method: "POST", body: { mode: "quick" } });
+  assert.equal(parallelAttempt.response.status, 409);
+  assert.equal(parallelAttempt.payload.code, "ranked_attempt_active");
+  const rankedBoundaryStart = quickStart;
+  const rankedCombine = (a, b) => request("/api/combine", {
+    method: "POST",
+    body: { a, b, runId: rankedBoundaryStart.payload.run.id, runToken: rankedBoundaryStart.payload.run.token }
+  });
+  assert.equal((await rankedCombine("Air", "Water")).payload.word, "Mist");
+  assert.equal((await rankedCombine("Earth", "Fire")).payload.word, "Lava");
+  const rankedRoulette = await rankedCombine("Mist", "Lava");
+  assert.equal(rankedRoulette.response.status, 422);
+  assert.equal(rankedRoulette.payload.code, "combination_missing");
+  assert.equal(rankedRoulette.payload.rejected, true, "ranked play must not accept a semantic-category fallback");
+  const boundaryResume = await request("/api/run/resume", {
+    method: "POST",
+    body: { runId: rankedBoundaryStart.payload.run.id, runToken: rankedBoundaryStart.payload.run.token }
+  });
+  assert.equal(boundaryResume.payload.progress.moves, 2, "successful-move history remains distinct from attempts");
+  assert.equal(boundaryResume.payload.progress.attempts, 3, "a rejected ranked recipe consumes an attempt for errorless integrity");
+  assert.equal(boundaryResume.payload.progress.rejectedAttempts, 1);
 
   const play = async (started) => {
     const route = verifiedRoute(started.payload.game.target);
@@ -358,6 +426,9 @@ test("authenticated HTTP runs produce verified Pure and Open leaderboard scores"
       assert.equal(finalCombination.response.status, 200);
       assert.equal(finalCombination.payload.word, step.word);
       assert.equal(finalCombination.payload.feedbackEligible, true);
+      assert.equal(typeof finalCombination.payload.newDiscovery, "boolean");
+      assert.equal(typeof finalCombination.payload.progressionEligible, "boolean");
+      assert.equal(typeof finalCombination.payload.eventEligible, "boolean");
     }
     assert.equal(finalCombination.payload.completed, true);
     return { route, finalCombination };
@@ -365,6 +436,13 @@ test("authenticated HTTP runs produce verified Pure and Open leaderboard scores"
 
   const quickPlay = await play(quickStart);
   assert.equal(quickPlay.finalCombination.payload.division, "pure");
+  assert.equal(quickPlay.finalCombination.payload.assist, "none");
+  assert.equal(quickPlay.finalCombination.payload.scoreEligible, true);
+  assert.equal(quickPlay.finalCombination.payload.scoreMultiplier, 1);
+  assert.equal(quickPlay.finalCombination.payload.progressionEligible, true);
+  assert.equal(quickPlay.finalCombination.payload.eventEligible, true);
+  assert.equal(quickPlay.finalCombination.payload.eventProgress.weekKey, quickPlay.finalCombination.payload.cosmicEvent.weekKey);
+  assert.equal(quickPlay.finalCombination.payload.eventReward.amount, 60);
   const unauthenticatedRecipeFeedback = await request("/api/recipe-feedback", {
     method: "POST",
     authenticated: false,
@@ -413,11 +491,21 @@ test("authenticated HTTP runs produce verified Pure and Open leaderboard scores"
   assert.equal(completedResume.response.status, 200);
   assert.equal(completedResume.payload.progress.completed, true);
   assert.equal(completedResume.payload.progress.submitted, false);
-  assert.equal(completedResume.payload.progress.moves, quickPlay.route.length);
+  const boundarySteps = [
+    { a: "Air", b: "Water", word: "Mist" },
+    { a: "Earth", b: "Fire", word: "Lava" }
+  ];
+  assert.equal(completedResume.payload.progress.moves, quickPlay.route.length + boundarySteps.length);
   assert.deepEqual(
     completedResume.payload.progress.history.map(({ a, b, word }) => ({ a, b, word })),
-    quickPlay.route
+    [...boundarySteps, ...quickPlay.route]
   );
+  const forgedResumeSnapshot = await request("/api/run/resume", {
+    method: "POST",
+    body: { runId: quickStart.payload.run.id, runToken: quickStart.payload.run.token, snapshot: { moves: 0, history: [] } }
+  });
+  assert.equal(forgedResumeSnapshot.response.status, 400);
+  assert.equal(forgedResumeSnapshot.payload.code, "invalid_resume_request");
   const pureSubmit = await request("/api/run/submit", {
     method: "POST",
     body: { runId: quickStart.payload.run.id, runToken: quickStart.payload.run.token }
@@ -426,7 +514,13 @@ test("authenticated HTTP runs produce verified Pure and Open leaderboard scores"
   assert.equal(pureSubmit.payload.ranked, true);
   assert.equal(pureSubmit.payload.placement.rank, 1);
   assert.equal(pureSubmit.payload.placement.entry.division, "pure");
-  assert.equal(pureSubmit.payload.placement.entry.moves, quickPlay.route.length);
+  assert.equal(pureSubmit.payload.placement.entry.moves, quickPlay.route.length + boundarySteps.length);
+  assert.equal(pureSubmit.payload.placement.entry.rejectedAttempts, 1);
+  assert.equal(pureSubmit.payload.placement.entry.errorless, false);
+  assert.equal(pureSubmit.payload.placement.entry.signature.kind, "constellore-route-signature");
+  assert.equal(pureSubmit.payload.placement.entry.signature.privacy, "anonymous");
+  assert.deepEqual(pureSubmit.payload.verifiedSignature, pureSubmit.payload.placement.entry.signature);
+  assert.equal(pureSubmit.payload.placement.community.player.rank, 1);
   assert.equal(pureSubmit.payload.creditReward, 4);
   const retriedPureSubmit = await request("/api/run/submit", {
     method: "POST",
@@ -435,6 +529,7 @@ test("authenticated HTTP runs produce verified Pure and Open leaderboard scores"
   assert.equal(retriedPureSubmit.response.status, 200, "a lost success response must be safely retryable");
   assert.equal(retriedPureSubmit.payload.ranked, true);
   assert.equal(retriedPureSubmit.payload.recovered, true);
+  assert.deepEqual(retriedPureSubmit.payload.verifiedSignature, pureSubmit.payload.verifiedSignature);
   assert.equal(retriedPureSubmit.payload.creditReward, 0);
   assert.equal(retriedPureSubmit.payload.alreadyRewarded, true);
   const submittedResume = await request("/api/run/resume", {
@@ -449,7 +544,19 @@ test("authenticated HTTP runs produce verified Pure and Open leaderboard scores"
   assert.equal(pureBoard.payload.entries.length, 1);
   assert.equal(pureBoard.payload.entries[0].callsign, registration.payload.player.callsign);
   assert.equal(pureBoard.payload.entries[0].target, quickStart.payload.game.target);
+  assert.equal(pureBoard.payload.entries[0].signature.scoreEligible, true);
   assert.equal(pureBoard.payload.playerEntry.rank, 1);
+  assert.equal(pureBoard.payload.community.completedRoutes, 1);
+  assert.equal(pureBoard.payload.community.player.rank, 1);
+  assert.equal(JSON.stringify(pureBoard.payload.community).includes(registration.payload.player.id), false);
+  assert.equal(JSON.stringify(pureBoard.payload.community).includes(quickStart.payload.run.id), false);
+  const forgedPersonalBoard = await request("/api/leaderboard?scope=all&division=pure", {
+    authenticated: false,
+    headers: { "x-constellore-player": registration.payload.player.id }
+  });
+  assert.equal(forgedPersonalBoard.response.status, 200, "leaderboards remain publicly readable");
+  assert.equal(forgedPersonalBoard.payload.playerEntry, null, "a player comparison requires a valid bearer credential");
+  assert.equal(forgedPersonalBoard.payload.community.player, null);
 
   const market = await request("/api/market?q=moon");
   assert.equal(market.response.status, 200);
@@ -498,6 +605,8 @@ test("authenticated HTTP runs produce verified Pure and Open leaderboard scores"
 
   const movesPlay = await play(movesStart);
   assert.equal(movesPlay.finalCombination.payload.division, "open");
+  assert.equal(movesPlay.finalCombination.payload.progressionEligible, false);
+  assert.equal(movesPlay.finalCombination.payload.eventEligible, false);
   const openSubmit = await request("/api/run/submit", {
     method: "POST",
     body: { runId: movesStart.payload.run.id, runToken: movesStart.payload.run.token }
@@ -525,12 +634,13 @@ test("authenticated HTTP runs produce verified Pure and Open leaderboard scores"
   assert.equal(assistedStart.payload.run.ranked, true);
   assert.equal(assistedStart.payload.run.scoringDisabled, false);
   const parallelAssistedStart = await request("/api/run/start", { method: "POST", body: { mode: "quick" } });
-  assert.equal(parallelAssistedStart.response.status, 201);
-  assert.equal(parallelAssistedStart.payload.run.ranked, true);
-  assert.equal(parallelAssistedStart.payload.run.challengeId, assistedStart.payload.run.challengeId);
+  assert.equal(parallelAssistedStart.response.status, 409);
+  assert.equal(parallelAssistedStart.payload.code, "ranked_attempt_active");
   const preForfeitPreview = await request("/api/run/preview", { method: "POST", body: { mode: "quick" } });
   assert.equal(preForfeitPreview.response.status, 200);
   assert.equal(preForfeitPreview.payload.game.scoreEligible, true);
+  assert.ok(Number.isInteger(preForfeitPreview.payload.game.routeLength));
+  assert.ok(preForfeitPreview.payload.game.routeLength > 0);
   assert.equal(typeof preForfeitPreview.payload.previewToken, "string");
 
   const reveal = await request("/api/run/reveal", {
@@ -569,15 +679,19 @@ test("authenticated HTTP runs produce verified Pure and Open leaderboard scores"
   assert.equal(assistedSubmit.payload.weeklyBonus, 0);
   assert.equal(assistedSubmit.payload.player.credits, 300);
 
-  await play(parallelAssistedStart);
+  const postForfeitStart = await request("/api/run/start", { method: "POST", body: { mode: "quick" } });
+  assert.equal(postForfeitStart.response.status, 201);
+  assert.equal(postForfeitStart.payload.run.ranked, false);
+  assert.equal(postForfeitStart.payload.run.scoringDisabled, true);
+  await play(postForfeitStart);
   const parallelAssistedSubmit = await request("/api/run/submit", {
     method: "POST",
-    body: { runId: parallelAssistedStart.payload.run.id, runToken: parallelAssistedStart.payload.run.token }
+    body: { runId: postForfeitStart.payload.run.id, runToken: postForfeitStart.payload.run.token }
   });
   assert.equal(parallelAssistedSubmit.response.status, 200);
   assert.equal(parallelAssistedSubmit.payload.ranked, false);
   assert.equal(parallelAssistedSubmit.payload.assisted, true);
-  assert.equal(parallelAssistedSubmit.payload.score, 0, "a run started before Reveal Path must also forfeit the shared challenge");
+  assert.equal(parallelAssistedSubmit.payload.score, 0, "a later replay of a revealed challenge stays in Study");
 
   const pureAfterReveal = await request("/api/leaderboard?scope=all&division=pure");
   const openAfterReveal = await request("/api/leaderboard?scope=all&division=open");
@@ -604,9 +718,34 @@ test("authenticated HTTP runs produce verified Pure and Open leaderboard scores"
     body: { previewToken: assistedPreview.payload.previewToken }
   });
   assert.equal(assistedReplay.response.status, 201);
+  assert.equal(assistedReplay.payload.game.routeLength, assistedPreview.payload.game.routeLength);
   assert.equal(assistedReplay.payload.run.ranked, false);
   assert.equal(assistedReplay.payload.run.scoringDisabled, true);
   assert.equal(assistedReplay.payload.run.assist, "reveal");
+  const replaySense = await request("/api/run/sense", {
+    method: "POST",
+    body: { runId: assistedReplay.payload.run.id, runToken: assistedReplay.payload.run.token }
+  });
+  assert.equal(replaySense.response.status, 200);
+  assert.equal(replaySense.payload.division, "study");
+  assert.equal(replaySense.payload.assist, "reveal");
+  assert.equal(replaySense.payload.scoringDisabled, true);
+  assert.equal(replaySense.payload.scoreEligible, false);
+  assert.equal(replaySense.payload.rewardEligible, false);
+  assert.equal(replaySense.payload.leaderboardEligible, false);
+  assert.equal(replaySense.payload.scoreMultiplier, 0);
+  const replayGift = await request("/api/run/gift", {
+    method: "POST",
+    body: { runId: assistedReplay.payload.run.id, runToken: assistedReplay.payload.run.token }
+  });
+  assert.equal(replayGift.response.status, 200);
+  assert.equal(replayGift.payload.division, "study");
+  assert.equal(replayGift.payload.assist, "reveal");
+  assert.equal(replayGift.payload.scoringDisabled, true);
+  assert.equal(replayGift.payload.scoreEligible, false);
+  assert.equal(replayGift.payload.rewardEligible, false);
+  assert.equal(replayGift.payload.leaderboardEligible, false);
+  assert.equal(replayGift.payload.scoreMultiplier, 0);
 
   const disguisedMovesStart = await request("/api/run/start", { method: "POST", body: { mode: "moves", custom: true } });
   assert.equal(disguisedMovesStart.response.status, 201);

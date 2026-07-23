@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import test from "node:test";
-import { generateLocalWorldData, lookupGeneratedCombination, writeLocalWorldModule } from "../scripts/build-local-world.mjs";
+import { contentQualityReport, generateLocalWorldData, lookupGeneratedCombination, writeLocalWorldModule } from "../scripts/build-local-world.mjs";
 
 async function preparePagesAdapter(directory) {
   await writeLocalWorldModule(join(directory, "local-world.mjs"));
@@ -19,14 +19,36 @@ async function preparePagesAdapter(directory) {
 
 test("the compact Pages universe preserves important logical combinations", async () => {
   const data = await generateLocalWorldData();
-  assert.ok(data.words.length >= 425);
+  assert.ok(data.words.length >= 700);
   assert.equal(data.matrix.length, data.words.length * (data.words.length + 1) / 2);
+  assert.equal(data.payload.version, 3);
+  assert.equal(data.payload.matrix, undefined, "the shipped local world must not serialize the dense empty matrix");
+  assert.equal(data.payload.recipes.length, data.contentQuality.authoredCoverage.authoredPairs);
   assert.ok(data.words.some((item) => item.word === "Concrete"));
   assert.ok(data.words.some((item) => item.word === "Great Wall"));
   assert.equal(lookupGeneratedCombination(data, "Earth", "Water").word, "Mud");
   assert.equal(lookupGeneratedCombination(data, "Water", "Water").word, "Ocean");
   assert.equal(lookupGeneratedCombination(data, "Fire", "Fire").word, "Inferno");
   assert.equal(lookupGeneratedCombination(data, "Species", "Air").word, "Bird");
+  assert.equal(lookupGeneratedCombination(data, "Dragon", "Telescope"), null, "the static goal universe must not manufacture a category-roulette answer");
+  assert.ok(contentQualityReport(data).officialTargetCount >= 30);
+});
+
+test("the generated Pages world uses a compact sparse O(1) recipe index", async (context) => {
+  const directory = await mkdtemp(join(tmpdir(), "constellore-sparse-world-"));
+  context.after(() => rm(directory, { recursive: true, force: true }));
+  const worldPath = join(directory, "local-world.mjs");
+  const payload = await writeLocalWorldModule(worldPath);
+  const source = await readFile(worldPath, "utf8");
+  const world = await import(`${pathToFileURL(worldPath).href}?test=sparse-${Date.now()}`);
+
+  assert.doesNotMatch(source, /\"matrix\":/, "the generated module must not contain the former dense matrix payload");
+  assert.match(source, /new Map\(payload[.]recipes[.]map/, "sparse recipes should be indexed once for practical O(1) lookup");
+  assert.ok(Buffer.byteLength(source) < 450_000, `local-world.mjs should stay under 450 KB, got ${Buffer.byteLength(source)}`);
+  assert.equal(world.localRecipeCount, payload.recipes.length);
+  assert.match(world.localGraphVersion, /^3\./);
+  assert.equal(world.lookupLocalCombination("Water", "Wind").word, "Wave");
+  assert.equal(world.lookupLocalCombination("Dragon", "Telescope"), null);
 });
 
 test("every Pages mode target has a dependency-ordered route from the four starters", async (context) => {
@@ -41,7 +63,13 @@ test("every Pages mode target has a dependency-ordered route from the four start
   const games = regularModes.flatMap((mode) => data.payload.modes[mode]);
   for (const stages of data.payload.modes.weekly) games.push(...stages);
   const targets = new Set(games.map((game) => game.target));
-  assert.ok(targets.size >= 8, "the local mode cycles should cover the featured target catalog");
+  assert.ok(targets.size >= 30, "the local mode cycles should cover a deep official target catalog");
+
+  for (const game of games) {
+    const route = world.localRouteTo(game.target);
+    assert.ok(route, `${game.mode} target ${game.target} should have guidance`);
+    if (game.moveLimit) assert.ok(route.length <= game.moveLimit, `${game.target} guidance must fit ${game.moveLimit} moves`);
+  }
 
   for (const target of targets) {
     const route = world.localRouteTo(target);
@@ -104,7 +132,12 @@ test("the Pages adapter completes a real local Telescope route without a server"
   assert.equal(energy.word, "Energy");
   assert.equal(energy.ranked, false);
   assert.equal(energy.localOnly, true);
-  assert.equal(energy.feedbackEligible, false, "Pages practice must not claim that a discarded rating is uploadable");
+  assert.equal(energy.feedbackEligible, true, "authored Pages recipes can be rated for local QA");
+  const recipeVote = await localRequest("/api/recipe-feedback", {
+    method: "POST",
+    body: JSON.stringify({ runId: started.run.id, runToken: started.run.token, move: 1, rating: "logical" })
+  });
+  assert.deepEqual(recipeVote, { accepted: true, move: 1, rating: "logical", localOnly: true });
   assert.equal(energy.universeContext.seedId, started.game.universe.seedId);
   assert.equal(energy.universeContext.universeId, started.game.universe.id);
   assert.deepEqual(Object.keys(energy.universeContext).sort(), ["label", "lawId", "resonance", "seasonId", "seedId", "universeId"]);
@@ -163,11 +196,11 @@ test("the Pages adapter rejects a run whose local route disagrees with the canon
   await preparePagesAdapter(directory);
   const worldPath = join(directory, "local-world.mjs");
   const source = await readFile(worldPath, "utf8");
-  const routeReturn = "return visit(target) ? route : null;";
+  const routeReturn = "  return route;\n}\n\nexport function buildLocalGame";
   assert.ok(source.includes(routeReturn), "the fixture must find the generated route return");
   await writeFile(worldPath, source.replace(
     routeReturn,
-    'const complete = visit(target);\n  if (complete && route.length) route[route.length - 1] = { ...route[route.length - 1], word: "Invented Route Result" };\n  return complete ? route : null;'
+    '  if (route.length) route[route.length - 1] = { ...route[route.length - 1], word: "Invented Route Result" };\n  return route;\n}\n\nexport function buildLocalGame'
   ), "utf8");
   const { localRequest } = await import(`${pathToFileURL(join(directory, "local-beta.mjs")).href}?test=${Date.now()}`);
 
@@ -231,6 +264,88 @@ test("the Pages reveal endpoint is idempotent and permanently zero-score", async
     }),
     /already complete/i
   );
+});
+
+test("the Pages adapter supports safe no-run combinations for lessons and persistent Explore", async (context) => {
+  const directory = await mkdtemp(join(tmpdir(), "constellore-pages-sandbox-"));
+  context.after(() => rm(directory, { recursive: true, force: true }));
+  await preparePagesAdapter(directory);
+  const { localRequest } = await import(`${pathToFileURL(join(directory, "local-beta.mjs")).href}?test=sandbox-${Date.now()}`);
+
+  const lava = await localRequest("/api/combine", {
+    method: "POST",
+    body: JSON.stringify({ a: "Earth", b: "Fire", discovered: ["Earth", "Water", "Fire", "Air"] })
+  });
+  assert.equal(lava.word, "Lava");
+  assert.equal(lava.completed, false);
+  assert.equal(lava.ranked, false);
+  assert.equal(lava.localOnly, true);
+
+  const stone = await localRequest("/api/combine", {
+    method: "POST",
+    body: JSON.stringify({ a: "Lava", b: "Water", discovered: ["Earth", "Water", "Fire", "Air", "Lava"] })
+  });
+  assert.equal(stone.word, "Stone");
+
+  await assert.rejects(
+    localRequest("/api/combine", {
+      method: "POST",
+      body: JSON.stringify({ a: "Lava", b: "Water", discovered: ["Earth", "Water", "Fire", "Air"] })
+    }),
+    (error) => error.code === "word_unavailable" && error.status === 409
+  );
+});
+
+test("local restore keeps the strongest claimed assistance penalty", async (context) => {
+  const directory = await mkdtemp(join(tmpdir(), "constellore-assist-restore-"));
+  context.after(() => rm(directory, { recursive: true, force: true }));
+  await preparePagesAdapter(directory);
+  const moduleUrl = pathToFileURL(join(directory, "local-beta.mjs")).href;
+  const firstRuntime = await import(`${moduleUrl}?test=assist-start-${Date.now()}`);
+  const started = await firstRuntime.localRequest("/api/run/start", {
+    method: "POST",
+    body: JSON.stringify({ mode: "reach", seed: 23, target: "Telescope" })
+  });
+  const gift = await firstRuntime.localRequest("/api/run/gift", {
+    method: "POST",
+    body: JSON.stringify({ runId: started.run.id, runToken: started.run.token })
+  });
+  const compassAfterGift = await firstRuntime.localRequest("/api/run/sense", {
+    method: "POST",
+    body: JSON.stringify({ runId: started.run.id, runToken: started.run.token })
+  });
+  assert.equal(compassAfterGift.assist, "gift");
+  assert.equal(compassAfterGift.scoreMultiplier, .5);
+  const wishAfterGift = await firstRuntime.localRequest("/api/wish", {
+    method: "POST",
+    body: JSON.stringify({ word: "Moon", runId: started.run.id, runToken: started.run.token })
+  });
+  assert.equal(wishAfterGift.assist, "gift");
+  assert.equal(wishAfterGift.scoreMultiplier, .5);
+  const snapshot = {
+    version: 1,
+    game: started.game,
+    run: { ...started.run, assist: "sense", scoreMultiplier: .75 },
+    progress: {
+      moves: 0,
+      completed: false,
+      submitted: false,
+      discovered: started.game.starters.map((word) => ({ word, source: "origin" })).concat(gift.item),
+      history: [],
+      giftUsed: true,
+      giftItem: gift.item,
+      assist: "sense",
+      scoringDisabled: false
+    }
+  };
+  const restoredRuntime = await import(`${moduleUrl}?test=assist-restore-${Date.now()}`);
+  const restored = await restoredRuntime.localRequest("/api/run/resume", {
+    method: "POST",
+    body: JSON.stringify({ runId: started.run.id, runToken: started.run.token, snapshot })
+  });
+  assert.equal(restored.run.assist, "gift", "Gift's 50% penalty must beat an earlier Compass penalty");
+  assert.equal(restored.run.scoreMultiplier, .5);
+  assert.equal(restored.run.scoreEligible, true);
 });
 
 test("the Pages adapter safely reconstructs an unranked run after a module reload", async (context) => {

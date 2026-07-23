@@ -1,0 +1,6 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Private security report
+    url: https://github.com/YOxyfel/constellore/security/advisories/new
+    about: Never publish credentials, Recovery Kits, player data, or an unpatched exploit.
+

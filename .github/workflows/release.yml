@@ -1,0 +1,61 @@
+name: Publish verified release artifact
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - name: Verify tag matches package version
+        shell: bash
+        run: |
+          VERSION="$(node -p "require('./package.json').version")"
+          test "${GITHUB_REF_NAME}" = "v${VERSION}"
+      - name: Verify tagged commit belongs to main
+        shell: bash
+        run: |
+          git fetch --no-tags origin main:refs/remotes/origin/main
+          git merge-base --is-ancestor "${GITHUB_SHA}" "origin/main"
+      - name: Verify release metadata is synchronized
+        run: npm run release:sync
+      - name: Reject an unsynchronized source release
+        shell: bash
+        run: |
+          git diff --exit-code
+          test -z "$(git status --porcelain)"
+      - run: npm run check
+      - run: npm run build:release
+      - name: Install browser release gate
+        run: npx playwright install --with-deps chromium
+      - name: Smoke-test the packaged web artifact
+        run: npm run test:e2e:pages
+      - name: Publish immutable HTML5 package
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          VERSION="$(node -p "require('./package.json').version")"
+          RELEASE_FLAGS=()
+          if [[ "${VERSION}" == *-* ]]; then RELEASE_FLAGS+=(--prerelease); fi
+          gh release create "${GITHUB_REF_NAME}" \
+            dist-itch/*.zip \
+            dist-itch/*.zip.sha256 \
+            --verify-tag \
+            --generate-notes \
+            --title "Constellore ${GITHUB_REF_NAME}" \
+            "${RELEASE_FLAGS[@]}"

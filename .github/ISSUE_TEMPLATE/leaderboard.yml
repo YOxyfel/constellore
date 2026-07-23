@@ -1,0 +1,40 @@
+name: Leaderboard score review
+description: Request review of a visible asynchronous score without sharing credentials.
+title: "Score review: "
+labels: ["leaderboard"]
+body:
+  - type: markdown
+    attributes:
+      value: "Never include a run token or Recovery Kit. The public callsign and challenge identity are enough to begin review."
+  - type: input
+    id: callsign
+    attributes:
+      label: Public callsign
+    validations:
+      required: true
+  - type: input
+    id: challenge
+    attributes:
+      label: Challenge and target
+    validations:
+      required: true
+  - type: dropdown
+    id: division
+    attributes:
+      label: Division
+      options: ["Pure", "Open", "Practice", "Study", "Unknown"]
+    validations:
+      required: true
+  - type: input
+    id: score
+    attributes:
+      label: Visible score, moves, and approximate completion time
+    validations:
+      required: true
+  - type: textarea
+    id: reason
+    attributes:
+      label: Why should this result be reviewed?
+    validations:
+      required: true
+

@@ -1,8 +1,12 @@
-import { createHmac, randomBytes, randomUUID, timingSafeEqual } from "node:crypto";
+import { createHash, createHmac, randomBytes, randomUUID, timingSafeEqual } from "node:crypto";
 import { mkdir, readFile, readdir, rename, unlink, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
-import { QUICK_TIP_LIMIT } from "./public/engagement-features.mjs";
+import { QUICK_TIP_LIMIT, assistancePolicy, combineAssistance } from "./public/engagement-features.mjs";
+import { buildCommunityResults } from "./public/community-results.mjs";
+import { cosmicEventCatalog, cosmicEventCollectionProgress, currentCosmicEvent } from "./public/cosmic-events.mjs";
+import { constellationVoyageCatalog, sanitizeVoyageProgress } from "./public/constellation-voyages.mjs";
 import { emptyRecipeFeedback, normalizeRecipeFeedback, recipeFeedbackSummary, recordRecipeFeedback } from "./public/recipe-feedback.mjs";
+import { comparePersonalBest, createRouteSignature, sanitizeRouteSignature } from "./public/signature-routes.mjs";
 
 export const MARKET_CATALOG = Object.freeze([
   { id: "moon", word: "Moon", emoji: "🌙", category: "nature", usefulness: 5, basePrice: 180, reason: "Strong links to tides, night, eclipses, and space." },
@@ -52,7 +56,7 @@ export const CREATIVE_COMMERCE_CATALOG = Object.freeze([
 
 const commerceProductById = new Map(CREATIVE_COMMERCE_CATALOG.map((product) => [product.id, product]));
 const COMMERCE_PROVIDERS = new Set(["apple", "google", "xsolla", "steam", "epic", "web", "test"]);
-const CLOUD_PROFILE_FIELDS = new Set(["cosmetics", "discovered", "feedbackPreferences", "firstOrbit", "masteryCelebrated", "progression", "recipeMastery", "rivalGhostEnabled", "theme", "weekly"]);
+const CLOUD_PROFILE_FIELDS = new Set(["cosmetics", "discovered", "feedbackPreferences", "firstOrbit", "journeys", "masteryCelebrated", "progression", "recipeMastery", "rivalGhostEnabled", "signatureBests", "theme", "weekly"]);
 const CLOUD_THEMES = new Set(["void", "aurora", "solar", "dark", "light", "system"]);
 const CLOUD_COSMETICS = new Map([
   ["void", { kind: "theme", founder: false }], ["aurora", { kind: "theme", founder: true }], ["solar", { kind: "theme", founder: true }],
@@ -60,9 +64,32 @@ const CLOUD_COSMETICS = new Map([
   ["classic", { kind: "trail", founder: false }], ["comet", { kind: "trail", founder: true }], ["prism", { kind: "trail", founder: true }],
   ["cosmic", { kind: "sound", founder: false }], ["glass", { kind: "sound", founder: true }], ["analog", { kind: "sound", founder: true }]
 ]);
+const CLOUD_VOYAGES = new Map(constellationVoyageCatalog().map((voyage) => [voyage.id, voyage]));
+const CLOUD_EVENTS = new Map(cosmicEventCatalog().map((event) => [event.id, event]));
+const COSMIC_EVENT_ORIGIN_WORDS = new Set(["earth", "water", "fire", "air"]);
+const COSMIC_EVENT_COLLECTION_REWARD = 60;
+const MAX_LIFETIME_DISCOVERIES = 10_000;
+const MAX_COSMIC_EVENT_REWARDS = 104;
+const DISCOVERY_DIGEST_PATTERN = /^[A-Za-z0-9_-]{43}$/;
+const COSMIC_EVENT_REWARD_KEY_PATTERN = /^\d{4}-W(?:0[1-9]|[1-4]\d|5[0-3]):[a-z0-9][a-z0-9-]{0,47}$/;
+const CLOUD_SIGNATURE_FIELDS = new Set([
+  "assist", "categories", "contextualSteps", "dimensions", "discoveries", "idealMoves", "kind", "mode", "moves",
+  "privacy", "routeFingerprint", "score", "scoreEligible", "scoreMultiplier", "scopeKey", "signatureId",
+  "stepFingerprints", "targetKey", "tier", "tierLabel", "version"
+]);
 const RECOVERY_CODE_PATTERN = /^CF(?:-[0-9A-F]{4}){8}$/;
 const SAFE_BACKUP_PATTERN = /^constellore-safe-\d{8}T\d{9}Z\.json$/;
 const COMPLETED_RANKED_RUN_RETENTION_MS = 8 * 86400000;
+const PLAYER_SESSION_TTL_MS = 30 * 86400000;
+const MAX_PLAYER_SESSIONS = 8;
+const PLAYER_SESSION_TOKEN_PATTERN = /^cs3\.([A-Za-z0-9_-]{20,2048})\.([A-Za-z0-9_-]{43})$/;
+const CHALLENGE_IDENTITY_VERSION = 3;
+const RANKED_RULES_VERSION = "ranked-v3";
+const MAX_LEDGER_ENTRIES = 50_000;
+const MAX_REJECTED_PAIR_REPORTS = 2_000;
+const ANALYTICS_COHORT_PATTERN = /^[A-Za-z0-9_-]{16,80}$/;
+export const MARKET_REPRICE_INTERVAL_MS = 6 * 60 * 60_000;
+export const STORAGE_CONTRACT_VERSION = 1;
 
 const catalogById = new Map(MARKET_CATALOG.map((item) => [item.id, item]));
 const adjectives = ["Amber", "Astral", "Bright", "Cinder", "Cosmic", "Distant", "Echo", "Frost", "Golden", "Hidden", "Ivory", "Lunar", "Neon", "Quiet", "Solar", "Velvet"];
@@ -70,6 +97,8 @@ const nouns = ["Comet", "Drifter", "Ember", "Harbor", "Meteor", "Moon", "Nova", 
 const INTEREST_CAMPAIGN = "web-release";
 const INTEREST_SOURCES = new Set(["github-pages", "website", "local-practice", "game", "direct"]);
 const INTEREST_ACTIONS = new Set(["add", "remove"]);
+const INTEREST_RECORD_LIMIT = 25_000;
+const INTEREST_INACTIVE_RETENTION_DAYS = 90;
 const anonymousInterestIdPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const ANALYTICS_RETENTION_DAYS = 90;
 export const ANALYTICS_EVENT_NAMES = Object.freeze([
@@ -82,33 +111,46 @@ export const ANALYTICS_EVENT_NAMES = Object.freeze([
   "ghost_loaded", "ghost_race_started", "ghost_race_completed", "mastery_opened", "mastery_progressed",
   "mastery_completed", "audio_toggled", "haptic_toggled", "fusion_feedback_played", "cosmetic_changed",
   "recipe_feedback_submitted", "card_shared", "card_downloaded", "cloud_sync", "ownership_restored",
-  "recovery_rotated", "account_recovered", "mission_briefing_viewed", "mission_briefing_dismissed"
+  "recovery_rotated", "account_recovered", "mission_briefing_viewed", "mission_briefing_dismissed",
+  "mode_screen_viewed", "first_orbit_started", "first_combination", "first_orbit_completed", "run_retried",
+  "supporter_interest", "player_data_exported", "player_data_deleted", "journey_opened", "voyage_started",
+  "voyage_completed", "event_started", "event_discovery", "signature_graded", "community_viewed",
+  "combination_expected"
+]);
+export const ANALYTICS_FUNNEL_EVENTS = Object.freeze([
+  "app_opened", "mode_screen_viewed", "mission_briefing_viewed", "run_started", "first_combination", "target_reached", "run_retried"
 ]);
 const analyticsEventNames = new Set(ANALYTICS_EVENT_NAMES);
 const analyticsEnumDimensions = new Map([
   ["mode", new Set(["reach", "quick", "moves", "daily", "weekly", "challenge"])],
   ["division", new Set(["pure", "open"])],
-  ["source", new Set(["world", "ai", "twist", "reveal", "gift", "market", "wish", "earned", "credits", "reward", "free", "daily", "founder", "mastery", "benchmark", "verified"])],
-  ["location", new Set(["home", "run", "result", "market", "mastery"])],
+  ["source", new Set(["world", "ai", "twist", "reveal", "gift", "market", "wish", "earned", "credits", "reward", "free", "daily", "founder", "mastery", "benchmark", "verified", "voyage", "event", "signature", "community"])],
+  ["location", new Set(["home", "run", "result", "market", "mastery", "journey", "event"])],
   ["provider", new Set(["native", "web", "sandbox", "rewarded"])],
   ["scope", new Set(["daily", "weekly", "sprint", "all"])],
+  ["tier", new Set(["study", "spark", "orbit", "constellation", "nova", "singularity"])],
+  ["action", new Set(["race"])],
   ["theme", new Set(["void", "aurora", "solar", "dark", "light", "system"])],
   ["entitlement", new Set(["pass", "reward", "free", "credits", "earned"])],
   ["reason", new Set(["abandoned", "moves", "time", "reveal", "sense", "gift", "completed", "unavailable"])],
   ["assist", new Set(["none", "ai", "market", "wish", "reveal", "sense", "gift"])],
   ["result", new Set(["won", "lost", "tied", "completed", "dismissed", "accepted", "cancelled"])],
-  ["kind", new Set(["fusion", "rejection", "discovery", "twist", "target", "ui", "music", "haptic", "theme", "board", "trail", "sound", "logical", "surprising", "bad"])],
+  ["kind", new Set(["fusion", "rejection", "discovery", "twist", "target", "ui", "music", "haptic", "theme", "board", "trail", "sound", "logical", "surprising", "bad", "voyage", "event", "signature", "community"])],
   ["outcome", new Set(["accepted", "cancelled", "completed", "dismissed", "earned", "purchased"])],
   ["enabled", new Set(["true", "false"])],
   ["installed", new Set(["true", "false"])],
   ["completed", new Set(["true", "false"])],
+  ["complete", new Set(["true", "false"])],
   ["assisted", new Set(["true", "false"])],
   ["revealed", new Set(["true", "false"])],
   ["newDiscovery", new Set(["true", "false"])],
-  ["twisted", new Set(["true", "false"])]
+  ["twisted", new Set(["true", "false"])],
+  ["improved", new Set(["true", "false"])],
+  ["eligible", new Set(["true", "false"])],
+  ["training", new Set(["true", "false"])]
 ]);
-const analyticsSlugDimensions = new Set(["pack", "collection"]);
-const analyticsMetricNames = new Set(["credits", "cost", "reward", "score", "rank", "moves", "seconds", "steps", "words", "length", "stage", "progress", "stars", "deltaMs", "chargesBefore", "chargesAfter"]);
+const analyticsSlugDimensions = new Set(["pack", "collection", "voyage", "event", "chapter", "stage"]);
+const analyticsMetricNames = new Set(["credits", "cost", "reward", "score", "rank", "moves", "seconds", "steps", "words", "length", "stage", "progress", "stars", "deltaMs", "chargesBefore", "chargesAfter", "completedRoutes", "signatureScore", "topPercent"]);
 
 function emptyInterestData() {
   return { version: 1, records: {}, totals: {}, updatedAt: null };
@@ -116,6 +158,31 @@ function emptyInterestData() {
 
 function emptyAnalyticsData() {
   return { version: 1, totals: { events: {} }, days: {}, updatedAt: null };
+}
+
+function emptyRejectedPairData() {
+  return { version: 1, entries: {}, updatedAt: null };
+}
+
+function normalizeRejectedPairData(value) {
+  const data = isRecord(value) ? value : {};
+  const entries = [];
+  for (const [fingerprint, raw] of Object.entries(isRecord(data.entries) ? data.entries : {})) {
+    if (!/^[A-Za-z0-9_-]{32,64}$/.test(fingerprint) || !isRecord(raw)) continue;
+    const count = clamp(nonnegativeCounter(raw.count), 0, 1_000_000);
+    const lastSeenAt = typeof raw.lastSeenAt === "string" && Number.isFinite(Date.parse(raw.lastSeenAt)) ? new Date(raw.lastSeenAt).toISOString() : null;
+    if (!count || !lastSeenAt) continue;
+    const sample = Array.isArray(raw.sample) && raw.sample.length === 2
+      ? raw.sample.map((word) => cleanCloudText(word, 28)).filter(Boolean)
+      : [];
+    const modes = normalizeAnalyticsCounters(raw.modes, analyticsEnumDimensions.get("mode"));
+    const reporters = Object.fromEntries(Object.entries(isRecord(raw.reporters) ? raw.reporters : {})
+      .filter(([digest, seenAt]) => /^[A-Za-z0-9_-]{32,64}$/.test(digest) && typeof seenAt === "string" && Number.isFinite(Date.parse(seenAt)))
+      .slice(-256));
+    entries.push([fingerprint, { count, lastSeenAt, sample: sample.length === 2 ? sample : null, modes, reporters }]);
+  }
+  entries.sort((left, right) => Date.parse(right[1].lastSeenAt) - Date.parse(left[1].lastSeenAt));
+  return { version: 1, entries: Object.fromEntries(entries.slice(0, MAX_REJECTED_PAIR_REPORTS)), updatedAt: typeof data.updatedAt === "string" ? data.updatedAt : null };
 }
 
 function nonnegativeCounter(value) {
@@ -174,13 +241,16 @@ function normalizeAnalyticsData(value) {
         sessionHashes: entry.sessionHashes && typeof entry.sessionHashes === "object" && !Array.isArray(entry.sessionHashes)
           ? Object.fromEntries(Object.keys(entry.sessionHashes).filter((digest) => /^[A-Za-z0-9_-]{32,64}$/.test(digest)).map((digest) => [digest, true]))
           : {},
+        cohortHashes: entry.cohortHashes && typeof entry.cohortHashes === "object" && !Array.isArray(entry.cohortHashes)
+          ? Object.fromEntries(Object.keys(entry.cohortHashes).filter((digest) => /^[A-Za-z0-9_-]{32,64}$/.test(digest)).map((digest) => [digest, true]))
+          : {},
         segments: normalizeAnalyticsSegments(entry.segments),
         metrics: normalizeAnalyticsMetrics(entry.metrics)
       };
     }
   }
   return {
-    version: 1,
+    version: 2,
     totals: { events: normalizeAnalyticsCounters(data.totals?.events, analyticsEventNames) },
     days,
     updatedAt: typeof data.updatedAt === "string" ? data.updatedAt : null
@@ -275,12 +345,12 @@ export function callsignFor(playerId) {
   return `${adjectives[hash % adjectives.length]} ${nouns[(hash >>> 8) % nouns.length]} ${discriminator}`;
 }
 
-export function marketPrice(wordOrId, minute = Math.floor(Date.now() / 60_000), demand = 0) {
+export function marketPrice(wordOrId, period = Math.floor(Date.now() / MARKET_REPRICE_INTERVAL_MS), demand = 0) {
   const item = typeof wordOrId === "string" ? catalogById.get(wordOrId) : wordOrId;
   if (!item) return null;
   const phaseA = hashNumber(`${item.id}:a`) % 1000;
   const phaseB = hashNumber(`${item.id}:b`) % 1000;
-  const wave = Math.sin((minute + phaseA) / 11) * .09 + Math.sin((minute + phaseB) / 5) * .035;
+  const wave = Math.sin((period + phaseA) / 11) * .09 + Math.sin((period + phaseB) / 5) * .035;
   const demandLift = clamp(Number(demand) || 0, 0, 1) * .06;
   const roundedPrice = roundToFive(item.basePrice * clamp(1 + wave + demandLift, .8, 1.2));
   const minimumPrice = Math.ceil(item.basePrice * .8 / 5) * 5;
@@ -288,18 +358,25 @@ export function marketPrice(wordOrId, minute = Math.floor(Date.now() / 60_000), 
   return clamp(roundedPrice, minimumPrice, maximumPrice);
 }
 
-export function marketTrend(item, minute, demand, length = 12) {
-  return Array.from({ length }, (_, index) => marketPrice(item, minute - (length - index - 1), demand));
+export function marketTrend(item, period, demand, length = 12) {
+  return Array.from({ length }, (_, index) => marketPrice(item, period - (length - index - 1), demand));
 }
 
-export function calculateStarscore({ game, moves, elapsedSeconds, assisted = false }) {
+export function calculateStarscore({ game, moves, elapsedSeconds, errors = 0, assisted = false, assist = "none" }) {
   const tier = clamp(Number(game?.tier) || 1, 1, 5);
   const parMoves = 3 + tier * 3;
   const base = 100_000 + tier * 5_000;
   const movePenalty = Math.max(0, Number(moves) - parMoves) * 5_000;
   const timePenalty = Math.max(0, Number(elapsedSeconds)) * 25;
-  const assistPenalty = assisted ? 7_500 : 0;
-  return Math.max(1, Math.round(base - movePenalty - timePenalty - assistPenalty));
+  const errorPenalty = Math.max(0, Math.floor(Number(errors) || 0)) * 2_500;
+  const rawScore = Math.max(1, base - movePenalty - timePenalty - errorPenalty);
+  const requestedAssist = String(assist || "none").toLowerCase();
+  const scoredAssist = ["wish", "market", "ai", "sense", "gift", "open", "reveal", "training"].includes(requestedAssist)
+    ? requestedAssist
+    : assisted ? "open" : "none";
+  const policy = assistancePolicy(scoredAssist);
+  if (!policy.scoreEligible || policy.scoreMultiplier <= 0) return 0;
+  return Math.max(1, Math.round(rawScore * policy.scoreMultiplier));
 }
 
 export function compareEntries(left, right) {
@@ -312,8 +389,50 @@ function betterEntry(next, current) {
   return !current || compareEntries(next, current) < 0;
 }
 
+function canonicalChallengeText(value, maximum = 80) {
+  return String(value || "").normalize("NFKC").replace(/\s+/g, " ").trim().toLocaleLowerCase("en-US").slice(0, maximum);
+}
+
+export function buildChallengeIdentity(game, { assist = "none", graphVersion = "world-v1", buildVersion = "dev" } = {}) {
+  const policy = assistancePolicy(assist);
+  const descriptor = {
+    v: CHALLENGE_IDENTITY_VERSION,
+    mode: canonicalChallengeText(game?.mode, 24) || "reach",
+    target: canonicalChallengeText(game?.target, 80),
+    seed: Number.isFinite(Number(game?.seed)) ? String(Math.abs(Number(game.seed))) : "0",
+    modifier: {
+      timeLimit: Number.isFinite(Number(game?.timeLimit)) ? Math.max(0, Math.floor(Number(game.timeLimit))) : null,
+      moveLimit: Number.isFinite(Number(game?.moveLimit)) ? Math.max(0, Math.floor(Number(game.moveLimit))) : null,
+      stage: Number.isFinite(Number(game?.stage)) ? Math.max(0, Math.floor(Number(game.stage))) : null,
+      law: canonicalChallengeText(game?.law?.id, 40) || null
+    },
+    graphVersion: canonicalChallengeText(game?.graphVersion || graphVersion, 64) || "world-v1",
+    buildVersion: canonicalChallengeText(game?.buildVersion || buildVersion, 64) || "dev",
+    rulesVersion: canonicalChallengeText(game?.rulesVersion || RANKED_RULES_VERSION, 32),
+    assistanceClass: policy.study ? "study" : policy.division
+  };
+  const encoded = JSON.stringify(descriptor);
+  return { key: `ch3_${createHash("sha256").update(encoded).digest("base64url").slice(0, 24)}`, descriptor };
+}
+
+function communityForEntries(entries, playerId = "") {
+  const community = buildCommunityResults(
+    entries.map((entry, index) => ({ ...entry, rank: index + 1 })),
+    { playerId }
+  );
+  return {
+    ...community,
+    eligibleRoutes: entries.length,
+    sampledRoutes: community.completedRoutes
+  };
+}
+
 function isRecord(value) {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function hasExactRecordKeys(value, keys) {
+  return isRecord(value) && Object.keys(value).sort().join(",") === [...keys].sort().join(",");
 }
 
 function assertAllowedKeys(value, allowed, code = "invalid_cloud_profile") {
@@ -327,7 +446,136 @@ function cleanCloudText(value, maximum = 80) {
   return text && text.length <= maximum ? text : null;
 }
 
-function sanitizeCloudProfile(raw, { founder = false } = {}) {
+function normalizeDynamicRecipeRecord(value, key = "") {
+  if (!isRecord(value)) return null;
+  const a = cleanCloudText(value.a, 28);
+  const b = cleanCloudText(value.b, 28);
+  const word = cleanCloudText(value.word, 28);
+  const emoji = cleanCloudText(value.emoji, 12);
+  const note = cleanCloudText(value.note, 100);
+  if (!a || !b || !word || !emoji || !note) return null;
+  const status = ["quarantined", "promoted", "rejected", "rolled_back"].includes(value.status) ? value.status : "quarantined";
+  return {
+    proposalId: /^[A-Za-z0-9_-]{16,64}$/.test(String(value.proposalId || "")) ? String(value.proposalId) : createHash("sha256").update(`${key}:${a}:${b}:${word}`).digest("base64url").slice(0, 24),
+    a,
+    b,
+    word,
+    emoji,
+    note,
+    source: value.source === "ai-route" ? "ai-route" : "ai",
+    status,
+    promptVersion: cleanCloudText(value.promptVersion, 64) || "legacy-unversioned",
+    model: cleanCloudText(value.model, 80) || "unknown",
+    provenance: cleanCloudText(value.provenance, 80) || "ai-generated",
+    revision: Math.max(1, Math.floor(Number(value.revision) || 1)),
+    createdAt: typeof value.createdAt === "string" && Number.isFinite(Date.parse(value.createdAt)) ? new Date(value.createdAt).toISOString() : new Date(0).toISOString(),
+    generatedAt: typeof value.generatedAt === "string" && Number.isFinite(Date.parse(value.generatedAt)) ? new Date(value.generatedAt).toISOString() : null,
+    lastUsedAt: typeof value.lastUsedAt === "string" && Number.isFinite(Date.parse(value.lastUsedAt)) ? new Date(value.lastUsedAt).toISOString() : null,
+    reviewedAt: typeof value.reviewedAt === "string" && Number.isFinite(Date.parse(value.reviewedAt)) ? new Date(value.reviewedAt).toISOString() : null,
+    reviewedBy: cleanCloudText(value.reviewedBy, 80),
+    reviewReason: cleanCloudText(value.reviewReason, 160)
+  };
+}
+
+function normalizeDynamicRecipeCatalog(raw) {
+  const entries = [];
+  for (const [key, value] of Object.entries(isRecord(raw) ? raw : {})) {
+    const record = normalizeDynamicRecipeRecord(value, key);
+    if (record) entries.push([key, record]);
+  }
+  entries.sort((left, right) => Date.parse(right[1].lastUsedAt || right[1].createdAt) - Date.parse(left[1].lastUsedAt || left[1].createdAt));
+  return Object.fromEntries(entries.slice(0, 1_000));
+}
+
+function sanitizeCloudJourneys(raw, { currentEvent = null, authoritativeEventProgress = null } = {}) {
+  assertAllowedKeys(raw, new Set(["eventProgress", "selectedVoyageId", "voyageProgress"]));
+  const journeys = {};
+
+  if ("selectedVoyageId" in raw) {
+    const selectedVoyageId = String(raw.selectedVoyageId || "").trim().toLowerCase();
+    if (!CLOUD_VOYAGES.has(selectedVoyageId)) throw serviceError(400, "That Constellation Voyage is not available.", "invalid_cloud_profile");
+    journeys.selectedVoyageId = selectedVoyageId;
+  }
+
+  if ("voyageProgress" in raw) {
+    assertAllowedKeys(raw.voyageProgress, new Set(["version", "voyages"]));
+    if (raw.voyageProgress.version !== 1 || !isRecord(raw.voyageProgress.voyages)) {
+      throw serviceError(400, "Constellation Voyage progress is not valid.", "invalid_cloud_profile");
+    }
+    for (const [voyageId, progress] of Object.entries(raw.voyageProgress.voyages)) {
+      const voyage = CLOUD_VOYAGES.get(voyageId);
+      if (!voyage) throw serviceError(400, "Constellation Voyage progress contains an unknown voyage.", "invalid_cloud_profile");
+      assertAllowedKeys(progress, new Set(["completed"]));
+      if (!Number.isInteger(progress.completed) || progress.completed < 0 || progress.completed > voyage.chapters.length) {
+        throw serviceError(400, "Constellation Voyage chapter progress is not valid.", "invalid_cloud_profile");
+      }
+    }
+    journeys.voyageProgress = sanitizeVoyageProgress(raw.voyageProgress);
+  }
+
+  if ("eventProgress" in raw) {
+    assertAllowedKeys(raw.eventProgress, new Set(["eventId", "rewarded", "weekKey", "words"]));
+    const eventId = String(raw.eventProgress.eventId || "").trim().toLowerCase();
+    const weekKey = String(raw.eventProgress.weekKey || "").trim();
+    const rewarded = raw.eventProgress.rewarded;
+    if (typeof rewarded !== "boolean" || !Array.isArray(raw.eventProgress.words) || raw.eventProgress.words.length > 12) {
+      throw serviceError(400, "Cosmic Event progress is not valid.", "invalid_cloud_profile");
+    }
+    if (!eventId) {
+      if (weekKey || raw.eventProgress.words.length || rewarded) throw serviceError(400, "Empty Cosmic Event progress cannot contain discoveries.", "invalid_cloud_profile");
+      journeys.eventProgress = authoritativeEventProgress
+        ? structuredClone(authoritativeEventProgress)
+        : { weekKey: "", eventId: "", words: [], rewarded: false };
+    } else {
+      const event = CLOUD_EVENTS.get(eventId);
+      if (!event || !/^\d{4}-W(?:0[1-9]|[1-4]\d|5[0-3])$/.test(weekKey)) throw serviceError(400, "Cosmic Event identity is not valid.", "invalid_cloud_profile");
+      if (currentEvent && (eventId !== currentEvent.id || weekKey !== currentEvent.weekKey)) {
+        throw serviceError(409, "That Cosmic Event has ended. Refresh the current event before syncing.", "cosmic_event_stale", {
+          current: { eventId: currentEvent.id, weekKey: currentEvent.weekKey, endsAt: currentEvent.endsAt }
+        });
+      }
+      const allowedWords = new Map(event.collection.words.map((word) => [word.toLocaleLowerCase("en-US"), word]));
+      const words = [];
+      const seen = new Set();
+      for (const rawWord of raw.eventProgress.words) {
+        const word = cleanCloudText(rawWord);
+        const key = word?.toLocaleLowerCase("en-US") || "";
+        const canonical = allowedWords.get(key);
+        if (!canonical) throw serviceError(400, "Cosmic Event progress contains an unrelated word.", "invalid_cloud_profile");
+        if (!seen.has(key)) {
+          seen.add(key);
+          words.push(canonical);
+        }
+      }
+      const collection = cosmicEventCollectionProgress(event, words);
+      if (!authoritativeEventProgress && rewarded && !collection.complete) throw serviceError(400, "A Cosmic Event reward requires the complete collection.", "invalid_cloud_profile");
+      // Collection discoveries and reward claims are derived from server-observed
+      // play. Client values are validated above for compatibility, but can never
+      // mint progress or a reward receipt.
+      journeys.eventProgress = authoritativeEventProgress
+        ? structuredClone(authoritativeEventProgress)
+        : { weekKey, eventId, words, rewarded };
+    }
+  }
+
+  return journeys;
+}
+
+function sanitizeCloudSignatureBests(raw) {
+  if (!Array.isArray(raw) || raw.length > 120) throw serviceError(400, "Signature Route history is too large.", "invalid_cloud_profile");
+  const byScope = new Map();
+  for (const candidate of raw) {
+    assertAllowedKeys(candidate, CLOUD_SIGNATURE_FIELDS);
+    assertAllowedKeys(candidate.dimensions, new Set(["efficiency", "novelty", "purity", "variety"]));
+    const signature = sanitizeRouteSignature(candidate);
+    if (!signature || !signature.scoreEligible) throw serviceError(400, "A Signature Route personal best is not valid.", "invalid_cloud_profile");
+    const previous = byScope.get(signature.scopeKey);
+    byScope.set(signature.scopeKey, previous ? comparePersonalBest(signature, previous).best : signature);
+  }
+  return [...byScope.values()];
+}
+
+function sanitizeCloudProfile(raw, { founder = false, currentEvent = null, authoritativeEventProgress = null } = {}) {
   assertAllowedKeys(raw, CLOUD_PROFILE_FIELDS);
   const profile = {};
 
@@ -390,7 +638,7 @@ function sanitizeCloudProfile(raw, { founder = false } = {}) {
     }))];
   }
   if ("progression" in raw) {
-    const fields = new Set(["dailyCompleted", "dailyStreak", "lastDailyDate", "stardust", "streakShields", "wins"]);
+    const fields = new Set(["dailyCompleted", "dailyStreak", "lastDailyDate", "rewardedRunIds", "stardust", "streakShields", "wins"]);
     assertAllowedKeys(raw.progression, fields);
     const progression = raw.progression;
     const integerBounds = { stardust: 1_000_000_000, wins: 1_000_000, dailyStreak: 100_000, streakShields: 1_000 };
@@ -411,6 +659,24 @@ function sanitizeCloudProfile(raw, { founder = false } = {}) {
       dailyCompleted: progression.dailyCompleted,
       streakShields: progression.streakShields
     };
+    if ("rewardedRunIds" in progression) {
+      if (!Array.isArray(progression.rewardedRunIds) || progression.rewardedRunIds.length > 512) {
+        throw serviceError(400, "Cloud rewarded-run history is too large.", "invalid_cloud_profile");
+      }
+      const ids = [];
+      const seen = new Set();
+      for (const value of progression.rewardedRunIds) {
+        const id = String(value || "").trim().toLowerCase();
+        if (!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(id)) {
+          throw serviceError(400, "Cloud rewarded-run IDs are not valid.", "invalid_cloud_profile");
+        }
+        if (!seen.has(id)) {
+          seen.add(id);
+          ids.push(id);
+        }
+      }
+      profile.progression.rewardedRunIds = ids;
+    }
   }
   if ("weekly" in raw) {
     assertAllowedKeys(raw.weekly, new Set(["complete", "key", "stage"]));
@@ -442,6 +708,8 @@ function sanitizeCloudProfile(raw, { founder = false } = {}) {
     });
     profile.recipeMastery = { version: 1, recipes };
   }
+  if ("journeys" in raw) profile.journeys = sanitizeCloudJourneys(raw.journeys, { currentEvent, authoritativeEventProgress });
+  if ("signatureBests" in raw) profile.signatureBests = sanitizeCloudSignatureBests(raw.signatureBests);
 
   return profile;
 }
@@ -463,33 +731,182 @@ function safeDigestEqual(left, right) {
   return expected.length === received.length && timingSafeEqual(expected, received);
 }
 
-export class GameStore {
+function normalizeLifetimeDiscoveryLedger(raw) {
+  const entries = [];
+  for (const [digest, seenAt] of Object.entries(isRecord(raw) ? raw : {})) {
+    if (!DISCOVERY_DIGEST_PATTERN.test(digest)) continue;
+    const timestamp = typeof seenAt === "string" && Number.isFinite(Date.parse(seenAt)) ? new Date(seenAt).toISOString() : null;
+    if (timestamp) entries.push([digest, timestamp]);
+  }
+  entries.sort((left, right) => Date.parse(left[1]) - Date.parse(right[1]));
+  return Object.fromEntries(entries.slice(-MAX_LIFETIME_DISCOVERIES));
+}
+
+function normalizeCosmicEventRewardLedger(raw) {
+  const entries = [];
+  for (const [key, value] of Object.entries(isRecord(raw) ? raw : {})) {
+    if (!validCosmicEventLedgerKey(key) || !isRecord(value)) continue;
+    const eventId = key.slice(key.indexOf(":") + 1);
+    const claimedAt = typeof value.claimedAt === "string" && Number.isFinite(Date.parse(value.claimedAt))
+      ? new Date(value.claimedAt).toISOString()
+      : null;
+    if (!CLOUD_EVENTS.has(eventId) || !claimedAt) continue;
+    const cloudCreditedAt = typeof value.cloudCreditedAt === "string" && Number.isFinite(Date.parse(value.cloudCreditedAt))
+      ? new Date(value.cloudCreditedAt).toISOString()
+      : null;
+    entries.push([key, {
+      claimedAt,
+      kind: "stardust",
+      amount: COSMIC_EVENT_COLLECTION_REWARD,
+      ...(cloudCreditedAt ? { cloudCreditedAt } : {})
+    }]);
+  }
+  entries.sort((left, right) => Date.parse(right[1].claimedAt) - Date.parse(left[1].claimedAt));
+  return Object.fromEntries(entries.slice(0, MAX_COSMIC_EVENT_REWARDS));
+}
+
+function isoWeekStartDate(weekKey) {
+  const match = /^(\d{4})-W(0[1-9]|[1-4]\d|5[0-3])$/.exec(String(weekKey || ""));
+  if (!match) return null;
+  const year = Number(match[1]);
+  const week = Number(match[2]);
+  const januaryFourth = new Date(Date.UTC(year, 0, 4));
+  const januaryFourthDay = januaryFourth.getUTCDay() || 7;
+  const monday = new Date(Date.UTC(year, 0, 4 - januaryFourthDay + 1 + (week - 1) * 7));
+  return currentCosmicEvent(monday).weekKey === weekKey ? monday : null;
+}
+
+function validCosmicEventLedgerKey(key) {
+  if (!COSMIC_EVENT_REWARD_KEY_PATTERN.test(key)) return false;
+  const separator = key.indexOf(":");
+  const weekKey = key.slice(0, separator);
+  const eventId = key.slice(separator + 1);
+  const weekStart = isoWeekStartDate(weekKey);
+  return Boolean(weekStart && currentCosmicEvent(weekStart).id === eventId);
+}
+
+function normalizeCosmicEventDiscoveryLedger(raw) {
+  const entries = [];
+  for (const [key, value] of Object.entries(isRecord(raw) ? raw : {})) {
+    if (!validCosmicEventLedgerKey(key) || !isRecord(value)) continue;
+    const eventId = key.slice(key.indexOf(":") + 1);
+    const event = CLOUD_EVENTS.get(eventId);
+    const allowed = new Map(event.collection.words.map((word) => [word.toLocaleLowerCase("en-US"), word]));
+    const words = [];
+    const seen = new Set();
+    for (const candidate of Array.isArray(value.words) ? value.words.slice(0, 12) : []) {
+      const canonical = allowed.get(cleanCloudText(candidate, 80)?.toLocaleLowerCase("en-US") || "");
+      if (canonical && !seen.has(canonical)) {
+        seen.add(canonical);
+        words.push(canonical);
+      }
+    }
+    const updatedAt = typeof value.updatedAt === "string" && Number.isFinite(Date.parse(value.updatedAt))
+      ? new Date(value.updatedAt).toISOString()
+      : isoWeekStartDate(key.slice(0, key.indexOf(":")))?.toISOString();
+    if (updatedAt) entries.push([key, { words, updatedAt }]);
+  }
+  entries.sort((left, right) => Date.parse(right[1].updatedAt) - Date.parse(left[1].updatedAt));
+  return Object.fromEntries(entries.slice(0, MAX_COSMIC_EVENT_REWARDS));
+}
+
+// Runtime persistence is deliberately behind this small contract. The JSON
+// adapter remains the zero-configuration beta default; a transactional adapter
+// can implement load(), save(), health(), and kind without changing game rules.
+export class JsonGameStorage {
   constructor(path = ":memory:") {
     this.path = path;
-    this.data = { version: 6, secret: "", players: {}, scores: [], demand: {}, interest: emptyInterestData(), analytics: emptyAnalyticsData(), recipeFeedback: emptyRecipeFeedback(), runs: {}, commerceTransactions: {} };
+    this.kind = path === ":memory:" ? "memory" : "json";
+    this.ready = true;
+    this.lastError = null;
+  }
+
+  async load() {
+    if (this.path === ":memory:") return null;
+    try {
+      return JSON.parse(await readFile(this.path, "utf8"));
+    } catch (error) {
+      if (error.code === "ENOENT") return null;
+      this.ready = false;
+      this.lastError = error.code || "read_failed";
+      throw error;
+    }
+  }
+
+  async save(data) {
+    if (this.path === ":memory:") return;
+    try {
+      await mkdir(dirname(this.path), { recursive: true });
+      const temporary = `${this.path}.${process.pid}.tmp`;
+      await writeFile(temporary, JSON.stringify(data, null, 2), "utf8");
+      await rename(temporary, this.path);
+      this.ready = true;
+      this.lastError = null;
+    } catch (error) {
+      this.ready = false;
+      this.lastError = error.code || "write_failed";
+      throw error;
+    }
+  }
+
+  health() {
+    return { kind: this.kind, ready: this.ready, contractVersion: STORAGE_CONTRACT_VERSION, lastError: this.lastError };
+  }
+}
+
+export class GameStore {
+  constructor(path = ":memory:", { clock = () => new Date(), storage = null } = {}) {
+    this.path = path;
+    this.clock = typeof clock === "function" ? clock : () => new Date();
+    this.storage = storage || new JsonGameStorage(path);
+    if (!this.storage || typeof this.storage.load !== "function" || typeof this.storage.save !== "function") {
+      throw new TypeError("Storage adapters must implement load() and save().");
+    }
+    this.data = {
+      version: 10,
+      secret: "",
+      players: {},
+      scores: [],
+      demand: {},
+      interest: emptyInterestData(),
+      analytics: emptyAnalyticsData(),
+      rejectedPairs: emptyRejectedPairData(),
+      recipeFeedback: emptyRecipeFeedback(),
+      runs: {},
+      runLedger: [],
+      progressionLedger: [],
+      economyLedger: [],
+      entitlementLedger: [],
+      commerceTransactions: {},
+      dynamicRecipes: {},
+      dynamicRecipeRevisions: []
+    };
     this.writeQueue = Promise.resolve();
   }
 
   async init() {
-    if (this.path !== ":memory:") {
-      try {
-        const parsed = JSON.parse(await readFile(this.path, "utf8"));
-        if (parsed && typeof parsed === "object") this.data = {
+    {
+      const parsed = await this.storage.load();
+      if (parsed && typeof parsed === "object") this.data = {
           ...this.data,
           ...parsed,
-          version: 6,
+          version: 10,
           players: parsed.players || {},
           scores: parsed.scores || [],
           demand: parsed.demand || {},
           interest: normalizeInterestData(parsed.interest),
           analytics: normalizeAnalyticsData(parsed.analytics),
+          rejectedPairs: normalizeRejectedPairData(parsed.rejectedPairs),
           recipeFeedback: normalizeRecipeFeedback(parsed.recipeFeedback),
           runs: parsed.runs && typeof parsed.runs === "object" && !Array.isArray(parsed.runs) ? parsed.runs : {},
-          commerceTransactions: parsed.commerceTransactions && typeof parsed.commerceTransactions === "object" && !Array.isArray(parsed.commerceTransactions) ? parsed.commerceTransactions : {}
+          runLedger: Array.isArray(parsed.runLedger) ? parsed.runLedger.slice(-MAX_LEDGER_ENTRIES) : [],
+          progressionLedger: Array.isArray(parsed.progressionLedger) ? parsed.progressionLedger.slice(-MAX_LEDGER_ENTRIES) : [],
+          economyLedger: Array.isArray(parsed.economyLedger) ? parsed.economyLedger.slice(-MAX_LEDGER_ENTRIES) : [],
+          entitlementLedger: Array.isArray(parsed.entitlementLedger) ? parsed.entitlementLedger.slice(-MAX_LEDGER_ENTRIES) : [],
+          commerceTransactions: parsed.commerceTransactions && typeof parsed.commerceTransactions === "object" && !Array.isArray(parsed.commerceTransactions) ? parsed.commerceTransactions : {},
+          dynamicRecipes: normalizeDynamicRecipeCatalog(parsed.dynamicRecipes),
+          dynamicRecipeRevisions: Array.isArray(parsed.dynamicRecipeRevisions) ? parsed.dynamicRecipeRevisions.slice(-MAX_LEDGER_ENTRIES) : []
         };
-      } catch (error) {
-        if (error.code !== "ENOENT") throw error;
-      }
     }
     if (!this.data.secret) {
       this.data.secret = randomBytes(32).toString("base64url");
@@ -518,6 +935,21 @@ export class GameStore {
         player.cloudProfile = { version: 0, data: {}, updatedAt: null };
         playersMigrated = true;
       }
+      const lifetimeDiscoveries = normalizeLifetimeDiscoveryLedger(player.lifetimeDiscoveries);
+      if (JSON.stringify(player.lifetimeDiscoveries || {}) !== JSON.stringify(lifetimeDiscoveries)) {
+        player.lifetimeDiscoveries = lifetimeDiscoveries;
+        playersMigrated = true;
+      }
+      const cosmicEventRewards = normalizeCosmicEventRewardLedger(player.cosmicEventRewards);
+      if (JSON.stringify(player.cosmicEventRewards || {}) !== JSON.stringify(cosmicEventRewards)) {
+        player.cosmicEventRewards = cosmicEventRewards;
+        playersMigrated = true;
+      }
+      const cosmicEventDiscoveries = normalizeCosmicEventDiscoveryLedger(player.cosmicEventDiscoveries);
+      if (JSON.stringify(player.cosmicEventDiscoveries || {}) !== JSON.stringify(cosmicEventDiscoveries)) {
+        player.cosmicEventDiscoveries = cosmicEventDiscoveries;
+        playersMigrated = true;
+      }
       if (!player.entitlements || typeof player.entitlements !== "object" || Array.isArray(player.entitlements)) {
         player.entitlements = {};
         playersMigrated = true;
@@ -527,6 +959,22 @@ export class GameStore {
         // recoverable accounts were introduced.
         player.authVersion = 0;
         playersMigrated = true;
+      }
+      if (!isRecord(player.sessions)) {
+        player.sessions = {};
+        playersMigrated = true;
+      } else {
+        const now = this.now().getTime();
+        const sessions = Object.entries(player.sessions)
+          .filter(([sessionId, record]) => /^[0-9a-f-]{36}$/i.test(sessionId) && isRecord(record) && Number.isFinite(Date.parse(record.expiresAt || "")))
+          .filter(([, record]) => Date.parse(record.expiresAt) > now - 86400000)
+          .sort((left, right) => Date.parse(right[1].issuedAt || 0) - Date.parse(left[1].issuedAt || 0))
+          .slice(0, MAX_PLAYER_SESSIONS);
+        const normalizedSessions = Object.fromEntries(sessions);
+        if (JSON.stringify(player.sessions) !== JSON.stringify(normalizedSessions)) {
+          player.sessions = normalizedSessions;
+          playersMigrated = true;
+        }
       }
       if (player.entitlements.founder_pass && !player.entitlements.constellore_founders_pass) {
         player.entitlements.constellore_founders_pass = { ...player.entitlements.founder_pass, productId: "constellore_founders_pass" };
@@ -557,6 +1005,188 @@ export class GameStore {
     return expected.length === received.length && timingSafeEqual(expected, received);
   }
 
+  purposeKey(purpose) {
+    return createHmac("sha256", this.data.secret).update(`constellore-purpose-key:v1:${String(purpose)}`).digest();
+  }
+
+  signFor(purpose, value) {
+    return createHmac("sha256", this.purposeKey(purpose)).update(String(value)).digest("base64url");
+  }
+
+  verifyFor(purpose, value, signature) {
+    if (typeof signature !== "string") return false;
+    return safeDigestEqual(this.signFor(purpose, value), signature);
+  }
+
+  now() {
+    const value = this.clock();
+    const date = value instanceof Date ? new Date(value.getTime()) : new Date(value);
+    return Number.isFinite(date.getTime()) ? date : new Date();
+  }
+
+  lifetimeDiscoveryDigest(word) {
+    const canonical = cleanCloudText(word, 80)?.toLocaleLowerCase("en-US") || "";
+    return canonical ? this.sign(`discovery:v1:${canonical}`) : "";
+  }
+
+  hasLifetimeDiscovery(playerId, word) {
+    const player = this.data.players[playerId];
+    const digest = this.lifetimeDiscoveryDigest(word);
+    return Boolean(player && digest && isRecord(player.lifetimeDiscoveries) && player.lifetimeDiscoveries[digest]);
+  }
+
+  recordCosmicEventDiscovery(playerId, word, date = this.now()) {
+    const player = this.data.players[playerId];
+    if (!player) return { matched: false, recorded: false };
+    const eventDate = date instanceof Date && Number.isFinite(date.getTime()) ? new Date(date.getTime()) : this.now();
+    const event = currentCosmicEvent(eventDate);
+    const canonical = event.collection.words.find((candidate) => candidate.toLocaleLowerCase("en-US") === cleanCloudText(word, 80)?.toLocaleLowerCase("en-US"));
+    if (!canonical) return { matched: false, recorded: false, eventId: event.id, weekKey: event.weekKey };
+    const key = `${event.weekKey}:${event.id}`;
+    player.cosmicEventDiscoveries = normalizeCosmicEventDiscoveryLedger(player.cosmicEventDiscoveries);
+    const record = player.cosmicEventDiscoveries[key] || { words: [], updatedAt: eventDate.toISOString() };
+    const alreadyRecorded = record.words.some((candidate) => candidate.toLocaleLowerCase("en-US") === canonical.toLocaleLowerCase("en-US"));
+    if (!alreadyRecorded) record.words.push(canonical);
+    record.updatedAt = eventDate.toISOString();
+    player.cosmicEventDiscoveries[key] = record;
+    player.cosmicEventDiscoveries = normalizeCosmicEventDiscoveryLedger(player.cosmicEventDiscoveries);
+    return { matched: true, recorded: !alreadyRecorded, eventId: event.id, weekKey: event.weekKey };
+  }
+
+  recordLifetimeDiscovery(playerId, word, date = this.now(), { eventEligible = false } = {}) {
+    const player = this.data.players[playerId];
+    const canonical = cleanCloudText(word, 80)?.toLocaleLowerCase("en-US") || "";
+    const digest = this.lifetimeDiscoveryDigest(word);
+    if (!player || !digest) return { newDiscovery: false, recorded: false };
+    const eventDiscovery = eventEligible ? this.recordCosmicEventDiscovery(playerId, word, date) : { matched: false, recorded: false };
+    if (COSMIC_EVENT_ORIGIN_WORDS.has(canonical)) return { newDiscovery: false, recorded: false, eventDiscovery, origin: true };
+    player.lifetimeDiscoveries = normalizeLifetimeDiscoveryLedger(player.lifetimeDiscoveries);
+    if (player.lifetimeDiscoveries[digest]) return { newDiscovery: false, recorded: false, eventDiscovery };
+    if (Object.keys(player.lifetimeDiscoveries).length >= MAX_LIFETIME_DISCOVERIES) {
+      // Fail closed at the safety cap so replaying an unrecorded result cannot
+      // inflate Signature Route novelty.
+      return { newDiscovery: false, recorded: false, capacityReached: true, eventDiscovery };
+    }
+    const seenAt = date instanceof Date && Number.isFinite(date.getTime()) ? date : this.now();
+    player.lifetimeDiscoveries[digest] = seenAt.toISOString();
+    return { newDiscovery: true, recorded: true, eventDiscovery };
+  }
+
+  cosmicEventState(playerId, date = this.now()) {
+    const player = this.data.players[playerId];
+    if (!player) throw serviceError(401, "Player not found.", "player_missing");
+    const serverDate = date instanceof Date && Number.isFinite(date.getTime()) ? new Date(date.getTime()) : this.now();
+    const event = currentCosmicEvent(serverDate);
+    const eventKey = `${event.weekKey}:${event.id}`;
+    player.cosmicEventDiscoveries = normalizeCosmicEventDiscoveryLedger(player.cosmicEventDiscoveries);
+    const activeDiscoveries = new Set((player.cosmicEventDiscoveries[eventKey]?.words || []).map((word) => word.toLocaleLowerCase("en-US")));
+    const found = event.collection.words.filter((word) => COSMIC_EVENT_ORIGIN_WORDS.has(word.toLocaleLowerCase("en-US")) || activeDiscoveries.has(word.toLocaleLowerCase("en-US")));
+    const collection = cosmicEventCollectionProgress(event, found);
+    const rewardKey = `${event.weekKey}:${event.id}`;
+    player.cosmicEventRewards = normalizeCosmicEventRewardLedger(player.cosmicEventRewards);
+    const receipt = player.cosmicEventRewards[rewardKey] || null;
+    const rewarded = Boolean(receipt);
+    return {
+      serverTime: serverDate.toISOString(),
+      event,
+      progress: {
+        weekKey: event.weekKey,
+        eventId: event.id,
+        words: collection.found,
+        rewarded,
+        collection
+      },
+      reward: {
+        kind: "stardust",
+        amount: COSMIC_EVENT_COLLECTION_REWARD,
+        claimable: collection.complete && !rewarded,
+        claimed: rewarded,
+        claimedAt: receipt?.claimedAt || null
+      }
+    };
+  }
+
+  creditCosmicEventRewardInCloudProfile(playerId, amount, date = this.now()) {
+    const player = this.data.players[playerId];
+    if (!player) throw serviceError(401, "Player not found.", "player_missing");
+    const reward = Math.max(0, Math.floor(Number(amount) || 0));
+    if (!reward) return this.cloudProfile(playerId);
+    const stored = this.cloudProfile(playerId);
+    const data = isRecord(stored.profile) ? structuredClone(stored.profile) : {};
+    const previous = isRecord(data.progression) ? data.progression : {};
+    data.progression = {
+      stardust: Math.min(1_000_000_000, Math.max(0, Math.floor(Number(previous.stardust) || 0)) + reward),
+      wins: Math.min(1_000_000, Math.max(0, Math.floor(Number(previous.wins) || 0))),
+      dailyStreak: Math.min(100_000, Math.max(0, Math.floor(Number(previous.dailyStreak) || 0))),
+      lastDailyDate: /^\d{4}-\d{2}-\d{2}$/.test(String(previous.lastDailyDate || "")) ? previous.lastDailyDate : "",
+      dailyCompleted: /^\d{4}-\d{2}-\d{2}$/.test(String(previous.dailyCompleted || "")) ? previous.dailyCompleted : "",
+      streakShields: Math.min(1_000, Math.max(0, Math.floor(Number(previous.streakShields) || 0))),
+      ...(Array.isArray(previous.rewardedRunIds) ? { rewardedRunIds: [...previous.rewardedRunIds] } : {})
+    };
+    const creditedAt = date instanceof Date && Number.isFinite(date.getTime()) ? date : this.now();
+    player.cloudProfile = {
+      version: stored.version + 1,
+      data,
+      updatedAt: creditedAt.toISOString()
+    };
+    return this.cloudProfile(playerId);
+  }
+
+  async claimCosmicEventReward(playerId, { weekKey, eventId } = {}, date = this.now()) {
+    const safeWeekKey = String(weekKey || "").trim();
+    const safeEventId = String(eventId || "").trim().toLowerCase();
+    if (!/^\d{4}-W(?:0[1-9]|[1-4]\d|5[0-3])$/.test(safeWeekKey) || !CLOUD_EVENTS.has(safeEventId)) {
+      throw serviceError(400, "A valid Cosmic Event identity is required.", "invalid_cosmic_event_claim");
+    }
+    const now = date instanceof Date && Number.isFinite(date.getTime()) ? new Date(date.getTime()) : this.now();
+    const activeEvent = currentCosmicEvent(now);
+    const requestedWeekStart = isoWeekStartDate(safeWeekKey);
+    const requestedEvent = requestedWeekStart ? currentCosmicEvent(requestedWeekStart) : null;
+    if (!requestedEvent || safeEventId !== requestedEvent.id || Date.parse(requestedEvent.startsAt) > now.getTime()) {
+      throw serviceError(409, "That Cosmic Event has ended. Refresh the current event before claiming.", "cosmic_event_stale", {
+        current: { eventId: activeEvent.id, weekKey: activeEvent.weekKey, endsAt: activeEvent.endsAt }
+      });
+    }
+    const eventDate = safeWeekKey === activeEvent.weekKey && safeEventId === activeEvent.id ? now : requestedWeekStart;
+    let state = this.cosmicEventState(playerId, eventDate);
+    const responseState = (value) => ({
+      ...value,
+      serverTime: now.toISOString(),
+      eventServerTime: value.serverTime
+    });
+    if (!state.progress.collection.complete) {
+      throw serviceError(422, "Complete the current Cosmic Event collection before claiming its reward.", "cosmic_event_incomplete", {
+        progress: { discovered: state.progress.collection.discovered, total: state.progress.collection.total }
+      });
+    }
+
+    const player = this.data.players[playerId];
+    const rewardKey = `${safeWeekKey}:${safeEventId}`;
+    player.cosmicEventRewards = normalizeCosmicEventRewardLedger(player.cosmicEventRewards);
+    const existing = player.cosmicEventRewards[rewardKey];
+    if (existing) {
+      return {
+        ...responseState(state),
+        reward: { ...state.reward, granted: false, alreadyClaimed: true }
+      };
+    }
+
+    player.cosmicEventRewards[rewardKey] = {
+      claimedAt: now.toISOString(),
+      kind: "stardust",
+      amount: COSMIC_EVENT_COLLECTION_REWARD,
+      cloudCreditedAt: now.toISOString()
+    };
+    player.cosmicEventRewards = normalizeCosmicEventRewardLedger(player.cosmicEventRewards);
+    this.creditCosmicEventRewardInCloudProfile(playerId, COSMIC_EVENT_COLLECTION_REWARD, now);
+    await this.persist();
+    state = this.cosmicEventState(playerId, eventDate);
+    return {
+      ...responseState(state),
+      reward: { ...state.reward, granted: true, alreadyClaimed: false }
+    };
+  }
+
   async registerPlayer({ withRecoveryCode = false } = {}) {
     const id = randomUUID();
     const issuedRecoveryCode = recoveryCode();
@@ -572,11 +1202,16 @@ export class GameStore {
       rewardedChallenges: {},
       forfeitedChallenges: {},
       weeklyActivity: { week: "", days: [], bonusClaimed: false },
+      lifetimeDiscoveries: {},
+      cosmicEventRewards: {},
+      cosmicEventDiscoveries: {},
       cloudProfile: { version: 0, data: {}, updatedAt: null },
       entitlements: {},
       authVersion: 1,
+      sessions: {},
+      sessionsEnabledAt: null,
       recovery: {
-        digest: this.sign(`recovery:v1:${id}:${issuedRecoveryCode}`),
+        digest: this.signFor("account-recovery", `${id}:${issuedRecoveryCode}`),
         version: 1,
         issuedAt: new Date().toISOString()
       },
@@ -589,13 +1224,79 @@ export class GameStore {
 
   authenticate(playerId, playerToken) {
     const player = this.data.players[playerId];
-    if (!player || !this.verify(player.authVersion ? `player:${playerId}:v${player.authVersion}` : `player:${playerId}`, playerToken)) return null;
-    return player;
+    if (!player) return null;
+    const parsed = this.readPlayerSessionToken(playerToken);
+    if (parsed) {
+      const record = player.sessions?.[parsed.sessionId];
+      if (parsed.playerId !== playerId || parsed.authVersion !== player.authVersion || !record || record.revokedAt) return null;
+      const now = this.now().getTime();
+      if (parsed.expiresAt <= now || Date.parse(record.expiresAt) <= now) return null;
+      return player;
+    }
+    // Accounts that predate expiring device sessions keep their existing
+    // bearer until their next recovery or explicit session issuance.
+    if (player.sessionsEnabledAt) return null;
+    return this.verify(player.authVersion ? `player:${playerId}:v${player.authVersion}` : `player:${playerId}`, playerToken) ? player : null;
   }
 
   tokenForPlayer(playerId) {
     const player = this.data.players[playerId];
     return player ? this.sign(player.authVersion ? `player:${playerId}:v${player.authVersion}` : `player:${playerId}`) : "";
+  }
+
+  readPlayerSessionToken(token) {
+    const match = PLAYER_SESSION_TOKEN_PATTERN.exec(String(token || ""));
+    if (!match || !this.verifyFor("player-session", match[1], match[2])) return null;
+    try {
+      const payload = JSON.parse(Buffer.from(match[1], "base64url").toString("utf8"));
+      if (!hasExactRecordKeys(payload, ["authVersion", "expiresAt", "issuedAt", "playerId", "sessionId", "v"])) return null;
+      if (payload.v !== 3 || !/^[0-9a-f-]{36}$/i.test(payload.playerId) || !/^[0-9a-f-]{36}$/i.test(payload.sessionId)) return null;
+      if (!Number.isInteger(payload.authVersion) || !Number.isFinite(payload.issuedAt) || !Number.isFinite(payload.expiresAt) || payload.expiresAt <= payload.issuedAt) return null;
+      return payload;
+    } catch {
+      return null;
+    }
+  }
+
+  createPlayerSession(playerId, { deviceLabel = "device", ttlMs = PLAYER_SESSION_TTL_MS } = {}) {
+    const player = this.data.players[playerId];
+    if (!player) throw serviceError(401, "Player not found.", "player_missing");
+    const issuedAt = this.now().getTime();
+    const expiresAt = issuedAt + clamp(Math.floor(Number(ttlMs) || PLAYER_SESSION_TTL_MS), 60_000, PLAYER_SESSION_TTL_MS);
+    const sessionId = randomUUID();
+    const payload = { v: 3, playerId, sessionId, authVersion: player.authVersion, issuedAt, expiresAt };
+    const encoded = Buffer.from(JSON.stringify(payload), "utf8").toString("base64url");
+    const token = `cs3.${encoded}.${this.signFor("player-session", encoded)}`;
+    player.sessions ||= {};
+    player.sessions[sessionId] = {
+      issuedAt: new Date(issuedAt).toISOString(),
+      expiresAt: new Date(expiresAt).toISOString(),
+      deviceLabel: cleanCloudText(deviceLabel, 40) || "device",
+      tokenDigest: this.signFor("session-record", token)
+    };
+    player.sessionsEnabledAt ||= new Date(issuedAt).toISOString();
+    const retained = Object.entries(player.sessions)
+      .sort((left, right) => Date.parse(right[1].issuedAt || 0) - Date.parse(left[1].issuedAt || 0))
+      .slice(0, MAX_PLAYER_SESSIONS);
+    player.sessions = Object.fromEntries(retained);
+    return { playerToken: token, sessionId, issuedAt: new Date(issuedAt).toISOString(), expiresAt: new Date(expiresAt).toISOString() };
+  }
+
+  async issuePlayerSession(playerId, options = {}) {
+    const session = this.createPlayerSession(playerId, options);
+    await this.persist();
+    return session;
+  }
+
+  async revokePlayerSession(playerId, token) {
+    const player = this.data.players[playerId];
+    const parsed = this.readPlayerSessionToken(token);
+    if (!player || !parsed || parsed.playerId !== playerId || !player.sessions?.[parsed.sessionId]) {
+      throw serviceError(401, "That device session is not valid.", "invalid_player_session");
+    }
+    player.sessions[parsed.sessionId].revokedAt = this.now().toISOString();
+    await this.persist();
+    return { revoked: true, sessionId: parsed.sessionId };
   }
 
   publicPlayer(playerId) {
@@ -610,34 +1311,81 @@ export class GameStore {
       wishAvailable: this.canUseWish(playerId),
       dailyWishUsedDate: player.dailyWishUsedDate || "",
       cloudProfileVersion: Math.max(0, Math.floor(Number(player.cloudProfile?.version) || 0)),
+      competitiveProgression: this.competitiveProgression(playerId),
       vault: MARKET_CATALOG.filter((item) => player.licenses[item.id]).map((item) => ({ ...item, owned: true }))
+    };
+  }
+
+  appendLedger(name, entry) {
+    if (!["runLedger", "progressionLedger", "economyLedger", "entitlementLedger"].includes(name)) throw new TypeError("Unknown ledger.");
+    const ledger = this.data[name] ||= [];
+    const idempotencyKey = cleanCloudText(entry?.idempotencyKey, 180);
+    if (!idempotencyKey) throw new TypeError("Ledger entries require an idempotency key.");
+    const existing = ledger.find((record) => record.idempotencyKey === idempotencyKey);
+    if (existing) return { appended: false, entry: existing };
+    const record = {
+      id: randomUUID(),
+      ...structuredClone(entry),
+      idempotencyKey,
+      createdAt: entry.createdAt || this.now().toISOString()
+    };
+    ledger.push(record);
+    if (ledger.length > MAX_LEDGER_ENTRIES) ledger.splice(0, ledger.length - MAX_LEDGER_ENTRIES);
+    return { appended: true, entry: record };
+  }
+
+  competitiveProgression(playerId) {
+    const records = (this.data.progressionLedger || []).filter((entry) => entry.playerId === playerId && entry.type === "verified_run_completed");
+    const dailyKeys = [...new Set(records.map((entry) => entry.dailyKey).filter(Boolean))].sort();
+    let currentStreak = 0;
+    if (dailyKeys.length) {
+      currentStreak = 1;
+      for (let index = dailyKeys.length - 1; index > 0; index -= 1) {
+        const difference = (Date.parse(`${dailyKeys[index]}T00:00:00Z`) - Date.parse(`${dailyKeys[index - 1]}T00:00:00Z`)) / 86400000;
+        if (difference !== 1) break;
+        currentStreak += 1;
+      }
+    }
+    return {
+      source: "server_verified_ledger",
+      verifiedWins: records.length,
+      atlasXp: records.reduce((sum, entry) => sum + nonnegativeCounter(entry.atlasXp), 0),
+      dailyStreak: currentStreak,
+      lastDailyDate: dailyKeys.at(-1) || ""
     };
   }
 
   recoveryDigest(playerId, code) {
     const normalized = normalizeRecoveryCode(code);
-    return normalized && RECOVERY_CODE_PATTERN.test(normalized) ? this.sign(`recovery:v1:${playerId}:${normalized}`) : "";
+    return normalized && RECOVERY_CODE_PATTERN.test(normalized) ? this.signFor("account-recovery", `${playerId}:${normalized}`) : "";
   }
 
   async recoverPlayer(playerId, code) {
     const id = String(playerId || "").trim();
     const player = this.data.players[id];
     const receivedDigest = this.recoveryDigest(id, code);
-    if (!player?.recovery?.digest || !safeDigestEqual(player.recovery.digest, receivedDigest)) {
+    const normalizedCode = normalizeRecoveryCode(code);
+    const legacyDigest = normalizedCode && RECOVERY_CODE_PATTERN.test(normalizedCode) ? this.sign(`recovery:v1:${id}:${normalizedCode}`) : "";
+    if (!player?.recovery?.digest || (!safeDigestEqual(player.recovery.digest, receivedDigest) && !safeDigestEqual(player.recovery.digest, legacyDigest))) {
       throw serviceError(401, "That recovery kit is invalid or has already been used.", "invalid_recovery_code");
     }
     const nextCode = recoveryCode();
     player.recovery = {
-      digest: this.sign(`recovery:v1:${id}:${nextCode}`),
+      digest: this.signFor("account-recovery", `${id}:${nextCode}`),
       version: Math.max(1, Number(player.recovery.version) || 1) + 1,
       issuedAt: new Date().toISOString(),
       rotatedAt: new Date().toISOString()
     };
     player.authVersion = Math.max(0, Number(player.authVersion) || 0) + 1;
+    player.sessions = {};
+    player.sessionsEnabledAt = this.now().toISOString();
+    const session = this.createPlayerSession(id, { deviceLabel: "recovered device" });
     await this.persist();
     return {
       player: this.publicPlayer(id),
-      playerToken: this.tokenForPlayer(id),
+      playerToken: session.playerToken,
+      sessionId: session.sessionId,
+      sessionExpiresAt: session.expiresAt,
       recoveryCode: nextCode,
       recoveryVersion: player.recovery.version
     };
@@ -648,7 +1396,7 @@ export class GameStore {
     if (!player) throw serviceError(401, "Player not found.", "player_missing");
     const nextCode = recoveryCode();
     player.recovery = {
-      digest: this.sign(`recovery:v1:${playerId}:${nextCode}`),
+      digest: this.signFor("account-recovery", `${playerId}:${nextCode}`),
       version: Math.max(0, Number(player.recovery?.version) || 0) + 1,
       issuedAt: new Date().toISOString(),
       rotatedAt: new Date().toISOString()
@@ -681,7 +1429,17 @@ export class GameStore {
     if (expectedVersion !== current.version) {
       throw serviceError(409, "The cloud profile changed on another device.", "cloud_profile_conflict", { current });
     }
-    const data = sanitizeCloudProfile(profile, { founder: Boolean(player.founderPass) });
+    const eventState = this.cosmicEventState(playerId);
+    const data = sanitizeCloudProfile(profile, {
+      founder: Boolean(player.founderPass),
+      currentEvent: eventState.event,
+      authoritativeEventProgress: {
+        weekKey: eventState.progress.weekKey,
+        eventId: eventState.progress.eventId,
+        words: eventState.progress.words,
+        rewarded: eventState.progress.rewarded
+      }
+    });
     player.cloudProfile = { version: current.version + 1, data, updatedAt: new Date().toISOString() };
     await this.persist();
     return this.cloudProfile(playerId);
@@ -728,6 +1486,15 @@ export class GameStore {
       player.entitlements.constellore_founders_pass = { productId: product.id, kind: product.kind, active: true, source: safeProvider, grantedAt };
     }
     this.data.commerceTransactions[transactionDigest] = { playerId, productId: product.id, provider: safeProvider, fulfilledAt: grantedAt };
+    this.appendLedger("entitlementLedger", {
+      idempotencyKey: `entitlement:${safeProvider}:${transactionDigest}`,
+      type: "verified_entitlement_granted",
+      playerId,
+      productId: product.id,
+      provider: safeProvider,
+      transactionDigest,
+      createdAt: grantedAt
+    });
     await this.persist();
     return { restored: false, entitlements: this.entitlementSnapshot(playerId) };
   }
@@ -761,6 +1528,13 @@ export class GameStore {
     let interested = Boolean(existing?.active);
 
     if (action === "add" && !existing) {
+      const inactiveCutoff = new Date(date.getTime() - INTEREST_INACTIVE_RETENTION_DAYS * 86_400_000).toISOString().slice(0, 10);
+      for (const [key, record] of Object.entries(records)) {
+        if (!record?.active && String(record?.lastChangedDate || "") < inactiveCutoff) delete records[key];
+      }
+      if (Object.keys(records).length >= INTEREST_RECORD_LIMIT) {
+        throw serviceError(503, "The public interest ledger is temporarily full.", "interest_capacity");
+      }
       records[recordKey] = { campaign, active: true, firstDate: day, lastChangedDate: day, firstSource: source };
       totals.active += 1;
       totals.total += 1;
@@ -792,17 +1566,58 @@ export class GameStore {
     return { campaign, interested, changed };
   }
 
-  async recordAnalyticsEvent({ name, sessionId, properties = {} }, date = new Date()) {
+  recordRejectedPairExpectation({ a, b, mode = "reach", sessionId = "", cohortId = "" }, date = new Date(), { allowPlaintext = false } = {}) {
+    const words = [cleanCloudText(a, 28), cleanCloudText(b, 28)].filter(Boolean);
+    if (words.length !== 2) throw serviceError(400, "Two valid concepts are required.", "invalid_rejected_pair");
+    const canonical = words.map((word) => canonicalChallengeText(word, 28)).sort();
+    const fingerprint = this.signFor("rejected-pair", canonical.join("+"));
+    const reporterSource = String(cohortId || sessionId || "").trim();
+    const reporter = reporterSource ? this.signFor("rejected-pair-reporter", reporterSource) : "";
+    const data = this.data.rejectedPairs = normalizeRejectedPairData(this.data.rejectedPairs);
+    const existing = data.entries[fingerprint] || { count: 0, lastSeenAt: date.toISOString(), sample: null, modes: {}, reporters: {} };
+    const duplicate = Boolean(reporter && existing.reporters[reporter]);
+    if (!duplicate) existing.count += 1;
+    existing.lastSeenAt = date.toISOString();
+    if (allowPlaintext) existing.sample = canonical;
+    const safeMode = analyticsDimensionValue("mode", mode) || "reach";
+    if (!duplicate) existing.modes[safeMode] = (existing.modes[safeMode] || 0) + 1;
+    if (reporter) existing.reporters[reporter] = date.toISOString();
+    data.entries[fingerprint] = existing;
+    data.entries = Object.fromEntries(Object.entries(data.entries)
+      .sort((left, right) => Date.parse(right[1].lastSeenAt) - Date.parse(left[1].lastSeenAt))
+      .slice(0, MAX_REJECTED_PAIR_REPORTS));
+    data.updatedAt = date.toISOString();
+    return { accepted: true, fingerprint, duplicate, reviewable: Boolean(existing.sample) };
+  }
+
+  rejectedPairSummary({ minimumReports = 1, limit = 100 } = {}) {
+    const threshold = clamp(Math.floor(Number(minimumReports) || 1), 1, 100_000);
+    const cappedLimit = clamp(Math.floor(Number(limit) || 100), 1, 500);
+    const data = normalizeRejectedPairData(this.data.rejectedPairs);
+    return {
+      privacy: "keyed fingerprints; plaintext only for server-reviewed known concepts",
+      reports: Object.entries(data.entries)
+        .map(([fingerprint, entry]) => ({ fingerprint, count: entry.count, pair: entry.sample, modes: entry.modes, lastSeenAt: entry.lastSeenAt }))
+        .filter((entry) => entry.count >= threshold)
+        .sort((left, right) => right.count - left.count || Date.parse(right.lastSeenAt) - Date.parse(left.lastSeenAt))
+        .slice(0, cappedLimit),
+      updatedAt: data.updatedAt
+    };
+  }
+
+  async recordAnalyticsEvent({ name, sessionId, cohortId = "", properties = {} }, date = new Date(), { allowRejectedPairPlaintext = false } = {}) {
     if (!analyticsEventNames.has(name)) throw serviceError(400, "That analytics event is not available.", "invalid_analytics_event");
     if (typeof sessionId !== "string" || !sessionId.trim() || sessionId.length > 64) throw serviceError(400, "A valid analytics session is required.", "invalid_analytics_session");
+    if (cohortId && !ANALYTICS_COHORT_PATTERN.test(String(cohortId))) throw serviceError(400, "A valid privacy-safe cohort ID is required.", "invalid_analytics_cohort");
     if (!(date instanceof Date) || Number.isNaN(date.getTime())) throw serviceError(400, "A valid analytics date is required.", "invalid_analytics_date");
 
     const analytics = this.data.analytics = normalizeAnalyticsData(this.data.analytics);
     const dayKey = date.toISOString().slice(0, 10);
-    const day = analytics.days[dayKey] ||= { events: {}, sessionHashes: {}, segments: {}, metrics: {} };
+    const day = analytics.days[dayKey] ||= { events: {}, sessionHashes: {}, cohortHashes: {}, segments: {}, metrics: {} };
     day.events[name] = (day.events[name] || 0) + 1;
     analytics.totals.events[name] = (analytics.totals.events[name] || 0) + 1;
-    day.sessionHashes[this.sign(`analytics:v1:${dayKey}:${sessionId}`)] = true;
+    day.sessionHashes[this.signFor("analytics-session", `${dayKey}:${sessionId}`)] = true;
+    if (cohortId) day.cohortHashes[this.signFor("analytics-cohort", String(cohortId))] = true;
 
     const safeProperties = properties && typeof properties === "object" && !Array.isArray(properties) ? properties : {};
     for (const [property, value] of Object.entries(safeProperties).slice(0, 32)) {
@@ -823,11 +1638,18 @@ export class GameStore {
       }
     }
 
+    let rejectedPair = null;
+    if (name === "combination_expected") {
+      rejectedPair = this.recordRejectedPairExpectation({ a: safeProperties.a, b: safeProperties.b, mode: safeProperties.mode, sessionId, cohortId }, date, {
+        allowPlaintext: allowRejectedPairPlaintext
+      });
+    }
+
     const oldestDay = new Date(date.getTime() - (ANALYTICS_RETENTION_DAYS - 1) * 86_400_000).toISOString().slice(0, 10);
     for (const storedDay of Object.keys(analytics.days)) if (storedDay < oldestDay || storedDay > dayKey) delete analytics.days[storedDay];
     analytics.updatedAt = date.toISOString();
     await this.persist();
-    return { accepted: true, day: dayKey };
+    return { accepted: true, day: dayKey, cohortTracked: Boolean(cohortId), ...(rejectedPair ? { rejectedPair } : {}) };
   }
 
   analyticsSummary(requestedDays = 30, date = new Date()) {
@@ -841,13 +1663,16 @@ export class GameStore {
     const metrics = {};
     const daily = [];
     let dailyUniqueSessions = 0;
+    const uniqueCohorts = new Set();
 
     for (const [dayKey, day] of Object.entries(analytics.days).sort(([left], [right]) => left.localeCompare(right))) {
       if (dayKey < from || dayKey > through) continue;
       const sessions = Object.keys(day.sessionHashes).length;
+      const cohortDigests = Object.keys(day.cohortHashes || {});
+      for (const digest of cohortDigests) uniqueCohorts.add(digest);
       const eventCount = Object.values(day.events).reduce((sum, count) => sum + count, 0);
       dailyUniqueSessions += sessions;
-      daily.push({ date: dayKey, sessions, events: eventCount });
+      daily.push({ date: dayKey, sessions, cohorts: cohortDigests.length, events: eventCount });
       for (const [name, count] of Object.entries(day.events)) events[name] = (events[name] || 0) + count;
       mergeAnalyticsSegments(segments, day.segments);
       mergeAnalyticsMetrics(metrics, day.metrics);
@@ -861,14 +1686,44 @@ export class GameStore {
     const metricSum = (eventName, ...names) => names.reduce((sum, name) => sum + (metrics[eventName]?.[name]?.sum || 0), 0);
     const funnels = {
       play: { opened: eventCount("app_opened"), started: eventCount("run_started"), completed: eventCount("target_reached") },
+      onboarding: {
+        modeViews: eventCount("mode_screen_viewed"),
+        started: eventCount("first_orbit_started"),
+        firstCombination: eventCount("first_combination"),
+        completed: eventCount("first_orbit_completed")
+      },
       wish: { opened: eventCount("wish_opened"), used: eventCount("wish_used"), conversionPercent: conversionPercent(eventCount("wish_used"), eventCount("wish_opened")) },
       market: { opened: eventCount("market_opened"), purchased: eventCount("word_purchased"), conversionPercent: conversionPercent(eventCount("word_purchased"), eventCount("market_opened")) },
-      sense: { opened: eventCount("sense_opened"), used: eventCount("sense_used"), purchased: eventCount("sense_purchased"), useRatePercent: conversionPercent(eventCount("sense_used"), eventCount("sense_opened")) },
+      guidance: {
+        opened: Math.max(eventCount("sense_opened"), eventCount("powerups_opened")),
+        used: eventCount("sense_used") + eventCount("quick_tip_used") + eventCount("word_gift_used"),
+        revealed: eventCount("answer_revealed")
+      },
       ghost: { started: eventCount("ghost_race_started"), completed: eventCount("ghost_race_completed"), completionPercent: conversionPercent(eventCount("ghost_race_completed"), eventCount("ghost_race_started")) },
-      mastery: { opened: eventCount("mastery_opened"), progressed: eventCount("mastery_progressed"), completed: eventCount("mastery_completed") }
+      mastery: { opened: eventCount("mastery_opened"), progressed: eventCount("mastery_progressed"), completed: eventCount("mastery_completed") },
+      constellation: {
+        journeyViews: eventCount("journey_opened"),
+        voyagesStarted: eventCount("voyage_started"),
+        voyagesCompleted: eventCount("voyage_completed"),
+        eventsStarted: eventCount("event_started"),
+        eventDiscoveries: eventCount("event_discovery"),
+        signaturesGraded: eventCount("signature_graded"),
+        communityViews: eventCount("community_viewed")
+      }
     };
     funnels.play.startRatePercent = conversionPercent(funnels.play.started, funnels.play.opened);
     funnels.play.completionPercent = conversionPercent(funnels.play.completed, funnels.play.started);
+    funnels.onboarding.startRatePercent = conversionPercent(funnels.onboarding.started, funnels.onboarding.modeViews || funnels.play.opened);
+    funnels.onboarding.firstCombinationRatePercent = conversionPercent(funnels.onboarding.firstCombination, funnels.onboarding.started);
+    funnels.onboarding.completionPercent = conversionPercent(funnels.onboarding.completed, funnels.onboarding.started);
+    funnels.constellation.voyageCompletionPercent = conversionPercent(funnels.constellation.voyagesCompleted, funnels.constellation.voyagesStarted);
+    funnels.guidance.useRatePercent = conversionPercent(funnels.guidance.used, funnels.guidance.opened);
+    funnels.sense = { ...funnels.guidance, purchased: eventCount("sense_purchased") };
+    funnels.reengagement = {
+      retries: eventCount("run_retried"),
+      shares: eventCount("card_shared") + eventCount("share_created"),
+      supporterInterest: eventCount("supporter_interest")
+    };
     const economy = {
       checkoutStarts: eventCount("checkout_started"),
       wordPurchases: eventCount("word_purchased"),
@@ -877,10 +1732,39 @@ export class GameStore {
       senseStardustSpent: metricSum("sense_purchased", "cost")
     };
 
+    const allDays = Object.entries(analytics.days).sort(([left], [right]) => left.localeCompare(right));
+    const cohortsByDay = new Map(allDays.map(([dayKey, day]) => [dayKey, new Set(Object.keys(day.cohortHashes || {}))]));
+    const firstSeen = new Map();
+    for (const [dayKey, cohortSet] of cohortsByDay) for (const digest of cohortSet) if (!firstSeen.has(digest)) firstSeen.set(digest, dayKey);
+    const cohortRows = [];
+    for (const [cohortDay, cohortSet] of cohortsByDay) {
+      if (cohortDay < from || cohortDay > through) continue;
+      const starters = [...cohortSet].filter((digest) => firstSeen.get(digest) === cohortDay);
+      if (!starters.length) continue;
+      const dayAt = (offset) => new Date(Date.parse(`${cohortDay}T00:00:00Z`) + offset * 86400000).toISOString().slice(0, 10);
+      const retained = (offset) => {
+        const compareDay = dayAt(offset);
+        if (compareDay > through) return null;
+        const active = cohortsByDay.get(compareDay) || new Set();
+        return starters.filter((digest) => active.has(digest)).length;
+      };
+      cohortRows.push({ date: cohortDay, size: starters.length, d1Returned: retained(1), d7Returned: retained(7) });
+    }
+    const retentionMetric = (field) => {
+      const eligibleRows = cohortRows.filter((row) => row[field] !== null);
+      const eligible = eligibleRows.reduce((sum, row) => sum + row.size, 0);
+      const returned = eligibleRows.reduce((sum, row) => sum + row[field], 0);
+      return { eligible, returned, percent: conversionPercent(returned, eligible) };
+    };
+    const retention = { d1: retentionMetric("d1Returned"), d7: retentionMetric("d7Returned"), cohorts: cohortRows };
+
     return {
       privacy: "aggregate-only",
+      cohortPrivacy: "pseudonymous keyed cohorts; no raw cohort identifiers",
       period: { days, from, through },
       dailyUniqueSessions,
+      uniqueCohorts: uniqueCohorts.size,
+      retention,
       events,
       segments,
       metrics,
@@ -913,21 +1797,30 @@ export class GameStore {
     };
   }
 
-  demandForMinute(wordId, minute) {
-    const demand = this.data.demand[wordId] || { ema: 0, purchases: 0, activeMinute: minute, purchasesThisMinute: 0 };
+  demandForPeriod(wordId, period) {
+    const stored = this.data.demand[wordId] || {};
+    const migratedPeriod = Number.isInteger(stored.activePeriod)
+      ? stored.activePeriod
+      : Number.isInteger(stored.activeMinute) ? Math.floor(stored.activeMinute / (MARKET_REPRICE_INTERVAL_MS / 60_000)) : period;
+    const demand = {
+      ema: stored.ema,
+      purchases: stored.purchases,
+      activePeriod: migratedPeriod,
+      purchasesThisPeriod: stored.purchasesThisPeriod ?? stored.purchasesThisMinute
+    };
     demand.ema = clamp(Number(demand.ema) || 0, 0, 1);
     demand.purchases = Math.max(0, Number(demand.purchases) || 0);
-    if (!Number.isInteger(demand.activeMinute)) demand.activeMinute = minute;
-    demand.purchasesThisMinute = Math.max(0, Number(demand.purchasesThisMinute) || 0);
+    if (!Number.isInteger(demand.activePeriod)) demand.activePeriod = period;
+    demand.purchasesThisPeriod = Math.max(0, Number(demand.purchasesThisPeriod) || 0);
 
-    if (minute > demand.activeMinute) {
-      const completedMinutePurchases = Math.min(20, Math.floor(demand.purchasesThisMinute));
-      for (let index = 0; index < completedMinutePurchases; index += 1) demand.ema = demand.ema * .82 + .18;
-      const idleMinutes = Math.max(0, minute - demand.activeMinute - 1);
-      if (idleMinutes) demand.ema *= .82 ** idleMinutes;
+    if (period > demand.activePeriod) {
+      const completedPeriodPurchases = Math.min(20, Math.floor(demand.purchasesThisPeriod));
+      for (let index = 0; index < completedPeriodPurchases; index += 1) demand.ema = demand.ema * .82 + .18;
+      const idlePeriods = Math.max(0, period - demand.activePeriod - 1);
+      if (idlePeriods) demand.ema *= .82 ** idlePeriods;
       demand.ema = clamp(demand.ema, 0, 1);
-      demand.activeMinute = minute;
-      demand.purchasesThisMinute = 0;
+      demand.activePeriod = period;
+      demand.purchasesThisPeriod = 0;
     }
 
     this.data.demand[wordId] = demand;
@@ -936,14 +1829,14 @@ export class GameStore {
 
   marketSnapshot(playerId, now = Date.now()) {
     const player = this.data.players[playerId];
-    const minute = Math.floor(now / 60_000);
-    const nextRepriceAt = (minute + 1) * 60_000;
+    const period = Math.floor(now / MARKET_REPRICE_INTERVAL_MS);
+    const nextRepriceAt = (period + 1) * MARKET_REPRICE_INTERVAL_MS;
     const items = MARKET_CATALOG.map((item) => {
-      const demand = this.demandForMinute(item.id, minute).ema;
-      const trend = marketTrend(item, minute, demand);
+      const demand = this.demandForPeriod(item.id, period).ema;
+      const trend = marketTrend(item, period, demand);
       const price = trend.at(-1);
       const previous = trend.at(-2) || price;
-      const quotePayload = `${item.id}:${minute}:${price}`;
+      const quotePayload = `v2:${item.id}:${period}:${price}`;
       return {
         ...item,
         price,
@@ -952,11 +1845,11 @@ export class GameStore {
         useDivision: "open",
         changePercent: previous ? Number((((price - previous) / previous) * 100).toFixed(1)) : 0,
         trend,
-        quoteId: `${quotePayload}.${this.sign(`quote:${quotePayload}`)}`,
+        quoteId: `${quotePayload}.${this.signFor("market-quote", quotePayload)}`,
         quoteExpiresAt: new Date(nextRepriceAt).toISOString()
       };
     });
-    return { serverTime: new Date(now).toISOString(), nextRepriceAt: new Date(nextRepriceAt).toISOString(), balance: player?.credits || 0, items };
+    return { cadence: "six_hours", cadenceMs: MARKET_REPRICE_INTERVAL_MS, serverTime: new Date(now).toISOString(), nextRepriceAt: new Date(nextRepriceAt).toISOString(), balance: player?.credits || 0, items };
   }
 
   verifyQuote(quoteId, now = Date.now()) {
@@ -965,14 +1858,15 @@ export class GameStore {
     if (split < 1) return null;
     const payload = quoteId.slice(0, split);
     const signature = quoteId.slice(split + 1);
-    if (!this.verify(`quote:${payload}`, signature)) return null;
-    const [wordId, minuteText, priceText] = payload.split(":");
-    const minute = Number(minuteText);
+    if (!this.verifyFor("market-quote", payload, signature)) return null;
+    const [version, wordId, periodText, priceText] = payload.split(":");
+    if (version !== "v2") return null;
+    const period = Number(periodText);
     const price = Number(priceText);
-    if (!catalogById.has(wordId) || !Number.isInteger(minute) || !Number.isFinite(price) || minute !== Math.floor(now / 60_000)) return null;
-    const demand = this.demandForMinute(wordId, minute).ema;
-    if (marketPrice(wordId, minute, demand) !== price) return null;
-    return { item: catalogById.get(wordId), minute, price };
+    if (!catalogById.has(wordId) || !Number.isInteger(period) || !Number.isFinite(price) || period !== Math.floor(now / MARKET_REPRICE_INTERVAL_MS)) return null;
+    const demand = this.demandForPeriod(wordId, period).ema;
+    if (marketPrice(wordId, period, demand) !== price) return null;
+    return { item: catalogById.get(wordId), period, price };
   }
 
   async buyLicense(playerId, quoteId, idempotencyKey) {
@@ -991,8 +1885,17 @@ export class GameStore {
     if (player.credits < quote.price) throw serviceError(402, "Not enough Star Credits.", "insufficient_credits");
     player.credits -= quote.price;
     player.licenses[quote.item.id] = { purchasedAt: new Date().toISOString(), price: quote.price };
-    const demand = this.demandForMinute(quote.item.id, quote.minute);
-    demand.purchasesThisMinute += 1;
+    this.appendLedger("economyLedger", {
+      idempotencyKey: `word-license:${playerId}:${idempotencyKey}`,
+      type: "word_license_purchased",
+      playerId,
+      wordId: quote.item.id,
+      currency: "star_credits",
+      amount: -quote.price,
+      createdAt: this.now().toISOString()
+    });
+    const demand = this.demandForPeriod(quote.item.id, quote.period);
+    demand.purchasesThisPeriod += 1;
     demand.purchases += 1;
     const result = { item: { ...quote.item, owned: true, competitive: false, useDivision: "open" }, balance: player.credits, price: quote.price, competitive: false, useDivision: "open" };
     player.purchaseKeys[idempotencyKey] = { quoteId, result };
@@ -1023,8 +1926,11 @@ export class GameStore {
   canUseWish(playerId, date = new Date()) {
     const player = this.data.players[playerId];
     if (!player) return false;
-    const day = date.toISOString().slice(0, 10);
-    return Boolean(!player.freeWishUsed || (player.founderPass && player.dailyWishUsedDate !== day));
+    // The Supporter Pack is cosmetic-only. Keep the date argument for API
+    // compatibility with older callers, but never turn a paid entitlement into
+    // additional gameplay assistance.
+    void date;
+    return !player.freeWishUsed;
   }
 
   async consumeWish(playerId, date = new Date()) {
@@ -1076,22 +1982,74 @@ export class GameStore {
   }
 
   async addScore(entry) {
-    const index = this.data.scores.findIndex((score) => score.playerId === entry.playerId && score.challengeId === entry.challengeId && score.division === entry.division);
+    const challengeIdentity = entry.challengeKey && entry.challenge
+      ? { key: entry.challengeKey, descriptor: entry.challenge }
+      : buildChallengeIdentity({ ...entry, mode: entry.mode, target: entry.target }, { assist: entry.assist });
+    const normalized = {
+      ...structuredClone(entry),
+      challengeKey: challengeIdentity.key,
+      challenge: structuredClone(challengeIdentity.descriptor),
+      attempts: Math.max(nonnegativeCounter(entry.attempts), nonnegativeCounter(entry.moves)),
+      rejectedAttempts: nonnegativeCounter(entry.rejectedAttempts),
+      errorless: nonnegativeCounter(entry.rejectedAttempts) === 0,
+      status: entry.status === "provisional" ? "provisional" : "verified",
+      anomalyFlags: Array.isArray(entry.anomalyFlags) ? [...new Set(entry.anomalyFlags.map((flag) => cleanCloudText(flag, 64)).filter(Boolean))].slice(0, 8) : []
+    };
+    const index = this.data.scores.findIndex((score) => score.playerId === normalized.playerId && (score.challengeKey || score.challengeId) === normalized.challengeKey && score.division === normalized.division);
     const current = index >= 0 ? this.data.scores[index] : null;
-    if (betterEntry(entry, current)) {
-      if (index >= 0) this.data.scores[index] = entry;
-      else this.data.scores.push(entry);
+    // A suspicious replay must never displace a previously verified result.
+    // Conversely, a later verified run should always replace the provisional
+    // placeholder before the usual score comparison is applied.
+    const shouldReplace = !current
+      || (current.status === "provisional" && normalized.status === "verified")
+      || (current.status !== "provisional" && normalized.status !== "provisional" && betterEntry(normalized, current))
+      || (current.status === "provisional" && normalized.status === "provisional" && betterEntry(normalized, current));
+    if (shouldReplace) {
+      if (index >= 0) this.data.scores[index] = normalized;
+      else this.data.scores.push(normalized);
+    }
+    this.appendLedger("runLedger", {
+      idempotencyKey: `run:${normalized.runId}:completed`,
+      type: "ranked_run_completed",
+      runId: normalized.runId,
+      playerId: normalized.playerId,
+      challengeKey: normalized.challengeKey,
+      division: normalized.division,
+      score: normalized.score,
+      moves: normalized.moves,
+      rejectedAttempts: normalized.rejectedAttempts,
+      status: normalized.status,
+      createdAt: normalized.createdAt
+    });
+    if (normalized.status === "verified") {
+      this.appendLedger("progressionLedger", {
+        idempotencyKey: `progression:run:${normalized.runId}`,
+        type: "verified_run_completed",
+        runId: normalized.runId,
+        playerId: normalized.playerId,
+        challengeKey: normalized.challengeKey,
+        dailyKey: normalized.mode === "daily" ? normalized.dailyKey : "",
+        atlasXp: Math.max(10, Math.floor(nonnegativeCounter(normalized.score) / 2_000)),
+        createdAt: normalized.createdAt
+      });
     }
     if (this.data.scores.length > 5000) this.data.scores = this.data.scores.sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt)).slice(0, 5000);
     await this.persist();
-    return this.rankFor(entry.challengeId, entry.division, entry.playerId);
+    return this.rankFor(normalized.challengeKey, normalized.division, normalized.playerId);
   }
 
-  leaderboard(scope, division = "pure", limit = 50, playerId = "") {
+  leaderboard(scope, division = "pure", limit = 50, playerId = "", { challengeId = "", challengeKey = "", mode = "", includeProvisional = false } = {}) {
     const currentDaily = new Date().toISOString().slice(0, 10);
     const currentWeekly = isoWeekKey();
+    const exactChallengeId = String(challengeId || "").trim().slice(0, 160);
+    const exactChallengeKey = /^ch3_[A-Za-z0-9_-]{24}$/.test(String(challengeKey || "")) ? String(challengeKey) : "";
+    const exactMode = ["reach", "quick", "moves", "daily", "weekly", "challenge"].includes(mode) ? mode : "";
     const filtered = this.data.scores.filter((entry) => {
       if (entry.division !== division) return false;
+      if (!includeProvisional && entry.status === "provisional") return false;
+      if (exactChallengeKey) return entry.challengeKey === exactChallengeKey;
+      if (exactChallengeId) return entry.challengeId === exactChallengeId;
+      if (exactMode && entry.mode !== exactMode) return false;
       if (scope === "daily") return entry.mode === "daily" && entry.dailyKey === currentDaily;
       if (scope === "weekly") return entry.mode === "weekly" && entry.weeklyKey === currentWeekly;
       if (scope === "sprint") return ["quick", "moves"].includes(entry.mode) && Date.now() - Date.parse(entry.createdAt) < 7 * 86400000;
@@ -1099,13 +2057,30 @@ export class GameStore {
     }).sort(compareEntries);
     const top = filtered.slice(0, clamp(Number(limit) || 25, 1, 100)).map((entry, index) => publicEntry(entry, index + 1));
     const playerIndex = playerId ? filtered.findIndex((entry) => entry.playerId === playerId) : -1;
-    return { scope, division, entries: top, playerEntry: playerIndex >= 0 ? publicEntry(filtered[playerIndex], playerIndex + 1) : null, updatedAt: new Date().toISOString() };
+    return {
+      scope,
+      division,
+      challengeId: exactChallengeId,
+      challengeKey: exactChallengeKey,
+      mode: exactMode,
+      comparable: Boolean(exactChallengeKey || exactChallengeId || scope === "daily"),
+      entries: top,
+      playerEntry: playerIndex >= 0 ? publicEntry(filtered[playerIndex], playerIndex + 1) : null,
+      community: communityForEntries(filtered, playerId),
+      updatedAt: new Date().toISOString()
+    };
   }
 
   rankFor(challengeId, division, playerId) {
-    const entries = this.data.scores.filter((entry) => entry.challengeId === challengeId && entry.division === division).sort(compareEntries);
+    const entries = this.data.scores.filter((entry) => (entry.challengeKey === challengeId || entry.challengeId === challengeId) && entry.division === division && entry.status !== "provisional").sort(compareEntries);
     const index = entries.findIndex((entry) => entry.playerId === playerId);
-    return index >= 0 ? { rank: index + 1, entry: publicEntry(entries[index], index + 1) } : null;
+    if (index >= 0) return {
+      rank: index + 1,
+      entry: publicEntry(entries[index], index + 1),
+      community: communityForEntries(entries, playerId)
+    };
+    const provisional = this.data.scores.find((entry) => (entry.challengeKey === challengeId || entry.challengeId === challengeId) && entry.division === division && entry.playerId === playerId && entry.status === "provisional");
+    return provisional ? { rank: null, provisional: true, entry: publicEntry(provisional, null), community: communityForEntries(entries, playerId) } : null;
   }
 
   async grantEarnedCredits(playerId, requested) {
@@ -1117,6 +2092,14 @@ export class GameStore {
     if (!grant) return 0;
     player.credits += grant;
     player.earned.amount += grant;
+    this.appendLedger("economyLedger", {
+      idempotencyKey: `earned-credit:${playerId}:${date}:${player.earned.amount}`,
+      type: "earned_credit_granted",
+      playerId,
+      currency: "star_credits",
+      amount: grant,
+      createdAt: this.now().toISOString()
+    });
     await this.persist();
     return grant;
   }
@@ -1135,6 +2118,15 @@ export class GameStore {
     player.credits += creditReward;
     player.earned.amount += creditReward;
     player.rewardedChallenges[rewardKey] = date.toISOString();
+    if (creditReward) this.appendLedger("economyLedger", {
+      idempotencyKey: `challenge-credit:${playerId}:${rewardKey}`,
+      type: "challenge_credit_granted",
+      playerId,
+      challengeKey: rewardKey,
+      currency: "star_credits",
+      amount: creditReward,
+      createdAt: date.toISOString()
+    });
 
     const week = isoWeekKey(date);
     if (player.weeklyActivity?.week !== week) player.weeklyActivity = { week, days: [], bonusClaimed: false };
@@ -1144,6 +2136,15 @@ export class GameStore {
       weeklyBonus = 40;
       player.credits += weeklyBonus;
       player.weeklyActivity.bonusClaimed = true;
+      this.appendLedger("economyLedger", {
+        idempotencyKey: `weekly-bonus:${playerId}:${week}`,
+        type: "weekly_credit_bonus",
+        playerId,
+        challengeKey: week,
+        currency: "star_credits",
+        amount: weeklyBonus,
+        createdAt: date.toISOString()
+      });
     }
 
     const rewardHistory = Object.entries(player.rewardedChallenges);
@@ -1161,6 +2162,7 @@ export class GameStore {
       const player = structuredClone(stored);
       delete player.recovery;
       delete player.purchaseKeys;
+      delete player.sessions;
       return [id, player];
     }));
     const analytics = normalizeAnalyticsData(this.data.analytics);
@@ -1179,8 +2181,15 @@ export class GameStore {
         demand: structuredClone(this.data.demand),
         interest,
         analytics,
+        rejectedPairs: normalizeRejectedPairData(this.data.rejectedPairs),
         recipeFeedback: normalizeRecipeFeedback(this.data.recipeFeedback),
-        commerceTransactions: structuredClone(this.data.commerceTransactions || {})
+        runLedger: structuredClone(this.data.runLedger || []),
+        progressionLedger: structuredClone(this.data.progressionLedger || []),
+        economyLedger: structuredClone(this.data.economyLedger || []),
+        entitlementLedger: structuredClone(this.data.entitlementLedger || []),
+        commerceTransactions: structuredClone(this.data.commerceTransactions || {}),
+        dynamicRecipes: structuredClone(this.data.dynamicRecipes || {}),
+        dynamicRecipeRevisions: structuredClone(this.data.dynamicRecipeRevisions || [])
       }
     };
   }
@@ -1207,13 +2216,164 @@ export class GameStore {
     return { filename, retained: Math.min(backups.length, retention), generatedAt: date.toISOString(), recoverySecretsIncluded: false, bearerTokensIncluded: false };
   }
 
+  playerDataExport(playerId) {
+    const player = this.data.players[playerId];
+    if (!player) throw serviceError(404, "Player not found.", "player_missing");
+    return {
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      player: this.publicPlayer(playerId),
+      cloudProfile: this.cloudProfile(playerId),
+      entitlements: this.entitlementSnapshot(playerId),
+      scores: this.data.scores
+        .filter((entry) => entry.playerId === playerId)
+        .map((entry) => ({
+          challengeId: entry.challengeId,
+          challengeKey: entry.challengeKey,
+          challenge: structuredClone(entry.challenge || null),
+          division: entry.division,
+          assist: entry.assist,
+          mode: entry.mode,
+          target: entry.target,
+          score: entry.score,
+          moves: entry.moves,
+          attempts: entry.attempts,
+          rejectedAttempts: entry.rejectedAttempts,
+          errorless: entry.errorless,
+          status: entry.status || "verified",
+          elapsedMs: entry.elapsedMs,
+          signature: sanitizeRouteSignature(entry.signature),
+          createdAt: entry.createdAt
+        }))
+    };
+  }
+
+  async deleteFreePlayerData(playerId) {
+    const player = this.data.players[playerId];
+    if (!player) return { deleted: true };
+    const hasPaidOwnership = Boolean(player.founderPass)
+      || Object.values(player.entitlements || {}).some((entitlement) => entitlement?.active && entitlement?.source !== "test")
+      || Object.values(this.data.commerceTransactions || {}).some((transaction) => transaction?.playerId === playerId);
+    if (hasPaidOwnership) {
+      throw serviceError(409, "Paid ownership requires support-assisted deletion so receipts and refunds remain correct.", "paid_deletion_requires_support");
+    }
+    delete this.data.players[playerId];
+    this.data.scores = this.data.scores.filter((entry) => entry.playerId !== playerId);
+    for (const ledger of ["runLedger", "progressionLedger", "economyLedger", "entitlementLedger"]) {
+      this.data[ledger] = (this.data[ledger] || []).filter((entry) => entry.playerId !== playerId);
+    }
+    for (const [runId, run] of Object.entries(this.data.runs || {})) if (run?.playerId === playerId) delete this.data.runs[runId];
+    for (const [transactionId, transaction] of Object.entries(this.data.commerceTransactions || {})) {
+      if (transaction?.playerId === playerId) delete this.data.commerceTransactions[transactionId];
+    }
+    await this.persist();
+    return { deleted: true };
+  }
+
+  dynamicRecipeCatalog({ statuses = ["promoted"] } = {}) {
+    const allowed = new Set(Array.isArray(statuses) ? statuses : [statuses]);
+    return Object.values(normalizeDynamicRecipeCatalog(this.data.dynamicRecipes))
+      .filter((recipe) => allowed.has(recipe.status))
+      .map((recipe) => structuredClone(recipe));
+  }
+
+  async rememberDynamicRecipes(recipes, date = new Date(), metadata = {}) {
+    if (!Array.isArray(recipes) || !recipes.length) return { stored: 0 };
+    this.data.dynamicRecipes ||= {};
+    let stored = 0;
+    for (const value of recipes.slice(0, 16)) {
+      const a = cleanCloudText(value?.a, 28);
+      const b = cleanCloudText(value?.b, 28);
+      const word = cleanCloudText(value?.word, 28);
+      const emoji = cleanCloudText(value?.emoji, 12);
+      const note = cleanCloudText(value?.note, 100);
+      if (!a || !b || !word || !emoji || !note) continue;
+      const key = [a, b].map((item) => item.toLocaleLowerCase("en-US")).sort().join("+");
+      const existing = this.data.dynamicRecipes[key];
+      const proposed = normalizeDynamicRecipeRecord({
+        a,
+        b,
+        word,
+        emoji,
+        note,
+        source: value?.source === "ai-route" ? "ai-route" : "ai",
+        status: existing?.status || "quarantined",
+        proposalId: existing?.proposalId || this.signFor("ai-recipe-proposal", `${key}:${word}:${date.toISOString()}`).slice(0, 24),
+        promptVersion: value?.promptVersion || metadata.promptVersion || "combine-v1",
+        model: value?.model || metadata.model || "unknown",
+        provenance: value?.provenance || metadata.provenance || "live-unranked-ai",
+        revision: Math.max(1, Number(existing?.revision) || 1),
+        createdAt: existing?.createdAt || date.toISOString(),
+        generatedAt: existing?.generatedAt || date.toISOString(),
+        lastUsedAt: date.toISOString()
+      }, key);
+      if (!proposed) continue;
+      this.data.dynamicRecipes[key] = proposed;
+      stored += 1;
+    }
+    const entries = Object.entries(this.data.dynamicRecipes);
+    if (entries.length > 1_000) {
+      entries.sort((left, right) => Date.parse(right[1].lastUsedAt || right[1].createdAt || 0) - Date.parse(left[1].lastUsedAt || left[1].createdAt || 0));
+      this.data.dynamicRecipes = Object.fromEntries(entries.slice(0, 1_000));
+    }
+    if (stored) await this.persist();
+    return { stored };
+  }
+
+  dynamicRecipeReviewQueue({ status = "quarantined", limit = 100 } = {}) {
+    const allowedStatus = ["quarantined", "promoted", "rejected", "rolled_back"].includes(status) ? status : "quarantined";
+    return Object.values(normalizeDynamicRecipeCatalog(this.data.dynamicRecipes))
+      .filter((recipe) => recipe.status === allowedStatus)
+      .sort((left, right) => Date.parse(right.lastUsedAt || right.createdAt) - Date.parse(left.lastUsedAt || left.createdAt))
+      .slice(0, clamp(Math.floor(Number(limit) || 100), 1, 500))
+      .map((recipe) => structuredClone(recipe));
+  }
+
+  async reviewDynamicRecipe(proposalId, action, { reviewer = "operator", reason = "" } = {}, date = this.now()) {
+    const safeProposalId = String(proposalId || "").trim();
+    const nextStatus = { promote: "promoted", reject: "rejected", rollback: "rolled_back" }[action];
+    if (!nextStatus) throw serviceError(400, "That recipe review action is not available.", "invalid_recipe_review_action");
+    const pair = Object.entries(this.data.dynamicRecipes || {}).find(([, recipe]) => recipe?.proposalId === safeProposalId);
+    if (!pair) throw serviceError(404, "That AI recipe proposal was not found.", "dynamic_recipe_missing");
+    const [key, existing] = pair;
+    const before = existing.status || "quarantined";
+    const updated = {
+      ...existing,
+      status: nextStatus,
+      revision: Math.max(1, Number(existing.revision) || 1) + 1,
+      reviewedAt: date.toISOString(),
+      reviewedBy: cleanCloudText(reviewer, 80) || "operator",
+      reviewReason: cleanCloudText(reason, 160)
+    };
+    this.data.dynamicRecipes[key] = updated;
+    this.data.dynamicRecipeRevisions ||= [];
+    this.data.dynamicRecipeRevisions.push({
+      id: randomUUID(),
+      proposalId: safeProposalId,
+      pairKey: this.signFor("ai-pair-key", key),
+      from: before,
+      to: nextStatus,
+      reviewer: updated.reviewedBy,
+      reason: updated.reviewReason,
+      createdAt: date.toISOString()
+    });
+    this.data.dynamicRecipeRevisions = this.data.dynamicRecipeRevisions.slice(-MAX_LEDGER_ENTRIES);
+    await this.persist();
+    return structuredClone(updated);
+  }
+
+  storageHealth() {
+    const health = typeof this.storage.health === "function" ? this.storage.health() : { kind: this.storage.kind || "custom", ready: true, contractVersion: STORAGE_CONTRACT_VERSION };
+    return { ...health, schemaVersion: this.data.version, pendingWrites: false };
+  }
+
   persist() {
-    if (this.path === ":memory:") return Promise.resolve();
     const write = async () => {
-      await mkdir(dirname(this.path), { recursive: true });
-      const temporary = `${this.path}.${process.pid}.tmp`;
-      await writeFile(temporary, JSON.stringify(this.data, null, 2), "utf8");
-      await rename(temporary, this.path);
+      if (this.storage instanceof JsonGameStorage && this.storage.path !== this.path) {
+        this.storage.path = this.path;
+        this.storage.kind = this.path === ":memory:" ? "memory" : "json";
+      }
+      return this.storage.save(this.data);
     };
     // A failed write must reject its own caller without permanently poisoning
     // the serialization queue. The next persistence attempt still runs after
@@ -1223,7 +2383,7 @@ export class GameStore {
   }
 }
 
-const RUN_SNAPSHOT_VERSION = 1;
+const RUN_SNAPSHOT_VERSION = 4;
 
 function sanitizeRunTipRecords(raw) {
   const records = [];
@@ -1237,6 +2397,7 @@ function sanitizeRunTipRecords(raw) {
     ids.add(id);
     records.push({ id, text });
   }
+
   return records;
 }
 
@@ -1268,6 +2429,11 @@ function serializeRun(run) {
     expiresAt: run.expiresAt,
     discovered: [...run.discovered.values()].map((item) => structuredClone(item)),
     moves: run.moves,
+    attempts: run.attempts,
+    rejectedAttempts: run.rejectedAttempts,
+    actionTimes: Array.isArray(run.actionTimes) ? run.actionTimes.slice(-64) : [],
+    challengeBaseIdentity: run.challengeBaseIdentity ? structuredClone(run.challengeBaseIdentity) : null,
+    finalChallengeKey: typeof run.finalChallengeKey === "string" ? run.finalChallengeKey : null,
     assist: run.assist,
     scoringDisabled: Boolean(run.scoringDisabled),
     forfeited: Boolean(run.forfeited),
@@ -1289,7 +2455,8 @@ function serializeRun(run) {
     recipeFeedbackMoves: run.recipeFeedbackMoves instanceof Set ? [...run.recipeFeedbackMoves] : [],
     recipeFeedbackRecipes: run.recipeFeedbackRecipes instanceof Set ? [...run.recipeFeedbackRecipes] : [],
     completedAt: run.completedAt,
-    submitted: Boolean(run.submitted)
+    submitted: Boolean(run.submitted),
+    verifiedSignature: sanitizeRouteSignature(run.verifiedSignature)
   };
 }
 
@@ -1300,6 +2467,7 @@ function hydrateRun(snapshot, players) {
   const startedAt = Number(snapshot.startedAt);
   const expiresAt = Number(snapshot.expiresAt);
   const ranked = Boolean(snapshot.ranked);
+  const snapshotVersion = Math.max(1, Math.floor(Number(snapshot.version) || 1));
   const completedAt = snapshot.completedAt == null ? null : Number.isFinite(Number(snapshot.completedAt)) ? Number(snapshot.completedAt) : null;
   const game = snapshot.game;
   if (!/^[0-9a-f]{8}-[0-9a-f-]{27}$/i.test(runId) || !players[playerId]) return null;
@@ -1336,14 +2504,29 @@ function hydrateRun(snapshot, players) {
     : null;
   if (giftItem) discovered.set(giftItem.word.toLowerCase(), structuredClone(giftItem));
   const giftUsed = Boolean(snapshot.giftUsed && giftItem);
-  const scoringDisabled = Boolean(snapshot.scoringDisabled || giftUsed);
-  const forfeited = Boolean(snapshot.forfeited || giftUsed);
+  const storedAssist = assistancePolicy(typeof snapshot.assist === "string" ? snapshot.assist.slice(0, 32) : "none").id;
+  const legacyGiftForfeit = Number(snapshot.version || 1) < 2 && giftUsed;
+  const scoringDisabled = Boolean(snapshot.scoringDisabled || legacyGiftForfeit || assistancePolicy(storedAssist).study);
+  const forfeited = Boolean(snapshot.forfeited || legacyGiftForfeit || assistancePolicy(storedAssist).study);
   const assist = scoringDisabled
-    ? studyAssistFor(snapshot.assist || snapshot.forfeitReason, giftUsed ? "gift" : "reveal")
-    : typeof snapshot.assist === "string" ? snapshot.assist.slice(0, 32) : "none";
+    ? studyAssistFor(storedAssist || snapshot.forfeitReason, giftUsed ? "gift" : "reveal")
+    : giftUsed ? combineAssistance(storedAssist, "gift").id : storedAssist;
   const forfeitReason = forfeited
     ? studyAssistFor(snapshot.forfeitReason || assist, giftUsed ? "gift" : "reveal")
     : null;
+  const clearlyPureLegacy = snapshotVersion < 3 && !scoringDisabled && !forfeited && assist === "none";
+  const history = (Array.isArray(snapshot.history) ? snapshot.history.slice(0, 2_000) : [])
+    .filter((step) => step && typeof step === "object" && !Array.isArray(step))
+    .map((step) => {
+      const legacyEligible = clearlyPureLegacy
+        && !step.revealed
+        && ["world", "expanded", "twist"].includes(String(step.source || "world"));
+      return {
+        ...structuredClone(step),
+        eventEligible: snapshotVersion >= 3 ? step.eventEligible === true : legacyEligible,
+        progressionEligible: snapshotVersion >= 3 ? step.progressionEligible === true : legacyEligible
+      };
+    });
 
   return {
     runId,
@@ -1355,6 +2538,18 @@ function hydrateRun(snapshot, players) {
     expiresAt: ranked && completedAt ? Math.max(expiresAt, completedAt + COMPLETED_RANKED_RUN_RETENTION_MS) : expiresAt,
     discovered,
     moves: nonnegativeCounter(snapshot.moves),
+    attempts: Math.max(nonnegativeCounter(snapshot.attempts), nonnegativeCounter(snapshot.moves) + nonnegativeCounter(snapshot.rejectedAttempts)),
+    rejectedAttempts: nonnegativeCounter(snapshot.rejectedAttempts),
+    actionTimes: (Array.isArray(snapshot.actionTimes) ? snapshot.actionTimes : [])
+      .map((value) => Number(value))
+      .filter(Number.isFinite)
+      .slice(-64),
+    challengeBaseIdentity: snapshot.challengeBaseIdentity && typeof snapshot.challengeBaseIdentity === "object"
+      ? structuredClone(snapshot.challengeBaseIdentity)
+      : buildChallengeIdentity(game, { assist: "none" }),
+    finalChallengeKey: /^ch3_[A-Za-z0-9_-]{24}$/.test(String(snapshot.finalChallengeKey || ""))
+      ? String(snapshot.finalChallengeKey)
+      : null,
     assist,
     scoringDisabled,
     forfeited,
@@ -1370,7 +2565,7 @@ function hydrateRun(snapshot, players) {
     twistedPairKey: typeof snapshot.twistedPairKey === "string" ? snapshot.twistedPairKey.slice(0, 160) : null,
     usedBend: Boolean(snapshot.usedBend),
     bendItem: snapshot.bendItem && typeof snapshot.bendItem === "object" && !Array.isArray(snapshot.bendItem) ? structuredClone(snapshot.bendItem) : null,
-    history: Array.isArray(snapshot.history) ? structuredClone(snapshot.history.slice(0, 2_000)) : [],
+    history,
     recipeFeedbackMoves: new Set((Array.isArray(snapshot.recipeFeedbackMoves) ? snapshot.recipeFeedbackMoves : [])
       .map((move) => Math.floor(Number(move)))
       .filter((move) => Number.isInteger(move) && move > 0 && move <= 2_000)),
@@ -1379,7 +2574,8 @@ function hydrateRun(snapshot, players) {
       .filter((fingerprint) => /^[a-z0-9]{7,16}$/.test(fingerprint))
       .slice(0, 2_000)),
     completedAt,
-    submitted: Boolean(snapshot.submitted)
+    submitted: Boolean(snapshot.submitted),
+    verifiedSignature: sanitizeRouteSignature(snapshot.verifiedSignature)
   };
 }
 
@@ -1390,7 +2586,14 @@ export class RunRegistry {
     this.store.data.runs ||= {};
     for (const [runId, snapshot] of Object.entries(this.store.data.runs)) {
       const run = hydrateRun(snapshot, this.store.data.players);
-      if (run && run.runId === runId) this.runs.set(runId, run);
+      if (run && run.runId === runId) {
+        this.runs.set(runId, run);
+        for (const step of run.history) {
+          if (step.eventEligible && step.progressionEligible) {
+            this.store.recordCosmicEventDiscovery(run.playerId, step.word, new Date(run.startedAt));
+          }
+        }
+      }
       else delete this.store.data.runs[runId];
     }
     this.cleanup();
@@ -1411,8 +2614,16 @@ export class RunRegistry {
 
   start(playerId, game, { ranked = false, challengeId = "", scoringDisabled = false, forfeitReason = "" } = {}) {
     this.cleanup();
+    if (ranked) {
+      const active = [...this.runs.values()].find((candidate) => candidate.playerId === playerId
+        && candidate.ranked
+        && candidate.challengeId === challengeId
+        && !candidate.submitted
+        && this.store.now().getTime() <= candidate.expiresAt);
+      if (active) throw serviceError(409, "This ranked challenge already has an active attempt. Resume or finish it before starting another.", "ranked_attempt_active", { runId: active.runId });
+    }
     const runId = randomUUID();
-    const startedAt = Date.now();
+    const startedAt = this.store.now().getTime();
     const run = {
       runId,
       playerId,
@@ -1423,6 +2634,11 @@ export class RunRegistry {
       expiresAt: startedAt + Math.max((game.timeLimit || 0) * 1000 + 10_000, 30 * 60_000),
       discovered: new Map(game.starters.map((word) => [word.toLowerCase(), { word, source: "origin", feedbackEligible: true }])),
       moves: 0,
+      attempts: 0,
+      rejectedAttempts: 0,
+      actionTimes: [],
+      challengeBaseIdentity: buildChallengeIdentity(game, { assist: "none" }),
+      finalChallengeKey: null,
       assist: scoringDisabled ? studyAssistFor(forfeitReason) : "none",
       scoringDisabled: Boolean(scoringDisabled),
       forfeited: Boolean(scoringDisabled),
@@ -1440,25 +2656,30 @@ export class RunRegistry {
       recipeFeedbackMoves: new Set(),
       recipeFeedbackRecipes: new Set(),
       completedAt: null,
-      submitted: false
+      submitted: false,
+      verifiedSignature: null
     };
     this.runs.set(runId, run);
     this.checkpoint(run);
-    return { run, token: this.store.sign(`run:${runId}:${playerId}:${startedAt}`) };
+    const legacyPayload = `run:${runId}:${playerId}:${startedAt}`;
+    return { run, token: `cr3.${this.store.signFor("run-session", legacyPayload)}` };
   }
 
   get(runId, playerId, token) {
     const run = this.runs.get(runId);
-    if (!run || run.playerId !== playerId || !this.store.verify(`run:${runId}:${playerId}:${run.startedAt}`, token)) throw serviceError(401, "This run is not valid anymore.", "invalid_run");
-    if (Date.now() > run.expiresAt) throw serviceError(410, "This run has expired.", "run_expired");
+    const payload = `run:${runId}:${playerId}:${run?.startedAt}`;
+    const validV3 = typeof token === "string" && token.startsWith("cr3.") && this.store.verifyFor("run-session", payload, token.slice(4));
+    const validLegacy = typeof token === "string" && this.store.verify(payload, token);
+    if (!run || run.playerId !== playerId || (!validV3 && !validLegacy)) throw serviceError(401, "This run is not valid anymore.", "invalid_run");
+    if (this.store.now().getTime() > run.expiresAt) throw serviceError(410, "This run has expired.", "run_expired");
     return run;
   }
 
   canCombine(run, a, b) {
     if (run.completedAt) throw serviceError(409, "This orbit is already complete.", "run_complete");
     if (!run.discovered.has(String(a).toLowerCase()) || !run.discovered.has(String(b).toLowerCase())) throw serviceError(422, "That combination contains an undiscovered word.", "impossible_combination");
-    if (run.game.moveLimit && run.moves >= run.game.moveLimit) throw serviceError(409, "No moves remain in this orbit.", "move_limit");
-    if (run.game.timeLimit && Date.now() - run.startedAt > run.game.timeLimit * 1000 + 3000) throw serviceError(409, "Time has expired for this orbit.", "time_limit");
+    if (run.game.moveLimit && run.attempts >= run.game.moveLimit) throw serviceError(409, "No moves remain in this orbit.", "move_limit");
+    if (run.game.timeLimit && this.store.now().getTime() - run.startedAt > run.game.timeLimit * 1000 + 3000) throw serviceError(409, "Time has expired for this orbit.", "time_limit");
   }
 
   recordCombination(run, result, { a = "", b = "" } = {}) {
@@ -1476,8 +2697,24 @@ export class RunRegistry {
       && ingredientFeedbackSafe(ingredientB)
       && safeResultSources.has(String(result.source || "world"));
     const canonicalWord = (word) => run.discovered.get(String(word).trim().toLowerCase())?.word || String(word).trim();
-    const newDiscovery = !run.discovered.has(result.word.toLowerCase());
+    const resultSource = String(result.source || "world");
+    const anticipatedAssist = ["ai", "ai-route"].includes(resultSource)
+      ? combineAssistance(run.assist, "ai").id
+      : run.assist;
+    const progressionEligible = !run.scoringDisabled
+      && !run.forfeited
+      && anticipatedAssist === "none"
+      && !result.revealed
+      && ["world", "expanded", "twist", "semantic"].includes(resultSource);
+    // Signature novelty is lifetime novelty, not merely novelty within this
+    // one route. The server stores only a keyed digest of each discovered word.
+    const newDiscovery = this.store.recordLifetimeDiscovery(run.playerId, result.word, new Date(run.startedAt), {
+      eventEligible: progressionEligible
+    }).newDiscovery;
     run.moves += 1;
+    run.attempts += 1;
+    run.actionTimes.push(this.store.now().getTime());
+    run.actionTimes = run.actionTimes.slice(-64);
     const historyEntry = {
       move: run.moves,
       a: canonicalWord(a),
@@ -1486,8 +2723,10 @@ export class RunRegistry {
       emoji: result.emoji || "",
       category: result.category || null,
       note: result.note || "",
-      source: result.source || "world",
+      source: resultSource,
       newDiscovery,
+      progressionEligible,
+      eventEligible: progressionEligible,
       twisted: Boolean(result.twisted),
       canonicalWord: result.twist?.canonicalWord || "",
       revealed: false,
@@ -1495,13 +2734,28 @@ export class RunRegistry {
     };
     run.history.push(historyEntry);
     run.discovered.set(result.word.toLowerCase(), { ...result, feedbackEligible });
-    if (result.source === "ai") run.assist = "ai";
+    if (["ai", "ai-route"].includes(result.source)) run.assist = combineAssistance(run.assist, "ai").id;
     if (result.word.toLowerCase() === run.game.target.toLowerCase()) {
-      run.completedAt = Date.now();
+      run.completedAt = this.store.now().getTime();
       if (run.ranked) run.expiresAt = Math.max(run.expiresAt, run.completedAt + COMPLETED_RANKED_RUN_RETENTION_MS);
     }
     this.checkpoint(run);
     return historyEntry;
+  }
+
+  recordRejectedAttempt(run, { a = "", b = "" } = {}) {
+    if (run.completedAt) throw serviceError(409, "This orbit is already complete.", "run_complete");
+    run.rejectedAttempts += 1;
+    run.attempts += 1;
+    run.actionTimes.push(this.store.now().getTime());
+    run.actionTimes = run.actionTimes.slice(-64);
+    const record = {
+      attempt: run.attempts,
+      pairFingerprint: this.store.signFor("run-rejected-pair", [a, b].map((word) => canonicalChallengeText(word, 28)).sort().join("+")),
+      at: this.store.now().toISOString()
+    };
+    this.checkpoint(run);
+    return record;
   }
 
   reveal(run, route) {
@@ -1514,7 +2768,7 @@ export class RunRegistry {
     run.scoringDisabled = true;
     run.forfeited = true;
     run.forfeitReason = "reveal";
-    run.forfeitedAt ||= Date.now();
+    run.forfeitedAt ||= this.store.now().getTime();
     run.revealRoute = route.map((step) => ({ ...step }));
     for (const step of run.revealRoute) {
       const newDiscovery = !run.discovered.has(step.word.toLowerCase());
@@ -1528,6 +2782,8 @@ export class RunRegistry {
         note: step.note || "",
         source: "reveal",
         newDiscovery,
+        progressionEligible: false,
+        eventEligible: false,
         twisted: false,
         canonicalWord: "",
         revealed: true
@@ -1535,7 +2791,7 @@ export class RunRegistry {
       run.discovered.set(step.word.toLowerCase(), { ...step, source: "reveal" });
       run.moves += 1;
     }
-    run.completedAt = Date.now();
+    run.completedAt = this.store.now().getTime();
     this.checkpoint(run);
     return run.revealRoute;
   }
@@ -1544,11 +2800,10 @@ export class RunRegistry {
     if (run.submitted) throw serviceError(409, "This score was already submitted.", "already_submitted");
     if (run.completedAt) throw serviceError(409, "This orbit is already complete.", "run_complete");
 
-    run.assist = run.forfeitReason === "reveal" ? "reveal" : "sense";
-    run.scoringDisabled = true;
-    run.forfeited = true;
-    run.forfeitReason ||= "sense";
-    run.forfeitedAt ||= Date.now();
+    if (!run.scoringDisabled && !run.forfeited) {
+      run.assist = combineAssistance(run.assist, "sense").id;
+      run.game = { ...run.game, division: "open", pureEligible: false };
+    }
     this.checkpoint(run);
     return run;
   }
@@ -1572,11 +2827,10 @@ export class RunRegistry {
     };
     run.giftUsed = true;
     run.giftItem = giftItem;
-    if (!run.forfeited || run.assist === "none") run.assist = "gift";
-    run.scoringDisabled = true;
-    run.forfeited = true;
-    run.forfeitReason ||= "gift";
-    run.forfeitedAt ||= Date.now();
+    if (!run.scoringDisabled && !run.forfeited) {
+      run.assist = combineAssistance(run.assist, "gift").id;
+      run.game = { ...run.game, division: "open", pureEligible: false };
+    }
     run.discovered.set(giftItem.word.toLowerCase(), structuredClone(giftItem));
     this.checkpoint(run);
     return structuredClone(giftItem);
@@ -1618,7 +2872,7 @@ export class RunRegistry {
     if (!["market", "wish"].includes(assist)) throw serviceError(400, "That Reality Bend is not available.", "invalid_bend_assist");
     run.usedBend = true;
     run.bendItem = structuredClone(item);
-    run.assist = assist;
+    run.assist = combineAssistance(run.assist, assist).id;
     run.game = { ...run.game, division: "open", pureEligible: false };
     run.discovered.set(item.word.toLowerCase(), item);
     this.checkpoint(run);
@@ -1627,6 +2881,9 @@ export class RunRegistry {
   progress(run) {
     return {
       moves: run.moves,
+      attempts: run.attempts,
+      rejectedAttempts: run.rejectedAttempts,
+      errorless: run.rejectedAttempts === 0,
       completed: Boolean(run.completedAt),
       completedAt: run.completedAt ? new Date(run.completedAt).toISOString() : null,
       submitted: Boolean(run.submitted),
@@ -1647,19 +2904,58 @@ export class RunRegistry {
     run.submitted = true;
     const elapsedMs = Math.max(1, run.completedAt - run.startedAt);
     const assisted = run.assist !== "none";
+    const routePar = Array.isArray(run.solutionRoute) && run.solutionRoute.length
+      ? run.solutionRoute.length
+      : Math.max(1, Math.floor(Number(run.game.parMoves) || 3 + (Number(run.game.tier) || 1) * 3));
+    const signature = sanitizeRouteSignature(createRouteSignature({
+      history: run.history,
+      target: run.game.target,
+      completed: true,
+      moves: run.moves,
+      attempts: run.attempts,
+      rejectedAttempts: run.rejectedAttempts,
+      errorless: run.rejectedAttempts === 0,
+      parMoves: routePar,
+      game: run.game,
+      mode: run.game.mode,
+      challengeId: run.challengeId,
+      assist: run.assist,
+      scoringDisabled: false,
+      revealed: false
+    }));
+    run.verifiedSignature = signature;
+    const elapsedSeconds = Math.round(elapsedMs / 1000);
+    const challengeIdentity = buildChallengeIdentity(run.game, { assist: run.assist });
+    run.finalChallengeKey = challengeIdentity.key;
+    const anomalyFlags = [];
+    // Keep this deliberately conservative: short verified routes can be
+    // replayed very quickly, while a burst of a dozen server actions inside a
+    // quarter-second is a much stronger automation signal.
+    if (run.attempts >= 12 && elapsedMs < 250) anomalyFlags.push("implausible_total_cadence");
+    const rapidIntervals = run.actionTimes.slice(1).filter((time, index) => time - run.actionTimes[index] < 20).length;
+    if (run.actionTimes.length >= 12 && rapidIntervals >= 8) anomalyFlags.push("automation_cadence");
     const entry = {
       id: randomUUID(),
       runId: run.runId,
       playerId: run.playerId,
       callsign,
       challengeId: run.challengeId,
+      challengeKey: challengeIdentity.key,
+      challengeBaseKey: run.challengeBaseIdentity.key,
+      challenge: challengeIdentity.descriptor,
       division: assisted ? "open" : "pure",
       assist: run.assist,
       mode: run.game.mode,
       target: run.game.target,
-      score: calculateStarscore({ game: run.game, moves: run.moves, elapsedSeconds: Math.round(elapsedMs / 1000), assisted }),
+      score: calculateStarscore({ game: run.game, moves: run.moves, elapsedSeconds, errors: run.rejectedAttempts, assisted, assist: run.assist }),
       moves: run.moves,
+      attempts: run.attempts,
+      rejectedAttempts: run.rejectedAttempts,
+      errorless: run.rejectedAttempts === 0,
       elapsedMs,
+      status: anomalyFlags.length ? "provisional" : "verified",
+      anomalyFlags,
+      signature,
       dailyKey: new Date(run.startedAt).toISOString().slice(0, 10),
       weeklyKey: isoWeekKey(new Date(run.startedAt)),
       createdAt: new Date().toISOString()
@@ -1669,12 +2965,23 @@ export class RunRegistry {
   }
 
   cleanup() {
-    const now = Date.now();
+    const now = this.store.now().getTime();
     for (const [id, run] of this.runs) {
       if (now <= run.expiresAt + 60_000) continue;
       this.runs.delete(id);
       delete this.store.data.runs[id];
     }
+  }
+
+  revokePlayer(playerId) {
+    let removed = 0;
+    for (const [runId, run] of this.runs) {
+      if (run.playerId !== playerId) continue;
+      this.runs.delete(runId);
+      delete this.store.data.runs[runId];
+      removed += 1;
+    }
+    return removed;
   }
 }
 
@@ -1696,5 +3003,31 @@ export function isoWeekKey(date = new Date()) {
 }
 
 function publicEntry(entry, rank) {
-  return { rank, callsign: entry.callsign, score: entry.score, moves: entry.moves, elapsedMs: entry.elapsedMs, mode: entry.mode, target: entry.target, assist: entry.assist, division: entry.division };
+  return {
+    rank,
+    callsign: entry.callsign,
+    score: entry.score,
+    moves: entry.moves,
+    elapsedMs: entry.elapsedMs,
+    mode: entry.mode,
+    target: entry.target,
+    challengeId: entry.challengeId,
+    challengeKey: entry.challengeKey || null,
+    challengeBaseKey: entry.challengeBaseKey || entry.challengeKey || null,
+    challenge: entry.challenge ? structuredClone(entry.challenge) : null,
+    assist: entry.assist,
+    division: entry.division,
+    attempts: Math.max(nonnegativeCounter(entry.attempts), nonnegativeCounter(entry.moves)),
+    rejectedAttempts: nonnegativeCounter(entry.rejectedAttempts),
+    errorless: entry.errorless !== false && !nonnegativeCounter(entry.rejectedAttempts),
+    status: entry.status === "provisional" ? "provisional" : "verified",
+    anomalyFlags: entry.status === "provisional" ? [...(entry.anomalyFlags || [])] : [],
+    ghost: {
+      kind: "player",
+      label: entry.status === "provisional" ? "Provisional player route" : "Verified player route",
+      verified: entry.status !== "provisional",
+      synthetic: false
+    },
+    signature: sanitizeRouteSignature(entry.signature)
+  };
 }
