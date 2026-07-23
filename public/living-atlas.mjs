@@ -162,7 +162,7 @@ export function buildLivingAtlas({ history: rawHistory = [], target = "", locked
 
   const safeTarget = safeText(target, 48);
   if (safeTarget) {
-    const targetNode = nodes.get(keyFor(safeTarget)) || addNode(nodes, safeTarget, { target: true, depth: Math.max(1, ...nodes.values().map((node) => node.depth)) + 1 });
+    const targetNode = nodes.get(keyFor(safeTarget)) || addNode(nodes, safeTarget, { target: true, depth: Math.max(1, ...[...nodes.values()].map((node) => node.depth)) + 1 });
     updateNode(targetNode, { target: true });
   }
 

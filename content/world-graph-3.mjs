@@ -1,5 +1,5 @@
 export const WORLD_GRAPH_SCHEMA_VERSION = 3;
-export const WORLD_GRAPH_VERSION = "3.0.0-beta.1";
+export const WORLD_GRAPH_VERSION = "3.0.0-beta.2";
 
 // The breadth pack makes the stricter editorial ceiling practical: no more
 // than roughly one in five reachable concepts may remain a non-terminal

@@ -1,24 +1,24 @@
-import { createCtrlHoverController } from "./ctrl-hover.mjs?v=3.0.0-beta.1";
-import { createShiftBoardController } from "./shift-board.mjs?v=3.0.0-beta.1";
-import { findOpenSpawn, orderInventory, packOrbit, pickMagneticTarget } from "./frictionless.mjs?v=3.0.0-beta.1";
-import { buildMasteryCollections, lifetimeMasteryProgress, recordRecipeDiscovery, sanitizeRecipeMasteryState, summarizeMasteryCollections } from "./recipe-mastery.mjs?v=3.0.0-beta.1";
-import { QUICK_TIP_LIMIT, assistancePolicy, buildGhost, combineAssistance, feedbackCuePolicy, ghostSnapshot, ghostTrailPreviewState, grantSenseCharges, lifetimeProgression, reconcileCloudProgression, refillSenseWallet, sanitizeFeedbackPreferences, sanitizeSenseWallet, spendSenseCharge, weeklyRatingPresentation } from "./engagement-features.mjs?v=3.0.0-beta.1";
-import { firstOrbitProgress, firstOrbitWrongPairMessage, resolveFirstOrbitCombination, sanitizeFirstOrbitState } from "./first-orbit.mjs?v=3.0.0-beta.1";
-import { secondOrbitProgress, sanitizeSecondOrbitState } from "./second-orbit.mjs?v=3.0.0-beta.1";
-import { exploreGame, mergeExploreInventory, sanitizeExploreInventory } from "./explore-sandbox.mjs?v=3.0.0-beta.1";
-import { buildConstellationCard, constellationCardFilename, constellationCardShareText, renderConstellationCardSvg } from "./constellation-card.mjs?v=3.0.0-beta.1";
-import { COSMETIC_CATALOG, cosmeticClasses, cosmeticOptions, earnedBadges, progressionAuraClass, sanitizeCosmeticLoadout, transformFeedbackAudio } from "./cosmetic-economy.mjs?v=3.0.0-beta.1";
-import { createRecipeFeedbackRequest, recipeFingerprint, sanitizeRecipeRating } from "./recipe-feedback.mjs?v=3.0.0-beta.1";
-import { selectUniverse } from "./universe-director.mjs?v=3.0.0-beta.1";
-import { listPendingScoreRecords, removePendingScoreRecord, savePendingScoreRecord } from "./pending-scores.mjs?v=3.0.0-beta.1";
-import { buildMissionBriefing } from "./mission-briefing.mjs?v=3.0.0-beta.1";
-import { advanceVoyageProgress, constellationVoyage, constellationVoyageCatalog, currentVoyageStage, sanitizeVoyageProgress, voyageProgress } from "./constellation-voyages.mjs?v=3.0.0-beta.1";
-import { annotateCosmicEventResult, cosmicEventCollectionProgress, cosmicEventTargets, currentCosmicEvent } from "./cosmic-events.mjs?v=3.0.0-beta.1";
-import { explainRecipeNearMiss, explainSuccessfulRecipe } from "./recipe-insight.mjs?v=3.0.0-beta.1";
-import { buildLivingAtlas, buildRouteProgress } from "./living-atlas.mjs?v=3.0.0-beta.1";
-import { buildCommunityResults } from "./community-results.mjs?v=3.0.0-beta.1";
-import { comparePersonalBest, createRouteSignature, gradeSignatureRoute, sanitizeRouteSignature } from "./signature-routes.mjs?v=3.0.0-beta.1";
-import { createHomeMenuState } from "./home-menu.mjs?v=3.0.0-beta.1";
+import { createCtrlHoverController } from "./ctrl-hover.mjs?v=3.0.0-beta.2";
+import { createShiftBoardController } from "./shift-board.mjs?v=3.0.0-beta.2";
+import { findOpenSpawn, orderInventory, packOrbit, pickMagneticTarget } from "./frictionless.mjs?v=3.0.0-beta.2";
+import { buildMasteryCollections, lifetimeMasteryProgress, recordRecipeDiscovery, sanitizeRecipeMasteryState, summarizeMasteryCollections } from "./recipe-mastery.mjs?v=3.0.0-beta.2";
+import { QUICK_TIP_LIMIT, assistancePolicy, buildGhost, combineAssistance, feedbackCuePolicy, ghostSnapshot, ghostTrailPreviewState, grantSenseCharges, lifetimeProgression, reconcileCloudProgression, refillSenseWallet, sanitizeFeedbackPreferences, sanitizeSenseWallet, spendSenseCharge, weeklyRatingPresentation } from "./engagement-features.mjs?v=3.0.0-beta.2";
+import { firstOrbitProgress, firstOrbitWrongPairMessage, resolveFirstOrbitCombination, sanitizeFirstOrbitState } from "./first-orbit.mjs?v=3.0.0-beta.2";
+import { secondOrbitProgress, sanitizeSecondOrbitState } from "./second-orbit.mjs?v=3.0.0-beta.2";
+import { exploreGame, mergeExploreInventory, sanitizeExploreInventory } from "./explore-sandbox.mjs?v=3.0.0-beta.2";
+import { buildConstellationCard, constellationCardFilename, constellationCardShareText, renderConstellationCardSvg } from "./constellation-card.mjs?v=3.0.0-beta.2";
+import { COSMETIC_CATALOG, cosmeticClasses, cosmeticOptions, earnedBadges, progressionAuraClass, sanitizeCosmeticLoadout, transformFeedbackAudio } from "./cosmetic-economy.mjs?v=3.0.0-beta.2";
+import { createRecipeFeedbackRequest, recipeFingerprint, sanitizeRecipeRating } from "./recipe-feedback.mjs?v=3.0.0-beta.2";
+import { selectUniverse } from "./universe-director.mjs?v=3.0.0-beta.2";
+import { listPendingScoreRecords, removePendingScoreRecord, savePendingScoreRecord } from "./pending-scores.mjs?v=3.0.0-beta.2";
+import { buildMissionBriefing } from "./mission-briefing.mjs?v=3.0.0-beta.2";
+import { advanceVoyageProgress, constellationVoyage, constellationVoyageCatalog, currentVoyageStage, sanitizeVoyageProgress, voyageProgress } from "./constellation-voyages.mjs?v=3.0.0-beta.2";
+import { annotateCosmicEventResult, cosmicEventCollectionProgress, cosmicEventTargets, currentCosmicEvent } from "./cosmic-events.mjs?v=3.0.0-beta.2";
+import { explainRecipeNearMiss, explainSuccessfulRecipe } from "./recipe-insight.mjs?v=3.0.0-beta.2";
+import { buildLivingAtlas, buildRouteProgress } from "./living-atlas.mjs?v=3.0.0-beta.2";
+import { buildCommunityResults } from "./community-results.mjs?v=3.0.0-beta.2";
+import { comparePersonalBest, createRouteSignature, gradeSignatureRoute, sanitizeRouteSignature } from "./signature-routes.mjs?v=3.0.0-beta.2";
+import { createHomeMenuState } from "./home-menu.mjs?v=3.0.0-beta.2";
 
 const starterEmoji = { Earth: "🌍", Water: "💧", Fire: "🔥", Air: "💨" };
 const starterCategory = { Earth: "nature", Water: "force", Fire: "force", Air: "force" };
@@ -1623,7 +1623,7 @@ async function loadConfig() {
 
 async function fetchJson(url, options = {}, timeout = 20000) {
   if (isStaticBeta) {
-    localRuntimePromise ||= import("./local-beta.mjs?v=3.0.0-beta.1");
+    localRuntimePromise ||= import("./local-beta.mjs?v=3.0.0-beta.2");
     const runtime = await localRuntimePromise;
     return runtime.localRequest(url, options);
   }
@@ -7340,7 +7340,7 @@ async function boot() {
   if (profile.playerId && profile.playerToken) await initializeCloudServices();
   announcePendingScoreRecovery(await retryPendingScoreUploads());
   if ("serviceWorker" in navigator && window.top === window.self) {
-    const serviceWorkerUrl = isStaticBeta ? "./service-worker.js?v=3.0.0-beta.1" : "/play/service-worker.js?v=3.0.0-beta.1";
+    const serviceWorkerUrl = isStaticBeta ? "./service-worker.js?v=3.0.0-beta.2" : "/play/service-worker.js?v=3.0.0-beta.2";
     const serviceWorkerScope = isStaticBeta ? "./" : "/play/";
     navigator.serviceWorker.register(serviceWorkerUrl, { scope: serviceWorkerScope }).catch(() => {});
   }

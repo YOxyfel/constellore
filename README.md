@@ -6,7 +6,7 @@ The former working title, Wordforge, was retired before release because it is al
 
 The repository is a dependency-free Node.js 20+ web app and installable PWA. It does not yet contain native mobile, Electron, Steam, or Epic wrappers; those are separate future distribution projects.
 
-## Version 3.0.0-beta.1 highlights
+## Version 3.0.0-beta.2 highlights
 
 - **The path is now the product:** First Orbit teaches the board, Second Orbit teaches a real three-fusion route without blocking experimentation, and then the hub progressively reveals Daily play, modifiers, Journeys, Creator's Lab, collections, and community surfaces.
 - **World Graph 3** packages 759 playable word records and 1,066 deterministic recipes in a compact runtime. The graph audit catalogs 744 concepts, with 686 reachable from the four starters. All 759 reviewed high-intent attempts work, including same-word recipes; all forty official targets have alternate final recipes; and 90 deterministic Daily variants are quality-gated.

@@ -6,11 +6,11 @@ import {
   localRouteTo,
   localSuggestions,
   lookupLocalCombination
-} from "./local-world.mjs?v=3.0.0-beta.1";
-import { cosmicTwistOptions, cosmicTwistSeedFor, selectCosmicTwist } from "./cosmic-twists.mjs?v=3.0.0-beta.1";
-import { QUICK_TIP_LIMIT, assistancePolicy, combineAssistance, rankSenseCandidates, selectRouteNavigationTip, selectWordGift } from "./engagement-features.mjs?v=3.0.0-beta.1";
-import { annotateUniverseResult, selectUniverse, validateUniverseRoute } from "./universe-director.mjs?v=3.0.0-beta.1";
-import { sanitizeRecipeRating } from "./recipe-feedback.mjs?v=3.0.0-beta.1";
+} from "./local-world.mjs?v=3.0.0-beta.2";
+import { cosmicTwistOptions, cosmicTwistSeedFor, selectCosmicTwist } from "./cosmic-twists.mjs?v=3.0.0-beta.2";
+import { QUICK_TIP_LIMIT, assistancePolicy, combineAssistance, rankSenseCandidates, selectRouteNavigationTip, selectWordGift } from "./engagement-features.mjs?v=3.0.0-beta.2";
+import { annotateUniverseResult, selectUniverse, validateUniverseRoute } from "./universe-director.mjs?v=3.0.0-beta.2";
+import { sanitizeRecipeRating } from "./recipe-feedback.mjs?v=3.0.0-beta.2";
 
 const runs = new Map();
 const missionPreviews = new Map();

@@ -2,7 +2,7 @@
 
 This scaffold publishes Constellore as a **free-to-players beta** on one paid Render Starter web-service instance in Frankfurt. It does not create any account or cloud resource, and it does not make the current JSON economy safe for real-money purchases.
 
-The v3.0.0-beta.1 build makes the target route the central product: it introduces the simplified first session, World Graph 3, one progressive Guidance ladder, visible route milestones, exact-challenge ranked integrity, expiring/revocable device sessions, provisional anomaly handling, privacy-safe cohort and missing-pair analytics, six-hour earn-only Exchange quotes, AI recipe quarantine, and automated browser/release gates. These features are ready for beta testing; they do not remove the storage, operations, commerce, legal, or real-user evidence requirements described below.
+The v3.0.0-beta.2 build makes the target route the central product: it introduces the simplified first session, World Graph 3, one progressive Guidance ladder, visible route milestones, exact-challenge ranked integrity, expiring/revocable device sessions, provisional anomaly handling, privacy-safe cohort and missing-pair analytics, six-hour earn-only Exchange quotes, AI recipe quarantine, and automated browser/release gates. These features are ready for beta testing; they do not remove the storage, operations, commerce, legal, or real-user evidence requirements described below.
 
 The configuration follows Render's current [Blueprint YAML reference](https://render.com/docs/blueprint-spec), [Node web-service guidance](https://render.com/docs/web-services), and [persistent-disk documentation](https://render.com/docs/disks).
 

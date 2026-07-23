@@ -1,6 +1,6 @@
 {
   "name": "constellore",
-  "version": "3.0.0-beta.1",
+  "version": "3.0.0-beta.2",
   "description": "A mobile-first, target-based word-route puzzle game.",
   "private": true,
   "type": "module",

@@ -27,7 +27,7 @@ const runRegistry = new RunRegistry(gameStore);
 await runRegistry.flush();
 const backupDirectory = storePath === ":memory:" ? "" : (process.env.CONSTELLORE_BACKUP_DIR || join(dirname(storePath), "backups"));
 const backupRetention = Math.min(30, Math.max(1, Number(process.env.CONSTELLORE_BACKUP_KEEP) || 7));
-const APP_VERSION = process.env.CONSTELLORE_VERSION || packageMetadata.version || "3.0.0-beta.1";
+const APP_VERSION = process.env.CONSTELLORE_VERSION || packageMetadata.version || "3.0.0-beta.2";
 const BUILD_VERSION = process.env.CONSTELLORE_BUILD_VERSION || process.env.GIT_COMMIT || process.env.RENDER_GIT_COMMIT || "local-dev";
 const GRAPH_VERSION = process.env.CONSTELLORE_GRAPH_VERSION || `world-${APP_VERSION}`;
 const RANKED_RULES_VERSION = "ranked-v3";
