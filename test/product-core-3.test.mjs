@@ -8,6 +8,8 @@ import { missionDivision } from "../public/mission-briefing.mjs";
 const app = await readFile(new URL("../public/app.js", import.meta.url), "utf8");
 const page = await readFile(new URL("../public/index.html", import.meta.url), "utf8");
 const styles = await readFile(new URL("../public/styles.css", import.meta.url), "utf8");
+const simpleStyles = await readFile(new URL("../public/simple-ui.css", import.meta.url), "utf8");
+const reportDelivery = await readFile(new URL("../public/combination-report-delivery.mjs", import.meta.url), "utf8");
 
 test("3.0 uses explicit Pure, Open, Practice, and Study mission divisions", () => {
   assert.equal(missionDivision({ mode: "quick", ranked: true }).id, "pure");
@@ -33,13 +35,15 @@ test("route progress is bounded, non-spoiling, and recognizes the destination", 
   assert.ok(route.lineFill > 0 && route.lineFill <= 92);
 });
 
-test("the home and board expose one core loop with progressive destinations and Guidance", () => {
+test("the home and board expose one plain core loop and one Help action", () => {
   assert.match(page, /id="primaryOrbitButton"/);
-  assert.match(page, /id="modePicker"[\s\S]*MISSION RULES[\s\S]*Relaxed[\s\S]*Sprint[\s\S]*Precision/);
-  assert.match(page, /id="exploreHub"[\s\S]*DAILY WORD[\s\S]*EXPLORE · PRACTICE[\s\S]*Creator’s Lab/);
-  assert.match(page, /id="senseButton"[\s\S]*<b>Guidance<\/b>/);
-  assert.match(page, /id="runDivisionPill"/);
-  assert.match(page, /id="routeProgressTrail"/);
+  assert.match(page, /id="modePicker"[\s\S]*Choose game[\s\S]*Relaxed[\s\S]*Timed[\s\S]*Limited moves/);
+  assert.match(page, /id="exploreHub"[\s\S]*Today.s word[\s\S]*FREE PLAY[\s\S]*Choose a word/);
+  assert.match(page, /id="senseButton"[\s\S]*<b>Help<\/b>/);
+  assert.match(page, /class="run-division-pill practice simple-hidden" id="runDivisionPill"/);
+  assert.match(page, /class="run-milestone" id="runMilestone"[\s\S]*id="routeProgressTrail"/);
+  assert.match(simpleStyles, /:is\([.]rival-ghost, [.]ghost-preview\)\s*\{[^}]*display:\s*none !important/);
+  assert.match(simpleStyles, /[.]simple-ui [.]run-milestone\s*\{[^}]*width:[^}]*padding:/);
   assert.match(page, /id="resultRouteTrail"/);
   assert.match(page, /id="resultDetails"/);
 });
@@ -80,22 +84,34 @@ test("diagnostics are opt-in, bounded, resettable, and same-origin", () => {
 });
 
 test("monetization stays cosmetic or earn-only while competitive play stays clean", () => {
-  assert.match(page, /SUPPORTER PACK · LIFETIME[\s\S]*never changes recipes, Guidance, score, time, moves, or leaderboard eligibility/);
-  assert.match(page, /Creator’s Lab[\s\S]*always unranked/);
+  assert.match(page, /SUPPORTER PACK · LIFETIME[\s\S]*never changes recipes,[\s\S]*score, time, moves, or leaderboard eligibility/);
+  assert.match(page, /Custom targets do not go on leaderboards/);
   assert.match(app, /COMMERCE_LAUNCH_READY = document[.]body[.]dataset[.]commerce === "enabled"/);
   assert.match(app, /Purchases stay disabled during the free beta/);
   assert.match(app, /Creator words are available only in unranked Practice or Creator’s Lab/);
   assert.match(app, /Star Credits are earned through verified play and are never sold/);
 });
 
-test("missing combinations offer one bounded, no-free-text expectation report", () => {
+test("missing combinations ask for one bounded result and use the correct delivery path", () => {
   const feedback = page.match(/<section\b(?=[^>]*id="expectedPairFeedback")[\s\S]*?<\/section>/)?.[0] || "";
-  assert.match(feedback, /Expected this to work/);
-  assert.match(feedback, /No free text or identity is sent/);
+  assert.match(feedback, /What should[\s\S]*make[?]/);
+  assert.match(feedback, /id="expectedPairResult"[^>]*maxlength="28"/);
+  assert.doesNotMatch(feedback, /<textarea/i, "the report must not collect an open comment");
+  assert.doesNotMatch(feedback, /type="email"|name="(?:name|email|contact)"/i, "the report must not collect identity or contact fields");
+  assert.match(feedback, /Do not enter your name or private information/);
   assert.match(app, /state[.]expectedPairReports[.]has\(key\)/);
   assert.match(app, /state[.]expectedPairReports[.]add\(report[.]key\)/);
-  assert.match(app, /name: "combination_expected"/);
-  assert.match(app, /String\(a\)[.]slice\(0, 48\)/);
+  assert.match(app, /sanitizeCombinationSuggestion\(els[.]expectedPairResult[.]value\)/);
+  assert.match(reportDelivery, /function sanitizeCombinationSuggestion\([\s\S]*normalized[.]length > 28[\s\S]*https[?]:/);
+  assert.match(app, /PUBLIC_FEEDBACK_API_URL|FEEDBACK_API_URL/);
+  assert.match(app, /validateCombinationReportEndpoint\(document[.]body[.]dataset[.]feedbackApi\)/);
+  assert.match(reportDelivery, /function validateCombinationReportEndpoint\([\s\S]*\/api\/combination-reports/);
+  const submit = app.slice(app.indexOf("async function submitExpectedPairFeedback"), app.indexOf("function resetRecipeFeedback"));
+  assert.match(submit, /expectedPairDelivery[.]saveLocal\([\s\S]*expectedPairDelivery[.]queue[\s\S]*expectedPairDelivery[.]post/);
+  assert.match(submit, /fetchJson\("\/api\/combination-reports"[\s\S]*expected: expected \|\| ""[\s\S]*reporterId:/);
+  assert.match(submit, /no sign-in was needed/);
+  assert.match(app, /window[.]addEventListener\("online", handleOnline\)[\s\S]*function boot\(\)/);
+  assert.doesNotMatch(submit, /github[.]com|window[.]open|anchor[.]click/);
 });
 
 test("new 3.0 surfaces retain the 15px text and 44px touch floors", () => {

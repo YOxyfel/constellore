@@ -15,14 +15,45 @@ const [gameHtml, websiteHtml, worker, manifestSource, releaseSource, privacy, te
 ]);
 const manifest = JSON.parse(manifestSource);
 const release = JSON.parse(releaseSource);
+const celestialAtlasArt = await readFile(join(root, "public", "art", "celestial-atlas-bg-v1.webp"));
+const rankArtFiles = [
+  "tier-01-common",
+  "tier-02-dawn",
+  "tier-03-nebula",
+  "tier-04-aurora",
+  "tier-05-rift",
+  "tier-06-singularity"
+].flatMap((tier) => ["sm", "md", "lg"].map((size) => `${tier}-${size}.webp`));
+const rankArt = await Promise.all(
+  rankArtFiles.map((name) => readFile(join(root, "public", "art", "ranks", name)))
+);
 
 assert.ok(gameHtml.includes(`data-build-version="${pkg.version}"`), "Run npm run release:sync before packaging: game build version is stale.");
 assert.ok(gameHtml.includes(`/app.js?v=${pkg.version}`), "The game app asset is not tied to the package release version.");
 assert.ok(gameHtml.includes(`/styles.css?v=${pkg.version}`), "The game stylesheet is not tied to the package release version.");
+assert.ok(gameHtml.includes(`/simple-ui.css?v=${pkg.version}`), "The simplified game stylesheet is not tied to the package release version.");
 assert.ok(websiteHtml.includes(`data-build-version="${pkg.version}"`), "Run npm run release:sync before packaging: website build version is stale.");
 assert.ok(websiteHtml.includes(`website.css?v=${pkg.version}`), "The website stylesheet is not tied to the package release version.");
 assert.ok(websiteHtml.includes(`website.js?v=${pkg.version}`), "The website script is not tied to the package release version.");
 assert.ok(worker.includes(`\${CACHE_PREFIX}${pkg.version}`), "The service-worker cache does not match the package release version.");
+assert.ok(worker.includes(`/simple-ui.css?v=${pkg.version}`), "The service worker does not cache the simplified game stylesheet.");
+assert.ok(worker.includes(`/combination-report-delivery.mjs?v=${pkg.version}`), "The service worker does not cache anonymous report delivery.");
+assert.ok(worker.includes(`/adaptive-difficulty.mjs?v=${pkg.version}`), "The service worker does not cache the adaptive difficulty engine.");
+assert.ok(worker.includes(`/remix-progression.mjs?v=${pkg.version}`), "The service worker does not cache the Route Rank progression engine.");
+assert.ok(worker.includes(`/remix-readiness.mjs?v=${pkg.version}`), "The service worker does not cache the Remix readiness engine.");
+assert.ok(worker.includes(`/route-remixes.mjs?v=${pkg.version}`), "The service worker does not cache the route-remix rules engine.");
+assert.ok(worker.includes(`/shuffled-start.mjs?v=${pkg.version}`), "The service worker does not cache the Shuffled start engine.");
+assert.ok(worker.includes(`/rank-board-art.mjs?v=${pkg.version}`), "The service worker does not cache the rank-art mapping engine.");
+assert.ok(worker.includes(`/rank-board-art-runtime.mjs?v=${pkg.version}`), "The service worker does not cache the rank-art runtime.");
+assert.ok(worker.includes("/art/celestial-atlas-bg-v1.webp"), "The service worker does not cache the celestial atlas artwork.");
+assert.ok(worker.includes('"/art/ranks/"'), "Rank artwork is not configured for lazy offline caching.");
+assert.doesNotMatch(worker, /const SHELL = [^;]+tier-0[1-6]-/, "Rank artwork must not inflate the install shell.");
+assert.equal(celestialAtlasArt.subarray(0, 4).toString("ascii"), "RIFF", "The celestial atlas artwork is not a WebP RIFF file.");
+assert.equal(celestialAtlasArt.subarray(8, 12).toString("ascii"), "WEBP", "The celestial atlas artwork is not a valid WebP container.");
+for (const [index, art] of rankArt.entries()) {
+  assert.equal(art.subarray(0, 4).toString("ascii"), "RIFF", `${rankArtFiles[index]} is not a WebP RIFF file.`);
+  assert.equal(art.subarray(8, 12).toString("ascii"), "WEBP", `${rankArtFiles[index]} is not a valid WebP container.`);
+}
 assert.equal(release.version, pkg.version, "public/release.json does not match the package release version.");
 assert.equal(release.buildId, `${pkg.version}+source`, "The checked-in release metadata must use the deterministic source build ID.");
 assert.equal(release.channel, "server-beta");

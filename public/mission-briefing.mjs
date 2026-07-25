@@ -1,18 +1,42 @@
 const MODE_RULES = {
-  training: "Follow three guided fusions to learn the real board controls.",
-  "second-orbit": "Reach Mountain in three route fusions. Other logical combinations remain available, so experimenting is safe.",
-  explore: "There is no destination, score, clock, or move cap. Every discovery remains available when you return to Explore.",
-  reach: "There is no clock or move cap, so you can explore freely.",
-  quick: "Reach the destination before the 90-second clock expires.",
-  moves: "Every successful fusion uses one of your limited moves.",
-  daily: "You get one scored completion of today's shared destination.",
-  weekly: "Complete this stage within its move limit to continue the expedition.",
-  challenge: "You are tracing the same target and universe as the shared challenge."
+  training: "We will show you three combinations.",
+  "second-orbit": "Make Mountain in three combinations.",
+  explore: "There is no target, timer, or move limit.",
+  reach: "There is no timer or move limit.",
+  quick: "Make the target before time runs out.",
+  moves: "Each successful combination uses one move.",
+  daily: "You can finish today's word once.",
+  weekly: "Finish this game within the move limit.",
+  challenge: "Make the same target as your friend."
 };
 
 function positiveInteger(value, fallback = 0) {
   const parsed = Number(value);
   return Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : fallback;
+}
+
+function startingWords(game) {
+  for (const source of [game?.starters, game?.startProfile?.starters]) {
+    if (!Array.isArray(source)) continue;
+    const words = [];
+    const seen = new Set();
+    for (const candidate of source) {
+      const word = String(candidate?.word ?? candidate ?? "").trim();
+      const key = word.toLocaleLowerCase("en-US");
+      if (!word || seen.has(key)) continue;
+      seen.add(key);
+      words.push(word);
+      if (words.length === 6) break;
+    }
+    if (words.length) return words;
+  }
+  return ["Earth", "Water", "Fire", "Air"];
+}
+
+function readableWordList(words) {
+  if (words.length < 2) return words[0] || "";
+  if (words.length === 2) return `${words[0]} and ${words[1]}`;
+  return `${words.slice(0, -1).join(", ")}, and ${words.at(-1)}`;
 }
 
 export function missionDivision(game, { localOnly = false } = {}) {
@@ -77,33 +101,41 @@ export function buildMissionBriefing(game, { localOnly = false } = {}) {
   const scoringDisabled = game?.scoreEligible === false || game?.rewardEligible === false;
   const ranked = Boolean(game?.ranked && !localOnly && !scoringDisabled);
   const division = missionDivision(game, { localOnly });
+  const starters = startingWords(game);
+  const actualStartStyle = String(
+    game?.startProfile?.style ?? game?.startStyle ?? "classic"
+  ).trim().toLocaleLowerCase("en-US");
+  const shuffledStart = actualStartStyle === "shuffled";
 
-  let limitValue = mode === "explore" ? "Persistent sandbox" : "No limit";
-  let limitDetail = "Explore at your own pace.";
+  let limitValue = mode === "explore" ? "Free play." : "No time limit.";
+  let limitDetail = "Take as long as you want.";
   if (timeLimit) {
-    limitValue = `${timeLimit} seconds`;
-    limitDetail = "The clock starts after this briefing.";
+    limitValue = `${timeLimit} seconds.`;
+    limitDetail = "The timer starts when you press Play.";
   } else if (moveLimit) {
-    limitValue = `${moveLimit} fusions`;
+    limitValue = `${moveLimit} moves.`;
     limitDetail = mode === "weekly" && Number.isFinite(Number(game?.stage))
-      ? `Expedition stage ${Number(game.stage) + 1} of ${positiveInteger(game?.stageCount, 3)}.`
-      : "Only successful combinations spend a move.";
+      ? `Game ${Number(game.stage) + 1} of ${positiveInteger(game?.stageCount, 3)}.`
+      : "Only successful combinations use a move.";
   } else if (mode === "daily") {
-    limitValue = "One scored run";
-    limitDetail = "Complete today's destination once.";
+    limitValue = "One game today.";
+    limitDetail = "Finish today's target once.";
   }
 
   return {
     mode,
-    modeLabel: `${modeName.toUpperCase()} · MISSION BRIEF`,
+    modeLabel: modeName,
     target,
     division,
     emoji: String(game?.emoji || "✦"),
     instruction: mode === "explore"
-      ? "Combine any two meaningful ideas and grow a universe you can reuse in every Explore session."
-      : `Combine words until one fusion creates ${target}.`,
-    interactionRule: "Drag one word onto another, or tap any two discovered words, to fuse them.",
+      ? "Combine any two words and see what you can make."
+      : `Keep combining words until you make ${target}.`,
+    interactionRule: "Drop one word onto another to combine them.",
     modeRule: MODE_RULES[mode] || MODE_RULES.reach,
+    startStyle: shuffledStart ? "shuffled" : "classic",
+    startValue: `You start with ${starters.length} ${starters.length === 1 ? "word" : "words"}`,
+    startDetail: readableWordList(starters),
     limitValue,
     limitDetail,
     rewardValue: sandbox ? "No rewards" : scoringDisabled ? "0 Stardust" : `${reward} Stardust`,
@@ -124,13 +156,13 @@ export function buildMissionBriefing(game, { localOnly = false } = {}) {
         ? "Saved on this device; no leaderboard upload."
         : "This mode does not upload to a leaderboard.",
     fairnessNote: sandbox
-      ? "Explore keeps its own reusable inventory. Ranked modes always begin again from Earth, Water, Fire, and Air."
+      ? "Explore keeps its own reusable inventory. Target games begin again from the starting words shown above."
       : scoringDisabled
       ? ["training", "second-orbit"].includes(mode)
         ? "Training uses the same combinations as the full game, but saves no rewards or leaderboard result."
         : "Play it as a Study orbit, or choose another mode for a fresh scored mission."
       : ranked
-      ? "Route Signals are score-safe. Compass and Gift keep a reduced Open score; complete Reveal becomes Study with 0 score."
-      : "Route Signals are score-safe. Compass and Gift keep reduced rewards in Open; complete Reveal becomes Study with 0 score."
+      ? `${shuffledStart ? "These starting words are only for this game and are not added to your collection. " : ""}Route Signals are score-safe. Compass and Gift keep a reduced Open score; complete Reveal becomes Study with 0 score.`
+      : `${shuffledStart ? "These starting words are only for this game and are not added to your collection. " : ""}Route Signals are score-safe. Compass and Gift keep reduced rewards in Open; complete Reveal becomes Study with 0 score.`
   };
 }

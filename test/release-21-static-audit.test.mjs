@@ -14,7 +14,8 @@ const FEATURE_MODULES = [
   "constellation-voyages",
   "recipe-insight",
   "community-results",
-  "cosmic-events"
+  "cosmic-events",
+  "adaptive-difficulty"
 ];
 
 const readProjectFile = (path) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
@@ -70,7 +71,7 @@ test("all current feature modules and release artwork are copied, cached, and ve
   ]);
   const releaseVersionPattern = JSON.parse(packageText).version.replaceAll(".", "[.]");
   assert.ok(
-    pagesBuild.includes('.filter((name) => /^(?:app[.]js|styles[.]css|.+[.]mjs|'),
+    pagesBuild.includes('.filter((name) => /^(?:app[.]js|(?:styles|simple-ui)[.]css|.+[.]mjs|'),
     "Pages must discover every public runtime module"
   );
   assert.ok(
@@ -100,9 +101,10 @@ test("all current feature modules and release artwork are copied, cached, and ve
   assert.match(itchBuild, /cp\(join\(pagesOutput, "play"\)/, "itch packaging must derive from the verified Pages play tree");
 });
 
-test("new feature copy keeps the 15px readable-text floor", async () => {
-  const [gameStyles, websiteStyles] = await Promise.all([
+test("new feature copy keeps the 18px primary reading floor", async () => {
+  const [gameStyles, simpleStyles, websiteStyles] = await Promise.all([
     readProjectFile("public/styles.css"),
+    readProjectFile("public/simple-ui.css"),
     readProjectFile("Website/styles.css")
   ]);
   const featureStyles = gameStyles.split("/* Signature Constellations")[1] || "";
@@ -114,9 +116,11 @@ test("new feature copy keeps the 15px readable-text floor", async () => {
   assert.ok(sizes.length >= 35, "the release audit should inspect every explicit 2.1 text size");
   assert.ok(sizes.every((size) => size >= 15), `2.1 feature copy fell below 15px: ${Math.min(...sizes)}px`);
 
-  for (const selector of [".step p", ".proof-feature p", ".faq-list p"]) {
+  assert.match(simpleStyles, /body[.]simple-ui\s*\{[^}]*font-size:\s*18px/);
+  assert.match(simpleStyles, /[.]simple-ui :is\(p, label, input, select, textarea\)\s*\{[^}]*font-size:\s*18px/);
+  for (const selector of [".hero-lede", ".preview-message", ".site-footer p"]) {
     const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     const rule = websiteStyles.match(new RegExp(`${escaped}\\s*\\{[^}]*\\}`))?.[0] || "";
-    assert.match(rule, /font-size:\s*(?:1[5-9]|[2-9][0-9])px/, `${selector} must keep readable launch copy`);
+    assert.match(rule, /font-size:\s*(?:clamp\()?(?:1[8-9]|[2-9][0-9])px/, `${selector} must keep the 18px reading floor`);
   }
 });

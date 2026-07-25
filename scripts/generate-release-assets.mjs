@@ -162,16 +162,16 @@ function drawText(surface, value, x, y, scale, color, spacing = 1) {
 }
 
 function drawBrandMark(surface, cx, cy, radius) {
-  surface.circle(cx, cy, radius * 1.55, [165, 134, 255, 22], Math.max(2, radius * .055));
-  surface.circle(cx, cy, radius, [18, 22, 48, 235]);
-  surface.circle(cx, cy, radius, [175, 147, 255, 185], Math.max(2, radius * .045));
-  surface.circle(cx, cy, radius * .68, [105, 226, 255, 65], Math.max(2, radius * .035));
-  star(surface, cx, cy, radius * .43, [216, 204, 255, 255]);
+  surface.circle(cx, cy, radius * 1.55, [105, 216, 204, 22], Math.max(2, radius * .055));
+  surface.circle(cx, cy, radius, [8, 37, 47, 245]);
+  surface.circle(cx, cy, radius, [241, 202, 120, 188], Math.max(2, radius * .045));
+  surface.circle(cx, cy, radius * .68, [105, 216, 204, 72], Math.max(2, radius * .035));
+  star(surface, cx, cy, radius * .43, [255, 224, 161, 255]);
 }
 
 function iconPng(size, maskable = false) {
   const surface = canvas(size, size);
-  background(surface, [7, 9, 20], [10, 12, 32]);
+  background(surface, [7, 25, 35], [6, 21, 30]);
   stars(surface, Math.max(40, Math.round(size * .28)), maskable ? 0x5120aa : 0x1920aa);
   const radius = size * (maskable ? .245 : .31);
   drawBrandMark(surface, size / 2, size / 2, radius);
@@ -180,22 +180,22 @@ function iconPng(size, maskable = false) {
 
 function socialCardPng() {
   const surface = canvas(1200, 630);
-  background(surface, [6, 8, 19], [9, 11, 29]);
+  background(surface, [7, 25, 35], [6, 21, 30]);
   stars(surface, 220, 0xc057e110);
-  surface.circle(969, 196, 268, [171, 139, 255, 28], 2);
-  surface.circle(969, 196, 356, [100, 222, 255, 17], 2);
-  surface.line(763, 446, 938, 303, [171, 139, 255, 85], 2);
-  surface.line(938, 303, 1081, 395, [111, 231, 255, 75], 2);
-  surface.circle(763, 446, 12, [171, 139, 255, 255]);
-  surface.circle(938, 303, 16, [111, 231, 255, 255]);
-  surface.circle(1081, 395, 11, [255, 204, 118, 255]);
+  surface.circle(969, 196, 268, [241, 202, 120, 27], 2);
+  surface.circle(969, 196, 356, [105, 216, 204, 18], 2);
+  surface.line(763, 446, 938, 303, [241, 202, 120, 82], 2);
+  surface.line(938, 303, 1081, 395, [105, 216, 204, 78], 2);
+  surface.circle(763, 446, 12, [241, 202, 120, 255]);
+  surface.circle(938, 303, 16, [105, 216, 204, 255]);
+  surface.circle(1081, 395, 11, [236, 146, 125, 255]);
   drawBrandMark(surface, 955, 182, 82);
-  surface.rect(70, 72, 8, 486, [171, 139, 255, 210]);
-  drawText(surface, "CONSTELLORE", 114, 98, 9, [210, 197, 255, 255], 2);
-  drawText(surface, "BUILD A UNIVERSE.", 114, 250, 7, [246, 243, 255, 255], 1);
-  drawText(surface, "FIND THE WORD.", 114, 334, 7, [112, 230, 255, 255], 1);
-  drawText(surface, "TARGET-BASED WORD ROUTE PUZZLE", 117, 476, 3, [167, 171, 195, 255], 1);
-  drawText(surface, "LOCAL PRACTICE BETA", 117, 523, 3, [121, 227, 194, 255], 1);
+  surface.rect(70, 72, 8, 486, [241, 202, 120, 210]);
+  drawText(surface, "CONSTELLORE", 114, 98, 9, [255, 224, 161, 255], 2);
+  drawText(surface, "BUILD A UNIVERSE.", 114, 250, 7, [245, 241, 231, 255], 1);
+  drawText(surface, "FIND THE WORD.", 114, 334, 7, [105, 216, 204, 255], 1);
+  drawText(surface, "TARGET-BASED WORD ROUTE PUZZLE", 117, 476, 3, [173, 195, 194, 255], 1);
+  drawText(surface, "LOCAL PRACTICE BETA", 117, 523, 3, [241, 202, 120, 255], 1);
   return encodePng(surface.width, surface.height, surface.pixels);
 }
 

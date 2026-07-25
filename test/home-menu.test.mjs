@@ -15,7 +15,7 @@ function menu(overrides = {}) {
   });
 }
 
-test("a fresh player sees one guided next action and one relaxed alternative", () => {
+test("a fresh player sees one guided Play action and one game chooser", () => {
   const state = menu();
   assert.equal(state.stage, "onboarding");
   assert.equal(state.onboardingComplete, false);
@@ -23,8 +23,10 @@ test("a fresh player sees one guided next action and one relaxed alternative", (
   assert.equal(state.adventuresReady, false);
   assert.equal(state.advancedReady, false);
   assert.equal(state.primary.action, "training");
-  assert.equal(state.primary.secondaryAction, "reach");
-  assert.match(state.primary.description, /target is Wall/i);
+  assert.equal(state.primary.label, "Play");
+  assert.equal(state.primary.secondaryAction, "modes");
+  assert.equal(state.primary.secondaryLabel, "Choose game");
+  assert.match(state.primary.description, /first target is Wall/i);
 });
 
 test("dismissing training does not unlock the full hub", () => {
@@ -37,12 +39,13 @@ test("dismissing training does not unlock the full hub", () => {
   assert.equal(state.adventuresReady, false);
 });
 
-test("completing First Orbit presents the short Second Orbit bridge before Daily", () => {
+test("completing the first lesson presents one short second lesson", () => {
   const state = menu({ firstOrbit: { seen: true, completed: true } });
   assert.equal(state.stage, "onboarding");
   assert.equal(state.onboardingComplete, false);
   assert.equal(state.primary.action, "second-orbit");
-  assert.equal(state.primary.secondaryAction, "reach");
+  assert.equal(state.primary.label, "Play");
+  assert.equal(state.primary.secondaryAction, "modes");
   assert.equal(state.progressReady, false, "zero-value progress stays hidden until a scored win");
   assert.equal(state.adventuresReady, false);
 });
@@ -76,11 +79,12 @@ test("adventures and advanced tools unlock together after demonstrated play", ()
   assert.equal(state.advancedReady, true);
 });
 
-test("a completed daily falls back to relaxed Reach without hiding custom targets", () => {
+test("a completed daily falls back to the plain untimed game chooser", () => {
   const state = menu({ firstOrbit: { seen: true, completed: true }, wins: 3, dailyCompleted: todayKey });
   assert.equal(state.primary.action, "reach");
   assert.equal(state.primary.secondaryAction, "modes");
-  assert.match(state.primary.kicker, /today's word complete/i);
+  assert.equal(state.primary.label, "Play");
+  assert.match(state.primary.description, /without a timer or move limit/i);
 });
 
 test("malformed saved onboarding data remains safely locked", () => {

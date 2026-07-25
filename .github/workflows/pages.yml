@@ -38,8 +38,11 @@ jobs:
           GITHUB_REPOSITORY: ${{ github.repository }}
           PUBLIC_BETA_URL: ${{ vars.PUBLIC_BETA_URL }}
           PUBLIC_ITCH_URL: ${{ vars.PUBLIC_ITCH_URL }}
+          PUBLIC_FEEDBACK_API_URL: ${{ vars.PUBLIC_FEEDBACK_API_URL }}
       - name: Verify Pages artifact
         run: npm run check:pages
+        env:
+          PUBLIC_FEEDBACK_API_URL: ${{ vars.PUBLIC_FEEDBACK_API_URL }}
       - name: Install browser smoke-test runtime
         run: npx playwright install --with-deps chromium
       - name: Smoke-test the exact Pages artifact

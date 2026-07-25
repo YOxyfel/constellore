@@ -29,7 +29,7 @@ test("hosted resume sends credentials only and rebuilds presentation from author
   assert.ok(!decorate.includes("...step"), "untrusted presentation fields must not be spread back into restored history");
 
   const hydrate = between("function hydrateRestoredRun", "async function restoreInterruptedRun");
-  assert.ok(hydrate.includes("state.history = decorateRestoredHistory(progress.history)"));
+  assert.ok(hydrate.includes("state.history = decorateRestoredHistory(progress.history"), "authoritative history must still drive restored presentation");
   assert.ok(hydrate.includes("state.newDiscoveries = state.history.reduce"));
 });
 

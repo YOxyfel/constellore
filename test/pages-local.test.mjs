@@ -13,7 +13,12 @@ async function preparePagesAdapter(directory) {
     "cosmic-twists.mjs",
     "engagement-features.mjs",
     "universe-director.mjs",
-    "recipe-feedback.mjs"
+    "recipe-feedback.mjs",
+    "adaptive-difficulty.mjs",
+    "remix-progression.mjs",
+    "remix-readiness.mjs",
+    "route-remixes.mjs",
+    "shuffled-start.mjs"
   ].map((filename) => copyFile(new URL(`../public/${filename}`, import.meta.url), join(directory, filename))));
 }
 
@@ -24,6 +29,10 @@ test("the compact Pages universe preserves important logical combinations", asyn
   assert.equal(data.payload.version, 3);
   assert.equal(data.payload.matrix, undefined, "the shipped local world must not serialize the dense empty matrix");
   assert.equal(data.payload.recipes.length, data.contentQuality.authoredCoverage.authoredPairs);
+  assert.ok(
+    data.payload.recipes.every((recipe) => recipe.length === 4),
+    "the shipped recipe index should retain compact offset, result, and ingredient indexes"
+  );
   assert.ok(data.words.some((item) => item.word === "Concrete"));
   assert.ok(data.words.some((item) => item.word === "Great Wall"));
   assert.equal(lookupGeneratedCombination(data, "Earth", "Water").word, "Mud");
@@ -31,7 +40,7 @@ test("the compact Pages universe preserves important logical combinations", asyn
   assert.equal(lookupGeneratedCombination(data, "Fire", "Fire").word, "Inferno");
   assert.equal(lookupGeneratedCombination(data, "Species", "Air").word, "Bird");
   assert.equal(lookupGeneratedCombination(data, "Dragon", "Telescope"), null, "the static goal universe must not manufacture a category-roulette answer");
-  assert.ok(contentQualityReport(data).officialTargetCount >= 30);
+  assert.equal(contentQualityReport(data).officialTargetCount, 500);
 });
 
 test("the generated Pages world uses a compact sparse O(1) recipe index", async (context) => {
@@ -63,7 +72,7 @@ test("every Pages mode target has a dependency-ordered route from the four start
   const games = regularModes.flatMap((mode) => data.payload.modes[mode]);
   for (const stages of data.payload.modes.weekly) games.push(...stages);
   const targets = new Set(games.map((game) => game.target));
-  assert.ok(targets.size >= 30, "the local mode cycles should cover a deep official target catalog");
+  assert.equal(targets.size, 500, "the local mode cycles should cover the complete official target catalog");
 
   for (const game of games) {
     const route = world.localRouteTo(game.target);
@@ -111,6 +120,9 @@ test("the Pages adapter completes a real local Telescope route without a server"
   assert.equal(started.game.target, "Telescope");
   assert.equal(started.game.target, missionPreview.game.target);
   assert.equal(started.run.ranked, false);
+  assert.equal(started.run.routeProgress.total, started.game.routeLength);
+  assert.equal(started.run.routeProgress.remaining, started.game.routeLength);
+  assert.equal(started.run.routeProgress.percent, 0);
   assert.equal(started.game.universe.seedId.startsWith("cx1-"), true);
   assert.ok(started.game.universe.season.id);
   assert.ok(started.game.universe.law.id);
@@ -133,6 +145,7 @@ test("the Pages adapter completes a real local Telescope route without a server"
   assert.equal(energy.ranked, false);
   assert.equal(energy.localOnly, true);
   assert.equal(energy.feedbackEligible, true, "authored Pages recipes can be rated for local QA");
+  assert.ok(energy.routeProgress.remaining <= started.run.routeProgress.remaining);
   const recipeVote = await localRequest("/api/recipe-feedback", {
     method: "POST",
     body: JSON.stringify({ runId: started.run.id, runToken: started.run.token, move: 1, rating: "logical" })
@@ -141,8 +154,12 @@ test("the Pages adapter completes a real local Telescope route without a server"
   assert.equal(energy.universeContext.seedId, started.game.universe.seedId);
   assert.equal(energy.universeContext.universeId, started.game.universe.id);
   assert.deepEqual(Object.keys(energy.universeContext).sort(), ["label", "lawId", "resonance", "seasonId", "seedId", "universeId"]);
-  assert.equal((await combine("Air", "Energy")).word, "Light");
-  assert.equal((await combine("Air", "Light")).word, "Sky");
+  const light = await combine("Air", "Energy");
+  assert.equal(light.word, "Light");
+  const sky = await combine("Air", "Light");
+  assert.equal(sky.word, "Sky");
+  assert.ok(sky.routeProgress.remaining < started.run.routeProgress.remaining);
+  assert.ok(sky.routeProgress.percent > 0);
   assert.equal((await combine("Earth", "Fire")).word, "Lava");
   assert.equal((await combine("Lava", "Water")).word, "Stone");
   assert.equal((await combine("Air", "Stone")).word, "Sand");
@@ -150,6 +167,12 @@ test("the Pages adapter completes a real local Telescope route without a server"
   const telescope = await combine("Glass", "Sky");
   assert.equal(telescope.word, "Telescope");
   assert.equal(telescope.completed, true);
+  assert.deepEqual(telescope.routeProgress, {
+    total: started.game.routeLength,
+    remaining: 0,
+    complete: true,
+    percent: 100
+  });
   assert.equal(telescope.ranked, false);
 
   await assert.rejects(
@@ -196,11 +219,11 @@ test("the Pages adapter rejects a run whose local route disagrees with the canon
   await preparePagesAdapter(directory);
   const worldPath = join(directory, "local-world.mjs");
   const source = await readFile(worldPath, "utf8");
-  const routeReturn = "  return route;\n}\n\nexport function buildLocalGame";
+  const routeReturn = "  return route;\n}\n\nexport function localRemixRecipesFor";
   assert.ok(source.includes(routeReturn), "the fixture must find the generated route return");
   await writeFile(worldPath, source.replace(
     routeReturn,
-    '  if (route.length) route[route.length - 1] = { ...route[route.length - 1], word: "Invented Route Result" };\n  return route;\n}\n\nexport function buildLocalGame'
+    '  if (route.length) route[route.length - 1] = { ...route[route.length - 1], word: "Invented Route Result" };\n  return route;\n}\n\nexport function localRemixRecipesFor'
   ), "utf8");
   const { localRequest } = await import(`${pathToFileURL(join(directory, "local-beta.mjs")).href}?test=${Date.now()}`);
 

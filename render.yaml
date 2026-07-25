@@ -24,6 +24,8 @@ services:
         value: "false"
       - key: REWARDED_ADS_ENABLED
         value: "false"
+      - key: CONSTELLORE_TRUST_PROXY
+        value: "true"
       - key: INTEREST_ALLOWED_ORIGINS
         value: https://yoxyfel.github.io
     # Free-to-play beta storage only. Do not use this JSON store for paid ownership.

@@ -2,7 +2,7 @@
 
 This scaffold publishes Constellore as a **free-to-players beta** on one paid Render Starter web-service instance in Frankfurt. It does not create any account or cloud resource, and it does not make the current JSON economy safe for real-money purchases.
 
-The v3.0.0-beta.2 build makes the target route the central product: it introduces the simplified first session, World Graph 3, one progressive Guidance ladder, visible route milestones, exact-challenge ranked integrity, expiring/revocable device sessions, provisional anomaly handling, privacy-safe cohort and missing-pair analytics, six-hour earn-only Exchange quotes, AI recipe quarantine, and automated browser/release gates. These features are ready for beta testing; they do not remove the storage, operations, commerce, legal, or real-user evidence requirements described below.
+The v3.3.0-beta.1 build adds private adaptive challenge pacing to the simplified one-action interface, verified Classic and Shuffled openings, twelve permanent Route Ranks, promotion challenges, progressively gated Route Remixes, six responsive rank-evolving board skies, direct board tools, illustrated visual system, readable animated answer reveal, 3,199 deterministic World Graph recipes, playful Run IQ momentum, truthful spoiler-free steps-left meter, one progressive Guidance ladder, exact-challenge ranked integrity, privacy-safe feedback, and automated browser/release gates. Adaptive Relaxed, Timed, and Limited Moves runs remain unranked; shared Daily, Weekly, friend, story, training, and player-chosen targets remain fixed. These features are ready for beta testing; they do not remove the storage, operations, commerce, legal, or real-user evidence requirements described below.
 
 The configuration follows Render's current [Blueprint YAML reference](https://render.com/docs/blueprint-spec), [Node web-service guidance](https://render.com/docs/web-services), and [persistent-disk documentation](https://render.com/docs/disks).
 
@@ -90,10 +90,33 @@ If the admin API is deliberately enabled, verify it from an operator terminal ra
 $headers = @{ Authorization = "Bearer $env:CONSTELLORE_ADMIN_TOKEN" }
 Invoke-RestMethod "$base/api/analytics/summary?days=30" -Headers $headers
 Invoke-RestMethod "$base/api/admin/recipe-feedback?minimumVotes=3&limit=50" -Headers $headers
+Invoke-RestMethod "$base/api/admin/rejected-pairs?minimumReports=1&limit=100" -Headers $headers
 Invoke-RestMethod "$base/api/admin/backup" -Method Post -Headers $headers -ContentType "application/json" -Body "{}"
 ```
 
-The recipe-feedback response is aggregate-only. The backup response names a server-side file; download or copy backups through a separate operator-controlled process, because keeping all rotations on the same attached disk is not disaster recovery.
+The recipe-feedback and rejected-pair responses are aggregate-only. A dedicated combination report contains only two bounded input concepts, an optional bounded suggested result, a fixed reason, and the game mode; arbitrary comments and contact details are rejected. Reporter IDs are retained only as one-way keyed digests for deduplication. The backup response names a server-side file; download or copy backups through a separate operator-controlled process, because keeping all rotations on the same attached disk is not disaster recovery.
+
+### Retrieve the player-feedback report
+
+The report is **not emailed**. In the hosted Node beta, a player's deliberate “What should these words make?” submission is sent to `POST /api/combination-reports` and aggregated in the server store at `CONSTELLORE_DATA_PATH`. Logical/Surprising/Bad recipe ratings are stored there separately. The protected endpoints above are how the operator reads those aggregates.
+
+For a combined JSON export, set the server origin and the same admin token in an operator-only PowerShell session:
+
+```powershell
+$env:CONSTELLORE_OPERATOR_BASE_URL = "https://constellore-beta.onrender.com"
+$headers = @{ Authorization = "Bearer $env:CONSTELLORE_ADMIN_TOKEN" }
+Invoke-RestMethod "$env:CONSTELLORE_OPERATOR_BASE_URL/api/admin/rejected-pairs?minimumReports=1&limit=100" -Headers $headers
+npm run --silent operator:feedback | Set-Content ".\constellore-feedback.json" -Encoding utf8
+Remove-Item Env:\CONSTELLORE_ADMIN_TOKEN
+```
+
+Use the exact `onrender.com` origin assigned to the service; do not append `/play/`. The first request is the shortest way to inspect missing-combination requests. The npm command exports both missing-combination requests and recipe ratings. Optional bounds are `CONSTELLORE_REPORT_MINIMUM_REPORTS`, `CONSTELLORE_REPORT_MINIMUM_VOTES`, and `CONSTELLORE_REPORT_LIMIT`. The tool only performs authenticated `GET` requests and never prints the token.
+
+Keep the token in Render's secret environment UI and an operator environment variable only. Do not paste it into a URL, Pages variable, browser console, screenshot, repository file, or support message. If the endpoint returns 404, the server admin token is absent or too short; if it returns 401, the operator token does not match.
+
+GitHub Pages and itch always save a bounded report in that browser's local storage. For frictionless delivery, set `PUBLIC_FEEDBACK_API_URL` to the exact hosted HTTPS endpoint, for example `https://constellore-beta.onrender.com/api/combination-reports`, before building Pages or the itch ZIP. A one-tap report then goes straight to the same protected aggregate queue without a GitHub account. If the receiver is offline, the local outbox retries automatically; if no endpoint was configured, the game states clearly that the idea remains only on that device. A player can also use **Profile → Privacy and data → Export local report** to download the local copy.
+
+Set `CONSTELLORE_ADMIN_TOKEN` in the hosted service before collecting reports, and keep it out of the public build. Add the Pages origin to `INTEREST_ALLOWED_ORIGINS` or `ANALYTICS_ALLOWED_ORIGINS`; the report endpoint separately accepts HTTPS itch.io and itch.zone game origins. Then use `operator:feedback` to retrieve the aggregate. GitHub issues remain an optional manual support route, not the in-game delivery mechanism.
 
 After every release, also run a mobile-sized browser smoke test and one desktop smoke test. Do not rely on the health endpoint alone to validate drag-and-drop, combining, goal completion, or leaderboard submission.
 

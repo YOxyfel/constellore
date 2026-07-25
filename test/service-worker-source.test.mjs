@@ -25,8 +25,32 @@ test("server worker can cache root assets while navigation lives under play", ()
     cachePrefix: "server-",
     version: "3.0.0",
     navigationPath: "/play/",
-    assets: ["/app.js?v=3.0.0", "/styles.css?v=3.0.0"]
+    assets: ["/app.js?v=3.0.0", "/styles.css?v=3.0.0"],
+    lazyAssets: ["/art/ranks/"]
   });
   assert.ok(source.includes('["/play/","/app.js?v=3.0.0"'));
   assert.match(source, /cache[.]match\(SHELL\[0\]\)/);
+  assert.match(source, /LAZY_PREFIXES/);
+  assert.match(source, /isLazyAsset/);
+  assert.ok(!source.match(/const SHELL = [^;]+art[/]ranks/), "rank art must not enter the install shell");
+});
+
+test("lazy asset prefixes are safe and cache on first request", () => {
+  const source = renderServiceWorker({
+    cachePrefix: "safe-",
+    version: "3.2.0-beta.1",
+    assets: ["./app.js"],
+    lazyAssets: ["./art/ranks/"]
+  });
+  assert.match(source, /[.]\/art\/ranks\//);
+  assert.match(source, /if \(cached\) return cached/);
+  assert.throws(
+    () => renderServiceWorker({
+      cachePrefix: "safe-",
+      version: "3.2.0",
+      assets: [],
+      lazyAssets: ["../art/"]
+    }),
+    /Unsafe/
+  );
 });

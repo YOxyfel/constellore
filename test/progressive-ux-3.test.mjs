@@ -5,17 +5,18 @@ import { readFile } from "node:fs/promises";
 const app = await readFile(new URL("../public/app.js", import.meta.url), "utf8");
 const page = await readFile(new URL("../public/index.html", import.meta.url), "utf8");
 
-test("Guidance presents one score-safe action before stronger help", () => {
+test("Help orders its three plain choices from least to most assistance", () => {
   const guidance = page.slice(page.indexOf('id="senseDialog"'), page.indexOf('id="revealDialog"'));
-  const signal = guidance.indexOf('id="useQuickTip"');
-  const disclosure = guidance.indexOf('class="guidance-stronger"');
-  const compass = guidance.indexOf('id="useSense"');
+  const hint = guidance.indexOf('id="useQuickTip"');
   const gift = guidance.indexOf('id="useWordGift"');
   const reveal = guidance.indexOf('id="revealPathButton"');
-  assert.ok(signal >= 0 && disclosure > signal);
-  assert.ok(compass > disclosure && gift > disclosure && reveal > disclosure);
-  assert.match(guidance, /SCORE SAFE/);
-  assert.match(guidance, /Need stronger help/);
+  const legacyExtra = guidance.indexOf('id="useSense"');
+  assert.ok(hint >= 0 && gift > hint && reveal > gift);
+  assert.ok(legacyExtra > reveal, "advanced legacy help must stay outside the primary choice order");
+  assert.match(guidance, /Your points stay the same/);
+  assert.match(guidance, /You keep half your points/);
+  assert.match(guidance, /You get no points/);
+  assert.match(guidance, /class="simple-hidden"[^>]*aria-hidden="true"[\s\S]*id="useSense"/);
 });
 
 test("each mission resets both desktop and mobile inventory scroll positions", () => {

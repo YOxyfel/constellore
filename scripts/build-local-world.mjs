@@ -17,6 +17,11 @@ const STARTERS = [
   { word: "Air", emoji: "💨", category: "force" }
 ];
 const MISSING_RESULT = 0xffff;
+const DAILY_VARIANTS = Object.freeze([
+  Object.freeze({ id: "classic", name: "Classic Route", moveBuffer: null, rewardBonus: 0 }),
+  Object.freeze({ id: "charted", name: "Charted Route", moveBuffer: 2, rewardBonus: 20 }),
+  Object.freeze({ id: "precision", name: "Precision Route", moveBuffer: 1, rewardBonus: 35 })
+]);
 
 function pairOffset(left, right, size) {
   const a = Math.min(left, right);
@@ -34,9 +39,11 @@ function gameSignature(game) {
 }
 
 function modeCycle(buildGameForMode, mode, stage = 0) {
-  const games = Array.from({ length: 256 }, (_, seed) => buildGameForMode(mode, seed, "", stage));
+  // The public destination pool contains 500 entries. Probe far enough to
+  // detect that full period while still keeping this build deterministic.
+  const games = Array.from({ length: 2048 }, (_, seed) => buildGameForMode(mode, seed, "", stage));
   const signatures = games.map(gameSignature);
-  for (let period = 1; period <= 128; period += 1) {
+  for (let period = 1; period <= 1024; period += 1) {
     if (signatures.every((signature, index) => index < period || signature === signatures[index % period])) {
       return games.slice(0, period).map((game) => JSON.parse(gameSignature(game)));
     }
@@ -45,14 +52,9 @@ function modeCycle(buildGameForMode, mode, stage = 0) {
 }
 
 function dailySchedule(buildGameForMode, targetRoutes, length = 90) {
-  const variants = [
-    { id: "classic", name: "Classic Route", moveBuffer: null, rewardBonus: 0 },
-    { id: "charted", name: "Charted Route", moveBuffer: 2, rewardBonus: 20 },
-    { id: "precision", name: "Precision Route", moveBuffer: 1, rewardBonus: 35 }
-  ];
   return Array.from({ length }, (_, dayIndex) => {
     const game = buildGameForMode("daily", dayIndex);
-    const variant = variants[Math.floor(dayIndex / 30) % variants.length];
+    const variant = DAILY_VARIANTS[Math.floor(dayIndex / 30) % DAILY_VARIANTS.length];
     const routeLength = targetRoutes[game.target.toLowerCase()]?.length;
     if (!Number.isInteger(routeLength)) throw new Error(`Daily target ${game.target} has no route for its schedule.`);
     return {
@@ -136,7 +138,13 @@ export async function generateLocalWorldData() {
       const offset = pairOffset(left, right, words.length);
       matrix[offset] = resultIndex;
       if (left === right) sameWordAuthoredPairs += 1;
-      sparseRecipes.push([offset, resultIndex, authored.emoji, authored.note, authored.source || "world"]);
+      // The result index already identifies the canonical word, emoji, and
+      // category. Two integers are enough for the offline lookup table; its
+      // short note can be reconstructed without shipping thousands of nearly
+      // identical explanation strings.
+      // Ingredient indexes add little compressed size and let the static
+      // runtime reconstruct only the alternate recipes needed for remixes.
+      sparseRecipes.push([offset, resultIndex, left, right]);
       authoredRecipes.push({
         a: words[left].word,
         b: words[right].word,
@@ -289,7 +297,7 @@ export async function generateLocalWorldData() {
     }
   };
 
-  if (officialTargets.length < 30) throw new Error(`Official target catalog collapsed to ${officialTargets.length}; at least 30 are required.`);
+  if (officialTargets.length !== 500) throw new Error(`Official target catalog must contain exactly 500 destinations; found ${officialTargets.length}.`);
   if (Object.values(difficultyBands).some((count) => count < 1)) throw new Error("Every official difficulty band must contain at least one target.");
   if (modes.daily.length < 90 || distinctDailyChallenges < 90) throw new Error("Daily schedule must contain ninety distinct challenges.");
   if (distinctDailyTargets < 28) throw new Error(`Daily rotation collapsed to ${distinctDailyTargets} targets; at least four weeks are required.`);
@@ -300,8 +308,8 @@ export async function generateLocalWorldData() {
   }
   if (worldGraph.validationIssues.length) throw new Error(`World Graph validation failed: ${worldGraph.validationIssues.join(" ")}`);
   if (worldGraph.targets.reachable !== worldGraph.targets.count) throw new Error("An official World Graph target is unreachable.");
-  if (worldGraph.targets.withMultipleFinalRecipes !== worldGraph.targets.count) {
-    throw new Error("Every official target must retain at least two final recipes.");
+  if (worldGraph.targets.withMultipleFinalRecipes < 250) {
+    throw new Error("At least 250 official targets must retain alternate final recipes for high-rank remixes.");
   }
   if (worldGraph.targets.withMultipleOpenings < 12) throw new Error("Official target opening diversity regressed below twelve goals.");
   if (worldGraph.topology.thinConceptCount > 220) {
@@ -349,13 +357,122 @@ export function lookupGeneratedCombination(data, a, b) {
   return resultIndex === MISSING_RESULT ? null : data.words[resultIndex];
 }
 
+function packLocalModeCycles(payload, targetIndexByWord) {
+  const laws = [];
+  const lawIndexById = new Map();
+  const lawReference = (law) => {
+    if (!law?.id || !law?.name || !law?.description) return -1;
+    const id = String(law.id);
+    const existing = lawIndexById.get(id);
+    if (existing !== undefined) {
+      const packed = laws[existing];
+      if (packed[1] !== law.name || packed[2] !== law.description) {
+        throw new Error(`Local law ${id} changed within one generated cycle.`);
+      }
+      return existing;
+    }
+    const index = laws.length;
+    lawIndexById.set(id, index);
+    laws.push([id, law.name, law.description]);
+    return index;
+  };
+  const targetReference = (game) => {
+    const index = targetIndexByWord.get(String(game?.target || "").toLowerCase());
+    if (index === undefined) throw new Error(`A packed local mode references ${game?.target || "an unknown target"}.`);
+    return index;
+  };
+  const simpleCycle = (mode) => payload.modes[mode].map(targetReference);
+  const variantIndexById = new Map(DAILY_VARIANTS.map((variant, index) => [variant.id, index]));
+  const daily = payload.modes.daily.flatMap((game) => {
+    const lawIndex = lawReference(game.law);
+    const modifierIndex = variantIndexById.get(game.routeModifier?.id);
+    if (lawIndex < 0 || modifierIndex === undefined) {
+      throw new Error(`Daily target ${game.target} has an unrecognized law or route modifier.`);
+    }
+    return [targetReference(game), lawIndex, modifierIndex];
+  });
+  const weekly = payload.modes.weekly.map((stage) => stage.flatMap((game) => {
+    const lawIndex = lawReference(game.law);
+    if (lawIndex < 0) throw new Error(`Weekly target ${game.target} has no recognized law.`);
+    return [targetReference(game), lawIndex];
+  }));
+  return {
+    modes: {
+      r: simpleCycle("reach"),
+      q: simpleCycle("quick"),
+      m: simpleCycle("moves"),
+      d: daily,
+      c: simpleCycle("challenge"),
+      w: weekly
+    },
+    laws
+  };
+}
+
 export async function writeLocalWorldModule(destination) {
   const { payload } = await generateLocalWorldData();
-  const { targetRoutes, packedTargetRoutes, ...portablePayload } = payload;
-  const source = `const payload = ${JSON.stringify({ ...portablePayload, targetRoutes: packedTargetRoutes })};
+  const { targetDetails, targetRoutes, packedTargetRoutes, modes: unpackedModes, ...portablePayload } = payload;
+  const targetIndexByWord = new Map(payload.words.map((item, index) => [item.word.toLowerCase(), index]));
+  const defaultTargetClue = "A destination chosen by you.";
+  const defaultTargetTier = 2;
+  const sharedTargetMetadata = new Map(payload.modes.challenge.map((game) => [game.target.toLowerCase(), game]));
+  const topicNames = [...new Set(
+    [...sharedTargetMetadata.values()].flatMap((game) => Array.isArray(game.topics) ? game.topics : [])
+  )].sort();
+  const topicIndexByName = new Map(topicNames.map((topic, index) => [topic, index]));
+  const packedTargetDetails = Object.entries(targetDetails).flatMap(([key, detail]) => {
+    if (detail.clue === defaultTargetClue && detail.tier === defaultTargetTier) return [];
+    const index = targetIndexByWord.get(key);
+    if (index === undefined) throw new Error(`A compact target detail references ${detail.target} outside the generated universe.`);
+    const shared = sharedTargetMetadata.get(key);
+    const topics = (Array.isArray(shared?.topics) ? shared.topics : [])
+      .map((topic) => topicIndexByName.get(topic))
+      .filter((topicIndex) => topicIndex !== undefined);
+    return [[
+      index,
+      detail.clue,
+      detail.tier,
+      detail.emoji === payload.words[index]?.emoji ? "" : detail.emoji,
+      topics,
+      shared?.source === "official" ? 1 : 0,
+      Math.max(0, Math.trunc(Number(shared?.poolVersion) || 0))
+    ]];
+  });
+  const packedModes = packLocalModeCycles({ ...payload, modes: unpackedModes }, targetIndexByWord);
+  const source = `const payload = ${JSON.stringify({
+    ...portablePayload,
+    modes: packedModes.modes,
+    laws: packedModes.laws,
+    dailyVariants: DAILY_VARIANTS.map((variant) => [
+      variant.id,
+      variant.name,
+      variant.moveBuffer,
+      variant.rewardBonus
+    ]),
+    topicNames,
+    targetDetails: packedTargetDetails,
+    targetRoutes: packedTargetRoutes
+  })};
 const indexByWord = new Map(payload.words.map((item, index) => [item.word.toLowerCase(), index]));
 const recipeByOffset = new Map(payload.recipes.map((recipe) => [recipe[0], recipe]));
 const routeByTarget = new Map(payload.targetRoutes);
+const targetDetailByIndex = new Map(payload.targetDetails.map(([index, clue, tier, emoji, topicIndexes, official, poolVersion]) => [
+  index,
+  {
+    clue,
+    tier,
+    emoji,
+    topics: (topicIndexes || []).map((topicIndex) => payload.topicNames[topicIndex]).filter(Boolean),
+    source: official ? "official" : "expanded",
+    poolVersion: Math.max(0, Number(poolVersion) || 0)
+  }
+]));
+const finalRecipeCountByIndex = new Map();
+for (const [, resultIndex] of payload.recipes) {
+  finalRecipeCountByIndex.set(resultIndex, (finalRecipeCountByIndex.get(resultIndex) || 0) + 1);
+}
+const defaultTargetClue = ${JSON.stringify(defaultTargetClue)};
+const defaultTargetTier = ${defaultTargetTier};
 
 function pairOffset(left, right) {
   const a = Math.min(left, right);
@@ -370,7 +487,8 @@ export function canonicalLocalWord(value) {
 
 export function canonicalLocalTarget(value) {
   const normalized = String(value || \"\").trim().toLowerCase();
-  return payload.targetDetails[normalized]?.target || null;
+  const index = indexByWord.get(normalized);
+  return index !== undefined && routeByTarget.has(index) ? payload.words[index].word : null;
 }
 
 export function localItemFor(value) {
@@ -389,9 +507,8 @@ export function lookupLocalCombination(a, b) {
   const result = payload.words[resultIndex];
   return {
     ...result,
-    note: authored[3] || \"An authored connection in the local universe.\",
-    source: authored[4] || \"world\",
-    emoji: authored[2] || result.emoji
+    note: payload.words[left].word + \" and \" + payload.words[right].word + \" make \" + result.word + \".\",
+    source: \"world\"
   };
 }
 
@@ -412,16 +529,160 @@ export function localRouteTo(value) {
   return route;
 }
 
+export function localRemixRecipesFor(value) {
+  const route = localRouteTo(value);
+  if (!Array.isArray(route)) return [];
+  const resultIndexes = new Set(route
+    .map((step) => indexByWord.get(step.word.toLowerCase()))
+    .filter((index) => index !== undefined));
+  return payload.recipes
+    .filter((recipe) => recipe.length >= 4 && resultIndexes.has(recipe[1]))
+    .map((recipe) => ({
+      a: payload.words[recipe[2]]?.word,
+      b: payload.words[recipe[3]]?.word,
+      word: payload.words[recipe[1]]?.word
+    }))
+    .filter((recipe) => recipe.a && recipe.b && recipe.word);
+}
+
+export function localRouteProgress(value, available) {
+  const targetKey = String(value || \"\").trim().toLowerCase();
+  const targetIndex = indexByWord.get(targetKey);
+  const stored = routeByTarget.get(targetIndex);
+  const total = Array.isArray(stored) ? stored.length / 3 : 0;
+  if (!Array.isArray(stored) || stored.length % 3 !== 0) {
+    return { total: 0, remaining: 0, complete: false, percent: 0 };
+  }
+  const known = new Set((Array.isArray(available) ? available : [...(available || [])])
+    .map((item) => String(item?.word || item || \"\").trim().toLowerCase())
+    .filter(Boolean));
+  if (known.has(targetKey)) return { total, remaining: 0, complete: true, percent: 100 };
+  const needed = new Set([targetIndex]);
+  let remaining = 0;
+  for (let index = stored.length - 3; index >= 0; index -= 3) {
+    const leftIndex = stored[index];
+    const rightIndex = stored[index + 1];
+    const resultIndex = stored[index + 2];
+    if (!needed.has(resultIndex)) continue;
+    needed.delete(resultIndex);
+    const resultKey = payload.words[resultIndex]?.word.toLowerCase();
+    if (resultKey && known.has(resultKey)) continue;
+    remaining += 1;
+    needed.add(leftIndex);
+    needed.add(rightIndex);
+  }
+  return {
+    total,
+    remaining,
+    complete: false,
+    percent: total ? Math.max(0, Math.min(99, Math.round(((total - remaining) / total) * 100))) : 0
+  };
+}
+
+const localModeRules = Object.freeze({
+  reach: Object.freeze({ mode: \"reach\", modeName: \"Reach\", timeLimit: null, moveLimit: null, reward: 70 }),
+  quick: Object.freeze({ mode: \"quick\", modeName: \"Quick Orbit\", timeLimit: 90, moveLimit: null, reward: 100 }),
+  moves: Object.freeze({ mode: \"moves\", modeName: \"Move Limit\", timeLimit: null, moveLimit: 12, reward: 110 }),
+  daily: Object.freeze({ mode: \"daily\", modeName: \"Word of the Day\", timeLimit: null, moveLimit: null, reward: 180 }),
+  weekly: Object.freeze({ mode: \"weekly\", modeName: \"Weekly Expedition\", timeLimit: null, moveLimit: 10, reward: 130 }),
+  challenge: Object.freeze({ mode: \"challenge\", modeName: \"Friend Challenge\", timeLimit: null, moveLimit: null, reward: 90 })
+});
+const packedModeKey = Object.freeze({ reach: \"r\", quick: \"q\", moves: \"m\", daily: \"d\", challenge: \"c\", weekly: \"w\" });
+
+function localLawAt(index) {
+  const packed = payload.laws[index];
+  return packed ? { id: packed[0], name: packed[1], description: packed[2] } : null;
+}
+
+function localRouteLengthAt(index) {
+  const stored = routeByTarget.get(index);
+  return Array.isArray(stored) && stored.length % 3 === 0 ? stored.length / 3 : 0;
+}
+
+function localRouteBand(routeLength) {
+  if (routeLength <= 4) return \"spark\";
+  if (routeLength <= 7) return \"path\";
+  if (routeLength <= 11) return \"journey\";
+  if (routeLength <= 16) return \"expedition\";
+  return \"odyssey\";
+}
+
+function localTargetFields(index) {
+  const item = payload.words[index];
+  if (!item || !routeByTarget.has(index)) return null;
+  const detail = targetDetailByIndex.get(index);
+  const routeLength = localRouteLengthAt(index);
+  const topics = detail?.topics?.length ? [...detail.topics] : [item.category || \"discovery\", \"discovery\"];
+  return {
+    target: item.word,
+    emoji: detail?.emoji || item.emoji,
+    clue: detail?.clue || defaultTargetClue,
+    tier: detail?.tier || defaultTargetTier,
+    routeLength,
+    finalRecipeCount: Math.max(1, finalRecipeCountByIndex.get(index) || 0),
+    routeBand: localRouteBand(routeLength),
+    topics,
+    primaryTopic: topics[0] || \"discovery\",
+    source: detail?.source || \"expanded\",
+    poolVersion: detail?.poolVersion || 1
+  };
+}
+
+function localPackedGame(mode, safeSeed, safeStage) {
+  const key = packedModeKey[mode];
+  const packed = mode === \"weekly\" ? payload.modes[key][safeStage] : payload.modes[key];
+  if (!Array.isArray(packed) || packed.length === 0) return null;
+  let targetIndex;
+  let extras = {};
+
+  if (mode === \"daily\") {
+    const cycleLength = packed.length / 3;
+    const cycleIndex = safeSeed % cycleLength;
+    const offset = cycleIndex * 3;
+    targetIndex = packed[offset];
+    const law = localLawAt(packed[offset + 1]);
+    const variant = payload.dailyVariants[packed[offset + 2]];
+    if (!law || !variant) return null;
+    const routeLength = localRouteLengthAt(targetIndex);
+    extras = {
+      modeName: variant[0] === \"classic\" ? \"Word of the Day\" : \"Word of the Day · \" + variant[1],
+      moveLimit: variant[2] === null ? null : routeLength + variant[2],
+      reward: localModeRules.daily.reward + variant[3],
+      law,
+      dailyContentId: \"wg3-day-\" + String(cycleIndex + 1).padStart(3, \"0\"),
+      graphVersion: payload.contentQuality.graphVersion,
+      routeModifier: { id: variant[0], name: variant[1] }
+    };
+  } else if (mode === \"weekly\") {
+    const cycleLength = packed.length / 2;
+    const offset = (safeSeed % cycleLength) * 2;
+    targetIndex = packed[offset];
+    const law = localLawAt(packed[offset + 1]);
+    if (!law) return null;
+    extras = {
+      stage: safeStage,
+      stageCount: 3,
+      moveLimit: 10 + safeStage * 2,
+      law
+    };
+  } else {
+    targetIndex = packed[safeSeed % packed.length];
+  }
+
+  const target = localTargetFields(targetIndex);
+  return target ? { ...target, ...localModeRules[mode], ...extras } : null;
+}
+
 export function buildLocalGame(mode, seed = 0, target = \"\", stage = 0) {
   const normalizedMode = [\"reach\", \"quick\", \"moves\", \"daily\", \"weekly\", \"challenge\"].includes(mode) ? mode : \"reach\";
-  const safeSeed = Math.abs(Number(seed) || 0);
-  const safeStage = Math.min(2, Math.max(0, Number(stage) || 0));
-  const cycle = normalizedMode === \"weekly\" ? payload.modes.weekly[safeStage] : payload.modes[normalizedMode];
-  const game = structuredClone(cycle[safeSeed % cycle.length]);
+  const safeSeed = Math.trunc(Math.abs(Number(seed) || 0));
+  const safeStage = Math.trunc(Math.min(2, Math.max(0, Number(stage) || 0)));
+  let game = localPackedGame(normalizedMode, safeSeed, safeStage);
+  if (!game) return null;
   if (target) {
-    const detail = payload.targetDetails[String(target).trim().toLowerCase()];
-    if (!detail) return null;
-    Object.assign(game, detail);
+    const index = indexByWord.get(String(target).trim().toLowerCase());
+    if (index === undefined || !routeByTarget.has(index)) return null;
+    game = { ...game, ...localTargetFields(index) };
   }
   return {
     ...game,
@@ -433,6 +694,32 @@ export function buildLocalGame(mode, seed = 0, target = \"\", stage = 0) {
     ranked: false,
     localOnly: true
   };
+}
+
+export function localAdaptiveCandidates(mode) {
+  const normalizedMode = [\"reach\", \"quick\", \"moves\"].includes(mode) ? mode : \"\";
+  if (!normalizedMode) return [];
+  const rule = localModeRules[normalizedMode];
+  if (!rule) return [];
+  const candidates = [];
+  for (const [index, detail] of targetDetailByIndex) {
+    const stored = routeByTarget.get(index);
+    if (!Array.isArray(stored) || stored.length % 3 !== 0) continue;
+    const routeLength = stored.length / 3;
+    if (normalizedMode === \"quick\" && routeLength > 8) continue;
+    if (normalizedMode === \"moves\" && routeLength > 12) continue;
+    const targetFields = localTargetFields(index);
+    if (!targetFields) continue;
+    candidates.push({
+      ...structuredClone(rule),
+      ...targetFields,
+      pathCount: Math.max(1, finalRecipeCountByIndex.get(index) || 0),
+      difficultyLevel: Math.min(10, Math.max(1, Math.round(routeLength * 0.65 + Number(detail.tier || defaultTargetTier) * 0.9 - 1))),
+      reachable: true,
+      routeValid: true
+    });
+  }
+  return candidates;
 }
 
 export function localSuggestions(limit = 8) {

@@ -73,8 +73,8 @@ test("authenticated HTTP runs produce verified Pure and Open leaderboard scores"
   assert.match(landingResponse.headers.get("content-type"), /^text\/html/);
   assert.match(landingResponse.headers.get("content-security-policy"), /frame-src 'self'/);
   const landingHtml = await landingResponse.text();
-  assert.match(landingHtml, /You know the word[.][\s\S]{0,80}Can you find the route[?]/);
-  assert.match(landingHtml, /Every run gives you a destination/);
+  assert.match(landingHtml, /Every game gives you one word to find[.][\s\S]{0,220}make the target word[.]/i);
+  assert.match(landingHtml, /Three simple steps/);
 
   const healthResponse = await fetch(`${baseUrl}/healthz`);
   assert.equal(healthResponse.status, 200);
@@ -344,6 +344,12 @@ test("authenticated HTTP runs produce verified Pure and Open leaderboard scores"
   assert.equal(quickStart.response.status, 201);
   assert.equal(quickStart.payload.run.ranked, true);
   assert.ok(quickStart.payload.run.deadlineAt);
+  assert.deepEqual(quickStart.payload.run.routeProgress, {
+    total: quickStart.payload.game.routeLength,
+    remaining: quickStart.payload.game.routeLength,
+    complete: false,
+    percent: 0
+  });
 
   const unauthenticatedResume = await request("/api/run/resume", {
     method: "POST",
@@ -365,6 +371,7 @@ test("authenticated HTTP runs produce verified Pure and Open leaderboard scores"
   assert.equal(initialResume.response.status, 200);
   assert.equal(initialResume.payload.game.target, quickStart.payload.game.target);
   assert.equal(initialResume.payload.run.id, quickStart.payload.run.id);
+  assert.deepEqual(initialResume.payload.run.routeProgress, quickStart.payload.run.routeProgress);
   assert.equal(initialResume.payload.progress.moves, 0);
   assert.equal(initialResume.payload.progress.completed, false);
   assert.equal(initialResume.payload.progress.submitted, false);
@@ -413,6 +420,7 @@ test("authenticated HTTP runs produce verified Pure and Open leaderboard scores"
   const play = async (started) => {
     const route = verifiedRoute(started.payload.game.target);
     let finalCombination = null;
+    let remaining = started.payload.run.routeProgress.remaining;
     for (const step of route) {
       finalCombination = await request("/api/combine", {
         method: "POST",
@@ -429,8 +437,12 @@ test("authenticated HTTP runs produce verified Pure and Open leaderboard scores"
       assert.equal(typeof finalCombination.payload.newDiscovery, "boolean");
       assert.equal(typeof finalCombination.payload.progressionEligible, "boolean");
       assert.equal(typeof finalCombination.payload.eventEligible, "boolean");
+      assert.ok(finalCombination.payload.routeProgress.remaining <= remaining);
+      remaining = finalCombination.payload.routeProgress.remaining;
     }
     assert.equal(finalCombination.payload.completed, true);
+    assert.equal(finalCombination.payload.routeProgress.remaining, 0);
+    assert.equal(finalCombination.payload.routeProgress.percent, 100);
     return { route, finalCombination };
   };
 
@@ -593,6 +605,8 @@ test("authenticated HTTP runs produce verified Pure and Open leaderboard scores"
   assert.equal(activation.response.status, 200);
   assert.equal(activation.payload.item.word, "Moon");
   assert.equal(activation.payload.assist, "market");
+  assert.equal(activation.payload.scoreEligible, true);
+  assert.ok(Number.isFinite(activation.payload.routeProgress.remaining));
 
   const bendResume = await request("/api/run/resume", {
     method: "POST",

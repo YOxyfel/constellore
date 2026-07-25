@@ -3,53 +3,65 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#070914">
-  <meta name="description" content="Combine ideas across a living cosmos, trace constellations, and reach the hidden word.">
+  <meta name="theme-color" content="#071923">
+  <meta name="description" content="Make the target word by combining ideas and discovering a route through a growing cosmic puzzle.">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta property="og:title" content="Constellore — a universe made of words">
-  <meta property="og:description" content="Start with four elements. Forge a path to the hidden word.">
-  <title>Constellore — a universe made of words</title>
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Constellore — make the target word">
+  <meta property="og:description" content="Start with useful words, discover new ones, and build a route to the target as your challenge and sky evolve.">
+  <meta property="og:site_name" content="Constellore">
+  <meta property="og:image" content="https://yoxyfel.github.io/constellore/social-card-v3.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:type" content="image/jpeg">
+  <meta property="og:image:alt" content="Constellore, a cosmic word-combination puzzle about reaching a target word.">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Constellore — make the target word">
+  <meta name="twitter:description" content="Combine words on a cosmic board, discover new ideas, and build a path to the target.">
+  <meta name="twitter:image" content="https://yoxyfel.github.io/constellore/social-card-v3.jpg">
+  <title>Constellore — make the target word</title>
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="icon" href="/icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="/icon.svg">
-  <link rel="stylesheet" href="/styles.css?v=3.0.0-beta.2">
+  <link rel="stylesheet" href="/styles.css?v=3.3.0-beta.1">
+  <link rel="stylesheet" href="/simple-ui.css?v=3.3.0-beta.1">
 </head>
-<body class="first-session training-needed" data-build-version="3.0.0-beta.2" data-build-id="3.0.0-beta.2+source">
+<body class="simple-ui first-session training-needed" data-build-version="3.3.0-beta.1" data-build-id="3.3.0-beta.1+source" data-feedback-api="">
   <section class="start-screen" id="startScreen" aria-labelledby="startTitle">
     <div class="practice-banner" id="practiceBanner" hidden><a href="../">← Website</a><span>LOCAL PRACTICE · SAVED ON THIS DEVICE · NO PAYMENTS</span></div>
     <div class="start-stars" aria-hidden="true"></div>
     <header class="start-nav">
       <div class="brand"><span class="brand-star" aria-hidden="true">✦</span><span class="brand-name">CONSTELLORE</span><small>BY OXYFEL GAMES</small></div>
       <div class="start-actions">
-        <button class="profile-chip" id="profileButton" type="button" aria-label="Open your universe">
-          <span class="profile-label">YOU</span><small>LV <b id="profileLevel">1</b> · <span aria-hidden="true">✦</span> <b id="profileDust">0</b></small>
+        <button class="profile-chip" id="profileButton" type="button" aria-label="Open your stats and settings">
+          <span class="profile-label">Stats</span><small><b id="profileLevel">1</b> · <span aria-hidden="true">✦</span> <b id="profileDust">0</b></small>
         </button>
-        <button class="hub-menu-button" id="hubMenuButton" type="button" aria-haspopup="dialog" aria-controls="hubMenuDialog" data-progressive="secondary"><span aria-hidden="true">•••</span><b>MORE</b></button>
+        <button class="hub-menu-button" id="hubMenuButton" type="button" aria-haspopup="dialog" aria-controls="hubMenuDialog" data-progressive="secondary"><span aria-hidden="true">☰</span><b>Menu</b></button>
       </div>
     </header>
 
     <main class="start-content">
       <div class="hero-row">
         <div class="start-copy">
-          <span class="eyebrow">COMBINE · DISCOVER · REACH</span>
-          <h1 id="startTitle">Reach the word.<br><em>Forge the path.</em></h1>
-          <p class="hero-promise">Combine two words to make a new one. Keep discovering until you create the target word. Every discovery becomes part of your own constellation.</p>
+          <span class="eyebrow simple-hidden">WORD GAME</span>
+          <h1 id="startTitle">Make the target word.</h1>
+          <p class="hero-promise">Combine two words to make a new word. Keep going until you make the target.</p>
           <div class="recipe-example" aria-label="Example: Earth plus Water makes Mud">
             <span>🌍 <b>EARTH</b></span><i aria-hidden="true">+</i><span>💧 <b>WATER</b></span><i aria-hidden="true">→</i><strong>🟤 MUD</strong>
           </div>
           <section class="primary-orbit-panel" aria-labelledby="primaryOrbitTitle">
-            <span class="eyebrow" id="primaryOrbitKicker">RECOMMENDED · ABOUT 90 SECONDS</span>
-            <h2 id="primaryOrbitTitle">Learn the game in three real combinations.</h2>
-            <p id="primaryOrbitDescription">Your target is Wall. Drag or tap words together and discover the short route at your own pace.</p>
+            <span class="eyebrow simple-hidden" id="primaryOrbitKicker">RECOMMENDED</span>
+            <h2 id="primaryOrbitTitle">Ready to play?</h2>
+            <p id="primaryOrbitDescription">Your first target is Wall. We will show you how to play.</p>
             <div class="primary-orbit-actions">
-              <button class="primary-orbit-button" id="primaryOrbitButton" type="button"><span>Play First Orbit</span><b aria-hidden="true">→</b></button>
-              <button class="primary-orbit-secondary" id="primaryOrbitSecondary" type="button">Skip tutorial · Play relaxed</button>
+              <button class="primary-orbit-button" id="primaryOrbitButton" type="button"><span>Play</span><b aria-hidden="true">→</b></button>
+              <button class="primary-orbit-secondary" id="primaryOrbitSecondary" type="button">Choose game</button>
             </div>
-            <small id="primaryOrbitMeta">TARGET: WALL · GUIDED · NO SCORE</small>
+            <small class="primary-orbit-meta" id="primaryOrbitMeta">Wall</small>
           </section>
         </div>
-        <section class="universe-summary" aria-label="Your universe progress" data-progressive="progress">
+        <section class="universe-summary simple-hidden" aria-label="Your progress" data-progressive="progress">
           <div class="summary-heading"><span class="eyebrow">YOUR UNIVERSE</span><strong id="universeRank">Stargazer I</strong></div>
           <div class="rank-track" aria-hidden="true"><span id="rankProgress"></span></div>
           <div class="summary-stats">
@@ -62,32 +74,32 @@
 
       <details class="home-disclosure mode-picker" id="modePicker" data-progressive="secondary">
         <summary id="modeSectionTitle">
-          <span><small>MISSION RULES</small><strong>Change the challenge</strong></span>
-          <em>Relaxed · add a 90-second clock · add a 12-move cap</em>
+          <span><small>MORE CHOICES</small><strong>Choose game</strong></span>
+          <em>Relaxed, timed, or limited moves</em>
           <b class="disclosure-toggle" aria-hidden="true">+</b>
         </summary>
-        <div class="home-disclosure-panel">
-          <p class="disclosure-intro">The goal never changes: create the target word. Choose only how much pressure you want.</p>
-          <div class="mode-grid" aria-label="Choose mission rules">
+          <div class="home-disclosure-panel">
+          <p class="disclosure-intro">Every game has the same goal: make the target word.</p>
+          <div class="mode-grid" aria-label="Choose a game">
             <article class="mode-card featured" data-home-mode="reach">
-              <div class="mode-top"><span class="mode-icon violet" aria-hidden="true">◎</span><span class="mode-number">NO MODIFIER</span></div>
+              <div class="mode-top"><span class="mode-icon violet" aria-hidden="true">◎</span><span class="mode-number">NO TIMER</span></div>
               <h2>Relaxed</h2>
-              <p>Follow a guaranteed route with no clock and no move cap.</p>
-              <button class="mode-action" type="button" data-mode="reach"><span>Use relaxed rules</span><span aria-hidden="true">→</span></button>
+              <p>Take as long as you want.</p>
+              <button class="mode-action" type="button" data-mode="reach"><span>Play relaxed</span><span aria-hidden="true">→</span></button>
             </article>
 
             <article class="mode-card" data-home-mode="quick">
-              <div class="mode-top"><span class="mode-icon cyan" aria-hidden="true">↯</span><span class="mode-number">+ 90-SECOND CLOCK</span></div>
-              <h2>Sprint</h2>
-              <p>The same target hunt with a 90-second clock and time bonus.</p>
-              <button class="mode-action" type="button" data-mode="quick"><span>Add Sprint</span><span aria-hidden="true">→</span></button>
+              <div class="mode-top"><span class="mode-icon cyan" aria-hidden="true">↯</span><span class="mode-number">90 SECONDS</span></div>
+              <h2>Timed</h2>
+              <p>Make the target before time runs out.</p>
+              <button class="mode-action" type="button" data-mode="quick"><span>Play timed</span><span aria-hidden="true">→</span></button>
             </article>
 
             <article class="mode-card" data-home-mode="moves">
-              <div class="mode-top"><span class="mode-icon amber" aria-hidden="true">◇</span><span class="mode-number">+ 12-MOVE CAP</span></div>
-              <h2>Precision</h2>
-              <p>The same target hunt with only twelve successful fusions.</p>
-              <button class="mode-action" type="button" data-mode="moves"><span>Add Precision</span><span aria-hidden="true">→</span></button>
+              <div class="mode-top"><span class="mode-icon amber" aria-hidden="true">◇</span><span class="mode-number">12 MOVES</span></div>
+              <h2>Limited moves</h2>
+              <p>Make the target in 12 moves.</p>
+              <button class="mode-action" type="button" data-mode="moves"><span>Play limited moves</span><span aria-hidden="true">→</span></button>
             </article>
           </div>
         </div>
@@ -95,30 +107,30 @@
 
       <details class="home-disclosure explore-hub" id="exploreHub" data-progressive="secondary">
         <summary id="exploreTitle">
-          <span><small>DAILY · EXPLORE · CREATE</small><strong>More destinations</strong></span>
-          <em>A shared word, a freeform orbit, or your own idea</em>
+          <span><small>OTHER GAMES</small><strong>More ways to play</strong></span>
+          <em>Today’s word, free play, or your own target</em>
           <b class="disclosure-toggle" aria-hidden="true">+</b>
         </summary>
         <div class="home-disclosure-panel explore-grid" aria-labelledby="exploreTitle">
           <article class="explore-card daily-destination" data-home-mode="daily">
             <span class="explore-card-icon" aria-hidden="true">✦</span>
-            <div><small>DAILY WORD</small><strong>One shared destination</strong><p>Trace today’s game-chosen word and compare the exact challenge.</p></div>
+            <div><small>DAILY WORD</small><strong>Today’s word</strong><p>Everyone gets the same target today.</p></div>
             <button type="button" data-mode="daily"><span>Play today’s word</span><span aria-hidden="true">→</span></button>
           </article>
           <article class="explore-card">
             <span class="explore-card-icon" aria-hidden="true">∞</span>
-            <div><small>EXPLORE · PRACTICE</small><strong>Follow a new route</strong><p>A guaranteed random target with no timer, move cap, or leaderboard pressure.</p></div>
-            <button type="button" data-mode="explore"><span>Open persistent sandbox</span><span aria-hidden="true">→</span></button>
+            <div><small>FREE PLAY</small><strong>Play without a target</strong><p>Combine any words and see what you find.</p></div>
+            <button type="button" data-mode="explore"><span>Start free play</span><span aria-hidden="true">→</span></button>
           </article>
           <details class="custom-target-disclosure">
-            <summary><span><strong>Creator’s Lab</strong><small>Choose your own target · always unranked</small></span><b aria-hidden="true">+</b></summary>
+              <summary><span><strong>Choose a word</strong><small>Pick your own target</small></span><b aria-hidden="true">+</b></summary>
             <form class="custom-target-form" id="customTargetForm">
               <label for="customTarget">What real word or short concept do you want to reach?</label>
               <div class="target-input-row">
                 <input id="customTarget" name="target" maxlength="28" autocomplete="off" placeholder="e.g. Telescope" required>
                 <button type="submit" aria-label="Start with your target">↗</button>
               </div>
-              <small class="creator-fairness">Creator’s Lab builds an assisted route in Practice. It never enters Pure or Open rankings.</small>
+              <small class="creator-fairness">Custom targets do not go on leaderboards.</small>
               <p class="form-message" id="targetMessage" aria-live="polite"></p>
             </form>
           </details>
@@ -157,12 +169,12 @@
     </main>
 
     <dialog class="modal hub-menu-modal" id="hubMenuDialog" aria-labelledby="hubMenuTitle">
-      <button class="modal-close" data-close="hubMenuDialog" type="button" aria-label="Close More menu">&times;</button>
+      <button class="modal-close" data-close="hubMenuDialog" type="button" aria-label="Close menu">&times;</button>
       <span class="eyebrow">YOUR CONSTELLORE</span>
-      <h2 id="hubMenuTitle">More</h2>
-      <p>Progress, community, extras, and game information—kept here so playing stays simple.</p>
+      <h2 id="hubMenuTitle">Menu</h2>
+      <p>Updates, progress, and other parts of the game.</p>
       <div class="hub-menu-grid">
-        <button class="hub-menu-action" id="updatesButton" type="button" aria-haspopup="dialog" aria-controls="updatesDialog"><span aria-hidden="true">✦</span><b>Updates</b><small>What's new in 3.0</small><i aria-hidden="true">→</i></button>
+        <button class="hub-menu-action" id="updatesButton" type="button" aria-haspopup="dialog" aria-controls="updatesDialog"><span aria-hidden="true">✦</span><b>Updates</b><small>What's new in 3.3</small><i aria-hidden="true">→</i></button>
         <button class="hub-menu-action" id="installButton" type="button" hidden><span aria-hidden="true">↓</span><b>Install game</b><small>Add Constellore to this device</small><i aria-hidden="true">→</i></button>
         <button class="hub-menu-action" id="leaderboardButton" type="button" data-progressive="advanced"><span aria-hidden="true">≋</span><b>Leaderboards</b><small>Compare verified routes</small><i aria-hidden="true">→</i></button>
         <button class="hub-menu-action" id="viewMastery" type="button" data-progressive="advanced"><span aria-hidden="true">✦</span><b>Recipe Mastery</b><small>Review your combinations</small><i aria-hidden="true">→</i></button>
@@ -178,52 +190,61 @@
 
   <section class="game-screen" id="gameScreen" hidden>
     <header class="game-nav">
-      <button class="nav-icon pause-run-button" id="pauseRunButton" type="button" aria-label="Pause orbit and open orbit menu" aria-haspopup="dialog" aria-controls="pauseDialog" title="Orbit menu (Esc)"><span aria-hidden="true">Ⅱ</span></button>
+      <button class="nav-icon pause-run-button" id="pauseRunButton" type="button" aria-label="Open game menu" aria-haspopup="dialog" aria-controls="pauseDialog" title="Menu (Esc)"><span aria-hidden="true">☰</span><b>Menu</b></button>
       <div class="game-target">
-        <span id="modeName">REACH</span>
-        <div><strong>Find <b id="targetWord">…</b></strong><small class="run-division-pill practice" id="runDivisionPill">PRACTICE</small><small id="journeyPill" hidden></small><small id="universePill" hidden></small><small id="lawPill" hidden></small></div>
+        <span class="simple-hidden" id="modeName">RELAXED</span>
+        <div><strong>Make: <b id="targetWord">…</b></strong><button class="remix-pill" id="remixPill" type="button" aria-label="Show route rules" hidden>Rules 0/0</button><small class="run-division-pill practice simple-hidden" id="runDivisionPill">PRACTICE</small><small class="simple-hidden" id="journeyPill" hidden></small><small class="simple-hidden" id="universePill" hidden></small><small class="simple-hidden" id="lawPill" hidden></small></div>
       </div>
       <div class="game-hud">
-        <div id="timerHud" hidden><small>TIME</small><strong id="timerValue">01:30</strong></div>
-        <div id="movesHud"><small>MOVES</small><strong id="movesValue">0</strong></div>
-        <button class="nav-icon nav-atlas" id="atlasButton" type="button" aria-label="Open constellation path"><span aria-hidden="true">⌁</span><b id="pathCount">0</b></button>
-        <button class="nav-icon feedback-toggle" id="feedbackToggle" type="button" aria-label="Mute sound effects" aria-pressed="true"><span aria-hidden="true">♪</span></button>
-        <button class="nav-icon nav-share" id="shareRunButton" type="button" aria-label="Share this challenge">↗</button>
+        <div class="run-iq-hud" id="runIqHud" role="meter" aria-label="Playful Run IQ score" aria-valuemin="0" aria-valuemax="200" aria-valuenow="0" aria-valuetext="Run IQ 0. This is a playful score for this game, not an intelligence test." title="A playful score for this game — not a real intelligence test." hidden>
+          <span class="run-iq-label"><span class="run-iq-long">Run </span>IQ</span>
+          <strong><span id="runIqValue">0</span><em id="runIqDelta" aria-hidden="true"></em></strong>
+          <span class="run-iq-streak" id="runIqStreak" hidden>×1</span>
+          <i class="run-iq-track" aria-hidden="true"><b id="runIqBar"></b></i>
+          <span class="sr-only" id="runIqStatus" aria-live="polite"></span>
+        </div>
+        <div id="timerHud" hidden><small>Time</small><strong id="timerValue">01:30</strong></div>
+        <div id="movesHud"><small>Moves</small><strong id="movesValue">0</strong></div>
+        <div class="powerup-shortcuts" role="group" aria-label="Help">
+          <button class="sense-tool" id="senseButton" type="button" aria-haspopup="dialog" aria-controls="senseDialog" aria-label="Open help"><span aria-hidden="true">?</span><b>Help</b><em class="simple-hidden" id="senseHudCount" aria-hidden="true">3</em></button>
+          <button class="quick-power-button tip-shortcut" id="quickTipShortcut" type="button" title="Use a hint" aria-label="Use a hint" hidden><span aria-hidden="true">?</span><em id="quickTipShortcutCount" aria-hidden="true">3</em></button>
+          <button class="quick-power-button gift-shortcut" id="wordGiftShortcut" type="button" title="Add a helpful word" aria-label="Add a helpful word" hidden><span aria-hidden="true">&#10022;</span><em id="wordGiftShortcutCount" aria-hidden="true">1</em></button>
+          <button class="quick-power-button compass-shortcut" id="senseShortcut" type="button" title="Use an extra hint" aria-label="Use an extra hint" hidden><span aria-hidden="true">&#10023;</span><em id="senseShortcutCount" aria-hidden="true">1</em></button>
+          <button class="powerup-shop-shortcut" id="powerupShopShortcut" type="button" title="Open help" aria-label="Open help" hidden><span aria-hidden="true">+</span></button>
+        </div>
+        <button class="nav-icon nav-atlas simple-hidden" id="atlasButton" type="button" aria-label="Open word path"><span aria-hidden="true">⌁</span><b id="pathCount">0</b></button>
+        <button class="nav-icon feedback-toggle simple-hidden" id="feedbackToggle" type="button" aria-label="Mute sound effects" aria-pressed="true"><span aria-hidden="true">♪</span></button>
+        <button class="nav-icon nav-share simple-hidden" id="shareRunButton" type="button" aria-label="Share this game">↗</button>
       </div>
     </header>
 
     <main class="game-layout">
-      <section class="cosmos-board" id="board" aria-label="Cosmic combination board">
+      <section class="cosmos-board" id="board" aria-label="Word board">
         <canvas id="cosmosCanvas" class="cosmos-canvas" aria-hidden="true"></canvas>
         <div class="nebula one" aria-hidden="true"></div>
         <div class="nebula two" aria-hidden="true"></div>
+        <nav class="board-quick-tools" id="boardQuickTools" aria-label="Board tools">
+          <button id="undoBoardAction" type="button" aria-label="Undo last board change" title="Undo last board change" disabled><span aria-hidden="true">&#8630;</span><b>Undo</b></button>
+          <button id="redoBoardAction" type="button" aria-label="Redo last board change" title="Redo last board change" disabled><span aria-hidden="true">&#8631;</span><b>Redo</b></button>
+          <button id="tidyBoard" type="button" aria-label="Tidy words on the board" title="Tidy words"><span aria-hidden="true">&#10022;</span><b>Tidy</b></button>
+          <button class="clear-board-action" id="resetBoard" type="button" aria-label="Clear all words from the board" title="Clear board"><span aria-hidden="true">&times;</span><b>Clear</b></button>
+        </nav>
         <div class="board-guide" id="boardGuide">
           <span class="guide-orbit" aria-hidden="true"></span>
-          <strong>Summon an element</strong>
-          <span class="guide-copy guide-desktop">Drag one word onto another, or select any two words, to fuse them.</span>
-          <span class="guide-copy guide-mobile">Drag one word onto another, or tap two to fuse.</span>
+          <strong>Drag a word here.</strong>
+          <span class="guide-copy guide-desktop">Drop one word onto another to combine them.</span>
+          <span class="guide-copy guide-mobile">Drop one word onto another to combine them.</span>
         </div>
         <section class="first-orbit-guide" id="firstOrbitGuide" aria-labelledby="firstOrbitGuideTitle" hidden>
           <header>
-            <span id="orbitLessonLabel"><i aria-hidden="true">&#10022;</i> TRAINING ORBIT &middot; 0 SCORE</span>
-            <button id="skipFirstOrbit" type="button">Skip training</button>
+            <span id="orbitLessonLabel"><i aria-hidden="true">&#10022;</i> LEARN TO PLAY</span>
+            <button id="skipFirstOrbit" type="button">Skip</button>
           </header>
-          <div class="first-orbit-step"><b id="firstOrbitStep">STEP 1 OF 3</b><span id="firstOrbitGuideTitle">Make your first discovery</span></div>
-          <p id="firstOrbitInstruction" aria-live="polite">Bring Earth and Water together to create Mud.</p>
-          <small id="firstOrbitTip">Drag one word onto the other, or tap both words.</small>
-          <div class="first-orbit-progress" role="progressbar" aria-label="First Orbit training progress" aria-valuemin="0" aria-valuemax="3" aria-valuenow="0"><i id="firstOrbitProgressBar"></i></div>
+          <div class="first-orbit-step"><b id="firstOrbitStep">1 of 3</b><span id="firstOrbitGuideTitle">Make Mud</span></div>
+          <p id="firstOrbitInstruction" aria-live="polite">Combine Earth and Water.</p>
+          <small id="firstOrbitTip">Drop one word onto the other.</small>
+          <div class="first-orbit-progress" role="progressbar" aria-label="Lesson progress" aria-valuemin="0" aria-valuemax="3" aria-valuenow="0"><i id="firstOrbitProgressBar"></i></div>
         </section>
-        <div class="board-tools" aria-label="Board tools">
-          <div class="powerup-shortcuts" role="group" aria-label="Guidance">
-            <button class="sense-tool" id="senseButton" type="button" aria-haspopup="dialog" aria-controls="senseDialog" aria-label="Open Guidance"><span aria-hidden="true">&#10022;</span><b>Guidance</b><em id="senseHudCount" aria-hidden="true">3 SAFE</em></button>
-            <button class="quick-power-button tip-shortcut" id="quickTipShortcut" type="button" title="Read a Route Signal (score safe)" aria-label="Read a Route Signal; 3 remaining; score safe" hidden><span aria-hidden="true">?</span><em id="quickTipShortcutCount" aria-hidden="true">3</em></button>
-            <button class="quick-power-button gift-shortcut" id="wordGiftShortcut" type="button" title="Use Word Gift · Open · keep 50% score" aria-label="Use Word Gift; 1 ready; keeps half score in the Open division" hidden><span aria-hidden="true">&#10022;</span><em id="wordGiftShortcutCount" aria-hidden="true">1</em></button>
-            <button class="quick-power-button compass-shortcut" id="senseShortcut" type="button" title="Use Star Compass · Open · keep 75% score" aria-label="Use Star Compass; 1 charge; keeps 75% score in the Open division" hidden><span aria-hidden="true">&#10023;</span><em id="senseShortcutCount" aria-hidden="true">1</em></button>
-            <button class="powerup-shop-shortcut" id="powerupShopShortcut" type="button" title="Buy more Star Compass charges · open Guidance" aria-label="Open Guidance inventory" hidden><span aria-hidden="true">+</span></button>
-          </div>
-          <button id="tidyBoard" type="button" aria-label="Tidy orbit; does not affect score"><span aria-hidden="true">✣</span><b>Tidy</b></button>
-          <button id="resetBoard" type="button" aria-label="Clear the board"><span aria-hidden="true">↻</span><b>Clear</b></button>
-        </div>
         <button class="rival-ghost" id="rivalGhost" type="button" aria-label="Hide Rival Ghost pace" aria-pressed="true" hidden>
           <span class="ghost-orb" aria-hidden="true">◌</span>
           <span><small id="ghostCallsign">COSMOS SCOUT</small><strong id="ghostStatus">Mapping a rival…</strong></span>
@@ -233,6 +254,17 @@
           <header><span><small>PROJECTED TRAIL</small><strong id="ghostPreviewStatus">SCOUT CALIBRATING</strong></span><span class="ghost-preview-counter"><b id="ghostPreviewCount">0 / 0</b><small id="ghostPreviewPercent">0%</small></span></header>
           <div class="ghost-preview-progress" id="ghostPreviewProgress" role="progressbar" aria-label="Projected rival route progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i id="ghostPreviewBar"></i></div>
           <div class="ghost-preview-steps" id="ghostPreviewSteps" aria-hidden="true"></div>
+        </section>
+        <section class="reveal-equation" id="revealEquation" data-phase="summon" aria-label="Current answer step" hidden>
+          <small class="reveal-equation-step" id="revealEquationStep">Combination 1 of 1</small>
+          <div class="reveal-equation-row" aria-hidden="true">
+            <span class="reveal-term reveal-a"><span class="reveal-term-emoji" id="revealEquationAEmoji">✦</span><strong id="revealEquationA">Earth</strong></span>
+            <span class="reveal-equation-operator">+</span>
+            <span class="reveal-term reveal-b"><span class="reveal-term-emoji" id="revealEquationBEmoji">✦</span><strong id="revealEquationB">Water</strong></span>
+            <span class="reveal-equation-equals">=</span>
+            <span class="reveal-term reveal-answer"><span class="reveal-term-emoji" id="revealEquationAnswerEmoji">✦</span><strong id="revealEquationAnswer">?</strong></span>
+          </div>
+          <p class="reveal-equation-note" id="revealEquationNote">Watch these words combine.</p>
         </section>
         <div id="boardItems" class="board-items"></div>
         <div class="drop-pair-preview" id="dropPairPreview" aria-hidden="true" hidden></div>
@@ -255,8 +287,16 @@
             <button class="recipe-feedback-dismiss" id="dismissRecipeFeedback" type="button" aria-label="Dismiss recipe rating">&times;</button>
           </section>
           <section class="expected-pair-feedback" id="expectedPairFeedback" aria-labelledby="expectedPairTitle" hidden>
-            <span><small id="expectedPairTitle">HELP GROW THE WORLD GRAPH</small><strong id="expectedPairRecipe">Earth + Sky</strong><em>No free text or identity is sent.</em></span>
-            <button id="expectedPairButton" type="button">Expected this to work</button>
+            <form id="expectedPairForm">
+              <header>
+                <small>MISSING COMBINATION</small>
+                <strong id="expectedPairTitle">What should <span id="expectedPairRecipe">Earth + Sky</span> make?</strong>
+              </header>
+              <label for="expectedPairResult">Your answer <small>(optional)</small></label>
+              <input id="expectedPairResult" name="expected" maxlength="28" autocomplete="off" spellcheck="true" placeholder="For example: Bird">
+              <p id="expectedPairDelivery">Sends these two words, your answer, and the game mode to Oxyfel Games. Do not enter your name or private information.</p>
+              <button id="expectedPairButton" type="submit">Send idea</button>
+            </form>
             <button class="expected-pair-dismiss" id="dismissExpectedPair" type="button" aria-label="Dismiss expected combination report">&times;</button>
           </section>
           <div class="alchemy-note" id="alchemyNote" aria-hidden="true"></div>
@@ -264,7 +304,7 @@
         <section class="reveal-controller" id="revealController" aria-label="Revealed path controls" hidden>
           <div class="reveal-status">
             <span class="reveal-pulse" aria-hidden="true">&#10023;</span>
-            <div><small>COSMOS REVEAL &middot; 0 SCORE</small><strong id="revealStepText">Preparing the constellation&hellip;</strong></div>
+            <div><small>SHOWING THE ANSWER &middot; NO POINTS</small><strong id="revealStepText">Getting the words ready&hellip;</strong></div>
           </div>
           <div class="reveal-controls">
             <button id="revealPause" type="button" aria-pressed="false"><span aria-hidden="true">&#8545;</span><b>Pause</b></button>
@@ -274,8 +314,8 @@
           <div class="reveal-progress" role="progressbar" aria-label="Answer path progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i id="revealProgressBar"></i></div>
           <p class="sr-only" id="revealAnnouncement" aria-live="polite"></p>
         </section>
-        <section class="run-milestone" id="runMilestone" aria-label="Your visible constellation route">
-          <div><span id="milestoneText">Your constellation begins here</span><b id="routeStepCount">0 STARS</b></div>
+        <section class="run-milestone" id="runMilestone" aria-label="Closest known route">
+          <div><span id="milestoneText">Finding the closest route</span><b id="routeStepCount">0 STEPS LEFT</b></div>
           <div class="route-star-strip" id="routeProgressTrail" aria-hidden="true"><i class="origin-star">✦</i><i class="target-star">?</i></div>
           <i class="route-line" aria-hidden="true"><em id="milestoneBar"></em></i>
         </section>
@@ -284,7 +324,7 @@
 
       <aside class="inventory" aria-labelledby="inventoryTitle">
         <div class="inventory-head">
-          <div><span class="eyebrow">DISCOVERED</span><h2 id="inventoryTitle">Your universe</h2></div>
+          <div><span class="eyebrow simple-hidden">FOUND</span><h2 id="inventoryTitle">Words</h2></div>
           <span id="collectionCount">4</span>
         </div>
         <div class="inventory-search" role="search">
@@ -295,7 +335,7 @@
         </div>
         <p class="sr-only" id="inventorySearchStatus" aria-live="polite"></p>
         <div id="wordList" class="word-list"></div>
-        <button class="wish-button" id="wishWord" type="button" aria-label="Make a Wish">
+        <button class="wish-button simple-hidden" id="wishWord" type="button" aria-label="Add your own word">
           <span><i aria-hidden="true">✧</i><b>Make a Wish</b></span><small id="wishState">FIRST FREE</small>
         </button>
       </aside>
@@ -307,14 +347,37 @@
     <div class="updates-heading">
       <span class="updates-orb" aria-hidden="true">✦</span>
       <div>
-        <span class="eyebrow">TRANSMISSION ARCHIVE · 7 ENTRIES</span>
+        <span class="eyebrow">10 UPDATES</span>
         <h2 id="updatesTitle">Dev Logs / Updates</h2>
       </div>
     </div>
-    <p id="updatesIntro">Follow Constellore from first light to its destination-first 3.0 universe.</p>
+    <p id="updatesIntro">See what changed in each version.</p>
     <ol class="updates-list">
       <li class="updates-entry is-latest" data-update-entry>
-        <div class="updates-meta"><span>VERSION 3.0.0-BETA.2</span><time datetime="2026-07-23">JUL 23, 2026</time><b>LATEST</b></div>
+        <div class="updates-meta"><span>VERSION 3.3.0-BETA.1</span><time datetime="2026-07-25">JUL 25, 2026</time><b>LATEST</b></div>
+        <h3>One Play, a Growing Universe</h3>
+        <p>The main Play button now chooses a suitable challenge and opening for you. Bronze begins with Earth, Water, Fire, and Air; new mixes arrive gently from Silver onward, lending useful temporary words from a checked part of the real answer route. After a win, choose whether the next challenge uses Auto, the same four words, or a new mix.</p>
+        <p>Twelve permanent Route Ranks grow through mastery and best-of-three promotion games. Higher ranks combine more Route Remixes, while adaptive intensity adds unfamiliar rules only after you have shown you are ready. An easier challenge never removes a rank you already earned.</p>
+        <p>Six board skies now evolve with your rank, from a quiet common night through living nebulae and astral rifts to the crowned singularity for Legend and Cosmic. Responsive mobile, balanced, and cinematic artwork keeps every device light and readable.</p>
+        <p>Every adaptive target and starting mix is checked for a real route, with 500 possible destination words and recent targets avoided. These personal games do not enter shared leaderboards; Daily, Weekly, friend, story, training, and player-chosen challenges stay fixed for everyone.</p>
+      </li>
+      <li class="updates-entry" data-update-entry>
+        <div class="updates-meta"><span>VERSION 3.2.0-BETA.1</span><time datetime="2026-07-25">JUL 25, 2026</time></div>
+        <h3>A Journey That Learns How You Play</h3>
+        <p>Normal Relaxed, Timed, and Limited Moves games now choose a reachable target that fits your recent games. Every three completed challenges raise your normal level. One unfinished challenge lowers it by one. Every tenth completion unlocks one much harder Surge challenge. Missing it keeps your old level safe; finishing it unassisted with no mistakes and 200 Run IQ makes that Surge level your new normal.</p>
+        <p>Run IQ now begins at 0. Discoveries that genuinely move you toward the target earn most of the points, unrelated discoveries earn only a little, and a flawless target route can finish at 200. Trying a word pair that does not combine never changes challenge difficulty.</p>
+        <p>Rewards match the target that was actually chosen, recently played targets are avoided, and every adaptive target has a checked route from its exact starting words.</p>
+        <p>These are personal games, so they do not enter shared leaderboards. Daily, Weekly, friend, story, training, and player-chosen targets stay exactly the same for everyone.</p>
+      </li>
+      <li class="updates-entry" data-update-entry>
+        <div class="updates-meta"><span>VERSION 3.1.0-BETA.1</span><time datetime="2026-07-24">JUL 24, 2026</time></div>
+        <h3>Clearer Play, Better Answers</h3>
+        <p>Constellore 3.1 keeps one obvious action in focus, gives the game a warmer illustrated identity, and places Undo, Redo, Tidy, and Clear directly on the board. Larger text, familiar words, calmer menus, and clearer player feedback make every mode easier to understand.</p>
+        <p>Find-the-word modes now show honest steps remaining and a playful Run IQ score. New valid pairs build a multiplier up to ×3, misses cost only two points, repeats cannot be farmed, and 200 is the cap. The authored universe has grown from 1,066 to 3,199 logical pairs without changing ranked rules.</p>
+        <p>Show Answer now performs one readable fusion at a time: two words meet, the result appears with light trails and a discovery burst, and the route advances without overlapping copies. It still disables scoring, allows one replay, and then returns to the main screen.</p>
+      </li>
+      <li class="updates-entry" data-update-entry>
+        <div class="updates-meta"><span>VERSION 3.0.0-BETA.2</span><time datetime="2026-07-23">JUL 23, 2026</time></div>
         <h3>The Path Becomes the Game</h3>
         <p>A calmer First Orbit now teaches one visible destination before the rest of the universe unfolds. World Graph 3 adds a faster sparse runtime, hundreds of reviewed logical connections, ninety Daily challenge variants, one honest Guidance ladder, a live constellation trail, clearer Pure/Open/Practice/Study rules, privacy-safe missing-pair feedback, stronger ranked-run integrity, and the beta.2 compatibility fix for the Living Atlas.</p>
         <p>Pages and itch are deterministic local practice without live rankings, accounts, or AI. Beta progress may reset.</p>
@@ -357,57 +420,62 @@
 
   <dialog id="pauseDialog" class="modal pause-modal" aria-labelledby="pauseTitle" aria-describedby="pauseDescription pauseClockPolicy">
     <div class="pause-heading">
-      <span class="pause-orb" aria-hidden="true"><i></i><i></i></span>
       <div>
-        <span class="eyebrow">ORBIT MENU</span>
-        <h2 id="pauseTitle">Your constellation is held.</h2>
+        <h2 id="pauseTitle">Game paused</h2>
       </div>
-      <kbd aria-label="Escape key">ESC</kbd>
     </div>
-    <p id="pauseDescription">Resume when you are ready, restart this target, or leave the current mode.</p>
+    <p class="simple-hidden" id="pauseDescription">Continue, restart, or go home.</p>
     <section class="pause-target" aria-label="Current mission">
-      <span>YOU ARE SEEKING</span>
+      <span>Target</span>
       <strong id="pauseTarget">…</strong>
-      <small id="pauseMode">REACH</small>
+      <small class="simple-hidden" id="pauseMode">RELAXED</small>
     </section>
-    <div class="pause-stats" aria-label="Current orbit progress">
-      <section><span>MOVES</span><strong id="pauseMoves">0</strong></section>
-      <section><span>DISCOVERIES</span><strong id="pauseDiscoveries">0</strong></section>
-      <section><span id="pauseClockLabel">ELAPSED</span><strong id="pauseClock">00:00</strong></section>
+    <div class="pause-stats simple-hidden" aria-label="Current game progress">
+      <section><span>Moves</span><strong id="pauseMoves">0</strong></section>
+      <section><span>Words found</span><strong id="pauseDiscoveries">0</strong></section>
+      <section><span id="pauseClockLabel">Time</span><strong id="pauseClock">00:00</strong></section>
     </div>
-    <p class="pause-clock-policy" id="pauseClockPolicy"><span aria-hidden="true">⌛</span><strong>Fair-play clock:</strong><b id="pauseClockMessage">In timed modes, the verified clock keeps running while this menu is open.</b></p>
+    <p class="pause-clock-policy" id="pauseClockPolicy" hidden><b id="pauseClockMessage">The timer keeps running.</b></p>
     <div class="pause-confirmation" id="pauseConfirmation" role="status" aria-live="polite" hidden>
-      <strong id="pauseConfirmationTitle">Confirm this action</strong>
-      <span id="pauseConfirmationText">Your current board progress will be abandoned.</span>
-      <button id="cancelPauseAction" type="button">Keep this orbit</button>
+      <strong id="pauseConfirmationTitle">Are you sure?</strong>
+      <span id="pauseConfirmationText">Your progress in this game will be lost.</span>
+      <button id="cancelPauseAction" type="button">Cancel</button>
     </div>
     <div class="pause-actions">
-      <button class="primary-action" id="resumePausedRun" type="button"><span>Resume orbit</span><span aria-hidden="true">→</span></button>
-      <button class="secondary-action pause-restart" id="pauseRestart" type="button"><span>Restart this target</span><span aria-hidden="true">↻</span></button>
-      <button class="quiet-action pause-exit" id="pauseExit" type="button">Exit to mode selection</button>
+      <button class="primary-action" id="resumePausedRun" type="button"><span>Continue</span><span aria-hidden="true">→</span></button>
+      <button class="secondary-action pause-restart" id="pauseRestart" type="button"><span>Restart</span><span aria-hidden="true">↻</span></button>
+      <button class="quiet-action pause-exit" id="pauseExit" type="button">Quit game</button>
     </div>
   </dialog>
 
   <dialog id="missionBriefingDialog" class="modal mission-briefing-modal" aria-labelledby="missionBriefingTitle" aria-describedby="missionBriefingRule missionBriefingScoreDetail">
     <div class="mission-scroll" id="missionBriefingScroll">
-      <span class="eyebrow" id="missionBriefingMode">REACH &middot; MISSION BRIEF</span>
+      <span class="eyebrow simple-hidden" id="missionBriefingMode">RELAXED</span>
       <div class="mission-target-lockup">
-        <span class="mission-target-emoji" id="missionBriefingEmoji" aria-hidden="true">&#10022;</span>
+        <span class="mission-target-emoji simple-hidden" id="missionBriefingEmoji" aria-hidden="true">&#10022;</span>
         <div>
-          <small>YOU ARE LOOKING FOR</small>
-          <h2 id="missionBriefingTitle">Your target is <strong id="missionBriefingTarget">Telescope</strong>.</h2>
+          <small>Your target</small>
+          <h2 id="missionBriefingTitle">Make <strong id="missionBriefingTarget">Telescope</strong></h2>
         </div>
       </div>
-      <p class="mission-clue" id="missionBriefingClue">A destination waits at the edge of this constellation.</p>
-      <p class="mission-win-rule" id="missionBriefingRule">Combine words until one fusion creates Telescope.</p>
-      <div class="mission-division practice" id="missionBriefingDivision">
+      <p class="mission-clue" id="missionBriefingClue">Combine two words to make a new word.</p>
+      <p class="mission-win-rule" id="missionBriefingRule">Keep going until you make Telescope.</p>
+      <p class="mission-start-line"><strong id="missionBriefingStart">You start with 4 words</strong><span id="missionBriefingStarters">Earth, Water, Fire, and Air</span></p>
+      <div class="mission-division practice simple-hidden" id="missionBriefingDivision">
         <span id="missionBriefingDivisionLabel">PRACTICE</span>
         <div><strong id="missionBriefingDivisionTitle">Explore without leaderboard pressure</strong><small id="missionBriefingDivisionDetail">Guidance is available and this route stays on your device.</small></div>
       </div>
-      <div class="mission-journey-context" id="missionJourneyContext" hidden><span id="missionJourneyType">VOYAGE STAGE</span><strong id="missionJourneyTitle"></strong><small id="missionJourneyStory"></small></div>
-      <div class="mission-law" id="missionBriefingLaw" hidden><span>COSMIC LAW</span><strong id="missionBriefingLawName"></strong><small id="missionBriefingLawDescription"></small></div>
-      <details class="mission-details">
-        <summary><span>Rules, reward, and Guidance</span><small id="missionBriefingLimitSummary">No limit · Practice</small></summary>
+      <div class="mission-journey-context simple-hidden" id="missionJourneyContext" hidden><span id="missionJourneyType">STORY</span><strong id="missionJourneyTitle"></strong><small id="missionJourneyStory"></small></div>
+      <div class="mission-law simple-hidden" id="missionBriefingLaw" hidden><span>RULE</span><strong id="missionBriefingLawName"></strong><small id="missionBriefingLawDescription"></small></div>
+      <p class="mission-limit-line" id="missionBriefingLimitSummary">No time limit.</p>
+      <p class="mission-iq-rule" id="missionBriefingIqRule" hidden>Run IQ starts at 0. Useful connections earn the most. A perfect route reaches 200.</p>
+      <p class="mission-adaptive-note" id="missionAdaptiveNote" hidden>Matched to your recent games. Every three wins raise your normal level; ending one early lowers it by one.</p>
+      <section class="mission-remix-summary" id="missionRemixSummary" aria-labelledby="missionRemixRank" hidden>
+        <div><strong id="missionRemixRank">Bronze Route Rank</strong><span id="missionRemixCount">Classic rules</span></div>
+        <ul id="missionRemixRules"></ul>
+      </section>
+      <details class="mission-details simple-hidden">
+        <summary><span>More details</span><small>Optional</small></summary>
         <div class="mission-facts" aria-label="Mission limits and scoring">
           <section>
             <span>LIMIT</span>
@@ -427,16 +495,16 @@
         </div>
         <div class="mission-how-to">
           <strong>HOW COMBINING WORKS</strong>
-          <p id="missionBriefingInteraction">Drag one word onto another, or tap any two discovered words, to fuse them.</p>
-          <p id="missionBriefingModeRule">There is no clock or move cap, so you can explore freely.</p>
+          <p id="missionBriefingInteraction">Drop one word onto another to combine them.</p>
+          <p id="missionBriefingModeRule">There is no time limit.</p>
         </div>
         <p class="mission-fairness" id="missionBriefingFairness">Route Signals are score-safe. Star Compass keeps 75% and Word Gift keeps 50% in Open; automatic Reveal becomes Study with 0 score.</p>
       </details>
     </div>
     <div class="mission-actions">
       <p class="form-message mission-status" id="missionBriefingStatus" role="status" aria-live="polite"></p>
-      <button class="primary-action" id="beginMission" type="button"><span>Begin mission</span><span aria-hidden="true">&rarr;</span></button>
-      <button class="quiet-action" id="cancelMission" type="button">Back to modes</button>
+      <button class="primary-action" id="beginMission" type="button"><span>Play</span><span aria-hidden="true">&rarr;</span></button>
+      <button class="quiet-action" id="cancelMission" type="button">Back</button>
     </div>
   </dialog>
 
@@ -597,87 +665,73 @@
   </dialog>
 
   <dialog id="senseDialog" class="modal sense-modal powerups-modal" aria-labelledby="senseTitle" aria-describedby="powerupsIntro">
-    <button class="modal-close" data-close="senseDialog" type="button" aria-label="Close Guidance">×</button>
+    <button class="modal-close" data-close="senseDialog" type="button" aria-label="Close help">×</button>
     <div class="powerups-heading">
-      <span class="modal-orb sense-orb" aria-hidden="true">✦</span>
-      <div><span class="eyebrow">PROGRESSIVE HELP · YOUR CHOICE</span><h2 id="senseTitle">Guidance</h2></div>
+      <div><h2 id="senseTitle">Need help?</h2></div>
     </div>
-    <p id="powerupsIntro">Start with a score-safe signal. Stronger help is always optional and shows its exact scoring effect before you use it.</p>
-    <article class="powerup-card tip-card guidance-primary">
-        <header><span class="powerup-icon cyan" aria-hidden="true">1</span><div><small>ROUTE SIGNAL</small><h3>Point me forward</h3></div><b class="score-safe">SCORE SAFE</b></header>
-        <p>Finds the earliest route bridge you can make now. It names at most one word you already discovered—never the partner, result, target, or full path.</p>
-        <div class="powerup-stock"><span>THIS ORBIT</span><strong id="quickTipCount">3 / 3</strong></div>
-        <button class="powerup-action" id="useQuickTip" type="button"><span>Read a route signal</span><span aria-hidden="true">→</span></button>
-        <p class="powerup-message tip-message" id="quickTipMessage" role="status" aria-live="polite">Three score-safe route signals are ready.</p>
+    <p id="powerupsIntro">Choose how much help you want.</p>
+    <article class="powerup-card tip-card">
+      <header><div><h3>Hint</h3><small>Your points stay the same.</small></div></header>
+      <p>Shows one useful word you already found.</p>
+      <div class="powerup-stock"><strong id="quickTipCount">3 left</strong></div>
+      <button class="powerup-action" id="useQuickTip" type="button"><span>Use hint</span><span aria-hidden="true">→</span></button>
+      <p class="powerup-message tip-message" id="quickTipMessage" role="status" aria-live="polite">You have three hints.</p>
     </article>
-    <details class="guidance-stronger">
-      <summary><span><strong>Need stronger help?</strong><small>Compass, Word Gift, and complete Reveal change scoring.</small></span><b aria-hidden="true">+</b></summary>
-      <div class="guidance-stronger-panel">
-        <div class="powerup-grid">
-          <article class="powerup-card gift-card" id="wordGiftCard">
-        <header><span class="powerup-icon amber" aria-hidden="true">3</span><div><small>WORD GIFT</small><h3>Give me a bridge</h3></div><b class="partial-score">OPEN · 50% SCORE</b></header>
-        <p>Summons one undiscovered non-target word from the verified route. Its recipe stays secret.</p>
-        <div class="powerup-stock"><span>THIS ORBIT</span><strong id="wordGiftState">1 READY</strong></div>
-        <button class="powerup-action" id="useWordGift" type="button"><span>Summon gift · keep 50%</span><span aria-hidden="true">✦</span></button>
-        <p class="powerup-message" id="wordGiftMessage" role="status" aria-live="polite">Keeps an Open score at half value; the recipe remains yours to discover.</p>
-          </article>
-          <article class="powerup-card compass-card">
-        <header><span class="powerup-icon violet" aria-hidden="true">2</span><div><small>STAR COMPASS</small><h3>Highlight warm words</h3></div><b class="partial-score">OPEN · 75% SCORE</b></header>
-        <p>Makes up to three useful words you already discovered shimmer for ten seconds. No recipe is shown.</p>
-        <div class="powerup-stock"><span>AVAILABLE</span><strong><b id="senseDialogCount">1</b> CHARGE</strong><small id="senseEarnNote">One charge returns each UTC day.</small></div>
-        <button class="powerup-action" id="useSense" type="button"><span>Activate compass · keep 75%</span><span aria-hidden="true">✧</span></button>
-        <button class="powerup-buy" id="buySense" type="button"><span>Buy one charge</span><strong>90 ✦</strong></button>
-        <p class="powerup-message" id="senseMessage" role="status" aria-live="polite"></p>
-          </article>
-        </div>
-        <section class="guidance-reveal-step">
-      <span class="powerup-icon rose" aria-hidden="true">4</span>
-      <div><small>COMPLETE REVEAL</small><strong>Show and teach the route</strong><p>Watch the required words combine, then replay the constellation once. This changes the orbit to Study.</p></div>
-      <b>STUDY · 0 SCORE</b>
-      <button class="reveal-trigger" id="revealPathButton" type="button" aria-haspopup="dialog" aria-controls="revealDialog" aria-label="Reveal answer path; forfeits all scoring"><span aria-hidden="true">&#10023;</span><b>Reveal complete path</b></button>
-        </section>
-      </div>
-    </details>
-    <p class="powerups-fairness"><span aria-hidden="true">◇</span><strong>You stay in control:</strong> Pure uses no score-changing help. Compass or Gift moves the run to Open. Automatic Reveal is the only full Study option at 0 score.</p>
+    <article class="powerup-card gift-card" id="wordGiftCard">
+      <header><div><h3>Add a helpful word</h3><small>You keep half your points.</small></div></header>
+      <p>Adds one new word that helps you reach the target.</p>
+      <div class="powerup-stock"><strong id="wordGiftState">1 left</strong></div>
+      <button class="powerup-action" id="useWordGift" type="button"><span>Add word</span><span aria-hidden="true">→</span></button>
+      <p class="powerup-message" id="wordGiftMessage" role="status" aria-live="polite">The recipe stays hidden.</p>
+    </article>
+    <section class="guidance-reveal-step">
+      <div><strong>Show the answer</strong><p>Shows every step. You get no points.</p></div>
+      <button class="reveal-trigger" id="revealPathButton" type="button" aria-haspopup="dialog" aria-controls="revealDialog" aria-label="Show the answer; gives no points"><b>Show answer</b><span aria-hidden="true">→</span></button>
+    </section>
+    <div class="simple-hidden" aria-hidden="true">
+      <b id="senseDialogCount">1</b><small id="senseEarnNote">One available.</small>
+      <button id="useSense" type="button">Use extra hint</button>
+      <button id="buySense" type="button">Buy hint</button>
+      <p id="senseMessage" role="status" aria-live="polite"></p>
+    </div>
   </dialog>
 
   <dialog id="revealDialog" class="modal reveal-modal" aria-labelledby="revealTitle" aria-describedby="revealDescription">
     <button class="modal-close" data-close="revealDialog" type="button" aria-label="Close">×</button>
-    <span class="modal-orb" aria-hidden="true">&#10023;</span>
-    <span class="eyebrow">ASK THE COSMOS</span>
-    <h2 id="revealTitle">Reveal the path?</h2>
-    <p id="revealDescription">The cosmos will trace every required combination from the starting elements.</p>
+    <h2 id="revealTitle">Show the answer?</h2>
+    <p id="revealDescription">The game will show every combination you need.</p>
     <div class="reveal-consequence">
-      <span class="reveal-zero-score">0 SCORE</span>
-      <strong>This cannot be undone for this challenge.</strong>
-      <p>No leaderboard entry, Stardust, streak credit, rewards, or saved discoveries will be earned.</p>
-      <p class="reveal-mode-warning" id="revealModeWarning">Timed and limited runs are forfeited when the path begins.</p>
+      <strong>You will get no points for this game.</strong>
+      <p class="reveal-mode-warning" id="revealModeWarning">You can watch it once, then try again.</p>
     </div>
-    <button class="primary-action" id="confirmReveal" type="button"><span>Reveal and forfeit score</span><span aria-hidden="true">&#10023;</span></button>
-    <button class="quiet-action" data-close="revealDialog" type="button">Keep solving</button>
+    <button class="primary-action" id="confirmReveal" type="button"><span>Show answer</span><span aria-hidden="true">→</span></button>
+    <button class="quiet-action" data-close="revealDialog" type="button">Cancel</button>
   </dialog>
 
   <dialog id="profileDialog" class="modal profile-modal" aria-labelledby="profileRankTitle">
     <button class="modal-close" data-close="profileDialog" type="button" aria-label="Close">×</button>
     <header class="profile-heading">
-      <div><span class="eyebrow">YOUR CONSTELLATION</span><h2 id="profileRankTitle">Stargazer I</h2></div>
-      <div class="public-callsign"><span>PUBLIC CALLSIGN</span><strong id="profileCallsign">Mapping…</strong><small>Anonymous name used on rankings</small></div>
+      <div><h2 id="profileRankTitle">Your progress</h2></div>
+      <div class="public-callsign simple-hidden"><span>Public name</span><strong id="profileCallsign">Loading…</strong><small>Used on leaderboards</small></div>
     </header>
     <section class="profile-overview" aria-label="Profile overview">
-      <div class="profile-total"><span aria-hidden="true">✦</span><strong id="profileTotalDust">0</strong><small>STARDUST</small></div>
+      <div class="profile-total simple-hidden"><span aria-hidden="true">✦</span><strong id="profileTotalDust">0</strong><small>Points</small></div>
       <div class="profile-grid profile-core-grid">
-        <div><strong id="profileWords">4</strong><span>words</span></div>
-        <div><strong id="profileWins">0</strong><span>wins</span></div>
-        <div><strong id="profileStreak">0</strong><span>day streak</span></div>
+        <div><strong id="profileWords">4</strong><span>Words found</span></div>
+        <div><strong id="profileWins">0</strong><span>Games won</span></div>
+        <div><strong id="profileStreak">0</strong><span>Day streak</span></div>
       </div>
     </section>
-    <section class="progression-dashboard" aria-label="Lifetime and weekly progression">
+    <section class="progression-dashboard simple-hidden" aria-label="Lifetime and weekly progression">
       <article><span><small>LIFETIME ATLAS</small><strong id="lifetimeRankName">Stargazer I</strong></span><b><span id="lifetimePoints">0</span> XP</b><i aria-hidden="true"><em id="lifetimeRankProgress"></em></i><small id="lifetimeRankNext">250 Atlas XP to Stargazer II</small></article>
       <article><span><small id="weeklyRatingSeason">WEEKLY MOMENTUM</small><strong id="weeklyRatingName">Quiet Orbit</strong></span><b id="weeklyRatingValue">1000</b><i aria-hidden="true"><em id="weeklyRatingProgress"></em></i><small id="weeklyRatingNext">Resets weekly. Your lifetime rank is safe.</small></article>
     </section>
+    <details class="profile-more">
+      <summary>More</summary>
+      <div class="profile-more-content">
     <div class="profile-disclosure-grid">
       <details class="profile-archive profile-disclosure">
-        <summary><span><strong>Inventory</strong><small>Mastery, words &amp; utility</small></span><b aria-hidden="true">+</b></summary>
+        <summary><span><strong>Collection</strong><small>Words and rewards</small></span><b aria-hidden="true">+</b></summary>
         <div class="profile-grid">
           <div><strong id="profileMasteryStars">0</strong><span>recipe stars</span></div>
           <div><strong id="profileCredits">0</strong><span>earn-only Credits</span></div>
@@ -687,13 +741,13 @@
         </div>
       </details>
       <details class="profile-disclosure profile-badges">
-        <summary><span><strong>Badges</strong><small id="profileBadgeSummary">0 earned</small></span><b aria-hidden="true">+</b></summary>
+        <summary><span><strong>Achievements</strong><small id="profileBadgeSummary">0 earned</small></span><b aria-hidden="true">+</b></summary>
         <section class="badge-shelf" aria-label="Constellation badges"><div><span class="eyebrow">EARNED, NEVER LOST</span><h3 id="badgeShelfTitle">Constellation badges</h3></div><div id="badgeShelf"></div></section>
       </details>
     </div>
     <div class="profile-options-grid">
     <details class="profile-disclosure profile-account" id="cloudProfileGroup">
-      <summary><span><strong>Cloud &amp; recovery</strong><small id="cloudProfileSummary">Sync or recover</small></span><b aria-hidden="true">+</b></summary>
+      <summary><span><strong>Account</strong><small id="cloudProfileSummary">Save or recover</small></span><b aria-hidden="true">+</b></summary>
       <section class="cloud-account-card" id="cloudAccountSection" aria-labelledby="cloudAccountTitle">
         <div class="cloud-account-head"><span><small>RECOVERABLE CLOUD PROFILE</small><strong id="cloudAccountTitle">Keep your universe</strong></span><b id="cloudSyncStatus" role="status" aria-live="polite" aria-atomic="true">Connecting…</b></div>
         <div class="cloud-player-id"><span>PLAYER ID</span><code id="cloudPlayerId">Creating…</code></div>
@@ -718,7 +772,7 @@
       </section>
     </details>
     <details class="profile-disclosure profile-preferences">
-      <summary><span><strong>Preferences</strong><small>Training &amp; feel</small></span><b aria-hidden="true">+</b></summary>
+      <summary><span><strong>Settings</strong><small>Sound, feel, and lessons</small></span><b aria-hidden="true">+</b></summary>
       <div class="profile-disclosure-content">
         <section class="training-replay-card" aria-labelledby="trainingReplayTitle">
           <span aria-hidden="true">&#10022;</span>
@@ -749,9 +803,9 @@
       </div>
     </details>
     <details class="profile-disclosure profile-data">
-      <summary><span><strong>Privacy &amp; data</strong><small>Exports &amp; diagnostics</small></span><b aria-hidden="true">+</b></summary>
+      <summary><span><strong>Privacy and data</strong><small>Downloads and diagnostics</small></span><b aria-hidden="true">+</b></summary>
       <div class="profile-disclosure-content">
-        <section class="local-diagnostics" id="localDiagnosticsSection" hidden aria-labelledby="localDiagnosticsTitle"><div><strong id="localDiagnosticsTitle">Local practice data</strong><small>Export/reset your save, or share privacy-safe event counts for beta diagnostics. Counts contain no words, targets, identity, or sessions.</small></div><button id="exportLocalPractice" type="button">Export save</button><button id="resetLocalPractice" type="button">Reset practice</button><button id="exportLocalDiagnostics" type="button">Export counts</button><button id="resetLocalDiagnostics" type="button">Reset counts</button></section>
+        <section class="local-diagnostics" id="localDiagnosticsSection" hidden aria-labelledby="localDiagnosticsTitle"><div><strong id="localDiagnosticsTitle">Local practice data</strong><small>Export or reset your save and local beta report. A report can include event counts, recipe pairs, and the short result you suggested, but never your name, contact details, or account.</small></div><button id="exportLocalPractice" type="button">Export save</button><button id="resetLocalPractice" type="button">Reset practice</button><button id="exportLocalDiagnostics" type="button">Export local report</button><button id="resetLocalDiagnostics" type="button">Reset local report</button></section>
         <section class="diagnostics-preference" aria-labelledby="diagnosticsTitle">
           <div><strong id="diagnosticsTitle">Optional play diagnostics</strong><small>Off by default. If enabled, Constellore sends bounded gameplay events with a random device cohort ID. No free text, email, or real name is included. Security and verified-run records are operational data and are handled separately.</small></div>
           <button id="diagnosticsPreference" type="button" aria-pressed="false"><span aria-hidden="true">◇</span><b>Share optional diagnostics</b><small>OFF</small></button>
@@ -761,6 +815,8 @@
       </div>
     </details>
     </div>
+      </div>
+    </details>
   </dialog>
 
   <dialog id="recoveryDialog" class="modal recovery-modal" aria-labelledby="recoveryTitle">
@@ -793,18 +849,32 @@
 
   <dialog id="resultDialog" class="modal result-modal" aria-labelledby="resultTitle" aria-describedby="resultStats">
     <span class="result-emoji" id="resultEmoji">✦</span>
-    <span class="eyebrow" id="resultKicker">TARGET REACHED</span>
-    <h2 id="resultTitle">You found it.</h2>
+    <span class="eyebrow simple-hidden" id="resultKicker">DONE</span>
+    <h2 id="resultTitle">You made it!</h2>
     <p id="resultStats"></p>
-    <section class="result-route-card" aria-labelledby="resultRouteTitle">
-      <div><span>YOUR CONSTELLATION</span><strong id="resultRouteTitle">A route only you traced</strong><small id="resultRouteSummary">0 recipes · 0 discoveries</small></div>
-      <div class="result-route-trail" id="resultRouteTrail" aria-hidden="true"><i>✦</i><i>?</i></div>
-      <button id="resultAtlas" type="button"><span>View constellation</span><span aria-hidden="true">⌁</span></button>
+    <p class="result-adaptive-note" id="resultAdaptiveNote" hidden></p>
+    <p class="result-remix-note" id="resultRemixNote" hidden></p>
+    <section class="start-style-control result-next-options" id="resultNextOptions" aria-labelledby="startStyleLabel" hidden>
+      <span><strong id="startStyleLabel">Next challenge starts with</strong><small id="startStyleSummary">Auto chooses the best starting words for you.</small></span>
+      <div class="start-style-options" role="radiogroup" aria-label="Choose how the next game begins" aria-describedby="startStyleSummary">
+        <button type="button" role="radio" aria-checked="true" aria-label="Auto: let the game choose the best starting words" title="Let the game choose" data-start-style="auto">Auto</button>
+        <button type="button" role="radio" aria-checked="false" aria-label="Same four: always start with Earth, Water, Fire, and Air" title="Always use Earth, Water, Fire, and Air" tabindex="-1" data-start-style="classic">Same 4</button>
+        <button type="button" role="radio" aria-checked="false" aria-label="New mix: start with different useful words" title="Start with different useful words" tabindex="-1" data-start-style="shuffled">New mix</button>
+      </div>
     </section>
-    <button class="primary-action" id="resultPrimary" type="button"><span>Next orbit</span><span aria-hidden="true">→</span></button>
+    <div class="result-actions" id="resultActions">
+      <button class="primary-action" id="resultRetry" type="button">Play next</button>
+      <button class="secondary-action" id="resultReplay" type="button">Restart challenge</button>
+      <button class="quiet-action" id="resultPrimary" type="button"><span>Main menu</span><span aria-hidden="true">→</span></button>
+    </div>
     <details class="result-details" id="resultDetails">
-      <summary><span>Score, rewards &amp; more</span><b aria-hidden="true">+</b></summary>
+      <summary><span>More details</span><b aria-hidden="true">+</b></summary>
       <div class="result-details-panel">
+      <section class="result-route-card" aria-labelledby="resultRouteTitle">
+        <div><span>Your path</span><strong id="resultRouteTitle">How you made it</strong><small id="resultRouteSummary">0 combinations · 0 words</small></div>
+        <div class="result-route-trail" id="resultRouteTrail" aria-hidden="true"><i>✦</i><i>?</i></div>
+        <button id="resultAtlas" type="button"><span>View path</span><span aria-hidden="true">→</span></button>
+      </section>
       <div class="mastery-result-card" id="resultMasteryCard" hidden><span>RECIPE MASTERY</span><strong id="resultMasteryText"></strong></div>
     <section class="signature-result-card" id="signatureResultCard" hidden aria-labelledby="signatureResultTitle">
       <div class="signature-orb" id="signatureResultGrade" aria-hidden="true">A</div>
@@ -828,11 +898,10 @@
     <button class="secondary-action result-reveal" id="resultReveal" type="button" hidden><span>Reveal this path</span><span aria-hidden="true">&#10023;</span></button>
       </div>
     </details>
-    <button class="quiet-action" id="resultRetry" type="button">Retry this target</button>
   </dialog>
 
-  <div class="connection-badge" id="connectionBadge" role="status" hidden>Offline — reconnect to forge new words</div>
+  <div class="connection-badge" id="connectionBadge" role="status" hidden>Offline — reconnect to make new words</div>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
-  <script type="module" src="/app.js?v=3.0.0-beta.2"></script>
+  <script type="module" src="/app.js?v=3.3.0-beta.1"></script>
 </body>
 </html>

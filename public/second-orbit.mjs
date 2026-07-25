@@ -3,27 +3,27 @@ const ROUTE = [
     a: "Earth",
     b: "Fire",
     word: "Lava",
-    title: "Change the ground",
-    instruction: "Route Signal: keep Earth in play. One starting element can heat it into something new.",
-    tip: "This lesson no longer locks wrong pairs. Explore freely; the signal only points you forward.",
+    title: "Make Lava",
+    instruction: "Earth is useful. Try adding heat.",
+    tip: "You can try other pairs too.",
     spotlightWords: ["Earth"]
   },
   {
     a: "Lava",
     b: "Water",
     word: "Stone",
-    title: "Cool what you created",
-    instruction: "Route Signal: Lava is useful here. Pair it with a cooling starting element.",
-    tip: "A discovered word can connect back to any of the four starting elements.",
+    title: "Make Stone",
+    instruction: "Lava is useful. Try cooling it.",
+    tip: "New words can combine with the starting words.",
     spotlightWords: ["Lava"]
   },
   {
     a: "Stone",
     b: "Stone",
     word: "Mountain",
-    title: "Let the idea grow",
-    instruction: "Route Signal: Stone is the final bridge. Some ideas become larger when doubled.",
-    tip: "Summon Stone twice, then bring the copies together.",
+    title: "Make Mountain",
+    instruction: "Stone is useful. Some things grow when doubled.",
+    tip: "Place Stone twice. Combine the two copies.",
     spotlightWords: ["Stone"]
   }
 ];

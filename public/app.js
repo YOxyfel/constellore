@@ -1,24 +1,53 @@
-import { createCtrlHoverController } from "./ctrl-hover.mjs?v=3.0.0-beta.2";
-import { createShiftBoardController } from "./shift-board.mjs?v=3.0.0-beta.2";
-import { findOpenSpawn, orderInventory, packOrbit, pickMagneticTarget } from "./frictionless.mjs?v=3.0.0-beta.2";
-import { buildMasteryCollections, lifetimeMasteryProgress, recordRecipeDiscovery, sanitizeRecipeMasteryState, summarizeMasteryCollections } from "./recipe-mastery.mjs?v=3.0.0-beta.2";
-import { QUICK_TIP_LIMIT, assistancePolicy, buildGhost, combineAssistance, feedbackCuePolicy, ghostSnapshot, ghostTrailPreviewState, grantSenseCharges, lifetimeProgression, reconcileCloudProgression, refillSenseWallet, sanitizeFeedbackPreferences, sanitizeSenseWallet, spendSenseCharge, weeklyRatingPresentation } from "./engagement-features.mjs?v=3.0.0-beta.2";
-import { firstOrbitProgress, firstOrbitWrongPairMessage, resolveFirstOrbitCombination, sanitizeFirstOrbitState } from "./first-orbit.mjs?v=3.0.0-beta.2";
-import { secondOrbitProgress, sanitizeSecondOrbitState } from "./second-orbit.mjs?v=3.0.0-beta.2";
-import { exploreGame, mergeExploreInventory, sanitizeExploreInventory } from "./explore-sandbox.mjs?v=3.0.0-beta.2";
-import { buildConstellationCard, constellationCardFilename, constellationCardShareText, renderConstellationCardSvg } from "./constellation-card.mjs?v=3.0.0-beta.2";
-import { COSMETIC_CATALOG, cosmeticClasses, cosmeticOptions, earnedBadges, progressionAuraClass, sanitizeCosmeticLoadout, transformFeedbackAudio } from "./cosmetic-economy.mjs?v=3.0.0-beta.2";
-import { createRecipeFeedbackRequest, recipeFingerprint, sanitizeRecipeRating } from "./recipe-feedback.mjs?v=3.0.0-beta.2";
-import { selectUniverse } from "./universe-director.mjs?v=3.0.0-beta.2";
-import { listPendingScoreRecords, removePendingScoreRecord, savePendingScoreRecord } from "./pending-scores.mjs?v=3.0.0-beta.2";
-import { buildMissionBriefing } from "./mission-briefing.mjs?v=3.0.0-beta.2";
-import { advanceVoyageProgress, constellationVoyage, constellationVoyageCatalog, currentVoyageStage, sanitizeVoyageProgress, voyageProgress } from "./constellation-voyages.mjs?v=3.0.0-beta.2";
-import { annotateCosmicEventResult, cosmicEventCollectionProgress, cosmicEventTargets, currentCosmicEvent } from "./cosmic-events.mjs?v=3.0.0-beta.2";
-import { explainRecipeNearMiss, explainSuccessfulRecipe } from "./recipe-insight.mjs?v=3.0.0-beta.2";
-import { buildLivingAtlas, buildRouteProgress } from "./living-atlas.mjs?v=3.0.0-beta.2";
-import { buildCommunityResults } from "./community-results.mjs?v=3.0.0-beta.2";
-import { comparePersonalBest, createRouteSignature, gradeSignatureRoute, sanitizeRouteSignature } from "./signature-routes.mjs?v=3.0.0-beta.2";
-import { createHomeMenuState } from "./home-menu.mjs?v=3.0.0-beta.2";
+import { createCtrlHoverController } from "./ctrl-hover.mjs?v=3.3.0-beta.1";
+import { createShiftBoardController } from "./shift-board.mjs?v=3.3.0-beta.1";
+import { findOpenSpawn, orderInventory, packOrbit, pickMagneticTarget } from "./frictionless.mjs?v=3.3.0-beta.1";
+import { buildMasteryCollections, lifetimeMasteryProgress, recordRecipeDiscovery, sanitizeRecipeMasteryState, summarizeMasteryCollections } from "./recipe-mastery.mjs?v=3.3.0-beta.1";
+import { QUICK_TIP_LIMIT, assistancePolicy, buildGhost, combineAssistance, feedbackCuePolicy, ghostSnapshot, ghostTrailPreviewState, grantSenseCharges, lifetimeProgression, reconcileCloudProgression, refillSenseWallet, sanitizeFeedbackPreferences, sanitizeSenseWallet, spendSenseCharge, weeklyRatingPresentation } from "./engagement-features.mjs?v=3.3.0-beta.1";
+import { firstOrbitProgress, firstOrbitWrongPairMessage, resolveFirstOrbitCombination, sanitizeFirstOrbitState } from "./first-orbit.mjs?v=3.3.0-beta.1";
+import { secondOrbitProgress, sanitizeSecondOrbitState } from "./second-orbit.mjs?v=3.3.0-beta.1";
+import { exploreGame, mergeExploreInventory, sanitizeExploreInventory } from "./explore-sandbox.mjs?v=3.3.0-beta.1";
+import { buildConstellationCard, constellationCardFilename, constellationCardShareText, renderConstellationCardSvg } from "./constellation-card.mjs?v=3.3.0-beta.1";
+import { COSMETIC_CATALOG, cosmeticClasses, cosmeticOptions, earnedBadges, progressionAuraClass, sanitizeCosmeticLoadout, transformFeedbackAudio } from "./cosmetic-economy.mjs?v=3.3.0-beta.1";
+import { createRecipeFeedbackRequest, recipeFingerprint, sanitizeRecipeRating } from "./recipe-feedback.mjs?v=3.3.0-beta.1";
+import { selectUniverse } from "./universe-director.mjs?v=3.3.0-beta.1";
+import { listPendingScoreRecords, removePendingScoreRecord, savePendingScoreRecord } from "./pending-scores.mjs?v=3.3.0-beta.1";
+import { buildMissionBriefing } from "./mission-briefing.mjs?v=3.3.0-beta.1";
+import { advanceVoyageProgress, constellationVoyage, constellationVoyageCatalog, currentVoyageStage, sanitizeVoyageProgress, voyageProgress } from "./constellation-voyages.mjs?v=3.3.0-beta.1";
+import { annotateCosmicEventResult, cosmicEventCollectionProgress, cosmicEventTargets, currentCosmicEvent } from "./cosmic-events.mjs?v=3.3.0-beta.1";
+import { explainRecipeNearMiss, explainSuccessfulRecipe } from "./recipe-insight.mjs?v=3.3.0-beta.1";
+import { buildLivingAtlas, buildRouteProgress } from "./living-atlas.mjs?v=3.3.0-beta.1";
+import { sanitizeAuthoredRouteProgress } from "./route-distance.mjs?v=3.3.0-beta.1";
+import { buildCommunityResults } from "./community-results.mjs?v=3.3.0-beta.1";
+import { comparePersonalBest, createRouteSignature, gradeSignatureRoute, sanitizeRouteSignature } from "./signature-routes.mjs?v=3.3.0-beta.1";
+import { createHomeMenuState } from "./home-menu.mjs?v=3.3.0-beta.1";
+import { createRunIqState, rewardRunIq, runIqApplies, runIqPairKey, runIqRouteContext, sanitizeRunIqState, softenRunIq } from "./run-iq.mjs?v=3.3.0-beta.1";
+import {
+  adaptiveModePolicy,
+  applyAdaptiveChallengeOutcome,
+  createAdaptiveDifficultyState,
+  rememberAdaptiveTarget,
+  sanitizeAdaptiveDifficultyState
+} from "./adaptive-difficulty.mjs?v=3.3.0-beta.1";
+import {
+  createRemixProgressionState,
+  getPromotionEligibility,
+  getRemixMasteryProgress,
+  getRemixRankPresentation,
+  recordRemixProgressionOutcome,
+  recordRemixPromotionTrialOutcome,
+  sanitizeRemixProgressionState,
+  startRemixPromotionTrial
+} from "./remix-progression.mjs?v=3.3.0-beta.1";
+import {
+  createRemixReadinessState,
+  getAdaptiveRemixIntensity,
+  recordRemixReadinessOutcome,
+  sanitizeRemixReadinessState
+} from "./remix-readiness.mjs?v=3.3.0-beta.1";
+import { selectStartStyle } from "./shuffled-start.mjs?v=3.3.0-beta.1";
+import { createRankBoardArtRuntime } from "./rank-board-art-runtime.mjs?v=3.3.0-beta.1";
+import { routeRankChangeMessage, sanitizeRouteOutcomeHashes, sanitizeRouteRankSummary, sanitizeStartStylePreference } from "./route-rank-client.mjs?v=3.3.0-beta.1";
+import { createCombinationReportDelivery, sanitizeCombinationSuggestion, validateCombinationReportEndpoint } from "./combination-report-delivery.mjs?v=3.3.0-beta.1";
 
 const starterEmoji = { Earth: "🌍", Water: "💧", Fire: "🔥", Air: "💨" };
 const starterCategory = { Earth: "nature", Water: "force", Fire: "force", Air: "force" };
@@ -29,15 +58,19 @@ const todayKey = new Date().toISOString().slice(0, 10);
 const sessionId = globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 const MAX_BOARD_NODES = 180;
 const MAX_SHIFT_COPIES_PER_DRAG = 24;
+const MAX_BOARD_HISTORY = 30;
 const LOCAL_ANALYTICS_KEY = "constellore-local-event-counts-v1";
 const LOCAL_RECIPE_FEEDBACK_KEY = "constellore-local-recipe-feedback-v1";
 const LOCAL_EXPECTED_PAIRS_KEY = "constellore-local-expected-pairs-v1";
+const LOCAL_EXPECTED_PAIR_OUTBOX_KEY = "constellore-local-expected-pair-outbox-v1";
 const ANALYTICS_COHORT_KEY = "constellore-analytics-cohort-v1";
 const ANALYTICS_PREFERENCE_KEY = "constellore-analytics-preference-v1";
 const PENDING_RECOVERY_KIT_KEY = "constellore-pending-recovery-kit-v1";
+const ADAPTIVE_DIFFICULTY_KEY = isStaticBeta ? "constellore-local-adaptive-difficulty-v1" : "constellore-adaptive-difficulty-v1";
 const VOYAGE_REWARD = 35;
 const EVENT_COLLECTION_REWARD = 60;
 const MAX_TRANSIENT_TRAILS = 120;
+const FEEDBACK_API_URL = validateCombinationReportEndpoint(document.body.dataset.feedbackApi);
 const COMMERCE_LAUNCH_READY = document.body.dataset.commerce === "enabled";
 const ANALYTICS_DIMENSIONS = new Set(["mode", "division", "source", "result", "completed", "installed", "replay", "free", "status", "scope", "location", "phase", "ranked", "reward", "success"]);
 
@@ -102,7 +135,13 @@ const defaultProfile = {
   selectedVoyageId: "first-cities",
   eventProgress: { weekKey: "", eventId: "", words: [], rewarded: false },
   signatureBests: [],
-  rewardedRunIds: []
+  rewardedRunIds: [],
+  routeProgression: createRemixProgressionState(),
+  remixReadiness: createRemixReadinessState(),
+  routeOutcomeHashes: [],
+  routeRank: null,
+  lastRouteOutcome: "",
+  startStylePreference: "auto"
 };
 
 const state = {
@@ -146,6 +185,13 @@ const state = {
   assist: "none",
   scoringDisabled: false,
   scoreMultiplier: 1,
+  adaptiveDifficulty: readAdaptiveDifficulty(),
+  adaptiveNotice: null,
+  adaptiveOutcomeRecorded: false,
+  routeRankNotice: null,
+  remixProgress: null,
+  runIq: createRunIqState(),
+  routeProgress: sanitizeAuthoredRouteProgress(null),
   reveal: {
     active: false,
     paused: false,
@@ -161,6 +207,7 @@ const state = {
     route: [],
     completed: 0,
     layout: null,
+    visual: null,
     wake: null
   },
   market: null,
@@ -172,7 +219,7 @@ const state = {
   leaderboardDivision: "pure",
   sense: { words: [], timer: null, active: false },
   powerups: { tipsUsed: 0, tipIds: [], giftUsed: false, giftUnavailable: false, giftItem: null, busy: false },
-  expectedPair: { a: "", b: "", key: "", submitted: false, timer: null },
+  expectedPair: { a: "", b: "", key: "", submitted: false, localSaved: false, timer: null },
   expectedPairReports: new Set(),
   recipeFeedback: { move: 0, step: null, timer: null, pendingTimer: null, submitted: false },
   scoreSubmission: { runId: "", activeSaved: false, pendingSaved: false, inFlight: false, exitAction: null, exitLabel: "" },
@@ -201,16 +248,26 @@ let activeTrayShiftSource = null;
 let activeBoardDragCleanup = null;
 let shiftCopyLimitAnnounced = false;
 let lastPointerPosition = null;
-let clearUndo = null;
-let clearUndoTimer = null;
+let boardHistory = { past: [], future: [] };
+let shiftHistorySnapshot = null;
+let boardUndoTimer = null;
 let armedPowerupShortcut = { kind: "", expiresAt: 0, timer: null };
 let runSaveTimer = null;
 let cloudSyncTimer = null;
 let pauseCloseRestoreFocus = true;
 let boardGeometryVersion = 0;
+let runIqFeedbackTimer = null;
+let routeProgressFeedbackTimer = null;
+let rankBoardArtRuntime = null;
 let analyticsPreference = readAnalyticsPreference();
 let analyticsCohortId = readAnalyticsCohort();
 const pendingScoreRetryPromises = new Map();
+const expectedPairDelivery = createCombinationReportDelivery({
+  endpoint: FEEDBACK_API_URL,
+  getMode: () => state.mode || "reach",
+  getReporterId: () => analyticsCohortId || sessionId,
+  pairKey: expectedPairKey
+});
 const ACTIVE_RUN_KEY = isStaticBeta ? "constellore-local-active-run-v1" : "constellore-active-run-v1";
 const LEGACY_PENDING_SCORES_KEY = "constellore-pending-scores-v1";
 
@@ -221,14 +278,16 @@ const adsAdapter = () => globalThis.constelloreAds || globalThis.wordforgeAds;
 const els = {
   startScreen: $("#startScreen"), gameScreen: $("#gameScreen"), targetMessage: $("#targetMessage"),
   board: $("#board"), boardItems: $("#boardItems"), boardGuide: $("#boardGuide"), cosmosCanvas: $("#cosmosCanvas"),
-  tidyBoard: $("#tidyBoard"), resetBoard: $("#resetBoard"), dropPairPreview: $("#dropPairPreview"),
+  tidyBoard: $("#tidyBoard"), resetBoard: $("#resetBoard"), undoBoardAction: $("#undoBoardAction"), redoBoardAction: $("#redoBoardAction"), dropPairPreview: $("#dropPairPreview"),
   tapChainStatus: $("#tapChainStatus"), tapChainText: $("#tapChainText"), boardUndo: $("#boardUndo"),
   alchemyNote: $("#alchemyNote"), boardAnnouncement: $("#boardAnnouncement"), wordList: $("#wordList"), collectionCount: $("#collectionCount"),
-  expectedPairFeedback: $("#expectedPairFeedback"), expectedPairButton: $("#expectedPairButton"),
+  expectedPairFeedback: $("#expectedPairFeedback"), expectedPairForm: $("#expectedPairForm"), expectedPairButton: $("#expectedPairButton"),
+  expectedPairResult: $("#expectedPairResult"), expectedPairDelivery: $("#expectedPairDelivery"),
   inventorySearch: $("#inventorySearch"), inventorySearchClear: $("#inventorySearchClear"), inventorySearchStatus: $("#inventorySearchStatus"),
-  modeName: $("#modeName"), targetWord: $("#targetWord"), universePill: $("#universePill"), lawPill: $("#lawPill"), movesValue: $("#movesValue"),
+  modeName: $("#modeName"), targetWord: $("#targetWord"), remixPill: $("#remixPill"), universePill: $("#universePill"), lawPill: $("#lawPill"), movesValue: $("#movesValue"),
   timerHud: $("#timerHud"), timerValue: $("#timerValue"), pathCount: $("#pathCount"),
-  milestoneText: $("#milestoneText"), milestoneBar: $("#milestoneBar"), wishState: $("#wishState"),
+  runIqHud: $("#runIqHud"), runIqValue: $("#runIqValue"), runIqDelta: $("#runIqDelta"), runIqStreak: $("#runIqStreak"), runIqBar: $("#runIqBar"), runIqStatus: $("#runIqStatus"),
+  runMilestone: $("#runMilestone"), milestoneText: $("#milestoneText"), milestoneBar: $("#milestoneBar"), wishState: $("#wishState"),
   senseButton: $("#senseButton"), senseHudCount: $("#senseHudCount"), senseDialog: $("#senseDialog"),
   quickTipShortcut: $("#quickTipShortcut"), quickTipShortcutCount: $("#quickTipShortcutCount"),
   wordGiftShortcut: $("#wordGiftShortcut"), wordGiftShortcutCount: $("#wordGiftShortcutCount"),
@@ -239,17 +298,22 @@ const els = {
   ghostPreview: $("#ghostPreview"), ghostPreviewStatus: $("#ghostPreviewStatus"), ghostPreviewCount: $("#ghostPreviewCount"), ghostPreviewPercent: $("#ghostPreviewPercent"),
   ghostPreviewProgress: $("#ghostPreviewProgress"), ghostPreviewBar: $("#ghostPreviewBar"), ghostPreviewSteps: $("#ghostPreviewSteps"),
   paywallDialog: $("#paywallDialog"), wishDialog: $("#wishDialog"), atlasDialog: $("#atlasDialog"),
-  missionBriefingDialog: $("#missionBriefingDialog"), pauseDialog: $("#pauseDialog"), journeyDialog: $("#journeyDialog"),
+  missionBriefingDialog: $("#missionBriefingDialog"), missionAdaptiveNote: $("#missionAdaptiveNote"), pauseDialog: $("#pauseDialog"), journeyDialog: $("#journeyDialog"),
   profileDialog: $("#profileDialog"), shareDialog: $("#shareDialog"), resultDialog: $("#resultDialog"),
   updatesDialog: $("#updatesDialog"),
   exchangeDialog: $("#exchangeDialog"), marketBuyDialog: $("#marketBuyDialog"), leaderboardDialog: $("#leaderboardDialog"),
   revealDialog: $("#revealDialog"), revealController: $("#revealController"), revealPathButton: $("#revealPathButton"),
   revealStepText: $("#revealStepText"), revealPause: $("#revealPause"), revealSpeed: $("#revealSpeed"),
   revealSkip: $("#revealSkip"), revealProgressBar: $("#revealProgressBar"), revealAnnouncement: $("#revealAnnouncement"),
+  revealEquation: $("#revealEquation"), revealEquationStep: $("#revealEquationStep"),
+  revealEquationA: $("#revealEquationA"), revealEquationAEmoji: $("#revealEquationAEmoji"),
+  revealEquationB: $("#revealEquationB"), revealEquationBEmoji: $("#revealEquationBEmoji"),
+  revealEquationAnswer: $("#revealEquationAnswer"), revealEquationAnswerEmoji: $("#revealEquationAnswerEmoji"),
+  revealEquationNote: $("#revealEquationNote"),
   marketList: $("#marketList"), marketBalance: $("#marketBalance"), marketCountdown: $("#marketCountdown"),
   marketMessage: $("#marketMessage"), leaderboardRows: $("#leaderboardRows"), leaderboardMessage: $("#leaderboardMessage"),
   resultEmoji: $("#resultEmoji"), resultKicker: $("#resultKicker"), resultTitle: $("#resultTitle"),
-  resultStats: $("#resultStats"), resultMasteryCard: $("#resultMasteryCard"), resultMasteryText: $("#resultMasteryText"), resultPrimary: $("#resultPrimary"), resultRetry: $("#resultRetry"),
+  resultStats: $("#resultStats"), resultAdaptiveNote: $("#resultAdaptiveNote"), resultRemixNote: $("#resultRemixNote"), resultMasteryCard: $("#resultMasteryCard"), resultMasteryText: $("#resultMasteryText"), resultPrimary: $("#resultPrimary"), resultRetry: $("#resultRetry"), resultReplay: $("#resultReplay"),
   resultShare: $("#resultShare"), rewardCard: $("#rewardCard"), rewardDust: $("#rewardDust"),
   rewardReason: $("#rewardReason"), masteryCollectionList: $("#masteryCollectionList"),
   atlasMap: $("#atlasMap"), atlasGraph: $("#atlasGraph"), atlasGraphEdges: $("#atlasGraphEdges"), atlasGraphNodes: $("#atlasGraphNodes"), atlasGraphSummary: $("#atlasGraphSummary"),
@@ -347,6 +411,314 @@ function ensureAnalyticsCohort() {
   return analyticsCohortId;
 }
 
+function readAdaptiveDifficulty() {
+  try {
+    return sanitizeAdaptiveDifficultyState(JSON.parse(localStorage.getItem(ADAPTIVE_DIFFICULTY_KEY) || "null"));
+  } catch {
+    return createAdaptiveDifficultyState();
+  }
+}
+
+function saveAdaptiveDifficulty() {
+  try {
+    localStorage.setItem(ADAPTIVE_DIFFICULTY_KEY, JSON.stringify(sanitizeAdaptiveDifficultyState(state.adaptiveDifficulty)));
+  } catch { /* Adaptive play still works for this session when storage is unavailable. */ }
+}
+
+function localRouteRankSummary() {
+  profile.routeProgression = sanitizeRemixProgressionState(profile.routeProgression);
+  profile.remixReadiness = sanitizeRemixReadinessState(profile.remixReadiness);
+  const progression = profile.routeProgression;
+  const mastery = getRemixMasteryProgress(progression);
+  const promotion = getPromotionEligibility(progression);
+  const rank = getRemixRankPresentation(progression.rankId);
+  const challengeRank = promotion.active && promotion.nextRank
+    ? getRemixRankPresentation(promotion.nextRank.id)
+    : rank;
+  const intensity = getAdaptiveRemixIntensity(profile.remixReadiness, challengeRank.id);
+  return sanitizeRouteRankSummary({
+    version: progression.version,
+    rank,
+    challengeRank,
+    mastery: {
+      points: mastery.masteryPoints,
+      rankFloor: mastery.rankFloor,
+      nextThreshold: mastery.nextThreshold,
+      pointsIntoRank: mastery.pointsIntoRank,
+      pointsRequired: mastery.pointsRequired,
+      pointsRemaining: mastery.pointsRemaining,
+      fraction: mastery.fraction
+    },
+    promotion: {
+      active: promotion.active,
+      eligible: promotion.eligible,
+      status: promotion.status,
+      currentRank: promotion.rank,
+      targetRank: promotion.nextRank,
+      attempt: promotion.trial ? promotion.trial.attempts + 1 : 0,
+      attemptsCompleted: promotion.trial?.attempts || 0,
+      attemptsTotal: promotion.trialLength,
+      wins: promotion.trial?.wins || 0,
+      winsRequired: promotion.winsRequired,
+      flawlessWins: promotion.trial?.flawlessWins || 0
+    },
+    remixIntensity: intensity,
+    familyMastery: profile.remixReadiness.familyMastery,
+    adaptiveDifficulty: state.adaptiveDifficulty
+  });
+}
+
+function currentRouteRank() {
+  return sanitizeRouteRankSummary(profile.routeRank)
+    || (isStaticBeta ? localRouteRankSummary() : sanitizeRouteRankSummary({
+      rank: "bronze",
+      challengeRank: "bronze",
+      adaptiveDifficulty: state.adaptiveDifficulty
+    }));
+}
+
+function syncRankBoardArt() {
+  const routeRank = currentRouteRank();
+  const rankId = routeRank?.rank?.id || "bronze";
+  document.body.dataset.routeRank = rankId;
+  document.body.dataset.routeArtTier = String(Math.ceil((routeRank?.rank?.number || 1) / 2));
+  if (!els.board) return;
+  if (!rankBoardArtRuntime) {
+    rankBoardArtRuntime = createRankBoardArtRuntime({
+      target: els.board,
+      rank: rankId,
+      quality: "auto",
+      preload: true
+    });
+    return;
+  }
+  rankBoardArtRuntime.setRank(rankId);
+}
+
+function applyRouteRank(candidate, { announce = false } = {}) {
+  const next = sanitizeRouteRankSummary(candidate);
+  if (!next) return null;
+  const previous = sanitizeRouteRankSummary(profile.routeRank);
+  profile.routeRank = next;
+  state.adaptiveDifficulty = sanitizeAdaptiveDifficultyState(next.adaptiveDifficulty);
+  const message = routeRankChangeMessage(previous, next);
+  if (announce && message) {
+    state.routeRankNotice = { message, rankUp: Boolean(previous && previous.rank.id !== next.rank.id) };
+    if (els.resultDialog?.open && els.resultAdaptiveNote) {
+      els.resultAdaptiveNote.hidden = false;
+      els.resultAdaptiveNote.textContent = message;
+      els.resultAdaptiveNote.classList.toggle("is-surge-perfect", state.routeRankNotice.rankUp);
+    }
+  }
+  try { localStorage.setItem(PROFILE_KEY, JSON.stringify(profile)); } catch { /* Rank still remains active for this session. */ }
+  renderProfile();
+  return next;
+}
+
+function ensureLocalPromotion() {
+  if (!isStaticBeta) return currentRouteRank();
+  profile.routeProgression = sanitizeRemixProgressionState(profile.routeProgression);
+  const started = startRemixPromotionTrial(profile.routeProgression);
+  if (started.started) profile.routeProgression = started.state;
+  profile.routeRank = localRouteRankSummary();
+  if (started.started) saveProfile({ cloud: false });
+  return profile.routeRank;
+}
+
+function nextStartStyleDecision() {
+  const routeRank = currentRouteRank();
+  const adaptive = sanitizeAdaptiveDifficultyState(routeRank?.adaptiveDifficulty || state.adaptiveDifficulty);
+  return selectStartStyle({
+    preference: sanitizeStartStylePreference(profile.startStylePreference),
+    rank: routeRank?.rank?.id || "bronze",
+    challengeIndex: adaptive.completedChallenges,
+    failureRecovery: adaptive.failureStreak > 0 || ["failed", "forfeit", "reveal"].includes(profile.lastRouteOutcome),
+    promotion: routeRank?.promotion?.active === true,
+    promotionAttempt: routeRank?.promotion?.attemptsCompleted || 0
+  });
+}
+
+function startStyleSummary(decision = nextStartStyleDecision()) {
+  if (decision.style === "shuffled") return "A new mix of useful words";
+  return decision.reason === "failure_recovery"
+    ? "Earth, Water, Fire, and Air · an easier start after the last game"
+    : "Earth, Water, Fire, and Air";
+}
+
+function syncStartStyleControls() {
+  let preference = sanitizeStartStylePreference(profile.startStylePreference);
+  profile.startStylePreference = preference;
+  const decision = nextStartStyleDecision();
+  const bronzeLocked = decision.rank?.id === "bronze";
+  if (bronzeLocked && preference === "shuffled") {
+    preference = "auto";
+    profile.startStylePreference = preference;
+  }
+  const accessibleLabels = {
+    auto: "Auto: let the game choose the best starting words",
+    classic: "Same four: always start with Earth, Water, Fire, and Air",
+    shuffled: bronzeLocked
+      ? "New mix: unlocks after Bronze"
+      : "New mix: start with different useful words"
+  };
+  for (const button of $$("[data-start-style]")) {
+    const selected = button.dataset.startStyle === preference;
+    button.setAttribute("aria-checked", String(selected));
+    button.setAttribute("aria-label", accessibleLabels[button.dataset.startStyle]);
+    button.classList.toggle("active", selected);
+    button.disabled = button.dataset.startStyle === "shuffled" && bronzeLocked;
+    button.tabIndex = selected ? 0 : -1;
+    button.title = accessibleLabels[button.dataset.startStyle];
+  }
+  const summary = $("#startStyleSummary");
+  if (summary) {
+    const next = `Next challenge: ${startStyleSummary(decision)}.`;
+    summary.textContent = bronzeLocked
+      ? `${next} New mixes unlock after Bronze.`
+      : next;
+  }
+  const preview = $("#primaryOrbitMeta");
+  if (preview && primaryOrbitState().action !== "training") {
+    preview.textContent = `${currentRouteRank().rank.name} · ${startStyleSummary(decision)}`;
+  }
+}
+
+function chooseStartStyle(style) {
+  const requested = sanitizeStartStylePreference(style);
+  const decision = nextStartStyleDecision();
+  if (requested === "shuffled" && decision.rank?.id === "bronze") {
+    showToast("New mixes unlock after Bronze. Auto will add them when you are ready.");
+    return false;
+  }
+  profile.startStylePreference = requested;
+  saveProfile({ cloud: false });
+  syncStartStyleControls();
+  track("start_style_selected", { style: requested });
+  return true;
+}
+
+function recordLocalRouteRankOutcome(outcome, { flawless = false } = {}) {
+  if (!isStaticBeta || !state.run?.id || !adaptiveRunEligible()) return null;
+  const outcomeHash = stableHash(`route-outcome\0${state.run.id}`).toString(16).padStart(8, "0");
+  profile.routeOutcomeHashes = sanitizeRouteOutcomeHashes(profile.routeOutcomeHashes);
+  if (profile.routeOutcomeHashes.includes(outcomeHash)) return null;
+  const assisted = Boolean(
+    state.scoringDisabled
+    || state.assist !== "none"
+    || state.wished
+    || state.powerups.giftUsed
+  );
+  const completed = outcome === "completed";
+  const clean = completed && !assisted && state.runIq.misses === 0;
+  const familyIds = (state.game?.remixes?.rules || []).map((rule) => rule.family).filter(Boolean);
+  const event = {
+    outcome,
+    assisted,
+    usedMajorPowerup: assisted,
+    usedReveal: outcome === "reveal",
+    revealed: assisted || outcome === "reveal",
+    clean,
+    flawless: clean && flawless,
+    activeRemixes: familyIds.length
+  };
+  profile.routeProgression = sanitizeRemixProgressionState(profile.routeProgression);
+  const promotionWasActive = Boolean(profile.routeProgression.promotionTrial);
+  const progressionResult = promotionWasActive
+    ? recordRemixPromotionTrialOutcome(profile.routeProgression, event)
+    : recordRemixProgressionOutcome(profile.routeProgression, event);
+  profile.routeProgression = progressionResult.state;
+  const readinessResult = recordRemixReadinessOutcome(profile.remixReadiness, {
+    outcomeId: state.run.id,
+    outcome: outcome === "reveal" ? "reveal" : completed && !assisted ? "completed" : "failed",
+    rankId: state.game?.remixes?.rank?.id || profile.routeProgression.rankId,
+    families: familyIds,
+    clean,
+    assisted
+  });
+  profile.remixReadiness = readinessResult.state;
+  profile.routeOutcomeHashes = sanitizeRouteOutcomeHashes([...profile.routeOutcomeHashes, outcomeHash]);
+  profile.lastRouteOutcome = completed && !assisted ? "completed" : outcome === "reveal" ? "reveal" : "failed";
+  const previous = sanitizeRouteRankSummary(profile.routeRank);
+  profile.routeRank = localRouteRankSummary();
+  const message = progressionResult.message || routeRankChangeMessage(previous, profile.routeRank);
+  if (message) state.routeRankNotice = {
+    message,
+    rankUp: progressionResult.promoted === true || previous?.rank?.id !== profile.routeRank.rank.id
+  };
+  saveProfile({ cloud: false });
+  return { progressionResult, readinessResult, routeRank: profile.routeRank };
+}
+
+function adaptiveSeriesEligible(game = state.game) {
+  return Boolean(
+    (game?.adaptive === true || (game?.practiceReplay === true && game?.replayOf?.adaptive === true))
+    && adaptiveModePolicy({ mode: game.mode }).eligible
+  );
+}
+
+function adaptiveRunEligible(game = state.game) {
+  return Boolean(adaptiveSeriesEligible(game) && game?.practiceReplay !== true);
+}
+
+function adaptiveRequestFor(mode, options = {}) {
+  const fixedContext = Boolean(
+    options.target
+    || options.custom
+    || options.fixed
+    || options.shared
+    || options.context
+  );
+  const policy = adaptiveModePolicy({ mode, fixed: fixedContext });
+  if (!policy.eligible) return {};
+  if (isStaticBeta) ensureLocalPromotion();
+  const adaptive = sanitizeAdaptiveDifficultyState(state.adaptiveDifficulty);
+  return {
+    adaptive: true,
+    adaptiveVersion: adaptive.version,
+    adaptiveLevel: adaptive.level,
+    failureStreak: adaptive.failureStreak,
+    adaptiveCompletedChallenges: adaptive.completedChallenges,
+    adaptiveMajorChallengePending: adaptive.majorChallengePending,
+    adaptiveMajorChallengeBaseLevel: adaptive.majorChallengeBaseLevel,
+    recentTargets: adaptive.recentTargets,
+    adaptiveTarget: String(options.adaptiveTarget || ""),
+    startStyle: sanitizeStartStylePreference(profile.startStylePreference),
+    ...(isStaticBeta ? {
+      routeProgression: sanitizeRemixProgressionState(profile.routeProgression),
+      remixReadiness: sanitizeRemixReadinessState(profile.remixReadiness),
+      lastRouteOutcome: profile.lastRouteOutcome
+    } : {})
+  };
+}
+
+function recordAdaptiveOutcome(outcome, { flawless = false } = {}) {
+  if (state.adaptiveOutcomeRecorded || !adaptiveRunEligible()) return null;
+  if (!isStaticBeta) {
+    state.adaptiveOutcomeRecorded = true;
+    return null;
+  }
+  const result = applyAdaptiveChallengeOutcome(state.adaptiveDifficulty, {
+    mode: state.game.mode,
+    outcome,
+    flawless: outcome === "completed" && flawless === true,
+    surge: Boolean(state.game.adaptiveSurge || state.game.surge),
+    surgeBaseLevel: state.game.adaptiveSurgeBaseLevel
+      ?? state.game.surgeBaseLevel
+      ?? state.game.adaptiveLevel,
+    baseLevel: state.game.adaptiveLevel
+  });
+  if (result.outcome === "ignored") return null;
+  state.adaptiveDifficulty = result.state;
+  state.adaptiveNotice = result;
+  state.adaptiveOutcomeRecorded = true;
+  saveAdaptiveDifficulty();
+  recordLocalRouteRankOutcome(
+    outcome === "abandoned" ? "forfeit" : outcome,
+    { flawless }
+  );
+  return result;
+}
+
 function loadProfile() {
   try {
     const legacyProfile = LEGACY_PROFILE_KEYS.map((key) => localStorage.getItem(key)).find(Boolean);
@@ -377,7 +749,15 @@ function loadProfile() {
       selectedVoyageId: sanitizeSelectedVoyage(stored.selectedVoyageId),
       eventProgress: sanitizeEventProgress(stored.eventProgress),
       signatureBests: sanitizeSignatureBests(stored.signatureBests),
-      rewardedRunIds: sanitizeRewardedRunIds(stored.rewardedRunIds)
+      rewardedRunIds: sanitizeRewardedRunIds(stored.rewardedRunIds),
+      routeProgression: sanitizeRemixProgressionState(stored.routeProgression),
+      remixReadiness: sanitizeRemixReadinessState(stored.remixReadiness),
+      routeOutcomeHashes: sanitizeRouteOutcomeHashes(stored.routeOutcomeHashes),
+      routeRank: sanitizeRouteRankSummary(stored.routeRank),
+      lastRouteOutcome: ["completed", "failed", "forfeit", "reveal"].includes(stored.lastRouteOutcome)
+        ? stored.lastRouteOutcome
+        : "",
+      startStylePreference: sanitizeStartStylePreference(stored.startStylePreference)
     };
   } catch {
     return structuredClone(defaultProfile);
@@ -449,7 +829,9 @@ function syncProgressiveDisclosure() {
   $("#primaryOrbitTitle").textContent = primary.title;
   $("#primaryOrbitDescription").textContent = primary.description;
   $("#primaryOrbitButton span").textContent = primary.label;
-  $("#primaryOrbitMeta").textContent = primary.meta;
+  $("#primaryOrbitMeta").textContent = primary.action === "training"
+    ? primary.meta
+    : `${currentRouteRank().rank.name} · ${startStyleSummary()}`;
   $("#primaryOrbitButton").dataset.action = primary.action;
   const secondary = $("#primaryOrbitSecondary");
   secondary.textContent = primary.secondaryLabel;
@@ -911,9 +1293,9 @@ function renderPowerups() {
   const giftReady = !state.powerups.giftUsed && !state.powerups.giftUnavailable;
   const armedKind = activeArmedPowerup();
   els.senseButton.disabled = !activeRun;
-  els.quickTipCount.textContent = `${tipsRemaining} / ${QUICK_TIP_LIMIT}`;
+  els.quickTipCount.textContent = `${tipsRemaining} left`;
   els.useQuickTip.disabled = !activeRun || state.powerups.busy || tipsRemaining <= 0;
-  els.wordGiftState.textContent = state.powerups.giftUsed ? "USED" : state.powerups.giftUnavailable ? "NO BRIDGE" : "1 READY";
+  els.wordGiftState.textContent = state.powerups.giftUsed ? "Used" : state.powerups.giftUnavailable ? "Unavailable" : "1 left";
   els.wordGiftCard.classList.toggle("is-used", state.powerups.giftUsed);
   els.wordGiftCard.classList.toggle("is-unavailable", state.powerups.giftUnavailable);
   els.useWordGift.disabled = !activeRun || state.powerups.busy || state.powerups.giftUsed || state.powerups.giftUnavailable;
@@ -956,8 +1338,8 @@ function renderPowerups() {
   const standaloneMode = learningOrbitActive() || state.mode === "explore";
   els.senseHudCount.textContent = state.mode === "explore" ? "OFF" : learningOrbitActive() ? "LESSON" : state.scoringDisabled ? "STUDY" : `${tipsRemaining} SAFE`;
   els.senseButton.setAttribute("aria-label", standaloneMode
-    ? `${state.mode === "explore" ? "Guidance is unavailable in persistent Explore" : "This lesson provides its own Route Signal"}`
-    : `Open Guidance; ${tipsRemaining} score-safe Route Signal${tipsRemaining === 1 ? "" : "s"} remain`);
+    ? `${state.mode === "explore" ? "Help is not needed in free play" : "This lesson includes its own hint"}`
+    : `Open help; ${tipsRemaining} hint${tipsRemaining === 1 ? "" : "s"} left`);
 }
 
 function activeArmedPowerup() {
@@ -1002,8 +1384,9 @@ function activateOpenPowerupShortcut(kind, action) {
 }
 
 function resetPowerupControlLabels() {
-  els.useWordGift.querySelector("span").textContent = "Summon gift · keep 50%";
-  $("#useSense span").textContent = "Activate compass · keep 75%";
+  els.useWordGift.querySelector("span").textContent = "Add word";
+  const senseLabel = $("#useSense span");
+  if (senseLabel) senseLabel.textContent = "Use extra hint";
 }
 
 function renderProfile() {
@@ -1046,7 +1429,7 @@ function renderProfile() {
   $("#totalDiscoveries").textContent = profile.discovered.length;
   $("#dailyStreak").textContent = profile.dailyStreak;
   $("#completedOrbits").textContent = profile.wins;
-  $("#profileRankTitle").textContent = rank.name;
+  $("#profileRankTitle").textContent = "Your progress";
   $("#profileTotalDust").textContent = profile.stardust;
   $("#profileWords").textContent = profile.discovered.length;
   $("#profileWins").textContent = profile.wins;
@@ -1092,9 +1475,9 @@ function renderProfile() {
   $("#profileSenseCount").textContent = senseCount;
   $("#senseDialogCount").textContent = senseCount;
   const tipsRemaining = Math.max(0, QUICK_TIP_LIMIT - (Number(state.powerups?.tipsUsed) || 0));
-  els.senseHudCount.textContent = `${tipsRemaining} SAFE`;
+  els.senseHudCount.textContent = `${tipsRemaining}`;
   $("#senseEarnNote").textContent = "One charge returns each UTC day for every player.";
-  els.senseButton.setAttribute("aria-label", `Open Guidance; ${tipsRemaining} score-safe Route Signal${tipsRemaining === 1 ? "" : "s"} remain`);
+  els.senseButton.setAttribute("aria-label", `Open help; ${tipsRemaining} hint${tipsRemaining === 1 ? "" : "s"} left`);
   $("#buySense").disabled = state.powerups.busy || profile.stardust < 90 || senseCount >= 9;
   renderPowerups();
   const feedbackPreferences = sanitizeFeedbackPreferences(profile.feedbackPreferences);
@@ -1121,6 +1504,8 @@ function renderProfile() {
   renderCosmeticLoadout();
   renderMastery();
   syncProgressiveDisclosure();
+  syncStartStyleControls();
+  syncRankBoardArt();
   updateWishButton();
 }
 
@@ -1137,6 +1522,7 @@ function applyServerPlayer(player) {
   profile.wishAvailable = player.wishAvailable !== false;
   profile.dailyWishUsedDate = player.dailyWishUsedDate || "";
   if (Number.isInteger(player.cloudProfileVersion)) profile.cloudProfileVersion = Math.max(0, player.cloudProfileVersion);
+  if (player.routeRank) profile.routeRank = sanitizeRouteRankSummary(player.routeRank);
   saveProfile({ cloud: founderActivated, fields: ["progression"] });
   renderWishVault();
   return true;
@@ -1493,6 +1879,7 @@ async function initializeCloudServices() {
 
 function handleOnline() {
   updateConnection();
+  if (isStaticBeta) void expectedPairDelivery.flush();
   if (!isStaticBeta && profile.playerId && profile.playerToken) void refreshCosmicEventState();
   if (!isStaticBeta && state.cloudReady && profile.playerId && profile.playerToken) scheduleCloudProfileSync({ changed: false, delay: 250 });
   if (!isStaticBeta && profile.playerId && profile.playerToken) void retryPendingScoreUploads().then(announcePendingScoreRecovery);
@@ -1623,7 +2010,7 @@ async function loadConfig() {
 
 async function fetchJson(url, options = {}, timeout = 20000) {
   if (isStaticBeta) {
-    localRuntimePromise ||= import("./local-beta.mjs?v=3.0.0-beta.2");
+    localRuntimePromise ||= import("./local-beta.mjs?v=3.3.0-beta.1");
     const runtime = await localRuntimePromise;
     return runtime.localRequest(url, options);
   }
@@ -1821,16 +2208,16 @@ function syncFirstOrbitGuide() {
   const step = progress.step;
   if (!step) return;
   $("#orbitLessonLabel").innerHTML = second
-    ? '<i aria-hidden="true">◇</i> SECOND ORBIT · 0 SCORE'
-    : '<i aria-hidden="true">&#10022;</i> TRAINING ORBIT · 0 SCORE';
-  $("#skipFirstOrbit").textContent = second ? "Leave lesson" : "Skip training";
-  $("#firstOrbitStep").textContent = `STEP ${progress.index + 1} OF ${progress.total}`;
+    ? '<i aria-hidden="true">◇</i> PRACTICE'
+    : '<i aria-hidden="true">&#10022;</i> LEARN TO PLAY';
+  $("#skipFirstOrbit").textContent = second ? "Leave" : "Skip";
+  $("#firstOrbitStep").textContent = `${progress.index + 1} of ${progress.total}`;
   $("#firstOrbitGuideTitle").textContent = step.title;
   $("#firstOrbitInstruction").textContent = step.instruction;
   $("#firstOrbitTip").textContent = step.tip;
   $("#firstOrbitProgressBar").style.width = `${progress.percent}%`;
   const progressBar = els.firstOrbitGuide.querySelector("[role='progressbar']");
-  progressBar.setAttribute("aria-label", `${second ? "Second" : "First"} Orbit lesson progress`);
+  progressBar.setAttribute("aria-label", "Lesson progress");
   progressBar.setAttribute("aria-valuemax", String(progress.total));
   progressBar.setAttribute("aria-valuenow", String(progress.index));
   for (const button of els.wordList.querySelectorAll(".inventory-word")) {
@@ -1977,21 +2364,44 @@ function presentMissionBriefing() {
   track("mission_briefing_viewed", { mode: pending.game.mode, target: pending.game.target, ranked: Boolean(pending.game.leaderboardEligible) });
 }
 
+function renderMissionRemixes(game) {
+  const panel = $("#missionRemixSummary");
+  const remixes = game?.remixes;
+  const rules = Array.isArray(remixes?.rules) ? remixes.rules : [];
+  panel.hidden = !remixes || rules.length === 0;
+  if (!remixes || rules.length === 0) {
+    $("#missionRemixRules").replaceChildren();
+    return;
+  }
+  const rank = remixes.rank || getRemixRankPresentation({
+    completedChallenges: remixes.completedChallenges
+  });
+  $("#missionRemixRank").textContent = `${rank.name || "Gold"} challenge`;
+  $("#missionRemixCount").textContent = `${rules.length} extra rule${rules.length === 1 ? "" : "s"}`;
+  $("#missionRemixRules").replaceChildren(...rules.map((rule) => {
+    const item = document.createElement("li");
+    item.textContent = rule.instruction;
+    return item;
+  }));
+}
+
 function openMissionBriefing(game, request, trigger = null, context = null) {
   const briefing = buildMissionBriefing(game, { localOnly: isStaticBeta });
   const journeyContext = normalizeJourneyContext(context, game);
-  const journeyKindLabel = journeyContext?.kind === "event" ? "COSMIC EVENT" : journeyContext?.kind === "voyage" ? "VOYAGE" : "";
+  const journeyKindLabel = journeyContext?.kind === "event" ? "Event" : journeyContext?.kind === "voyage" ? "Story" : "";
   const journeyClue = journeyContext?.kind === "event"
-    ? "A game-curated destination from this week's Cosmic Event."
+    ? "This target is part of this week’s event."
     : journeyContext?.kind === "voyage"
-      ? "A game-curated destination from your active Constellation Voyage."
+      ? "This target is part of your story."
       : "";
   state.pendingMission = { game, request: { ...request }, trigger, context: journeyContext, returnToModes: !els.gameScreen.hidden };
-  $("#missionBriefingMode").textContent = journeyKindLabel ? `${journeyKindLabel} \u00b7 MISSION BRIEF` : briefing.modeLabel;
+  $("#missionBriefingMode").textContent = journeyKindLabel || briefing.modeLabel;
   $("#missionBriefingEmoji").textContent = briefing.emoji;
   $("#missionBriefingTarget").textContent = briefing.target;
-  $("#missionBriefingClue").textContent = journeyClue || game.clue || "A destination waits at the edge of this constellation.";
+  $("#missionBriefingClue").textContent = journeyClue || game.clue || "Combine two words to make a new word.";
   $("#missionBriefingRule").textContent = briefing.instruction;
+  $("#missionBriefingStart").textContent = briefing.startValue;
+  $("#missionBriefingStarters").textContent = briefing.startDetail;
   $("#missionBriefingLimit").textContent = briefing.limitValue;
   $("#missionBriefingLimitDetail").textContent = briefing.limitDetail;
   $("#missionBriefingReward").textContent = briefing.rewardValue;
@@ -2000,16 +2410,30 @@ function openMissionBriefing(game, request, trigger = null, context = null) {
   $("#missionBriefingScore").textContent = briefing.scoringValue;
   $("#missionBriefingScoreDetail").textContent = briefing.scoringDetail;
   const division = $("#missionBriefingDivision");
-  division.className = `mission-division ${briefing.division.id}`;
+  division.className = `mission-division simple-hidden ${briefing.division.id}`;
   $("#missionBriefingDivisionLabel").textContent = briefing.division.label;
   $("#missionBriefingDivisionTitle").textContent = briefing.division.title;
   $("#missionBriefingDivisionDetail").textContent = briefing.division.detail;
-  $("#missionBriefingLimitSummary").textContent = `${briefing.limitValue} · ${briefing.division.label}`;
+  $("#missionBriefingLimitSummary").textContent = briefing.limitValue;
+  const missionIqRule = $("#missionBriefingIqRule");
+  missionIqRule.hidden = !runIqApplies(briefing.mode, briefing.target, {
+    scoreEligible: game.scoreEligible !== false
+  });
+  els.missionAdaptiveNote.hidden = game.adaptive !== true;
+  els.missionAdaptiveNote.classList.toggle("is-surge", game.adaptiveSurge === true || game.surge === true);
+  els.missionAdaptiveNote.textContent = game.adaptive === true
+    ? game.promotion?.active
+      ? `Promotion ${game.promotion.attempt} of ${game.promotion.attemptsTotal}. Win ${game.promotion.winsRequired} games to reach ${game.promotion.targetRank?.name || "the next rank"}.`
+      : game.adaptiveSurge === true || game.surge === true
+      ? "Surge: one much harder game. Miss it and your normal level stays safe. A perfect 200 Run IQ win keeps the harder level."
+      : game.adaptiveMessage || "Matched to you. Win three games to move up; stop one early and the next game gets easier."
+    : "";
+  renderMissionRemixes(game);
   $("#missionBriefingInteraction").textContent = briefing.interactionRule;
   $("#missionBriefingModeRule").textContent = briefing.modeRule;
   $("#missionBriefingFairness").textContent = briefing.fairnessNote;
   $("#missionJourneyContext").hidden = !journeyContext;
-  $("#missionJourneyType").textContent = journeyContext?.kind === "event" ? "COSMIC EVENT TARGET" : "VOYAGE STAGE";
+  $("#missionJourneyType").textContent = journeyContext?.kind === "event" ? "Event" : "Story";
   $("#missionJourneyTitle").textContent = journeyContext?.title || "";
   $("#missionJourneyStory").textContent = journeyContext?.story || "";
   const law = game.law;
@@ -2021,7 +2445,7 @@ function openMissionBriefing(game, request, trigger = null, context = null) {
   status.classList.remove("error");
   $("#beginMission").disabled = false;
   $("#cancelMission").disabled = false;
-  $("#beginMission span").textContent = `Start toward ${briefing.target}`;
+  $("#beginMission span").textContent = "Play";
   els.missionBriefingDialog.scrollTop = 0;
   $("#missionBriefingScroll").scrollTop = 0;
   presentMissionBriefing();
@@ -2112,9 +2536,9 @@ async function confirmMissionBriefing() {
   state.startingRun = true;
   begin.disabled = true;
   cancel.disabled = true;
-  begin.querySelector("span").textContent = "Opening orbit…";
+  begin.querySelector("span").textContent = "Loading…";
   status.classList.remove("error");
-  status.textContent = "Creating your verified starting point…";
+  status.textContent = "Starting your game…";
   try {
     if (!profile.playerId || !profile.playerToken) await ensurePlayer();
     const started = await createRun(pending.request);
@@ -2126,11 +2550,11 @@ async function confirmMissionBriefing() {
     if (error.code === "mission_stale") {
       try {
         status.classList.remove("error");
-        status.textContent = "The mission changed while this briefing was open. Refreshing it now...";
-        begin.querySelector("span").textContent = "Refreshing mission...";
+        status.textContent = "The target changed. Loading the new one…";
+        begin.querySelector("span").textContent = "Loading…";
         const refreshed = await refreshMissionPreview(pending);
         openMissionBriefing(refreshed.game, refreshed.request, pending.trigger, pending.context);
-        $("#missionBriefingStatus").textContent = "Mission refreshed. Review the updated details, then begin when ready.";
+        $("#missionBriefingStatus").textContent = "The new target is ready.";
         return;
       } catch (refreshError) {
         error = refreshError;
@@ -2166,10 +2590,16 @@ async function beginMode(mode, options = {}) {
   const label = button?.classList.contains("mode-action") ? button.querySelector("span") : null;
   const original = label?.textContent;
   if (button) button.disabled = true;
-  if (label) label.textContent = "Mapping orbit…";
+  if (label) label.textContent = "Loading…";
   try {
     const seed = options.seed ?? (mode === "daily" ? Math.floor(Date.now() / 86_400_000) : mode === "weekly" ? currentWeekSeed() : Math.floor(Math.random() * 1_000_000));
-    const request = { mode, seed, target: options.target || "", stage: mode === "weekly" ? profile.weekly.stage : undefined };
+    const request = {
+      mode,
+      seed,
+      target: options.target || "",
+      stage: mode === "weekly" ? profile.weekly.stage : undefined,
+      ...adaptiveRequestFor(mode, options)
+    };
     if (options.skipBriefing) {
       const started = await createRun(request);
       applyServerPlayer(started.player);
@@ -2262,7 +2692,8 @@ function buildActiveRunSnapshot({ completed = false } = {}) {
       giftItem: snapshotItem(state.powerups.giftItem),
       assist: state.assist,
       scoringDisabled: state.scoringDisabled,
-      scoreMultiplier: state.scoreMultiplier
+      scoreMultiplier: state.scoreMultiplier,
+      runIq: sanitizeRunIqState(state.runIq)
     },
     visuals: {
       nodes: state.nodes.slice(0, MAX_BOARD_NODES).filter((node) => !node.revealRole && !node.item.ghost).map((node) => ({
@@ -2447,14 +2878,23 @@ function readActiveRunSnapshot() {
   }
 }
 
-function decorateRestoredHistory(rawHistory) {
+function decorateRestoredHistory(rawHistory, extraKnownWords = []) {
   const event = currentEventState().event;
+  const knownInRun = new Set([
+    ...(state.game?.starters || []),
+    ...(Array.isArray(extraKnownWords) ? extraKnownWords : [])
+  ].map((value) => inventoryKey(value?.word || value)).filter(Boolean));
   return (Array.isArray(rawHistory) ? rawHistory.slice(-500) : []).map((rawStep, index) => {
     const step = rawStep && typeof rawStep === "object" && !Array.isArray(rawStep) ? rawStep : {};
     const a = String(step.a || "").trim().slice(0, 80);
     const b = String(step.b || "").trim().slice(0, 80);
     const word = String(step.word || "").trim().slice(0, 80);
     if (!a || !b || !word) return null;
+    const wordKey = inventoryKey(word);
+    const runIqNewToRun = typeof step.runIqNewToRun === "boolean"
+      ? step.runIqNewToRun
+      : !knownInRun.has(wordKey);
+    knownInRun.add(wordKey);
     const item = state.words.find((entry) => inventoryKey(entry.word) === inventoryKey(word));
     const source = String(step.source || item?.source || "world").slice(0, 40);
     const category = String(step.category || item?.category || "").slice(0, 40);
@@ -2489,7 +2929,13 @@ function decorateRestoredHistory(rawHistory) {
       insight: insight?.text || "",
       contextual: Boolean(journeyMatch || eventAnnotation.context?.collectionMatch),
       context: journeyMatch ? state.journeyContext.kind : eventAnnotation.context?.collectionMatch ? eventAnnotation.context.eventId : "",
-      rarity: twisted ? 90 : eventAnnotation.context?.collectionMatch ? 55 : 0
+      rarity: twisted ? 90 : eventAnnotation.context?.collectionMatch ? 55 : 0,
+      runIqKey: String(step.runIqKey || "").trim().slice(0, 180),
+      runIqNewToRun,
+      runIqRelevance: ["route", "target", "discovery", "known", "ignored"].includes(step.runIqRelevance) ? step.runIqRelevance : "",
+      routeTotal: clamp(Number(step.routeTotal) || 0, 0, 100),
+      routeStepsAdvanced: clamp(Number(step.routeStepsAdvanced) || 0, 0, 100),
+      routeCompleted: Boolean(step.routeCompleted)
     };
   }).filter(Boolean);
 }
@@ -2523,12 +2969,19 @@ function hydrateRestoredRun(payload, snapshot) {
   const progress = payload.progress || {};
   const authoritativeWords = Array.isArray(progress.discovered) ? progress.discovered.map(snapshotItem).filter(Boolean) : [];
   const byWord = new Map(authoritativeWords.map((item) => [inventoryKey(item), item]));
+  const starterItems = new Map((payload.game.starterItems || []).map((item) => [inventoryKey(item), item]));
   for (const starter of payload.game.starters || []) {
     const key = inventoryKey(starter);
-    if (!byWord.has(key)) byWord.set(key, { word: starter, emoji: starterEmoji[starter] || "✦", category: starterCategory[starter] || null, source: "origin" });
+    const item = starterItems.get(key);
+    if (!byWord.has(key)) byWord.set(key, {
+      word: starter,
+      emoji: item?.emoji || starterEmoji[starter] || "✦",
+      category: item?.category || starterCategory[starter] || null,
+      source: item?.source || (starterEmoji[starter] ? "origin" : "loaned-start")
+    });
   }
   state.words = [...byWord.values()];
-  state.history = decorateRestoredHistory(progress.history);
+  state.history = decorateRestoredHistory(progress.history, [progress.bendItem, progress.giftItem]);
   state.newDiscoveries = state.history.reduce((total, step) => total + (step.newDiscovery ? 1 : 0), 0);
   reconcileRestoredMastery(state.history);
   state.moves = Math.max(0, Number(progress.moves) || 0);
@@ -2536,6 +2989,27 @@ function hydrateRestoredRun(payload, snapshot) {
   state.bendItem = snapshotItem(progress.bendItem);
   state.assist = payload.run?.assist || progress.assist || "none";
   const matchingSnapshot = snapshot?.run?.id === payload.run?.id ? snapshot.progress || {} : {};
+  const authoritativeHistoryKeys = state.history.map((step) => `${inventoryKey(step.a)}+${inventoryKey(step.b)}=>${inventoryKey(step.word)}`);
+  const snapshotHistoryKeys = (Array.isArray(matchingSnapshot.history) ? matchingSnapshot.history : [])
+    .map((step) => `${inventoryKey(step?.a)}+${inventoryKey(step?.b)}=>${inventoryKey(step?.word)}`);
+  const snapshotMatchesHistory = authoritativeHistoryKeys.length === snapshotHistoryKeys.length
+    && authoritativeHistoryKeys.every((key, index) => key === snapshotHistoryKeys[index]);
+  const restoredRunIq = progress.runIq || (snapshotMatchesHistory ? matchingSnapshot.runIq : null);
+  state.runIq = restoredRunIq
+    ? sanitizeRunIqState(restoredRunIq)
+    : state.history.reduce(
+      (score, step) => step.runIqRelevance === "ignored"
+        ? score
+        : rewardRunIq(score, step.runIqKey || `${runIqPairKey(step.a, step.b)}=>${inventoryKey(step.word)}`, {
+        relevance: step.runIqRelevance || (step.routeCompleted ? "target" : step.routeStepsAdvanced ? "route" : step.runIqNewToRun ? "discovery" : "known"),
+        routeAdvanced: step.routeStepsAdvanced > 0,
+        routeTotal: step.routeTotal || state.game?.routeLength,
+        stepsAdvanced: step.routeStepsAdvanced,
+        completed: step.routeCompleted,
+        newDiscovery: step.runIqNewToRun
+      }),
+      createRunIqState()
+    );
   state.powerups.tipsUsed = clamp(Number(progress.tipsUsed ?? matchingSnapshot.tipsUsed) || 0, 0, QUICK_TIP_LIMIT);
   state.powerups.tipIds = Array.isArray(matchingSnapshot.tipIds) ? [...new Set(matchingSnapshot.tipIds.map((value) => String(value || "").slice(0, 60)).filter(Boolean))].slice(0, QUICK_TIP_LIMIT) : [];
   state.powerups.giftUsed = Boolean(progress.giftUsed || matchingSnapshot.giftUsed || state.assist === "gift");
@@ -2545,6 +3019,7 @@ function hydrateRestoredRun(payload, snapshot) {
   clearArmedPowerup({ render: false });
   state.scoringDisabled = payload.run?.scoreEligible === false || payload.game?.scoreEligible === false || Boolean(progress.scoringDisabled);
   state.scoreMultiplier = state.scoringDisabled ? 0 : cappedScoreMultiplier(state.assist, payload.run?.scoreMultiplier, progress.scoreMultiplier);
+  state.remixProgress = progress.remixProgress || payload.run?.remixProgress || state.remixProgress;
   const completedAt = Date.parse(progress.completedAt || "");
   if (progress.completed && Number.isFinite(completedAt) && Number.isFinite(state.startedAt)) {
     state.finishedElapsedSeconds = Math.max(1, Math.round((completedAt - state.startedAt) / 1000));
@@ -2558,6 +3033,7 @@ function hydrateRestoredRun(payload, snapshot) {
   state.nodes = [];
   state.nextId = 1;
   state.topZ = 10;
+  resetBoardHistory();
   if (snapshot?.run?.id === payload.run?.id && Array.isArray(snapshot?.visuals?.nodes)) {
     for (const savedNode of snapshot.visuals.nodes.slice(0, MAX_BOARD_NODES)) {
       const item = byWord.get(inventoryKey(savedNode?.word));
@@ -2572,7 +3048,9 @@ function hydrateRestoredRun(payload, snapshot) {
       });
     }
   }
-  const restoredWords = state.words.map((item) => item.word);
+  const restoredWords = state.words
+    .filter((item) => item.source !== "loaned-start")
+    .map((item) => item.word);
   const profileSize = profile.discovered.length;
   if (!state.scoringDisabled) profile.discovered = [...new Set([...profile.discovered, ...restoredWords])].slice(0, 1000);
   if (profile.discovered.length !== profileSize) saveProfile({ fields: ["mastery"] });
@@ -2606,7 +3084,7 @@ async function restoreInterruptedRun(snapshot) {
     showToast(`Restored your path to ${payload.game.target}.`);
     track("run_restored", { mode: payload.game.mode, target: payload.game.target, moves: state.moves });
     if (payload.progress?.completed) requestAnimationFrame(() => finishGame(true, "", { skipSubmit: Boolean(payload.progress.submitted) }));
-    else if (payload.run?.deadlineAt && Date.parse(payload.run.deadlineAt) <= Date.now()) requestAnimationFrame(() => finishGame(false, "Time slipped beyond your orbit."));
+    else if (payload.run?.deadlineAt && Date.parse(payload.run.deadlineAt) <= Date.now()) requestAnimationFrame(() => finishGame(false, "Time is up."));
     return true;
   } catch (error) {
     if (["invalid_run", "run_expired", "run_missing", "resume_mismatch", "resume_invalid"].includes(error.code) || [401, 404, 409, 410, 422].includes(error.status)) clearActiveRunSnapshot();
@@ -2653,6 +3131,13 @@ function startWithGame(game, run, { restored = false, context = null } = {}) {
     .forEach((dialog) => { if (dialog?.open) dialog.close(); });
   state.game = game;
   state.run = run;
+  state.adaptiveOutcomeRecorded = false;
+  state.adaptiveNotice = null;
+  state.routeRankNotice = null;
+  if (game.adaptive === true && adaptiveModePolicy({ mode: game.mode }).eligible) {
+    state.adaptiveDifficulty = rememberAdaptiveTarget(state.adaptiveDifficulty, game.target);
+    saveAdaptiveDifficulty();
+  }
   state.pause = { active: false, confirmAction: "" };
   state.journeyContext = normalizeJourneyContext(context, game);
   state.signature = null;
@@ -2661,12 +3146,30 @@ function startWithGame(game, run, { restored = false, context = null } = {}) {
   state.assist = run?.assist || "none";
   state.scoringDisabled = run?.scoreEligible === false || game?.scoreEligible === false;
   state.scoreMultiplier = state.scoringDisabled ? 0 : cappedScoreMultiplier(state.assist, run?.scoreMultiplier, game?.scoreMultiplier);
+  state.runIq = createRunIqState();
+  state.routeProgress = sanitizeAuthoredRouteProgress(run?.routeProgress, game?.routeLength);
+  state.remixProgress = run?.remixProgress || null;
+  clearTimeout(runIqFeedbackTimer);
+  runIqFeedbackTimer = null;
+  clearTimeout(routeProgressFeedbackTimer);
+  routeProgressFeedbackTimer = null;
+  els.runMilestone?.classList.remove("route-closer");
   state.mode = game.mode;
+  const starterItems = new Map((game.starterItems || []).map((item) => [inventoryKey(item), item]));
   state.words = game.mode === "explore"
     ? reusableExploreInventory()
-    : game.starters.map((word) => ({ word, emoji: starterEmoji[word] || "✦", category: starterCategory[word], source: "origin" }));
+    : game.starters.map((word) => {
+        const item = starterItems.get(inventoryKey(word));
+        return {
+          word,
+          emoji: item?.emoji || starterEmoji[word] || "✦",
+          category: item?.category || starterCategory[word] || null,
+          source: item?.source || (starterEmoji[word] ? "origin" : "loaned-start")
+        };
+      });
   state.nodes = [];
   state.history = [];
+  resetBoardHistory();
   state.trails = [];
   state.moves = 0;
   state.newDiscoveries = 0;
@@ -2705,7 +3208,7 @@ function startWithGame(game, run, { restored = false, context = null } = {}) {
   els.board.scrollTop = 0;
   els.board.scrollLeft = 0;
   els.modeName.textContent = missionModeLabel(game);
-  els.targetWord.textContent = game.mode === "explore" ? "FREE EXPLORE" : game.target;
+  els.targetWord.textContent = game.mode === "explore" ? "Anything" : game.target;
   els.universePill.hidden = ["training", "second-orbit"].includes(game.mode);
   els.universePill.textContent = ["training", "second-orbit"].includes(game.mode) ? "" : `${game.universe.icon} ${game.universe.name} · ${game.universe.season.name}`;
   els.universePill.title = ["training", "second-orbit"].includes(game.mode) ? "" : `${game.universe.law.name}: ${game.universe.law.description}`;
@@ -2714,6 +3217,7 @@ function startWithGame(game, run, { restored = false, context = null } = {}) {
     ? `${state.journeyContext.icon || "✦"} ${state.journeyContext.kind === "event" ? "EVENT" : "VOYAGE"} · ${state.journeyContext.title}`
     : "";
   els.timerHud.hidden = !game.timeLimit;
+  $("#movesHud").hidden = !game.moveLimit;
   els.lawPill.hidden = !game.law && !["training", "second-orbit", "explore"].includes(game.mode);
   els.lawPill.textContent = ["training", "second-orbit"].includes(game.mode)
     ? "0 SCORE · NO REWARDS"
@@ -2728,6 +3232,7 @@ function startWithGame(game, run, { restored = false, context = null } = {}) {
   updateHud();
   renderPowerups();
   updateMilestone();
+  syncRankBoardArt();
   syncFirstOrbitGuide();
   requestAnimationFrame(startCosmos);
   if (competitiveGhostEligible()) void startRivalGhost();
@@ -2761,8 +3266,8 @@ function resetPauseConfirmation({ focus = false } = {}) {
   $("#pauseConfirmation").hidden = true;
   $("#pauseRestart").classList.remove("is-confirming");
   $("#pauseExit").classList.remove("is-confirming");
-  $("#pauseRestart span").textContent = "Restart this target";
-  $("#pauseExit").textContent = "Exit to mode selection";
+  $("#pauseRestart span").textContent = "Restart";
+  $("#pauseExit").textContent = "Quit game";
   if (focus && previousAction) $(previousAction === "restart" ? "#pauseRestart" : "#pauseExit").focus();
 }
 
@@ -2772,14 +3277,14 @@ function confirmPauseAction(action) {
   const restart = action === "restart";
   const ranked = Boolean(state.run?.ranked && !state.scoringDisabled);
   $("#pauseConfirmation").hidden = false;
-  $("#pauseConfirmationTitle").textContent = restart ? "Restart this target?" : "Leave this orbit?";
+  $("#pauseConfirmationTitle").textContent = restart ? "Restart this game?" : "Quit this game?";
   $("#pauseConfirmationText").textContent = restart
-    ? `${ranked ? "This starts a fresh verified attempt. " : ""}Your current board, moves, and discoveries from this run will be discarded.`
-    : `${ranked ? "This attempt will not post a score. " : ""}Your current board progress will be abandoned.`;
+    ? `${ranked ? "This starts a new attempt. " : ""}Your progress in this game will be lost.`
+    : `${ranked ? "This game will not post a score. " : ""}Your progress in this game will be lost.`;
   $("#pauseRestart").classList.toggle("is-confirming", restart);
   $("#pauseExit").classList.toggle("is-confirming", !restart);
-  $("#pauseRestart span").textContent = restart ? "Confirm restart" : "Restart this target";
-  $("#pauseExit").textContent = restart ? "Exit to mode selection" : "Confirm exit to modes";
+  $("#pauseRestart span").textContent = restart ? "Yes, restart" : "Restart";
+  $("#pauseExit").textContent = restart ? "Quit game" : "Yes, quit";
   return false;
 }
 
@@ -2787,23 +3292,24 @@ function populatePauseMenu() {
   const elapsedSeconds = Math.max(0, Math.round((Date.now() - state.startedAt) / 1000));
   const timed = Boolean(state.game?.timeLimit);
   const ranked = Boolean(state.run?.ranked && !state.scoringDisabled);
-  $("#pauseTitle").textContent = timed ? "Orbit menu open." : "Your constellation is held.";
+  $("#pauseTitle").textContent = "Game paused";
   $("#pauseTarget").textContent = state.game?.target || "Unknown target";
-  $("#pauseMode").textContent = String(state.game?.modeName || state.mode || "ORBIT").toUpperCase();
+  $("#pauseMode").textContent = String(state.game?.modeName || state.mode || "Game");
   $("#pauseMoves").textContent = String(state.moves);
   $("#pauseDiscoveries").textContent = String(state.newDiscoveries);
-  $("#pauseClockLabel").textContent = timed ? "TIME LEFT" : "ELAPSED";
+  $("#pauseClockLabel").textContent = timed ? "Time left" : "Time";
   $("#pauseClock").textContent = formatTime(timed ? Math.max(0, state.remainingSeconds) : elapsedSeconds);
   $("#pauseClockMessage").textContent = timed
-    ? "This timed mode keeps running against its verified deadline. Resume before the clock expires."
+    ? "The timer keeps running while this menu is open."
     : ranked
-      ? "Your board is locked, but verified score time continues so leaderboard results stay fair."
-      : "There is no countdown. Your board and discoveries are safely held until you resume.";
+      ? "Your score timer keeps running while this menu is open."
+      : "";
+  $("#pauseClockPolicy").hidden = !timed && !ranked;
 }
 
 function openPauseMenu() {
   if (!pauseMenuAvailable()) {
-    if (state.busyPairs.size || state.powerups.busy) showToast("Let the current constellation settle, then open the orbit menu.");
+    if (state.busyPairs.size || state.powerups.busy) showToast("Wait for the words to finish combining.");
     return false;
   }
   cancelActiveTrayDrag();
@@ -2870,13 +3376,54 @@ function handlePauseShortcut(event) {
   openPauseMenu();
 }
 
-function returnHome() {
+async function submitRunForfeit(run = state.run, game = state.game, { announce = false } = {}) {
+  if (!run?.id || !run?.token || !game || run.forfeitSubmitted || !adaptiveRunEligible(game)) return null;
+  run.forfeitSubmitted = true;
+  if (isStaticBeta) {
+    recordAdaptiveOutcome("abandoned");
+    return { routeRank: currentRouteRank() };
+  }
+  try {
+    const result = await fetchJson("/api/run/forfeit", {
+      method: "POST",
+      headers: authHeaders({ "Content-Type": "application/json" }),
+      body: JSON.stringify({ runId: run.id, runToken: run.token })
+    });
+    const receipt = result.routeRankOutcome && typeof result.routeRankOutcome === "object"
+      ? result.routeRankOutcome
+      : null;
+    const routeRank = receipt?.routeRank || result.routeRank;
+    if (routeRank) applyRouteRank(routeRank, { announce });
+    if (receipt?.adaptive?.message) {
+      state.adaptiveNotice = {
+        message: receipt.adaptive.message,
+        metadata: receipt.adaptive.metadata || {}
+      };
+    }
+    if (receipt?.promotion?.message) {
+      state.routeRankNotice = {
+        message: receipt.promotion.message,
+        rankUp: receipt.promotion.promoted === true
+      };
+    }
+    state.adaptiveOutcomeRecorded = true;
+    return result;
+  } catch (error) {
+    if (["run_complete", "already_submitted", "run_missing"].includes(error.code)) return null;
+    run.forfeitSubmitted = false;
+    if (announce) showToast("Your game ended, but rank progress will sync when you reconnect.");
+    return null;
+  }
+}
+
+function returnHome({ skipForfeit = false } = {}) {
   if (state.startingRun) return showToast("The next orbit is still being mapped.");
   if (pendingScoreBlocksExit()) {
     if (!els.resultDialog.open) els.resultDialog.showModal();
     showToast("Upload or queue this score before starting another orbit.");
     return;
   }
+  if (state.game && !state.finished && !skipForfeit) void submitRunForfeit(state.run, state.game);
   const showRecoveryAfterExit = Boolean(state.finished && state.recoveryKit?.code && profile.wins > 0);
   pauseCloseRestoreFocus = false;
   cancelActiveTrayDrag();
@@ -2905,6 +3452,7 @@ function returnHome() {
   state.eventRewardGranted = 0;
   state.pendingMission = null;
   state.nodes = [];
+  resetBoardHistory();
   resetPowerupControlLabels();
   clearActiveRunSnapshot();
   els.gameScreen.classList.remove("training-orbit", "second-orbit", "explore-orbit", "first-ranked-orbit", "orbit-paused");
@@ -2995,12 +3543,52 @@ async function retryGame() {
     startExplore();
     return;
   }
-  const options = { seed: state.game.seed, target: ["reach", "challenge"].includes(mode) ? state.game.target : undefined, context: state.journeyContext, skipBriefing: true };
-  const resultActions = [els.resultPrimary, els.resultRetry, $("#resultLeaderboard"), els.resultShare, $("#resultReveal")];
+  const adaptive = adaptiveSeriesEligible();
+  const wasFinished = state.finished;
+  const options = adaptive
+    ? wasFinished
+      ? { trigger: els.resultRetry }
+      : { seed: state.game.seed, adaptiveTarget: state.game.target, skipBriefing: true }
+    : { seed: state.game.seed, target: ["reach", "challenge"].includes(mode) ? state.game.target : undefined, context: state.journeyContext, skipBriefing: true };
+  const resultActions = [els.resultPrimary, els.resultRetry, els.resultReplay, $("#resultLeaderboard"), els.resultShare, $("#resultReveal")];
   resultActions.forEach((control) => { control.disabled = true; });
-  try { await beginMode(mode, options); }
+  if (adaptive && wasFinished && els.resultDialog.open) els.resultDialog.close();
+  try {
+    await beginMode(mode, options);
+    if (adaptive && wasFinished && state.finished && !state.pendingMission && !els.resultDialog.open) {
+      els.resultDialog.showModal();
+    }
+  }
   finally {
     resultActions.forEach((control) => { control.disabled = false; });
+  }
+}
+
+async function replayFinishedChallenge() {
+  if (!state.game || !state.finished || state.startingRun || state.reveal.replayAvailable) return;
+  if (pendingScoreBlocksExit()) {
+    showToast("Upload or queue this score before starting another game.");
+    return;
+  }
+  const replay = { mode: state.game.mode, target: state.game.target };
+  track("run_replayed", replay);
+  const controls = [els.resultPrimary, els.resultRetry, els.resultReplay, $("#resultLeaderboard"), els.resultShare, $("#resultReveal")];
+  controls.forEach((control) => { control.disabled = true; });
+  if (els.resultDialog.open) els.resultDialog.close();
+  try {
+    const payload = await fetchJson("/api/run/replay", {
+      method: "POST",
+      headers: authHeaders({ "Content-Type": "application/json" }),
+      body: JSON.stringify({ runId: state.run.id, runToken: state.run.token })
+    });
+    applyServerPlayer(payload.player);
+    startWithGame(payload.game, payload.run);
+    showToast(`Restarted ${payload.game.target} with the same opening and rules. Practice replay: no rank or rewards.`);
+  } catch (error) {
+    showToast(error.message || "That challenge could not be restarted.");
+    if (state.finished && !els.resultDialog.open) els.resultDialog.showModal();
+  } finally {
+    controls.forEach((control) => { control.disabled = false; });
   }
 }
 
@@ -3013,7 +3601,7 @@ function startTimer() {
       : Math.max(0, Math.ceil((state.startedAt + Number(state.game?.timeLimit || 0) * 1000 - Date.now()) / 1000));
     els.timerValue.textContent = formatTime(Math.max(0, state.remainingSeconds));
     els.timerValue.classList.toggle("urgent", state.remainingSeconds <= 15);
-    if (state.remainingSeconds <= 0) finishGame(false, "Time slipped beyond your orbit.");
+    if (state.remainingSeconds <= 0) finishGame(false, "Time is up.");
   };
   tick();
   if (!state.finished) state.timerId = setInterval(tick, 250);
@@ -3041,23 +3629,34 @@ function exportLocalDiagnostics() {
     const parsed = JSON.parse(localStorage.getItem(LOCAL_ANALYTICS_KEY) || "null") || { version: 1, counts: {} };
     const recipeFeedback = JSON.parse(localStorage.getItem(LOCAL_RECIPE_FEEDBACK_KEY) || "null") || { version: 1, recipes: {} };
     const expectedPairs = JSON.parse(localStorage.getItem(LOCAL_EXPECTED_PAIRS_KEY) || "null") || { version: 1, pairs: {} };
-    downloadJson(`constellore-local-events-${todayKey}.json`, {
-      version: 1,
+    const pendingExpectedPairReports = expectedPairDelivery.pending().map(({ payload }) => ({
+      pair: [payload.a, payload.b],
+      expected: payload.expected,
+      reason: payload.reason,
+      mode: payload.mode,
+      delivery: "pending"
+    }));
+    downloadJson(`constellore-local-report-${todayKey}.json`, {
+      version: 3,
       exportedAt: new Date().toISOString(),
       counts: parsed.counts || {},
       recipeFeedback: recipeFeedback.recipes || {},
-      expectedPairs: expectedPairs.pairs || {}
+      expectedPairs: expectedPairs.pairs || {},
+      expectedPairReports: expectedPairs.reports || {},
+      pendingExpectedPairReports
     });
-  } catch { showToast("Local diagnostics could not be exported.", { scope: "global" }); }
+  } catch { showToast("The local report could not be exported.", { scope: "global" }); }
 }
 
 function resetLocalDiagnostics() {
+  expectedPairDelivery.cancel();
   try {
     localStorage.removeItem(LOCAL_ANALYTICS_KEY);
     localStorage.removeItem(LOCAL_RECIPE_FEEDBACK_KEY);
     localStorage.removeItem(LOCAL_EXPECTED_PAIRS_KEY);
+    localStorage.removeItem(LOCAL_EXPECTED_PAIR_OUTBOX_KEY);
   } catch { /* Storage can be unavailable. */ }
-  showToast("Local diagnostics reset.", { scope: "global" });
+  showToast("Local report reset.", { scope: "global" });
 }
 
 function exportLocalPractice() {
@@ -3070,12 +3669,14 @@ function exportLocalPractice() {
 
 function resetLocalPractice() {
   if (!window.confirm("Reset every local discovery, badge, score, and setting on this device? This cannot be undone.")) return;
+  expectedPairDelivery.cancel();
   try {
     localStorage.removeItem(PROFILE_KEY);
     localStorage.removeItem(ACTIVE_RUN_KEY);
     localStorage.removeItem(LOCAL_ANALYTICS_KEY);
     localStorage.removeItem(LOCAL_RECIPE_FEEDBACK_KEY);
     localStorage.removeItem(LOCAL_EXPECTED_PAIRS_KEY);
+    localStorage.removeItem(LOCAL_EXPECTED_PAIR_OUTBOX_KEY);
     localStorage.removeItem(ANALYTICS_COHORT_KEY);
     localStorage.removeItem(ANALYTICS_PREFERENCE_KEY);
     localStorage.removeItem(PENDING_RECOVERY_KIT_KEY);
@@ -3148,6 +3749,157 @@ function updateStudyHud() {
   }
 }
 
+function runIqActive() {
+  return Boolean(
+    state.game
+    && runIqApplies(state.mode, state.game.target, {
+      scoreEligible: !state.scoringDisabled,
+      revealed: state.reveal.revealed,
+      study: state.assist === "reveal"
+    })
+    && !state.reveal.active
+    && !state.reveal.pending
+  );
+}
+
+function renderRunIq({ announce = "" } = {}) {
+  if (!els.runIqHud) return;
+  const active = runIqActive();
+  els.runIqHud.hidden = !active;
+  if (!active) return;
+  const score = sanitizeRunIqState(state.runIq);
+  const percent = Math.round(score.value / 2);
+  els.runIqValue.textContent = String(score.value);
+  els.runIqBar.style.width = `${percent}%`;
+  els.runIqHud.setAttribute("aria-valuenow", String(score.value));
+  els.runIqHud.setAttribute(
+    "aria-valuetext",
+    `Run IQ ${score.value} out of 200. Playful score for this game, not an intelligence test.${score.streak > 1 ? ` ${score.streak} target-path discoveries in a row.` : ""}`
+  );
+  const streaking = score.streak > 1;
+  els.runIqStreak.hidden = !streaking;
+  els.runIqStreak.textContent = `×${score.multiplier.toFixed(score.multiplier % 1 ? 2 : 0)}`;
+  if (announce) els.runIqStatus.textContent = announce;
+}
+
+function animateRunIq(outcome) {
+  if (!runIqActive()) return;
+  clearTimeout(runIqFeedbackTimer);
+  const score = state.runIq;
+  const className = ["repeat", "known"].includes(score.outcome)
+    ? "iq-repeat"
+    : outcome === "miss"
+      ? "iq-miss"
+      : score.maxed
+        ? "iq-max"
+        : "iq-gain";
+  els.runIqHud.classList.remove("iq-gain", "iq-miss", "iq-max", "iq-repeat");
+  void els.runIqHud.offsetWidth;
+  els.runIqHud.classList.add(className);
+  els.runIqDelta.textContent = score.outcome === "repeat"
+    ? "REPEAT"
+    : score.outcome === "known"
+      ? "KNOWN"
+      : score.maxed && score.delta === 0
+        ? "MAX"
+        : `${score.delta > 0 ? "+" : ""}${score.delta}`;
+  const announcement = score.outcome === "repeat"
+    ? `That pair was already scored. Run IQ stays at ${score.value}.`
+    : score.outcome === "known"
+      ? `That result is already in this game. Run IQ stays at ${score.value}.`
+    : outcome === "miss"
+    ? score.delta < 0
+      ? `That pair does not combine. Run IQ drops to ${score.value}, and the target-path streak resets.`
+      : `That pair does not combine. Run IQ stays at ${score.value}, and the target-path streak resets.`
+    : score.maxed
+      ? "Run IQ reached the playful maximum of 200."
+      : score.outcome === "explore"
+        ? score.delta > 0
+          ? `New discovery, but it does not shorten the path to ${state.game.target}. Run IQ adds only ${score.delta}.`
+          : `New discovery, but it does not shorten the path to ${state.game.target}. The small discovery bonus is already full.`
+        : score.outcome === "route"
+          ? `That discovery moves you closer to ${state.game.target}. Run IQ rises to ${score.value}${score.streak > 1 ? ` with a ${score.multiplier.toFixed(2)} times path streak` : ""}.`
+          : score.outcome === "target"
+            ? `Target reached. Run IQ rises to ${score.value}.`
+            : `Run IQ stays at ${score.value}.`;
+  renderRunIq({ announce: announcement });
+  runIqFeedbackTimer = setTimeout(() => {
+    els.runIqHud?.classList.remove("iq-gain", "iq-miss", "iq-max", "iq-repeat");
+    if (els.runIqDelta) els.runIqDelta.textContent = "";
+    runIqFeedbackTimer = null;
+  }, 1350);
+}
+
+function changeRunIq(outcome, a = "", b = "", context = {}) {
+  if (!runIqActive()) return;
+  const pairKey = String(context.pairKey || runIqPairKey(a, b)).slice(0, 180);
+  state.runIq = outcome === "miss"
+    ? softenRunIq(state.runIq, pairKey)
+    : rewardRunIq(state.runIq, pairKey, context);
+  animateRunIq(outcome);
+  return state.runIq;
+}
+
+function runIqSuccessfulPairKey(a, b, resultWord) {
+  return `${runIqPairKey(a, b)}=>${inventoryKey(resultWord)}`.slice(0, 180);
+}
+
+function renderRemixHud() {
+  if (!els.remixPill) return;
+  const rules = Array.isArray(state.game?.remixes?.rules) ? state.game.remixes.rules : [];
+  els.remixPill.hidden = rules.length === 0;
+  if (!rules.length) {
+    els.remixPill.textContent = "Rules";
+    els.remixPill.title = "";
+    return;
+  }
+  const progressItems = Array.isArray(state.remixProgress?.items) ? state.remixProgress.items : [];
+  const byFamily = new Map(progressItems.map((item) => [item.family, item]));
+  const complete = rules.filter((rule) => byFamily.get(rule.family)?.complete === true).length;
+  const nextRule = rules.find((rule) => byFamily.get(rule.family)?.complete !== true) || rules[0];
+  els.remixPill.textContent = `Rules ${complete}/${rules.length}`;
+  els.remixPill.title = nextRule?.instruction || "Show route rules";
+  els.remixPill.setAttribute("aria-label", `${complete} of ${rules.length} route rules ready. Show route rules.`);
+}
+
+function renderResultRemixes(won, revealed) {
+  if (!els.resultRemixNote) return;
+  const remixes = state.game?.remixes;
+  if (!remixes) {
+    els.resultRemixNote.hidden = true;
+    els.resultRemixNote.textContent = "";
+    return;
+  }
+  const rank = getRemixRankPresentation({
+    completedChallenges: state.adaptiveDifficulty.completedChallenges
+  });
+  const rules = Array.isArray(remixes.rules) ? remixes.rules : [];
+  const progressItems = Array.isArray(state.remixProgress?.items) ? state.remixProgress.items : [];
+  const byFamily = new Map(progressItems.map((item) => [item.family, item]));
+  const complete = rules.filter((rule) => byFamily.get(rule.family)?.complete === true).length;
+  const winsToNext = rank.nextRank
+    ? Math.max(0, rank.nextRank.completedChallenges - state.adaptiveDifficulty.completedChallenges)
+    : 0;
+  const rankChanged = Boolean(
+    won
+    && !revealed
+    && remixes.rank?.id
+    && remixes.rank.id !== rank.id
+  );
+  const ruleSummary = rules.length
+    ? `${complete}/${rules.length} route rules complete`
+    : "Classic route complete";
+  const nextSummary = rank.nextRank
+    ? `${winsToNext} more ${winsToNext === 1 ? "win" : "wins"} to ${rank.nextRank.name}`
+    : "Highest Route Rank";
+  els.resultRemixNote.textContent = rankChanged
+    ? `${rank.name} Route Rank unlocked! ${rank.remixRange} now available.`
+    : won && !revealed
+      ? `${ruleSummary} · ${rank.name} Route Rank · ${nextSummary}`
+      : `${rank.name} Route Rank kept · ${nextSummary}`;
+  els.resultRemixNote.hidden = false;
+}
+
 function updateHud() {
   if (!state.game) return;
   els.movesValue.textContent = state.game.moveLimit ? `${state.moves}/${state.game.moveLimit}` : String(state.moves);
@@ -3158,8 +3910,10 @@ function updateHud() {
     const alreadyRevealed = state.reveal.revealed;
     els.revealPathButton.disabled = !state.game || !state.run || state.finished || state.startingRun || state.reveal.active || state.reveal.pending || alreadyRevealed;
     els.revealPathButton.classList.toggle("assisted", state.scoringDisabled);
-    els.revealPathButton.querySelector("b").textContent = state.scoringDisabled && alreadyRevealed ? "0 SCORE" : "REVEAL";
+    els.revealPathButton.querySelector("b").textContent = state.scoringDisabled && alreadyRevealed ? "Shown" : "Show answer";
   }
+  renderRunIq();
+  renderRemixHud();
   updateStudyHud();
   updateWishButton();
 }
@@ -3194,6 +3948,23 @@ function renderRouteStarStrip(container, model) {
   container.replaceChildren(...stars);
 }
 
+function acceptRouteProgress(rawProgress) {
+  if (!rawProgress || !state.game) return;
+  const previous = state.routeProgress;
+  const next = sanitizeAuthoredRouteProgress(rawProgress, state.game.routeLength);
+  state.routeProgress = next;
+  const improved = Number.isFinite(previous?.remaining) && next.remaining < previous.remaining;
+  if (!improved || !els.runMilestone) return;
+  clearTimeout(routeProgressFeedbackTimer);
+  els.runMilestone.classList.remove("route-closer");
+  void els.runMilestone.offsetWidth;
+  els.runMilestone.classList.add("route-closer");
+  routeProgressFeedbackTimer = setTimeout(() => {
+    els.runMilestone?.classList.remove("route-closer");
+    routeProgressFeedbackTimer = null;
+  }, 900);
+}
+
 function updateMilestone(won = false) {
   if (!state.game) return;
   if (state.mode === "explore") {
@@ -3208,13 +3979,27 @@ function updateMilestone(won = false) {
     return;
   }
   const model = buildRouteProgress({ history: state.history, target: state.game.target, limit: window.innerWidth <= 700 ? 4 : 6 });
-  els.milestoneBar.style.width = `${won ? 100 : model.lineFill}%`;
-  els.milestoneText.textContent = model.targetReached || won
-    ? `${state.game.target} reached · constellation complete`
-    : model.combinations
-      ? `${model.combinations} recipe${model.combinations === 1 ? "" : "s"} traced toward ${state.game.target}`
-      : `Trace your path to ${state.game.target}`;
-  $("#routeStepCount").textContent = `${model.combinations} STAR${model.combinations === 1 ? "" : "S"}`;
+  const progress = sanitizeAuthoredRouteProgress(state.routeProgress, state.game.routeLength);
+  const reached = Boolean(won || model.targetReached);
+  els.milestoneBar.style.width = `${reached ? 100 : progress.percent}%`;
+  els.milestoneText.textContent = reached
+    ? `${state.game.target} reached`
+    : progress.remaining > 0
+      ? `Closest route to ${state.game.target}`
+      : `${state.game.target} is ready`;
+  $("#routeStepCount").textContent = reached
+    ? "DONE"
+    : progress.remaining > 0
+      ? `${progress.remaining} STEP${progress.remaining === 1 ? "" : "S"} LEFT`
+      : "READY";
+  els.runMilestone?.setAttribute(
+    "aria-label",
+    reached
+      ? `${state.game.target} reached`
+      : progress.remaining > 0
+        ? `Closest known route to ${state.game.target}: ${progress.remaining} step${progress.remaining === 1 ? "" : "s"} left`
+        : `${state.game.target} is ready`
+  );
   renderRouteStarStrip(els.routeProgressTrail, model);
 }
 
@@ -3246,19 +4031,19 @@ function applySenseGlow(words) {
 
 function openPowerups() {
   if (!state.game || state.finished) return;
-  if (state.startingRun || state.pause.active || state.reveal.active || state.reveal.pending || state.busyPairs.size) return showToast("Let the current constellation settle first.");
+  if (state.startingRun || state.pause.active || state.reveal.active || state.reveal.pending || state.busyPairs.size) return showToast("Wait for the words to finish combining.");
   clearArmedPowerup({ render: false });
   stopTimer();
   els.quickTipMessage.classList.remove("error");
   els.quickTipMessage.textContent = state.powerups.tipsUsed >= QUICK_TIP_LIMIT
-    ? "All three Route Signals have been used for this orbit."
-    : "Route Signal finds your next reachable bridge and names at most one word you already discovered.";
+    ? "You have used all three hints."
+    : "";
   els.wordGiftMessage.classList.remove("error");
   els.wordGiftMessage.textContent = state.powerups.giftUsed
-    ? `${state.powerups.giftItem?.word || "Your bridge word"} was gifted. This orbit keeps half score in Open.`
+    ? `${state.powerups.giftItem?.word || "A helpful word"} was added. You keep half your points.`
     : state.powerups.giftUnavailable
-      ? "Every safe bridge for this target is already known, so no Word Gift is available."
-    : "Word Gift keeps half score in Open; only automatic Reveal becomes Study.";
+      ? "You already know every helpful word for this target."
+    : "";
   $("#senseMessage").classList.remove("error");
   $("#senseMessage").textContent = "";
   const strongerHelp = document.querySelector(".guidance-stronger");
@@ -3266,7 +4051,7 @@ function openPowerups() {
   renderProfile();
   els.senseDialog.scrollTop = 0;
   els.senseDialog.showModal();
-  track("sense_opened", { mode: state.mode, surface: "guidance" });
+  track("sense_opened", { mode: state.mode, surface: "help" });
 }
 
 function openPowerupShop() {
@@ -3292,9 +4077,9 @@ async function useQuickTip() {
   const label = els.useQuickTip.querySelector("span");
   const original = label.textContent;
   state.powerups.busy = true;
-  label.textContent = "Tracing the next bridge…";
+  label.textContent = "Finding a hint…";
   els.quickTipMessage.classList.remove("error");
-  els.quickTipMessage.textContent = "Reading the first route connection your discoveries can reach…";
+  els.quickTipMessage.textContent = "Looking for a useful word…";
   renderPowerups();
   try {
     const tip = await fetchJson("/api/run/tip", {
@@ -3305,13 +4090,13 @@ async function useQuickTip() {
     if (state.run?.id !== runId || state.orbitGeneration !== orbitGeneration) return;
     state.powerups.tipsUsed = clamp(Number(tip.used) || 0, 0, QUICK_TIP_LIMIT);
     if (tip.available) {
-      const tipId = `route-signal-${state.powerups.tipsUsed}`;
+      const tipId = `hint-${state.powerups.tipsUsed}`;
       if (!state.powerups.tipIds.includes(tipId)) state.powerups.tipIds.push(tipId);
       state.powerups.tipIds = state.powerups.tipIds.slice(-QUICK_TIP_LIMIT);
     }
     els.quickTipMessage.textContent = tip.text;
     scheduleRunSave();
-    if (!els.senseDialog.open) showAlchemy(`ROUTE SIGNAL · ${tip.text}`);
+    if (!els.senseDialog.open) showAlchemy(`HINT · ${tip.text}`);
     if (tip.available) {
       playFeedback("place");
       track("quick_tip_used", { mode: state.mode, tipIndex, remaining: tip.remaining, scoreSafe: tip.scoreSafe === true });
@@ -3319,8 +4104,8 @@ async function useQuickTip() {
   } catch (error) {
     if (state.run?.id !== runId || state.orbitGeneration !== orbitGeneration) return;
     els.quickTipMessage.classList.add("error");
-    els.quickTipMessage.textContent = error.message || "The route signal could not be read. No tip was spent.";
-    if (!els.senseDialog.open) showAlchemy("Route Signal could not connect. No tip was spent.", true);
+    els.quickTipMessage.textContent = error.message || "The hint could not load. You did not use one.";
+    if (!els.senseDialog.open) showAlchemy("The hint could not load. Try again.", true);
   } finally {
     if (state.run?.id === runId && state.orbitGeneration === orbitGeneration) {
       state.powerups.busy = false;
@@ -3343,9 +4128,9 @@ async function useWordGift() {
   const label = els.useWordGift.querySelector("span");
   const original = label.textContent;
   state.powerups.busy = true;
-  label.textContent = "Summoning a bridge…";
+  label.textContent = "Adding a word…";
   els.wordGiftMessage.classList.remove("error");
-  els.wordGiftMessage.textContent = "The cosmos is selecting an undiscovered bridge without exposing its recipe…";
+  els.wordGiftMessage.textContent = "Finding a helpful word…";
   // Commit the declared Open penalty before requesting the bridge, so a lost
   // response can never leave a Pure-looking score.
   const pendingPolicy = combineAssistance(priorAssist, "gift");
@@ -3370,6 +4155,7 @@ async function useWordGift() {
     if (!existing) state.words.push(item);
     state.powerups.giftUsed = true;
     state.powerups.giftItem = item;
+    acceptRouteProgress(result.routeProgress);
     const confirmedPolicy = combineAssistance(pendingPolicy.id, result.assist || "gift");
     state.assist = confirmedPolicy.id;
     state.scoringDisabled = Boolean(state.scoringDisabled || confirmedPolicy.study || result.scoringDisabled === true || result.scoreEligible === false);
@@ -3387,11 +4173,12 @@ async function useWordGift() {
     renderInventory();
     renderAtlas();
     updateHud();
+    updateMilestone();
     scheduleRunSave();
     if (els.senseDialog.open) els.senseDialog.close();
     placeFromTray(item);
     playFeedback("sense", { analytics: true });
-    showAlchemy(`✦ WORD GIFT · ${item.word} joined your Open orbit · ${Math.round(state.scoreMultiplier * 100)}% score.`);
+    showAlchemy(`${item.word} was added · ${Math.round(state.scoreMultiplier * 100)}% points.`);
     track("word_gift_used", { mode: state.mode, word: item.word, scoreMultiplier: state.scoreMultiplier });
   } catch (error) {
     if (state.run?.id !== runId || state.orbitGeneration !== orbitGeneration) return;
@@ -3404,10 +4191,10 @@ async function useWordGift() {
       if (error.code === "gift_unavailable") state.powerups.giftUnavailable = true;
       els.wordGiftMessage.textContent = error.message;
     } else {
-      els.wordGiftMessage.textContent = "The reply was interrupted. The visible Open penalty remains; retry to recover the same bridge.";
+      els.wordGiftMessage.textContent = "The reply was interrupted. Try again to add the same word.";
     }
     els.wordGiftMessage.classList.add("error");
-    if (!els.senseDialog.open) showToast(error.code === "gift_unavailable" ? "No undiscovered bridge is available for this orbit." : "Word Gift could not confirm. The Open penalty remains; retry to recover it.");
+    if (!els.senseDialog.open) showToast(error.code === "gift_unavailable" ? "No helpful word is available." : "The word could not be added. Try again.");
     updateHud();
     scheduleRunSave();
   } finally {
@@ -3761,6 +4548,17 @@ function inventoryKey(itemOrWord) {
   return String(typeof itemOrWord === "object" ? itemOrWord?.word : itemOrWord || "").trim().toLocaleLowerCase();
 }
 
+function visualWordToken(value) {
+  if (typeof value !== "string") return "unknown";
+  const token = value.trim().toLowerCase();
+  return /^[a-z][a-z0-9-]{0,31}$/.test(token) ? token : "unknown";
+}
+
+function visualWordCategory(value) {
+  const category = visualWordToken(value);
+  return ["force", "nature", "life", "structure", "celestial"].includes(category) ? category : "unknown";
+}
+
 function recentInventoryWords() {
   return [...state.inventoryRecency.entries()]
     .sort((left, right) => right[1] - left[1])
@@ -3788,15 +4586,26 @@ function renderInventory() {
   const controls = visible.map((item) => {
     const button = document.createElement("button");
     button.type = "button";
-    button.className = `inventory-word${["wish", "market"].includes(item.source) ? " wish" : ""}${item.source === "gift" ? " gift" : ""}${item.source === "twist" ? " twist" : ""}${item.ghost ? " reveal-ghost" : ""}${senseWordActive(item) ? " sense-hot" : ""}${firstOrbitWordActive(item) ? " tutorial-hot" : ""}`;
+    button.className = `inventory-word${["wish", "market"].includes(item.source) ? " wish" : ""}${item.source === "gift" ? " gift" : ""}${item.source === "twist" ? " twist" : ""}${item.source === "loaned-start" ? " loaned" : ""}${item.ghost ? " reveal-ghost" : ""}${senseWordActive(item) ? " sense-hot" : ""}${firstOrbitWordActive(item) ? " tutorial-hot" : ""}`;
     button.dataset.word = inventoryKey(item);
+    button.dataset.category = visualWordCategory(item.category);
+    button.dataset.source = visualWordToken(item.source);
     const revealLocked = state.reveal.active || state.reveal.pending;
     const unavailable = state.finished || state.pause.active || revealLocked || item.ghost;
     button.draggable = false;
     button.disabled = unavailable;
-    button.setAttribute("aria-label", item.ghost ? `${item.word}, temporary revealed word. Not saved or playable.` : unavailable ? `${item.word}. Unavailable while this orbit is locked.` : `Add ${item.word}${item.source === "gift" ? ", Word Gift bridge" : ""} to the cosmos. Drag onto a board word to combine immediately.`);
-    if (!unavailable) button.title = `Drag ${item.word} onto a board word to combine`;
-    const tag = item.ghost ? "REVEALED" : item.source === "gift" ? "GIFT" : item.source === "twist" ? "TWIST" : item.source === "wish" ? "WISH" : item.source === "market" ? "VAULT" : item.source?.startsWith("ai") ? "AI" : "";
+    const temporaryStart = item.source === "loaned-start";
+    button.setAttribute("aria-label", item.ghost
+      ? `${item.word}, temporary answer word. Not playable.`
+      : unavailable
+        ? `${item.word}. Not available right now.`
+        : temporaryStart
+          ? `Add ${item.word} to the board. This starting word is only for this game.`
+          : `Add ${item.word} to the board. Drop it onto another word to combine.`);
+    if (!unavailable) button.title = temporaryStart
+      ? `${item.word} is a starting word for this game`
+      : `Drag ${item.word} onto a board word to combine`;
+    const tag = item.ghost ? "REVEALED" : item.source === "loaned-start" ? "START" : item.source === "gift" ? "GIFT" : item.source === "twist" ? "TWIST" : item.source === "wish" ? "WISH" : item.source === "market" ? "VAULT" : item.source?.startsWith("ai") ? "AI" : "";
     const masteryStars = masteryStarsForWord(item.word);
     button.innerHTML = `<span class="emoji">${escapeHtml(item.emoji)}</span><span class="word">${escapeHtml(item.word)}</span>${tag ? `<span class="source-tag">${tag}</span>` : ""}${masteryStars ? `<span class="mastery-tag" aria-label="${masteryStars} recipe mastery stars">★${masteryStars}</span>` : ""}`;
     let suppressClickUntil = 0;
@@ -3819,6 +4628,7 @@ function renderInventory() {
     controls.push(empty);
   }
   els.wordList.replaceChildren(...controls);
+  document.querySelector(".inventory")?.classList.toggle("has-many-words", state.words.length >= 12);
   els.inventorySearch.value = state.inventoryQuery;
   els.inventorySearchClear.hidden = !state.inventoryQuery;
   els.inventorySearchStatus.textContent = state.inventoryQuery
@@ -3890,17 +4700,107 @@ function cancelTapChain({ announce = false } = {}) {
 }
 
 function dismissClearUndo() {
-  clearTimeout(clearUndoTimer);
-  clearUndoTimer = null;
-  clearUndo = null;
-  els.boardUndo.hidden = true;
+  clearTimeout(boardUndoTimer);
+  boardUndoTimer = null;
+  if (els.boardUndo) els.boardUndo.hidden = true;
+}
+
+function boardHistorySnapshot() {
+  return {
+    runId: state.run?.id || "",
+    generation: state.orbitGeneration,
+    progressRevision: state.history.length,
+    nextId: state.nextId,
+    topZ: state.topZ,
+    nodes: structuredClone(state.nodes.filter((node) => !node.revealRole && !node.item.ghost))
+  };
+}
+
+function boardHistoryFingerprint(snapshot) {
+  return JSON.stringify((snapshot?.nodes || []).map((node) => [
+    String(node.id),
+    inventoryKey(node.item),
+    Math.round(Number(node.x) * 10) / 10,
+    Math.round(Number(node.y) * 10) / 10,
+    Number(node.z) || 0,
+    Boolean(node.cosmicTwist)
+  ]));
+}
+
+function boardHistoryMatchesRun(snapshot) {
+  return Boolean(snapshot
+    && snapshot.generation === state.orbitGeneration
+    && snapshot.runId === (state.run?.id || "")
+    && snapshot.progressRevision === state.history.length);
+}
+
+function resetBoardHistory() {
+  boardHistory = { past: [], future: [] };
+  shiftHistorySnapshot = null;
+  updateBoardTools();
+}
+
+function commitBoardEdit(before, label) {
+  if (!boardHistoryMatchesRun(before)) return resetBoardHistory();
+  const after = boardHistorySnapshot();
+  if (boardHistoryFingerprint(before) === boardHistoryFingerprint(after)) return updateBoardTools();
+  boardHistory.past.push({ snapshot: before, label: String(label || "board change").slice(0, 48) });
+  if (boardHistory.past.length > MAX_BOARD_HISTORY) boardHistory.past.splice(0, boardHistory.past.length - MAX_BOARD_HISTORY);
+  boardHistory.future = [];
+  updateBoardTools();
+}
+
+function restoreBoardHistorySnapshot(snapshot) {
+  if (!boardHistoryMatchesRun(snapshot) || state.busyPairs.size) return false;
+  cancelActiveTrayDrag();
+  cancelActiveBoardDrag();
+  ctrlHover.reset();
+  shiftBoard.reset();
+  cancelTapChain();
+  dismissClearUndo();
+  state.nodes = structuredClone(snapshot.nodes);
+  state.nextId = Math.max(Number(snapshot.nextId) || 1, ...state.nodes.map((node) => Number(node.id) + 1).filter(Number.isFinite), 1);
+  state.topZ = Math.max(Number(snapshot.topZ) || 10, ...state.nodes.map((node) => Number(node.z)).filter(Number.isFinite), 10);
+  renderBoard();
+  scheduleRunSave();
+  return true;
+}
+
+function undoBoardEdit() {
+  const entry = boardHistory.past.pop();
+  if (!entry) return updateBoardTools();
+  const current = boardHistorySnapshot();
+  if (!restoreBoardHistorySnapshot(entry.snapshot)) {
+    resetBoardHistory();
+    return;
+  }
+  boardHistory.future.push({ snapshot: current, label: entry.label });
+  if (boardHistory.future.length > MAX_BOARD_HISTORY) boardHistory.future.shift();
+  updateBoardTools();
+  showAlchemy(`Undid ${entry.label}. Score and discoveries stay the same.`);
+}
+
+function redoBoardEdit() {
+  const entry = boardHistory.future.pop();
+  if (!entry) return updateBoardTools();
+  const current = boardHistorySnapshot();
+  if (!restoreBoardHistorySnapshot(entry.snapshot)) {
+    resetBoardHistory();
+    return;
+  }
+  boardHistory.past.push({ snapshot: current, label: entry.label });
+  if (boardHistory.past.length > MAX_BOARD_HISTORY) boardHistory.past.shift();
+  updateBoardTools();
+  showAlchemy(`Redid ${entry.label}. Score and discoveries stay the same.`);
 }
 
 function updateBoardTools() {
-  const locked = !state.game || state.finished || state.startingRun || state.pause.active || state.reveal.active || state.reveal.pending || state.busyPairs.size > 0;
-  els.tidyBoard.disabled = locked || state.nodes.length < 2;
-  els.resetBoard.disabled = locked || state.nodes.length === 0;
-  els.senseButton.disabled = locked;
+  const boardLocked = !state.game || state.finished || state.startingRun || state.reveal.active || state.reveal.pending || state.busyPairs.size > 0;
+  els.tidyBoard.disabled = boardLocked || state.nodes.length < 2;
+  els.resetBoard.disabled = boardLocked || state.nodes.length === 0;
+  els.undoBoardAction.disabled = boardLocked || !boardHistory.past.length;
+  els.redoBoardAction.disabled = boardLocked || !boardHistory.future.length;
+  els.senseButton.disabled = boardLocked || state.pause.active;
   renderPowerups();
 }
 
@@ -3914,29 +4814,19 @@ function clearBoardWithUndo() {
   shiftBoard.reset();
   cancelTapChain();
   dismissClearUndo();
-  clearUndo = {
-    runId: state.run?.id || "",
-    generation: state.orbitGeneration,
-    nodes: structuredClone(state.nodes)
-  };
+  const before = boardHistorySnapshot();
   state.nodes = [];
   renderBoard();
+  commitBoardEdit(before, "clear board");
   els.boardUndo.hidden = false;
-  clearUndoTimer = setTimeout(dismissClearUndo, 6000);
+  boardUndoTimer = setTimeout(dismissClearUndo, 6000);
   scheduleRunSave();
-  showAlchemy("The board is clear. Your discoveries remain.");
+  showAlchemy("Board cleared. Use Undo to restore it. Your discoveries remain.");
 }
 
 function undoBoardClear() {
-  if (!clearUndo || clearUndo.generation !== state.orbitGeneration || clearUndo.runId !== (state.run?.id || "") || state.busyPairs.size) return dismissClearUndo();
-  const snapshot = clearUndo.nodes;
   dismissClearUndo();
-  state.nodes = snapshot;
-  state.nextId = Math.max(state.nextId, ...state.nodes.map((node) => Number(node.id) + 1).filter(Number.isFinite), 1);
-  state.topZ = Math.max(state.topZ, ...state.nodes.map((node) => Number(node.z)).filter(Number.isFinite), 10);
-  renderBoard();
-  scheduleRunSave();
-  showAlchemy("Board restored · score unchanged.");
+  undoBoardEdit();
 }
 
 function boardRectangle(rectangle) {
@@ -3954,7 +4844,7 @@ function rectanglesOverlap(leftValue, rightValue, gap = 0) {
 }
 
 function visibleBoardOverlayRectangles(boardRect = els.board.getBoundingClientRect()) {
-  const candidates = [els.rivalGhost, els.ghostPreview, document.querySelector(".board-tools"), document.querySelector(".run-milestone"), els.tapChainStatus, els.boardUndo, els.recipeFeedback, els.expectedPairFeedback, els.alchemyNote, els.firstOrbitGuide];
+  const candidates = [els.rivalGhost, els.ghostPreview, document.querySelector(".board-quick-tools"), document.querySelector(".run-milestone"), els.tapChainStatus, els.boardUndo, els.recipeFeedback, els.expectedPairFeedback, els.alchemyNote, els.firstOrbitGuide];
   return candidates.map((element) => {
     if (!element || element.hidden) return null;
     if (element === els.alchemyNote && !element.classList.contains("show")) return null;
@@ -3990,6 +4880,7 @@ function packOrbitAroundOverlays(items, bounds, blockers) {
 
 function tidyOrbit(options = {}) {
   if (els.tidyBoard.disabled) return;
+  const before = options?.silent ? null : boardHistorySnapshot();
   cancelActiveTrayDrag();
   cancelActiveBoardDrag();
   ctrlHover.reset();
@@ -4029,6 +4920,7 @@ function tidyOrbit(options = {}) {
     setTimeout(() => element.classList.remove("tidying"), 280);
   }
   boardGeometryVersion += 1;
+  if (before) commitBoardEdit(before, "tidy words");
   scheduleRunSave();
   if (!options?.silent) {
     showAlchemy("Orbit tidied · score unchanged.");
@@ -4119,6 +5011,7 @@ function removeShiftBoardNode(node) {
   const current = getShiftBoardNode(node?.id);
   if (!current) return false;
   dismissClearUndo();
+  const before = boardHistorySnapshot();
   if (state.selectedNodeId === current.id) state.selectedNodeId = null;
   state.nodes = state.nodes.filter((entry) => entry.id !== current.id);
   els.boardItems.querySelector(`[data-id="${current.id}"]`)?.remove();
@@ -4128,6 +5021,7 @@ function removeShiftBoardNode(node) {
   syncSelectedNodeState();
   updateBoardTools();
   syncFirstOrbitGuide();
+  commitBoardEdit(before, `remove ${current.item.word}`);
   scheduleRunSave();
   showAlchemy(`SHIFT REMOVE · ${current.item.word} cleared from the board. It remains discovered.`);
   return true;
@@ -4142,6 +5036,7 @@ function duplicateShiftBoardNode(source, point, { copyNumber = 1, size } = {}) {
     return false;
   }
   dismissClearUndo();
+  shiftHistorySnapshot ||= boardHistorySnapshot();
   const bounds = els.board.getBoundingClientRect();
   const width = Math.max(1, Number(size?.width) || 1);
   const height = Math.max(1, Number(size?.height) || 1);
@@ -4164,6 +5059,13 @@ function duplicateShiftBoardNode(source, point, { copyNumber = 1, size } = {}) {
   scheduleRunSave();
   if (copyNumber === 1) showAlchemy(`SHIFT COPY · ${current.item.word} is leaving a spaced trail. Drop the held word onto any word to fuse.`);
   return true;
+}
+
+function commitShiftBoardHistory() {
+  if (!shiftHistorySnapshot) return;
+  const before = shiftHistorySnapshot;
+  shiftHistorySnapshot = null;
+  commitBoardEdit(before, "stamp words");
 }
 
 function handleShiftBoardEnter(node, event = {}) {
@@ -4233,6 +5135,20 @@ function activateCtrlHover(event) {
   else showAlchemy("CTRL FUSION · Hover a word to remember it.");
 }
 
+function handleBoardHistoryShortcut(event) {
+  if (event.defaultPrevented || event.altKey || (!event.ctrlKey && !event.metaKey) || boardModifierBlocked(event)) return;
+  if (els.gameScreen.hidden || !state.game || state.finished || state.pause.active || state.startingRun || state.reveal.active || state.reveal.pending || state.busyPairs.size) return;
+  const key = String(event.key || "").toLowerCase();
+  const wantsUndo = key === "z" && !event.shiftKey;
+  const wantsRedo = (key === "z" && event.shiftKey) || (key === "y" && !event.shiftKey);
+  if (!wantsUndo && !wantsRedo) return;
+  const available = wantsUndo ? boardHistory.past.length : boardHistory.future.length;
+  if (!available) return;
+  event.preventDefault();
+  if (wantsUndo) undoBoardEdit();
+  else redoBoardEdit();
+}
+
 function releaseCtrlHover(event) {
   if (event?.key && event.key !== "Control") return;
   const changed = ctrlHover.setActive(false);
@@ -4243,6 +5159,8 @@ function syncBoardNodeElement(button, node, isNew = false) {
   button.className = `board-word${isNew ? " appear" : ""}${isNew && node.shiftStamped ? " shift-stamped" : ""}${["wish", "market"].includes(node.item.source) ? " wish" : ""}${node.item.source === "gift" ? " gift" : ""}${node.item.source === "twist" || node.cosmicTwist ? " cosmic-twist" : ""}${node.item.ghost ? " reveal-ghost" : ""}${node.revealRole ? ` reveal-${node.revealRole}` : ""}${state.selectedNodeId === node.id ? " keyboard-selected" : ""}${senseWordActive(node.item) ? " sense-hot" : ""}${firstOrbitWordActive(node.item) ? " tutorial-hot" : ""}`;
   button.dataset.id = node.id;
   button.dataset.word = inventoryKey(node.item);
+  button.dataset.category = visualWordCategory(node.item.category);
+  button.dataset.source = visualWordToken(node.item.source);
   button.style.setProperty("--x", `${node.x}px`);
   button.style.setProperty("--y", `${node.y}px`);
   button.style.zIndex = node.z;
@@ -4353,9 +5271,11 @@ function placeFromTray(item, point, placement = {}) {
     });
     if (open) ({ x, y } = open);
   }
+  const before = boardHistorySnapshot();
   touchInventory(item);
   renderInventory();
   const node = addNode(item, x, y, measuredSize ? { size: measuredSize, inset: 5 } : {});
+  commitBoardEdit(before, `place ${item.word}`);
   playFeedback("place");
   return node;
 }
@@ -4604,6 +5524,8 @@ function startTrayPointerDrag(event, item, element, suppressClick) {
       ghost = document.createElement("div");
       ghost.className = "tray-drag-ghost";
       ghost.setAttribute("aria-hidden", "true");
+      ghost.dataset.category = visualWordCategory(item.category);
+      ghost.dataset.source = visualWordToken(item.source);
       ghost.innerHTML = `<span>${escapeHtml(item.emoji)}</span><strong>${escapeHtml(item.word)}</strong>`;
       ghost.style.left = `${lastPoint.x}px`;
       ghost.style.top = `${lastPoint.y}px`;
@@ -4642,6 +5564,7 @@ function startTrayPointerDrag(event, item, element, suppressClick) {
     ghost?.remove();
     clearDropTargets();
     if (shiftDragStarted) shiftBoard.endDrag();
+    commitShiftBoardHistory();
     activeTrayShiftSource = null;
     if (shiftArmedByPointer) shiftBoard.setHeld(false);
     if (activeTrayDragCleanup === cleanup) activeTrayDragCleanup = null;
@@ -4721,6 +5644,7 @@ function startNodeDrag(event, node, element) {
   const startY = event.clientY;
   const offsetX = event.clientX - nodeRect.left;
   const offsetY = event.clientY - nodeRect.top;
+  const boardBeforeDrag = boardHistorySnapshot();
   let moved = false;
   let highlightFrame = 0;
   let shiftArmedByPointer = false;
@@ -4771,6 +5695,7 @@ function startNodeDrag(event, node, element) {
     element.classList.remove("dragging");
     clearDropTargets();
     shiftBoard.endDrag();
+    commitShiftBoardHistory();
     if (shiftArmedByPointer) shiftBoard.setHeld(false);
     if (activeBoardDragCleanup === cleanup) activeBoardDragCleanup = null;
   };
@@ -4787,7 +5712,9 @@ function startNodeDrag(event, node, element) {
       height: nodeHeight
     };
     const resolution = moved ? resolveDropCandidate({ point: { x: upEvent.clientX, y: upEvent.clientY }, sourceElement: element, sourceRect, excludeId: node.id, pointerType, geometry: dropGeometry }) : null;
+    const stampedDuringDrag = Boolean(shiftHistorySnapshot);
     cleanup();
+    if (moved && !stampedDuringDrag) commitBoardEdit(boardBeforeDrag, `move ${node.item.word}`);
     if (resolution?.selected) void combineNodes(node, resolution.selected);
     else if (resolution?.ambiguous) showAlchemy("Move closer to choose a word.", true);
     else if (!moved) void selectNodeForTap(node);
@@ -4854,9 +5781,14 @@ function authoredInsightCatalog() {
   }));
 }
 
+function moveLimitEndMessage() {
+  const masterRoute = state.game?.remixes?.rules?.some((rule) => rule.family === "master_route");
+  return masterRoute ? "Master Route limit reached." : "No moves left.";
+}
+
 async function combineNodes(a, b) {
   if (state.finished || state.pause.active || state.reveal.active || state.reveal.pending || state.busyPairs.has(a.id) || state.busyPairs.has(b.id)) return;
-  if (state.game.moveLimit && state.moves >= state.game.moveLimit) return finishGame(false, "No moves remain in this orbit.");
+  if (state.game.moveLimit && state.moves >= state.game.moveLimit) return finishGame(false, moveLimitEndMessage());
   resetExpectedPairFeedback();
   dismissClearUndo();
   const orbitGeneration = state.orbitGeneration;
@@ -4941,6 +5873,11 @@ async function combineNodes(a, b) {
       state.scoreMultiplier = cappedScoreMultiplier(state.assist, state.scoreMultiplier, declaredPolicy.scoreMultiplier, policy.scoreMultiplier, result.scoreMultiplier);
       state.run = { ...state.run, assist: state.assist, assisted: true, division: "open", scoreMultiplier: state.scoreMultiplier };
     }
+    if (result.scoringDisabled === true || result.scoreEligible === false) {
+      state.scoringDisabled = true;
+      state.scoreMultiplier = 0;
+      state.run = { ...state.run, scoringDisabled: true, scoreEligible: false, scoreMultiplier: 0 };
+    }
     const eventAnnotation = annotateCosmicEventResult({ event: currentEventState().event, result });
     const journeyMatch = Boolean(state.journeyContext && inventoryKey(state.journeyContext.target) === inventoryKey(result.word));
     const insight = !result.twisted ? explainSuccessfulRecipe({
@@ -4970,7 +5907,42 @@ async function combineNodes(a, b) {
       context: journeyMatch ? state.journeyContext.kind : eventAnnotation.context?.collectionMatch ? eventAnnotation.context.eventId : "",
       rarity: result.twisted ? 90 : eventAnnotation.context?.collectionMatch ? 55 : 0
     };
+    const won = Boolean(result.completed || (secondOrbitActive() && inventoryKey(result.word) === inventoryKey(state.game.target)));
+    const routeRankOutcome = result.routeRankOutcome && typeof result.routeRankOutcome === "object"
+      ? result.routeRankOutcome
+      : null;
+    if (routeRankOutcome?.routeRank || result.routeRank) {
+      applyRouteRank(routeRankOutcome?.routeRank || result.routeRank, { announce: won });
+    }
+    if (routeRankOutcome?.adaptive?.message) {
+      state.adaptiveNotice = {
+        message: routeRankOutcome.adaptive.message,
+        metadata: routeRankOutcome.adaptive.metadata || {}
+      };
+    }
+    if (routeRankOutcome?.promotion?.message) {
+      state.routeRankNotice = {
+        message: routeRankOutcome.promotion.message,
+        rankUp: routeRankOutcome.promotion.promoted === true
+      };
+    }
+    const routeProgressBefore = state.routeProgress;
+    acceptRouteProgress(result.routeProgress);
+    if (result.remixProgress) state.remixProgress = result.remixProgress;
+    const iqContext = runIqRouteContext(routeProgressBefore, state.routeProgress, {
+      completed: won,
+      newDiscovery: newToRun
+    });
+    const iqPairKey = runIqSuccessfulPairKey(a.item.word, b.item.word, result.word);
+    iqContext.pairKey = iqPairKey;
+    historyStep.runIqKey = iqPairKey;
+    historyStep.runIqNewToRun = newToRun;
+    historyStep.runIqRelevance = iqContext.relevance;
+    historyStep.routeTotal = iqContext.routeTotal;
+    historyStep.routeStepsAdvanced = iqContext.stepsAdvanced;
+    historyStep.routeCompleted = iqContext.completed;
     state.history.push(historyStep);
+    changeRunIq("success", a.item.word, b.item.word, iqContext);
     const mastery = recordMasteryStep(historyStep);
     state.trails.push({ ax: a.x + 44, ay: a.y + 20, bx: b.x + 44, by: b.y + 20, x: x + 44, y: y + 20 });
     if (state.trails.length > MAX_TRANSIENT_TRAILS) state.trails.splice(0, state.trails.length - MAX_TRANSIENT_TRAILS);
@@ -4979,10 +5951,18 @@ async function combineNodes(a, b) {
     bElement?.remove();
     boardGeometryVersion += 1;
     const resultNode = addNode(known, x, y, { cosmicTwist: Boolean(result.twisted) });
+    resetBoardHistory();
     const universeLabel = result.universeContext?.label ? ` · ${result.universeContext.label}` : "";
     showAlchemy(result.twisted
       ? `✦ COSMIC TWIST · ${a.item.word} + ${b.item.word} found ${result.emoji} ${result.word} instead of ${result.twist.canonicalWord}. Mix them again for ${result.twist.canonicalWord}.`
       : `${a.item.word} + ${b.item.word} = ${result.emoji} ${result.word}${universeLabel}${insight?.text ? ` · ${insight.text}` : ""}`, false, Boolean(result.twisted));
+    if (result.completionBlocked && result.remixMessage) {
+      queueAlchemyNotice(`TARGET FOUND · ${result.remixMessage}`, true, false, {
+        key: `remix:${result.remixMessage}`,
+        retain: true,
+        maxAge: 10_000
+      });
+    }
     const eventDiscovery = learningOrbitActive() || state.mode === "explore" ? null : await recordEventDiscovery(result);
     if (eventDiscovery?.notice) {
       queueAlchemyNotice(eventDiscovery.notice, false, true, { key: `event:${inventoryKey(result.word)}`, retain: true, maxAge: 12_000 });
@@ -4995,11 +5975,10 @@ async function combineNodes(a, b) {
     updateHud();
     updateMilestone();
     renderAtlas();
-    const won = Boolean(result.completed || (secondOrbitActive() && inventoryKey(result.word) === inventoryKey(state.game.target)));
     track("combination_completed", { mode: state.mode, a: a.item.word, b: b.item.word, result: result.word, source: result.source, newDiscovery, twisted: Boolean(result.twisted) });
     if (!won && !learningOrbitActive() && historyStep.feedbackEligible) offerRecipeFeedback(historyStep, state.moves);
     if (won) setTimeout(() => finishGame(true), 480);
-    else if (state.game.moveLimit && state.moves >= state.game.moveLimit) setTimeout(() => finishGame(false, "No moves remain in this orbit."), 350);
+    else if (state.game.moveLimit && state.moves >= state.game.moveLimit) setTimeout(() => finishGame(false, moveLimitEndMessage()), 350);
     return { node: resultNode, completed: won };
   } catch (error) {
     if (orbitGeneration !== state.orbitGeneration || !state.game) return null;
@@ -5018,7 +5997,11 @@ async function combineNodes(a, b) {
       recipes: authoredInsightCatalog()
     }) : null;
     showAlchemy(nearMiss?.text || error.message, true);
-    if (error.code === "combination_missing" && !learningOrbitActive()) offerExpectedPairFeedback(a.item.word, b.item.word);
+    if (error.code === "combination_missing" && !learningOrbitActive()) {
+      changeRunIq("miss", a.item.word, b.item.word);
+      scheduleRunSave();
+      offerExpectedPairFeedback(a.item.word, b.item.word);
+    }
     playFeedback("reject");
     track("combination_rejected", { mode: state.mode, a: a.item.word, b: b.item.word });
     return null;
@@ -5039,10 +6022,14 @@ function expectedPairKey(a, b) {
 
 function resetExpectedPairFeedback() {
   clearTimeout(state.expectedPair?.timer);
-  state.expectedPair = { a: "", b: "", key: "", submitted: false, timer: null };
+  state.expectedPair = { a: "", b: "", key: "", submitted: false, localSaved: false, timer: null };
   if (els.expectedPairFeedback) {
     els.expectedPairFeedback.hidden = true;
     els.expectedPairButton.disabled = false;
+    els.expectedPairResult.value = "";
+    els.expectedPairResult.removeAttribute("aria-invalid");
+    els.expectedPairButton.textContent = expectedPairDelivery.submitLabel(isStaticBeta);
+    els.expectedPairDelivery.textContent = expectedPairDelivery.deliveryMessage(isStaticBeta);
   }
   clearBoardAnnouncement("expected-pair");
 }
@@ -5051,51 +6038,80 @@ function offerExpectedPairFeedback(a, b) {
   const key = expectedPairKey(a, b);
   if (!key || state.expectedPairReports.has(key) || !els.expectedPairFeedback) return;
   resetRecipeFeedback();
-  state.expectedPair = { a: String(a).slice(0, 48), b: String(b).slice(0, 48), key, submitted: false, timer: null };
+  state.expectedPair = { a: String(a).slice(0, 48), b: String(b).slice(0, 48), key, submitted: false, localSaved: false, timer: null };
   $("#expectedPairRecipe").textContent = `${state.expectedPair.a} + ${state.expectedPair.b}`;
-  els.expectedPairButton.textContent = "Expected this to work";
+  els.expectedPairButton.textContent = expectedPairDelivery.submitLabel(isStaticBeta);
+  els.expectedPairDelivery.textContent = expectedPairDelivery.deliveryMessage(isStaticBeta);
   els.expectedPairFeedback.hidden = false;
-  announceBoardMessage(`No authored result for ${state.expectedPair.a} plus ${state.expectedPair.b}. You can report that you expected it to work.`, "expected-pair");
-  state.expectedPair.timer = setTimeout(() => {
-    if (els.expectedPairFeedback?.contains(document.activeElement)) return;
-    resetExpectedPairFeedback();
-  }, 9_000);
+  const action = isStaticBeta && !FEEDBACK_API_URL ? "save an idea on this device" : "send Oxyfel Games an idea";
+  announceBoardMessage(`What should ${state.expectedPair.a} plus ${state.expectedPair.b} make? You can ${action}.`, "expected-pair");
 }
 
-function recordLocalExpectedPair(a, b) {
-  try {
-    const parsed = JSON.parse(localStorage.getItem(LOCAL_EXPECTED_PAIRS_KEY) || "null");
-    const pairs = parsed?.pairs && typeof parsed.pairs === "object" && !Array.isArray(parsed.pairs) ? parsed.pairs : {};
-    const bounded = Object.fromEntries(Object.entries(pairs).filter(([key, value]) => key.length <= 120 && Number.isFinite(Number(value))).slice(-255));
-    const key = expectedPairKey(a, b);
-    bounded[key] = Math.min(1000, Math.max(0, Math.floor(Number(bounded[key]) || 0)) + 1);
-    localStorage.setItem(LOCAL_EXPECTED_PAIRS_KEY, JSON.stringify({ version: 1, pairs: bounded }));
-  } catch { /* The explicit local report is optional. */ }
-}
-
-function submitExpectedPairFeedback() {
+async function submitExpectedPairFeedback(event) {
+  event?.preventDefault?.();
   const report = state.expectedPair;
   if (!report?.key || report.submitted || state.expectedPairReports.has(report.key)) return;
-  report.submitted = true;
-  state.expectedPairReports.add(report.key);
-  els.expectedPairButton.disabled = true;
-  els.expectedPairButton.textContent = "Reported · thank you";
-  const properties = { mode: String(state.mode || "").slice(0, 24), a: report.a, b: report.b };
-  if (isStaticBeta) recordLocalExpectedPair(report.a, report.b);
-  else if (analyticsPreference) track("combination_expected", properties);
-  else {
-    const url = new URL("/api/analytics", location.origin);
-    if (url.origin === location.origin) fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "same-origin",
-      keepalive: true,
-      body: JSON.stringify({ name: "combination_expected", sessionId, properties, explicit: true })
-    }).catch(() => {});
+  const expected = sanitizeCombinationSuggestion(els.expectedPairResult.value);
+  const reason = "";
+  if (expected === null) {
+    els.expectedPairResult.setAttribute("aria-invalid", "true");
+    els.expectedPairDelivery.textContent = "Use one short thing or idea. Do not enter a link, email, or private information.";
+    els.expectedPairResult.focus();
+    return;
   }
-  announceBoardMessage(`${report.a} plus ${report.b} was reported once for this orbit.`, "expected-pair");
-  clearTimeout(report.timer);
-  report.timer = setTimeout(resetExpectedPairFeedback, 2_400);
+  els.expectedPairResult.removeAttribute("aria-invalid");
+  report.submitted = true;
+  els.expectedPairButton.disabled = true;
+  els.expectedPairButton.textContent = isStaticBeta && !FEEDBACK_API_URL ? "Saving…" : "Sending…";
+  try {
+    if (isStaticBeta) {
+      report.localSaved = report.localSaved || expectedPairDelivery.saveLocal({ a: report.a, b: report.b, expected: expected || "", reason });
+      const payload = expectedPairDelivery.payload({ a: report.a, b: report.b, expected: expected || "", reason });
+      if (FEEDBACK_API_URL) {
+        const outboxId = expectedPairDelivery.queue(payload);
+        try {
+          await expectedPairDelivery.post(payload);
+          if (outboxId) expectedPairDelivery.remove(outboxId);
+          els.expectedPairButton.textContent = "Idea sent";
+          els.expectedPairDelivery.textContent = "Sent to Oxyfel Games. Thank you—no sign-in was needed.";
+        } catch (error) {
+          if (!outboxId) throw error;
+          els.expectedPairButton.textContent = "Saved";
+          els.expectedPairDelivery.textContent = "Saved safely. The game will send it automatically when the feedback receiver is reachable.";
+          expectedPairDelivery.schedule();
+        }
+      } else {
+        if (!report.localSaved) throw new Error("This device did not allow the idea to be saved.");
+        els.expectedPairButton.textContent = "Saved";
+        els.expectedPairDelivery.textContent = "Saved on this device. Direct sending is not connected in this build.";
+      }
+    } else {
+      await fetchJson("/api/combination-reports", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({
+          a: report.a,
+          b: report.b,
+          expected: expected || "",
+          reason,
+          mode: String(state.mode || "reach").slice(0, 24),
+          reporterId: analyticsCohortId || sessionId
+        })
+      });
+      els.expectedPairButton.textContent = "Idea sent";
+      els.expectedPairDelivery.textContent = "Sent to Oxyfel Games for recipe review. Thank you!";
+    }
+    state.expectedPairReports.add(report.key);
+    announceBoardMessage(`${FEEDBACK_API_URL || !isStaticBeta ? "Suggestion recorded" : "Suggestion saved"} for ${report.a} plus ${report.b}. Thank you.`, "expected-pair");
+  } catch {
+    report.submitted = false;
+    els.expectedPairButton.disabled = false;
+    els.expectedPairButton.textContent = "Try again";
+    els.expectedPairDelivery.textContent = FEEDBACK_API_URL
+      ? "The idea was not sent or queued. Check your connection or storage settings and try again."
+      : "The idea could not be saved on this device. Check your storage settings and try again.";
+  }
 }
 
 function resetRecipeFeedback() {
@@ -5205,43 +6221,53 @@ function resetRevealPlayback({ keepConstellation = false } = {}) {
     route: keepConstellation ? previous.route || [] : [],
     completed: keepConstellation ? previous.completed || 0 : 0,
     layout: keepConstellation ? previous.layout || null : null,
+    visual: null,
     wake: null
   };
+  const revealNodes = state.nodes.filter((node) => node.revealRole);
+  if (revealNodes.length) {
+    state.nodes = state.nodes.filter((node) => !node.revealRole);
+    renderBoard();
+  }
   if (els.revealController) els.revealController.hidden = true;
   els.revealController?.classList.remove("is-paused", "is-complete");
-  els.board?.classList.remove("reveal-active");
+  els.board?.classList.remove("reveal-active", "reveal-summoning", "reveal-merging", "reveal-resulting", "reveal-paused");
+  if (els.revealEquation) {
+    els.revealEquation.hidden = true;
+    els.revealEquation.dataset.phase = "summon";
+  }
   els.revealDialog?.classList.remove("is-pending");
   $$('[data-close="revealDialog"]').forEach((button) => { button.disabled = false; });
   const confirm = $("#confirmReveal");
   if (confirm) {
     confirm.disabled = false;
-    confirm.querySelector("span").textContent = "Reveal and forfeit score";
+    confirm.querySelector("span").textContent = "Show answer";
   }
   if (!keepConstellation) els.board?.classList.remove("reveal-complete");
 }
 
 function openRevealPath() {
   if (!state.game || !state.run || state.startingRun || state.reveal.revealed || state.reveal.active || state.reveal.pending) return;
-  if (state.busyPairs.size) return showToast("Let the current combination resolve before revealing the path.");
+  if (state.busyPairs.size) return showToast("Wait for the words to finish combining.");
   ctrlHover.reset();
   shiftBoard.reset();
   stopTimer();
-  $("#revealTitle").textContent = `Reveal the path to ${state.game.target}?`;
+  $("#revealTitle").textContent = `Show the answer for ${state.game.target}?`;
   const warnings = {
-    daily: "Today's scored challenge will be consumed. Replays stay unranked.",
-    quick: "Today's sprint will be forfeited. Replays of it stay unranked.",
-    moves: "Today's move challenge will be forfeited. Replays stay unranked.",
-    weekly: "This expedition stage will grant no progress, and its replays stay unranked."
+    daily: "You will get no points for today’s word.",
+    quick: "You will get no points for this timed game.",
+    moves: "You will get no points for this limited-moves game.",
+    weekly: "You will get no points or progress for this game."
   };
   $("#revealModeWarning").textContent = state.scoringDisabled
-    ? "This orbit is already unranked. The revealed words will still remain temporary."
-    : warnings[state.mode] || "This orbit will become a zero-score Study run.";
+    ? "You can watch the answer once."
+    : warnings[state.mode] || "You will get no points for this game.";
   els.revealDialog.showModal();
 }
 
 async function confirmRevealPath() {
   if (!state.game || !state.run || state.reveal.active || state.reveal.pending) return;
-  if (state.busyPairs.size) return showToast("Let the current combination resolve before revealing the path.");
+  if (state.busyPairs.size) return showToast("Wait for the words to finish combining.");
   const revealState = state.reveal;
   const runId = state.run.id;
   const runToken = state.run.token;
@@ -5256,7 +6282,7 @@ async function confirmRevealPath() {
     button.disabled = false;
     dismissers.forEach((control) => { control.disabled = false; });
     els.revealDialog.classList.remove("is-pending");
-    label.textContent = "Reveal and forfeit score";
+    label.textContent = "Show answer";
     pendingUiCleared = true;
   };
   revealState.pending = true;
@@ -5271,6 +6297,15 @@ async function confirmRevealPath() {
       body: JSON.stringify({ runId, runToken })
     });
     if (state.reveal !== revealState || state.run?.id !== runId || state.game?.target !== target) return;
+    if (payload.routeRankOutcome?.routeRank || payload.routeRank) {
+      applyRouteRank(payload.routeRankOutcome?.routeRank || payload.routeRank, { announce: true });
+    }
+    if (payload.routeRankOutcome?.promotion?.message) {
+      state.routeRankNotice = {
+        message: payload.routeRankOutcome.promotion.message,
+        rankUp: payload.routeRankOutcome.promotion.promoted === true
+      };
+    }
     state.assist = "reveal";
     state.scoringDisabled = true;
     state.scoreMultiplier = 0;
@@ -5341,6 +6376,125 @@ function addRevealDiscovery(step) {
   return item;
 }
 
+function clearRevealStage() {
+  state.nodes = [];
+  renderBoard();
+}
+
+function revealStageGeometry(rect) {
+  const compact = rect.width < 620;
+  const stacked = compact && rect.height >= 560;
+  const centerX = rect.width / 2;
+  const targetX = clamp(centerX - 72, 12, Math.max(12, rect.width - 162));
+  const targetY = clamp(rect.height * (compact ? .52 : .56) - 24, 132, Math.max(132, rect.height - 154));
+  const spread = compact
+    ? Math.min(104, Math.max(72, rect.width * .24))
+    : Math.min(238, Math.max(154, rect.width * .24));
+  const sourceY = stacked
+    ? clamp(targetY + 112, 188, Math.max(188, rect.height - 82))
+    : targetY;
+  const leftX = clamp(targetX - spread, 10, Math.max(10, rect.width - 160));
+  const rightX = clamp(targetX + spread, 10, Math.max(10, rect.width - 160));
+  const center = (x, y) => ({ x: x + 72, y: y + 24 });
+  return {
+    leftX,
+    rightX,
+    sourceY,
+    targetX,
+    targetY,
+    left: center(leftX, sourceY),
+    right: center(rightX, sourceY),
+    target: center(targetX, targetY)
+  };
+}
+
+function setRevealPresentation(step, index, phase, geometry = state.reveal.visual?.geometry) {
+  if (!step || !els.revealEquation) return;
+  const total = state.reveal.route.length;
+  const left = revealItem(step.a);
+  const right = revealItem(step.b);
+  const result = revealItem(step.word, { emoji: step.emoji });
+  const resolved = phase === "result" || phase === "complete";
+  const final = index === total - 1;
+  els.revealEquation.hidden = false;
+  els.revealEquation.dataset.phase = phase;
+  els.revealEquationStep.textContent = phase === "complete"
+    ? "Answer complete"
+    : `Combination ${index + 1} of ${total}`;
+  els.revealEquationA.textContent = step.a;
+  els.revealEquationAEmoji.textContent = left.emoji || "✦";
+  els.revealEquationB.textContent = step.b;
+  els.revealEquationBEmoji.textContent = right.emoji || "✦";
+  els.revealEquationAnswer.textContent = resolved ? step.word : "?";
+  els.revealEquationAnswerEmoji.textContent = resolved ? result.emoji || step.emoji || "✦" : "✦";
+  els.revealEquationNote.textContent = phase === "merge"
+    ? "The two words are fusing…"
+    : phase === "result"
+      ? `${step.a} and ${step.b} make ${step.word}.`
+      : phase === "complete"
+        ? `Target found: ${step.word}.`
+        : "Watch these two words combine.";
+  els.revealEquation.setAttribute("aria-label", resolved
+    ? `${phase === "complete" ? "Answer complete" : `Combination ${index + 1} of ${total}`}: ${step.a} plus ${step.b} equals ${step.word}.`
+    : `Combination ${index + 1} of ${total}: ${step.a} plus ${step.b}. Answer not shown yet.`);
+  els.board.classList.remove("reveal-summoning", "reveal-merging", "reveal-resulting");
+  if (phase === "summon") els.board.classList.add("reveal-summoning");
+  if (phase === "merge") els.board.classList.add("reveal-merging");
+  if (phase === "result" || phase === "complete") els.board.classList.add("reveal-resulting");
+  state.reveal.visual = {
+    phase,
+    stepIndex: index,
+    step,
+    geometry,
+    final,
+    startedAt: performance.now()
+  };
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches) startCosmos();
+}
+
+function recordRevealStep(step, result, replay) {
+  if (replay) return;
+  state.moves += 1;
+  state.history.push({
+    a: step.a,
+    b: step.b,
+    word: step.word,
+    emoji: result.emoji,
+    source: "reveal",
+    newDiscovery: false,
+    revealed: true
+  });
+}
+
+function completeRevealRouteImmediately(route, replay) {
+  for (let index = state.reveal.completed; index < route.length; index += 1) {
+    const step = route[index];
+    const result = addRevealDiscovery(step);
+    recordRevealStep(step, result, replay);
+  }
+  state.reveal.completed = route.length;
+  clearRevealStage();
+  const rect = els.board.getBoundingClientRect();
+  const geometry = revealStageGeometry(rect);
+  const finalStep = route.at(-1);
+  if (finalStep) {
+    const result = addRevealDiscovery(finalStep);
+    addNode(result, geometry.targetX, geometry.targetY, { revealRole: "target" });
+    setRevealPresentation(finalStep, route.length - 1, "complete", geometry);
+  } else {
+    const target = revealItem(state.game.target, { emoji: state.game.emoji });
+    addNode(target, geometry.targetX, geometry.targetY, { revealRole: "target" });
+    if (els.revealEquation) els.revealEquation.hidden = true;
+  }
+  if (!replay) {
+    updateHud();
+    updateMilestone(true);
+    renderAtlas();
+  }
+  updateRevealController(route.length);
+  playFeedback("success");
+}
+
 function wakeRevealPlayback() {
   const wake = state.reveal.wake;
   state.reveal.wake = null;
@@ -5349,35 +6503,42 @@ function wakeRevealPlayback() {
 
 async function revealDelay(milliseconds, generation) {
   const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
-  let remaining = state.reveal.skip ? 0 : reduced ? Math.min(40, milliseconds) : milliseconds / state.reveal.speed;
+  let remaining = state.reveal.skip ? 0 : reduced ? Math.min(300, milliseconds) : milliseconds;
+  let previousTime = performance.now();
   while (remaining > 0) {
     if (generation !== state.reveal.generation || !state.reveal.active) return false;
     if (state.reveal.paused || document.hidden) {
       await new Promise((resolve) => { state.reveal.wake = resolve; });
+      previousTime = performance.now();
       continue;
     }
-    const slice = Math.min(50, remaining);
+    const slice = Math.min(50, remaining / Math.max(.5, state.reveal.speed));
     await wait(slice);
-    remaining -= slice;
+    const now = performance.now();
+    remaining -= Math.max(0, now - previousTime) * state.reveal.speed;
+    previousTime = now;
     if (state.reveal.skip) remaining = 0;
   }
   return generation === state.reveal.generation && state.reveal.active;
 }
 
-function updateRevealController(stepIndex = state.reveal.completed, step = null) {
+function updateRevealController(stepIndex = state.reveal.completed, step = null, { resolved = false } = {}) {
   const total = state.reveal.route.length;
-  const complete = stepIndex >= total;
+  const complete = !step && stepIndex >= total;
   const label = complete
     ? state.reveal.replaying
       ? "Replay complete · returning to mode selection…"
-      : `Constellation complete · ${total} combinations traced`
+      : `Answer complete · ${total} combination${total === 1 ? "" : "s"} shown`
     : step
-      ? `Step ${stepIndex + 1} of ${total}: ${step.a} + ${step.b} → ${step.word}`
-      : "Preparing the constellation…";
+      ? resolved
+        ? `Step ${stepIndex + 1} of ${total}: ${step.a} + ${step.b} = ${step.word}`
+        : `Step ${stepIndex + 1} of ${total}: ${step.a} + ${step.b}`
+      : "Getting the words ready…";
+  const progressSteps = complete ? total : resolved ? stepIndex + 1 : stepIndex;
   els.revealStepText.textContent = label;
   els.revealAnnouncement.textContent = label;
-  els.revealProgressBar.style.width = `${total ? Math.min(100, stepIndex / total * 100) : 100}%`;
-  els.revealProgressBar.parentElement?.setAttribute("aria-valuenow", String(total ? Math.round(Math.min(100, stepIndex / total * 100)) : 100));
+  els.revealProgressBar.style.width = `${total ? Math.min(100, progressSteps / total * 100) : 100}%`;
+  els.revealProgressBar.parentElement?.setAttribute("aria-valuenow", String(total ? Math.round(Math.min(100, progressSteps / total * 100)) : 100));
   els.revealPause.disabled = complete;
   els.revealSpeed.disabled = complete;
   els.revealSkip.hidden = complete;
@@ -5404,6 +6565,7 @@ async function playRevealPath(route, { replay = false } = {}) {
   clearBoardNotices();
   if (!replay) state.finished = false;
   state.nodes = [];
+  resetBoardHistory();
   state.selectedNodeId = null;
   state.reveal = {
     active: true,
@@ -5420,12 +6582,14 @@ async function playRevealPath(route, { replay = false } = {}) {
     route,
     completed: 0,
     layout: buildRevealLayout(route),
+    visual: null,
     wake: null
   };
   els.board.classList.add("reveal-active");
-  els.board.classList.remove("reveal-complete");
+  els.board.classList.remove("reveal-complete", "reveal-paused", "reveal-summoning", "reveal-merging", "reveal-resulting");
   els.revealController.hidden = false;
   els.revealController.classList.remove("is-paused", "is-complete");
+  if (els.revealEquation) els.revealEquation.hidden = true;
   els.revealPause.textContent = "Pause";
   els.revealPause.setAttribute("aria-pressed", "false");
   els.revealSpeed.textContent = "1×";
@@ -5439,54 +6603,77 @@ async function playRevealPath(route, { replay = false } = {}) {
   if (!route.length) {
     const target = revealItem(state.game.target, { emoji: state.game.emoji });
     const rect = els.board.getBoundingClientRect();
-    state.nodes = [];
-    addNode(target, rect.width / 2 - 55, rect.height * .35, { revealRole: "target" });
+    const geometry = revealStageGeometry(rect);
+    clearRevealStage();
+    addNode(target, geometry.targetX, geometry.targetY, { revealRole: "target" });
   }
 
+  let skippedToEnd = false;
+  revealSteps:
   for (let index = 0; index < route.length; index += 1) {
     if (generation !== state.reveal.generation) return;
+    if (state.reveal.skip) {
+      completeRevealRouteImmediately(route, replay);
+      skippedToEnd = true;
+      break;
+    }
     const step = route[index];
     const rect = els.board.getBoundingClientRect();
-    const segment = state.reveal.layout.segments[index];
-    const targetX = clamp(segment.to.x * rect.width - 48, 10, Math.max(10, rect.width - 150));
-    const targetY = clamp(segment.to.y * rect.height - 22, 58, Math.max(58, rect.height - 88));
-    const spread = Math.min(150, rect.width * .25);
-    const sourceY = clamp(targetY + Math.min(145, rect.height * .2), 70, Math.max(70, rect.height - 72));
+    const geometry = revealStageGeometry(rect);
     const leftItem = revealItem(step.a);
     const rightItem = revealItem(step.b);
-    state.nodes = [];
-    const left = addNode(leftItem, clamp(targetX - spread, 8, rect.width - 155), sourceY, { revealRole: "source" });
-    const right = addNode(rightItem, clamp(targetX + spread, 8, rect.width - 155), sourceY, { revealRole: "source" });
+    clearRevealStage();
+    const left = addNode(leftItem, geometry.leftX, geometry.sourceY, { revealRole: "source" });
+    const right = addNode(rightItem, geometry.rightX, geometry.sourceY, { revealRole: "source" });
+    setRevealPresentation(step, index, "summon", geometry);
     updateRevealController(index, step);
-    if (!await revealDelay(620, generation)) return;
-    moveRevealNode(left, targetX - 18, targetY + 6);
-    moveRevealNode(right, targetX + 18, targetY + 6);
-    if (!await revealDelay(520, generation)) return;
-    els.boardItems.querySelectorAll(".reveal-source").forEach((element) => element.classList.add("merging"));
-    if (!await revealDelay(220, generation)) return;
-    const result = addRevealDiscovery(step);
-    state.nodes = [];
-    addNode(result, targetX, targetY, { revealRole: index === route.length - 1 ? "target" : "result" });
-    if (!replay) {
-      state.moves += 1;
-      state.history.push({ a: step.a, b: step.b, word: step.word, emoji: result.emoji, source: "reveal", newDiscovery: false, revealed: true });
+    if (!await revealDelay(720, generation)) return;
+    if (state.reveal.skip) {
+      completeRevealRouteImmediately(route, replay);
+      skippedToEnd = true;
+      break revealSteps;
     }
+    setRevealPresentation(step, index, "merge", geometry);
+    moveRevealNode(left, geometry.targetX - 22, geometry.targetY + 5);
+    moveRevealNode(right, geometry.targetX + 22, geometry.targetY + 5);
+    if (!await revealDelay(520, generation)) return;
+    if (state.reveal.skip) {
+      completeRevealRouteImmediately(route, replay);
+      skippedToEnd = true;
+      break revealSteps;
+    }
+    els.boardItems.querySelectorAll(".reveal-source").forEach((element) => element.classList.add("merging"));
+    if (!await revealDelay(260, generation)) return;
+    if (state.reveal.skip) {
+      completeRevealRouteImmediately(route, replay);
+      skippedToEnd = true;
+      break revealSteps;
+    }
+    const result = addRevealDiscovery(step);
+    clearRevealStage();
+    addNode(result, geometry.targetX, geometry.targetY, { revealRole: index === route.length - 1 ? "target" : "result" });
+    setRevealPresentation(step, index, "result", geometry);
+    recordRevealStep(step, result, replay);
     state.reveal.completed = index + 1;
     if (!replay) {
       updateHud();
       updateMilestone(index === route.length - 1);
       renderAtlas();
     }
-    updateRevealController(index + 1, route[index + 1]);
+    updateRevealController(index, step, { resolved: true });
     if (matchMedia("(prefers-reduced-motion: reduce)").matches) startCosmos();
     playFeedback("success");
-    if (!await revealDelay(620, generation)) return;
+    if (!await revealDelay(index === route.length - 1 ? 1350 : 1100, generation)) return;
   }
 
   if (generation !== state.reveal.generation) return;
+  if (route.length && !skippedToEnd) {
+    const finalStep = route.at(-1);
+    setRevealPresentation(finalStep, route.length - 1, "complete", state.reveal.visual?.geometry);
+  }
   state.reveal.active = false;
   state.reveal.completed = route.length;
-  els.board.classList.remove("reveal-active");
+  els.board.classList.remove("reveal-active", "reveal-summoning", "reveal-merging", "reveal-resulting", "reveal-paused");
   els.board.classList.add("reveal-complete");
   updateRevealController(route.length);
   if (replay) {
@@ -5526,6 +6713,7 @@ function toggleRevealPause() {
   els.revealPause.textContent = state.reveal.paused ? "Resume" : "Pause";
   els.revealPause.setAttribute("aria-pressed", String(state.reveal.paused));
   els.revealController.classList.toggle("is-paused", state.reveal.paused);
+  els.board.classList.toggle("reveal-paused", state.reveal.paused);
   if (!state.reveal.paused) wakeRevealPlayback();
 }
 
@@ -5545,6 +6733,7 @@ function skipRevealAnimation() {
   els.revealPause.textContent = "Pause";
   els.revealPause.setAttribute("aria-pressed", "false");
   els.revealController.classList.remove("is-paused");
+  els.board.classList.remove("reveal-paused");
   wakeRevealPlayback();
 }
 
@@ -5817,6 +7006,7 @@ function finishGame(won, reason = "", { skipSubmit = false } = {}) {
   resetRecipeFeedback();
   clearBoardNotices();
   state.finished = true;
+  resetBoardHistory();
   syncFirstOrbitGuide();
   stopTimer();
   stopRivalGhost({ completed: won });
@@ -5827,9 +7017,29 @@ function finishGame(won, reason = "", { skipSubmit = false } = {}) {
   const firstTraining = firstOrbitActive();
   const secondTraining = secondOrbitActive();
   const training = firstTraining || secondTraining;
+  const practiceReplay = state.game?.practiceReplay === true;
   const assisted = Boolean(training || state.scoringDisabled || state.assist === "reveal");
   const partialAssist = !assisted && state.scoreMultiplier < 1;
   const revealed = assisted && state.reveal.revealed;
+  const flawlessAdaptiveCompletion = Boolean(
+    won
+    && !assisted
+    && !partialAssist
+    && state.assist === "none"
+    && state.runIq.value === 200
+    && state.runIq.misses === 0
+  );
+  const adaptiveOutcome = revealed
+    ? "reveal"
+    : won
+      ? "completed"
+      : /time/i.test(reason)
+        ? "timeout"
+        : "failed";
+  recordAdaptiveOutcome(adaptiveOutcome, { flawless: flawlessAdaptiveCompletion });
+  if (!won && !revealed && !isStaticBeta) {
+    void submitRunForfeit(state.run, state.game, { announce: true });
+  }
   buildSignatureResult(won, { training, revealed });
   const pendingRankedSubmit = Boolean(won && !assisted && !skipSubmit && state.run?.ranked);
   if (pendingRankedSubmit) {
@@ -5856,6 +7066,8 @@ function finishGame(won, reason = "", { skipSubmit = false } = {}) {
   }
   if (assisted) $("#assistResultCard small").textContent = training
     ? "Training is never scored and grants no leaderboard place, Stardust, mastery, saved discoveries, streak progress, or rewards."
+    : practiceReplay
+      ? "Practice replay keeps the exact target, opening, and rules. It grants no rank, rewards, or progression."
     : revealed
       ? "One visual replay is available. It returns to mode selection and grants no progression."
       : "This Study orbit grants no score, leaderboard place, rewards, or progression.";
@@ -5933,7 +7145,9 @@ function finishGame(won, reason = "", { skipSubmit = false } = {}) {
     state.resultAction = replayRevealPathOnce;
   }
   els.resultEmoji.textContent = won ? state.game.emoji : state.mode === "quick" ? "⌛" : "◇";
-  els.resultKicker.textContent = training && won
+  els.resultKicker.textContent = practiceReplay
+    ? "PRACTICE REPLAY - NO RANK OR REWARDS"
+    : training && won
     ? `${firstTraining ? "FIRST" : "SECOND"} ORBIT COMPLETE · TRAINING`
     : revealed
     ? "PATH REVEALED · STUDY"
@@ -5945,14 +7159,28 @@ function finishGame(won, reason = "", { skipSubmit = false } = {}) {
         : "TARGET REACHED"
     : "ORBIT ENDED";
   els.resultTitle.textContent = training && won
-    ? firstTraining ? "You built your first constellation." : "You reached Mountain on your own route."
-    : revealed ? `The cosmos revealed ${state.game.target}.` : won ? `You found ${state.game.target}.` : reason;
-  const timeStat = state.game.timeLimit || state.mode === "challenge" ? ` · ${formatTime(elapsed)} elapsed` : "";
+    ? firstTraining ? "You made Wall!" : "You made Mountain!"
+    : revealed ? `Answer for ${state.game.target}` : won ? `You made ${state.game.target}!` : reason;
+  const timeStat = state.game.timeLimit || state.mode === "challenge" ? ` · ${formatTime(elapsed)}` : "";
+  const runIqStat = !revealed && runIqApplies(state.mode, state.game.target, {
+    scoreEligible: !state.scoringDisabled,
+    study: assisted
+  }) ? ` · ${state.runIq.value} Run IQ` : "";
   els.resultStats.textContent = training
-    ? `${state.history.length} guided combinations · ${formatTime(elapsed)} elapsed · 0 score`
+    ? `${state.history.length} combinations · ${formatTime(elapsed)}`
     : revealed
-    ? `${state.reveal.route.length} combinations traced · 0 score · no discoveries saved`
-    : `${state.words.length} discoveries · ${state.moves} moves${timeStat}${state.wished ? " · 1 Wish" : ""}${partialAssist ? ` · Open ${Math.round(state.scoreMultiplier * 100)}%` : ""}`;
+    ? `${state.reveal.route.length} combinations · No points`
+    : `${state.newDiscoveries} words found · ${state.moves} moves${timeStat}${runIqStat}${partialAssist ? ` · ${Math.round(state.scoreMultiplier * 100)}% points` : ""}`;
+  const routeResultNotice = state.routeRankNotice?.message
+    ? state.routeRankNotice
+    : state.adaptiveNotice;
+  els.resultAdaptiveNote.hidden = !routeResultNotice?.message;
+  els.resultAdaptiveNote.textContent = routeResultNotice?.message || "";
+  els.resultAdaptiveNote.classList.toggle(
+    "is-surge-perfect",
+    state.routeRankNotice?.rankUp === true || state.adaptiveNotice?.metadata?.surgePerfected === true
+  );
+  renderResultRemixes(won, revealed);
   els.resultMasteryCard.hidden = !won || !state.resultMasteryNotice;
   els.resultMasteryText.textContent = won ? state.resultMasteryNotice : "";
   renderSignatureResult();
@@ -5968,23 +7196,46 @@ function finishGame(won, reason = "", { skipSubmit = false } = {}) {
   }
   els.resultPrimary.querySelector("span").textContent = training
     ? firstTraining
-      ? "Continue to Second Orbit"
-      : profile.dailyCompleted === todayKey ? "Start a relaxed orbit" : "Play today's word"
-    : revealed ? "Replay constellation once"
-    : won && state.journeyContext?.kind === "voyage" && voyageProgressAdvanced ? "Continue Voyage"
-    : won && state.journeyContext?.kind === "event" ? "View event collection"
-    : won && state.mode === "weekly" && !profile.weekly.complete ? "Continue expedition"
-    : won ? "Choose another mode"
-    : "Back to modes";
-  els.resultRetry.hidden = training || (revealed ? false : assisted || (won && (state.mode === "daily" || state.mode === "weekly")));
-  els.resultRetry.textContent = revealed ? "Back to modes" : won ? "Replay this target" : "Try again";
+      ? "Continue"
+      : profile.dailyCompleted === todayKey ? "Play relaxed" : "Play today’s word"
+    : revealed ? "Watch answer once"
+    : won && state.journeyContext?.kind === "voyage" && voyageProgressAdvanced ? "Continue story"
+    : won && state.journeyContext?.kind === "event" ? "View event"
+    : won && state.mode === "weekly" && !profile.weekly.complete ? "Continue"
+    : "Main menu";
+  const adaptiveSeries = adaptiveSeriesEligible();
+  els.resultRetry.hidden = training || (revealed ? false : (assisted && !practiceReplay) || (won && (state.mode === "daily" || state.mode === "weekly")));
+  els.resultRetry.textContent = revealed
+    ? "Main menu"
+    : adaptiveSeries
+      ? won
+        ? "Next challenge"
+        : state.adaptiveNotice?.metadata?.surgeWasActive
+          ? "Back to normal"
+          : "Try easier challenge"
+      : won ? "Play again" : "Try again";
+  const resultCanReplayTarget = adaptiveSeries
+    && !training
+    && !revealed
+    && (!assisted || practiceReplay)
+    && !state.journeyContext;
+  els.resultReplay.hidden = !resultCanReplayTarget;
+  els.resultReplay.textContent = won ? "Restart challenge" : "Try this challenge again";
+  const showNextStartOptions = resultCanReplayTarget && currentRouteRank().rank.id !== "bronze";
+  $("#resultNextOptions").hidden = !showNextStartOptions;
+  if (showNextStartOptions) syncStartStyleControls();
+  els.resultRetry.classList.toggle("primary-action", !els.resultRetry.hidden && !revealed);
+  els.resultRetry.classList.toggle("secondary-action", !els.resultRetry.hidden && revealed);
+  els.resultPrimary.classList.toggle("primary-action", els.resultRetry.hidden || revealed);
+  els.resultPrimary.classList.remove("secondary-action");
+  els.resultPrimary.classList.toggle("quiet-action", !els.resultRetry.hidden && !revealed);
   els.resultShare.hidden = !won || training;
   const openRun = !assisted && (state.assist !== "none" || state.wished);
   els.resultShare.querySelector("span").textContent = assisted ? "Share Study card" : openRun ? "Share Open card" : "Challenge a friend";
   renderResultRoute();
   $("#resultDetails").open = false;
   els.resultDialog.showModal();
-  requestAnimationFrame(() => els.resultPrimary.focus({ preventScroll: true }));
+  requestAnimationFrame(() => els.resultDialog.querySelector(".primary-action:not([hidden]):not(:disabled)")?.focus({ preventScroll: true }));
   if (won && !assisted && !skipSubmit) submitRankedScore();
   track(won ? "target_reached" : "run_failed", { mode: state.mode, target: state.game.target, moves: state.moves, seconds: elapsed, wished: state.wished, reward: reward?.reward || 0, assisted, revealed, scoreMultiplier: state.scoreMultiplier });
 }
@@ -6019,6 +7270,8 @@ async function submitRankedScore() {
   if (!locallyQueued) {
     els.resultPrimary.disabled = true;
     els.resultRetry.hidden = true;
+    els.resultReplay.hidden = true;
+    $("#resultNextOptions").hidden = true;
   }
   const division = state.assist === "none" ? "pure" : "open";
   state.leaderboardDivision = division;
@@ -6059,11 +7312,17 @@ async function submitRankedScore() {
     const retryExitLabel = state.scoreSubmission.exitLabel;
     state.run = { ...state.run, submitted: true };
     state.scoreSubmission = { runId: submission.runId, activeSaved: false, pendingSaved: false, inFlight: false, exitAction: null, exitLabel: "" };
-    els.resultPrimary.querySelector("span").textContent = retryExitLabel || "Choose another mode";
+    els.resultPrimary.querySelector("span").textContent = retryExitLabel || "Home";
     state.resultAction = retryExitAction || returnHome;
     els.resultPrimary.disabled = false;
     els.resultRetry.hidden = state.mode === "daily" || state.mode === "weekly";
     els.resultRetry.disabled = false;
+    const resultCanReplayTarget = adaptiveSeriesEligible() && !state.journeyContext;
+    els.resultReplay.hidden = !resultCanReplayTarget;
+    els.resultReplay.disabled = false;
+    const showNextStartOptions = resultCanReplayTarget && currentRouteRank().rank.id !== "bronze";
+    $("#resultNextOptions").hidden = !showNextStartOptions;
+    if (showNextStartOptions) syncStartStyleControls();
     state.leaderboardDivision = result.placement.entry.division;
     state.leaderboardScope = submission.mode === "daily" ? "daily" : submission.mode === "weekly" ? "weekly" : "sprint";
     $("#resultDivision").textContent = `${result.placement.entry.division.toUpperCase()} - SERVER VERIFIED`;
@@ -6206,9 +7465,11 @@ async function makeWish(event) {
     state.assist = policy.id;
     state.scoreMultiplier = cappedScoreMultiplier(state.assist, state.scoreMultiplier, declaredPolicy.scoreMultiplier, policy.scoreMultiplier, item.scoreMultiplier);
     state.run = { ...state.run, assist: state.assist, assisted: true, division: "open", scoreEligible: true, scoreMultiplier: state.scoreMultiplier };
+    acceptRouteProgress(item.routeProgress);
     applyServerPlayer(item.player);
     renderInventory();
     updateHud();
+    updateMilestone();
     scheduleRunSave();
     els.wishDialog.close();
     input.value = "";
@@ -6274,8 +7535,10 @@ async function activateMarketWord(wordId) {
     state.assist = policy.id;
     state.scoreMultiplier = cappedScoreMultiplier(state.assist, state.scoreMultiplier, declaredPolicy.scoreMultiplier, policy.scoreMultiplier, result.scoreMultiplier);
     state.run = { ...state.run, assist: state.assist, assisted: true, division: "open", scoreEligible: true, scoreMultiplier: state.scoreMultiplier };
+    acceptRouteProgress(result.routeProgress);
     renderInventory();
     updateHud();
+    updateMilestone();
     scheduleRunSave();
     renderWishVault();
     if (els.wishDialog.open) els.wishDialog.close();
@@ -6767,43 +8030,88 @@ function startCosmos() {
       ctx.arc(trail.x, trail.y, 1.5, 0, Math.PI * 2);
       ctx.fill();
     }
-    const revealSegments = state.reveal.layout?.segments || [];
-    if (revealSegments.length) {
+    const revealVisual = state.reveal.visual;
+    if (revealVisual?.geometry) {
       ctx.save();
-      for (let index = 0; index < revealSegments.length; index += 1) {
-        const segment = revealSegments[index];
-        const completed = index < state.reveal.completed;
-        const current = state.reveal.active && index === state.reveal.completed;
-        const ax = segment.a.x * rect.width;
-        const ay = segment.a.y * rect.height;
-        const bx = segment.b.x * rect.width;
-        const by = segment.b.y * rect.height;
-        const tx = segment.to.x * rect.width;
-        const ty = segment.to.y * rect.height;
-        const pulse = reduced ? 1 : .72 + Math.sin(time * .004 + index) * .28;
+      const { left, right, target } = revealVisual.geometry;
+      const now = time || performance.now();
+      const elapsed = Math.max(0, now - revealVisual.startedAt);
+      const phase = revealVisual.phase;
+      const merging = phase === "merge";
+      const resolved = phase === "result" || phase === "complete";
+      const pulse = reduced ? .78 : .68 + Math.sin(now * .006) * .18;
+      ctx.globalCompositeOperation = "lighter";
 
-        ctx.globalAlpha = completed ? .78 : current ? .35 + pulse * .22 : .1;
-        ctx.strokeStyle = completed ? cyan : accent;
-        ctx.fillStyle = completed ? cyan : accent;
-        ctx.lineWidth = completed ? 1.8 : current ? 1.35 : .8;
-        ctx.setLineDash(completed ? [] : [4, 9]);
-        ctx.shadowColor = completed ? cyan : accent;
-        ctx.shadowBlur = completed ? 11 : current ? 8 : 0;
+      const drawFusionStream = (from, color, offset) => {
+        const control = {
+          x: (from.x + target.x) / 2,
+          y: Math.min(from.y, target.y) - Math.min(72, Math.abs(from.x - target.x) * .16 + 24)
+        };
+        const gradient = ctx.createLinearGradient(from.x, from.y, target.x, target.y);
+        gradient.addColorStop(0, "rgba(255,255,255,.18)");
+        gradient.addColorStop(.42, color);
+        gradient.addColorStop(1, cyan);
+        ctx.globalAlpha = merging ? .82 : .24;
+        ctx.strokeStyle = gradient;
+        ctx.lineWidth = merging ? 2.25 : 1.1;
+        ctx.shadowColor = color;
+        ctx.shadowBlur = merging ? 16 : 5;
+        ctx.setLineDash(merging ? [] : [3, 10]);
         ctx.beginPath();
-        ctx.moveTo(ax, ay);
-        ctx.lineTo(tx, ty);
-        ctx.moveTo(bx, by);
-        ctx.lineTo(tx, ty);
+        ctx.moveTo(from.x, from.y);
+        ctx.quadraticCurveTo(control.x, control.y, target.x, target.y);
         ctx.stroke();
         ctx.setLineDash([]);
+        if (reduced) return;
+        const travel = merging
+          ? Math.min(1, elapsed / Math.max(220, 680 / state.reveal.speed))
+          : (now * .00022 + offset) % 1;
+        const inverse = 1 - travel;
+        const packetX = inverse * inverse * from.x + 2 * inverse * travel * control.x + travel * travel * target.x;
+        const packetY = inverse * inverse * from.y + 2 * inverse * travel * control.y + travel * travel * target.y;
+        ctx.globalAlpha = merging ? .95 : .5;
+        ctx.fillStyle = "#ffffff";
+        ctx.shadowColor = cyan;
+        ctx.shadowBlur = 18;
         ctx.beginPath();
-        ctx.arc(tx, ty, completed ? 3 : 2, 0, Math.PI * 2);
+        ctx.arc(packetX, packetY, merging ? 3.4 : 2.1, 0, Math.PI * 2);
         ctx.fill();
-        if (current) {
-          ctx.globalAlpha = .18 + pulse * .18;
-          ctx.lineWidth = 1;
+      };
+
+      if (!resolved) {
+        drawFusionStream(left, accent, 0);
+        drawFusionStream(right, cyan, .5);
+        ctx.globalAlpha = merging ? .34 + pulse * .18 : .12;
+        ctx.strokeStyle = cyan;
+        ctx.lineWidth = merging ? 2 : 1;
+        ctx.shadowColor = cyan;
+        ctx.shadowBlur = merging ? 22 : 8;
+        ctx.beginPath();
+        ctx.arc(target.x, target.y, merging ? 18 + pulse * 8 : 10 + pulse * 3, 0, Math.PI * 2);
+        ctx.stroke();
+      } else {
+        const burstProgress = reduced || phase === "complete" ? 1 : Math.min(1, elapsed / 780);
+        const ringRadius = reduced || phase === "complete"
+          ? 38
+          : 22 + ((elapsed * .085) % 64);
+        ctx.globalAlpha = phase === "complete" ? .28 : Math.max(.12, .8 - ringRadius / 105);
+        ctx.strokeStyle = cyan;
+        ctx.lineWidth = 2;
+        ctx.shadowColor = cyan;
+        ctx.shadowBlur = 24;
+        ctx.beginPath();
+        ctx.arc(target.x, target.y, ringRadius, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.globalAlpha = phase === "complete" ? .13 : .34 * (1 - burstProgress * .5);
+        ctx.strokeStyle = accent;
+        ctx.lineWidth = 1.2;
+        for (let ray = 0; ray < 12; ray += 1) {
+          const angle = ray / 12 * Math.PI * 2;
+          const inner = 30 + burstProgress * 8;
+          const outer = 54 + burstProgress * 42;
           ctx.beginPath();
-          ctx.arc(tx, ty, 8 + pulse * 5, 0, Math.PI * 2);
+          ctx.moveTo(target.x + Math.cos(angle) * inner, target.y + Math.sin(angle) * inner);
+          ctx.lineTo(target.x + Math.cos(angle) * outer, target.y + Math.sin(angle) * outer);
           ctx.stroke();
         }
       }
@@ -7052,6 +8360,22 @@ function clamp(value, min, max) { return Math.min(Math.max(value, min), max); }
 function escapeHtml(value) { return String(value).replace(/[&<>'"]/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[character]); }
 
 $$('[data-mode]').forEach((button) => button.addEventListener("click", () => beginMode(button.dataset.mode)));
+$("[data-start-style]")?.closest(".start-style-options")?.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-start-style]");
+  if (button && !button.disabled) chooseStartStyle(button.dataset.startStyle);
+});
+$("[data-start-style]")?.closest(".start-style-options")?.addEventListener("keydown", (event) => {
+  if (!["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(event.key)) return;
+  const buttons = $$("[data-start-style]").filter((button) => !button.disabled);
+  const current = event.target.closest("[data-start-style]");
+  const index = buttons.indexOf(current);
+  if (index < 0 || !buttons.length) return;
+  event.preventDefault();
+  const direction = ["ArrowRight", "ArrowDown"].includes(event.key) ? 1 : -1;
+  const next = buttons[(index + direction + buttons.length) % buttons.length];
+  chooseStartStyle(next.dataset.startStyle);
+  next.focus();
+});
 $("#primaryOrbitButton").addEventListener("click", beginPrimaryOrbit);
 $("#primaryOrbitSecondary").addEventListener("click", beginPrimarySecondary);
 $("#hubMenuButton").addEventListener("click", openHubMenu);
@@ -7061,29 +8385,55 @@ $("#cancelMission").addEventListener("click", cancelMissionBriefing);
 $("#pauseRunButton").addEventListener("click", openPauseMenu);
 $("#resumePausedRun").addEventListener("click", closePauseMenu);
 $("#cancelPauseAction").addEventListener("click", () => resetPauseConfirmation({ focus: true }));
-$("#pauseRestart").addEventListener("click", () => {
+$("#pauseRestart").addEventListener("click", async () => {
   if (!confirmPauseAction("restart")) return;
+  const priorRun = state.run;
+  const priorGame = state.game;
   pauseCloseRestoreFocus = false;
   closePauseMenu();
+  await submitRunForfeit(priorRun, priorGame, { announce: true });
   if (state.mode === "training") startFirstOrbit();
   else void retryGame();
 });
-$("#pauseExit").addEventListener("click", () => {
+$("#pauseExit").addEventListener("click", async () => {
   if (!confirmPauseAction("exit")) return;
+  const priorRun = state.run;
+  const priorGame = state.game;
   pauseCloseRestoreFocus = false;
   closePauseMenu();
-  returnHome();
+  await submitRunForfeit(priorRun, priorGame, { announce: true });
+  returnHome({ skipForfeit: true });
 });
-els.resetBoard.addEventListener("click", clearBoardWithUndo);
-els.tidyBoard.addEventListener("click", tidyOrbit);
+els.resetBoard.addEventListener("click", () => {
+  clearBoardWithUndo();
+  if (els.pauseDialog.open) closePauseMenu();
+});
+els.tidyBoard.addEventListener("click", () => {
+  tidyOrbit();
+  if (els.pauseDialog.open) closePauseMenu();
+});
+els.undoBoardAction.addEventListener("click", undoBoardEdit);
+els.redoBoardAction.addEventListener("click", redoBoardEdit);
 $("#undoBoardClear").addEventListener("click", undoBoardClear);
 $("#cancelTapChain").addEventListener("click", () => cancelTapChain({ announce: true }));
 els.senseButton.addEventListener("click", openPowerups);
+els.remixPill?.addEventListener("click", () => {
+  const rules = Array.isArray(state.game?.remixes?.rules) ? state.game.remixes.rules : [];
+  if (!rules.length) return;
+  const progressItems = Array.isArray(state.remixProgress?.items) ? state.remixProgress.items : [];
+  const byFamily = new Map(progressItems.map((item) => [item.family, item]));
+  const nextRule = rules.find((rule) => byFamily.get(rule.family)?.complete !== true);
+  const message = nextRule
+    ? nextRule.instruction
+    : `All route rules are ready. Make ${state.game.target}.`;
+  showAlchemy(message, false, true);
+  els.boardAnnouncement.textContent = message;
+});
 els.quickTipShortcut.addEventListener("click", useQuickTip);
 els.wordGiftShortcut.addEventListener("click", useWordGiftShortcut);
 els.senseShortcut.addEventListener("click", useSenseShortcut);
 els.powerupShopShortcut.addEventListener("click", openPowerupShop);
-els.expectedPairButton.addEventListener("click", submitExpectedPairFeedback);
+els.expectedPairForm.addEventListener("submit", submitExpectedPairFeedback);
 $("#dismissExpectedPair").addEventListener("click", resetExpectedPairFeedback);
 els.useQuickTip.addEventListener("click", useQuickTip);
 els.useWordGift.addEventListener("click", useWordGift);
@@ -7091,7 +8441,7 @@ $("#useSense").addEventListener("click", useConstellationSense);
 $("#buySense").addEventListener("click", buySenseCharge);
 els.rivalGhost.addEventListener("click", toggleRivalGhost);
 els.board.addEventListener("pointerdown", (event) => {
-  if (event.target.closest?.(".board-word, .board-tools, .rival-ghost, .ghost-preview, .tap-chain-status, .board-undo, .reveal-controller, .recipe-feedback")) return;
+  if (event.target.closest?.(".board-word, .board-quick-tools, .rival-ghost, .ghost-preview, .tap-chain-status, .board-undo, .reveal-controller, .recipe-feedback, .expected-pair-feedback")) return;
   cancelTapChain();
 });
 els.inventorySearch.addEventListener("input", (event) => {
@@ -7218,6 +8568,7 @@ $("#resultReveal").addEventListener("click", () => {
 });
 $("#resultPrimary").addEventListener("click", () => state.resultAction?.());
 $("#resultRetry").addEventListener("click", () => state.reveal.replayAvailable ? returnHome() : retryGame());
+$("#resultReplay").addEventListener("click", replayFinishedChallenge);
 $("#raceCommunityGhost").addEventListener("click", () => {
   if (!queueNearbyCommunityRace()) return showToast("That nearby route is no longer available.");
   profile.rivalGhostEnabled = true;
@@ -7252,16 +8603,13 @@ els.revealDialog.addEventListener("cancel", (event) => {
   if (state.reveal.pending) event.preventDefault();
 });
 els.resultDialog.addEventListener("cancel", (event) => {
-  if (state.startingRun) return event.preventDefault();
+  event.preventDefault();
+  if (state.startingRun) return;
   if (pendingScoreBlocksExit()) {
-    event.preventDefault();
-    showToast("Upload or queue this score before leaving the result.");
+    showToast("Wait for your score to finish saving.");
     return;
   }
-  if (state.reveal.replayAvailable) {
-    event.preventDefault();
-    returnHome();
-  }
+  returnHome();
 });
 $("#recoveryDialog").addEventListener("cancel", (event) => event.preventDefault());
 [els.paywallDialog, els.wishDialog, els.atlasDialog, els.senseDialog, els.shareDialog, els.profileDialog, els.journeyDialog, els.marketBuyDialog, els.leaderboardDialog, els.revealDialog, $("#recoveryDialog")].forEach((dialog) => dialog.addEventListener("close", () => setTimeout(resumeTimerIfNeeded, 0)));
@@ -7283,6 +8631,7 @@ window.addEventListener("pointerdown", rememberPointerPosition, { capture: true,
 window.addEventListener("pointermove", rememberPointerPosition, { passive: true });
 window.addEventListener("keydown", handlePauseShortcut);
 window.addEventListener("keydown", activateShiftBoard);
+window.addEventListener("keydown", handleBoardHistoryShortcut);
 window.addEventListener("keydown", activateCtrlHover);
 window.addEventListener("keydown", (event) => {
   if (event.key === "Escape" && state.selectedNodeId != null && !event.defaultPrevented) {
@@ -7312,7 +8661,10 @@ document.addEventListener("visibilitychange", () => {
     cancelActivePointerGestures();
     flushRunSave();
   }
-  else wakeRevealPlayback();
+  else {
+    wakeRevealPlayback();
+    if (isStaticBeta) void expectedPairDelivery.flush();
+  }
 });
 window.addEventListener("beforeinstallprompt", (event) => { event.preventDefault(); state.installPrompt = event; $("#installButton").hidden = false; });
 $("#installButton").addEventListener("click", async () => {
@@ -7331,6 +8683,7 @@ async function boot() {
   const dailySense = refillDailySense();
   if (dailySense.refilled) saveProfile({ cloud: false });
   else renderProfile();
+  if (isStaticBeta) void expectedPairDelivery.flush();
   if (dailySense.granted) track("sense_earned", { source: "daily", reward: dailySense.granted });
   updateConnection();
   await loadConfig();
@@ -7340,7 +8693,7 @@ async function boot() {
   if (profile.playerId && profile.playerToken) await initializeCloudServices();
   announcePendingScoreRecovery(await retryPendingScoreUploads());
   if ("serviceWorker" in navigator && window.top === window.self) {
-    const serviceWorkerUrl = isStaticBeta ? "./service-worker.js?v=3.0.0-beta.2" : "/play/service-worker.js?v=3.0.0-beta.2";
+    const serviceWorkerUrl = isStaticBeta ? "./service-worker.js?v=3.3.0-beta.1" : "/play/service-worker.js?v=3.3.0-beta.1";
     const serviceWorkerScope = isStaticBeta ? "./" : "/play/";
     navigator.serviceWorker.register(serviceWorkerUrl, { scope: serviceWorkerScope }).catch(() => {});
   }

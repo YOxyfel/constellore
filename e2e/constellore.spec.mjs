@@ -42,8 +42,9 @@ test.beforeEach(async ({ page }) => {
 test("marketing path makes the playable beta obvious and mobile-safe", async ({ page }) => {
   await page.goto("/");
   await expect(page).toHaveTitle(/Constellore/i);
-  await expect(page.getByRole("heading", { name: /You know the word/i })).toBeVisible();
-  const primaryPlay = page.locator(".hero-copy a.primary-button");
+  await expect(page.getByRole("heading", { name: "Make the word." })).toBeVisible();
+  await expect(page.locator(".hero-lede")).toContainText(/make the target word/i);
+  const primaryPlay = page.locator(".hero-copy a.hero-button");
   await expect(primaryPlay).toBeVisible();
   await expect(primaryPlay).toHaveAttribute("href", /\/play\/$/);
   await expectNoHorizontalOverflow(page);
@@ -59,7 +60,7 @@ test("a first-time player sees the target, completes a real fusion, and can paus
   const briefing = page.locator("#missionBriefingDialog");
   await expect(briefing).toHaveJSProperty("open", true);
   expect((await page.locator("#missionBriefingTarget").innerText()).trim().length).toBeGreaterThan(0);
-  await expect(page.locator("#missionBriefingRule")).toContainText(/Combine/i);
+  await expect(page.locator("#missionBriefingRule")).toContainText(/combining/i);
   await page.locator("#beginMission").click();
 
   await expect(page.locator("#gameScreen")).toBeVisible();

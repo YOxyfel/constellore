@@ -2,15 +2,15 @@
   "id": "/play/",
   "name": "Constellore",
   "short_name": "Constellore",
-  "description": "A target-based word-route puzzle with Signature Routes, visual constellations, Voyages, and weekly Cosmic Events.",
+  "description": "A cosmic word-combination puzzle where you discover new words, reach checked and reachable targets, and earn permanent ranks.",
   "lang": "en",
   "dir": "ltr",
   "start_url": "/play/",
   "scope": "/play/",
   "display": "standalone",
   "orientation": "any",
-  "background_color": "#070914",
-  "theme_color": "#070914",
+  "background_color": "#071923",
+  "theme_color": "#071923",
   "categories": ["games", "puzzle"],
   "shortcuts": [
     {

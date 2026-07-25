@@ -1,8 +1,10 @@
 import { copyFile, cp, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
-import { dirname, join } from "node:path";
+import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { writeLocalWorldModule } from "./build-local-world.mjs";
 import { generateReleaseAssets } from "./generate-release-assets.mjs";
+import { minifyCss } from "./minify-css.mjs";
+import { validatePublicFeedbackApiUrl } from "./public-feedback-config.mjs";
 import { releaseMetadata, withAssetVersion, writeReleaseMetadata } from "./release-metadata.mjs";
 import { renderServiceWorker } from "./service-worker-source.mjs";
 
@@ -13,7 +15,18 @@ const repositoryOwner = process.env.GITHUB_REPOSITORY?.split("/")[0] || "YOxyfel
 const pagesUrl = (process.env.PAGES_BASE_URL || `https://${repositoryOwner.toLowerCase()}.github.io/${repositoryName}/`).replace(/\/?$/, "/");
 const configuredBetaUrl = process.env.PUBLIC_BETA_URL?.trim() || "";
 const configuredItchUrl = process.env.PUBLIC_ITCH_URL?.trim() || "";
+const configuredFeedbackApiUrl = process.env.PUBLIC_FEEDBACK_API_URL?.trim() || "";
 const release = await releaseMetadata({ channel: "github-pages", runtime: "local-practice" });
+
+async function listRelativeFiles(directory, base = directory) {
+  const files = [];
+  for (const entry of await readdir(directory, { withFileTypes: true })) {
+    const path = join(directory, entry.name);
+    if (entry.isDirectory()) files.push(...await listRelativeFiles(path, base));
+    else if (entry.isFile()) files.push(relative(base, path).replaceAll("\\", "/"));
+  }
+  return files.sort((left, right) => left.localeCompare(right, "en"));
+}
 
 function requirePublicUrl(value, name) {
   if (!value) return "";
@@ -79,6 +92,7 @@ function setBodyDataAttribute(document, name, value) {
 const validatedPagesUrl = requirePagesUrl(pagesUrl);
 const externalBetaUrl = requireBetaUrl(configuredBetaUrl);
 const itchUrl = requireItchUrl(configuredItchUrl);
+const feedbackApiUrl = validatePublicFeedbackApiUrl(configuredFeedbackApiUrl);
 const localBetaUrl = new URL("play/", validatedPagesUrl).href;
 const betaUrl = externalBetaUrl || localBetaUrl;
 const safePagesUrl = escapeAttribute(validatedPagesUrl);
@@ -146,7 +160,7 @@ for (const policyFile of ["privacy.html", "terms.html", "support.html"]) {
     .replace("<head>", `<head>\n  <link rel="canonical" href="${escapeAttribute(canonicalPolicyUrl)}">`);
   await writeFile(join(output, policyFile), policy, "utf8");
 }
-await copyFile(join(root, "Website", "styles.css"), join(output, "website.css"));
+await writeFile(join(output, "website.css"), minifyCss(await readFile(join(root, "Website", "styles.css"), "utf8")), "utf8");
 await copyFile(join(root, "Website", "site.js"), join(output, "website.js"));
 const robots = (await readFile(join(root, "Website", "robots.txt"), "utf8"))
   .replaceAll("https://yoxyfel.github.io/constellore/", validatedPagesUrl);
@@ -164,6 +178,7 @@ gameHtml = withAssetVersion(gameHtml, release.version)
   .replace('<link rel="apple-touch-icon" href="/icon.svg">', '<link rel="apple-touch-icon" href="./icon-192.png">')
   .replaceAll('href="/icon.svg"', 'href="./icon.svg"')
   .replace(new RegExp(`href="/styles[.]css[?]v=${release.version.replaceAll(".", "[.]")}"`), `href="./styles.css?v=${release.version}"`)
+  .replace(new RegExp(`href="/simple-ui[.]css[?]v=${release.version.replaceAll(".", "[.]")}"`), `href="./simple-ui.css?v=${release.version}"`)
   .replace(new RegExp(`src="/app[.]js[?]v=${release.version.replaceAll(".", "[.]")}"`), `src="./app.js?v=${release.version}"`)
   .replace(/\s*<link rel="preconnect" href="https:\/\/fonts[.]googleapis[.]com">\r?\n/gi, "\n")
   .replace(/\s*<link rel="preconnect" href="https:\/\/fonts[.]gstatic[.]com" crossorigin>\r?\n/gi, "\n")
@@ -171,23 +186,27 @@ gameHtml = withAssetVersion(gameHtml, release.version)
 gameHtml = setBodyDataAttribute(gameHtml, "data-runtime", "local-practice");
 gameHtml = setBodyDataAttribute(gameHtml, "data-build-version", release.version);
 gameHtml = setBodyDataAttribute(gameHtml, "data-build-id", release.buildId);
+gameHtml = setBodyDataAttribute(gameHtml, "data-feedback-api", feedbackApiUrl);
 await writeFile(join(playOutput, "index.html"), gameHtml, "utf8");
 await writeReleaseMetadata(join(playOutput, "release.json"), { channel: "github-pages", runtime: "local-practice" });
 const publicRuntimeFiles = (await readdir(join(root, "public"), { withFileTypes: true }))
   .filter((entry) => entry.isFile())
   .map((entry) => entry.name)
-  .filter((name) => /^(?:app[.]js|styles[.]css|.+[.]mjs|icon(?:-maskable)?(?:-[0-9]+)?[.](?:png|svg))$/.test(name))
+  .filter((name) => /^(?:app[.]js|(?:styles|simple-ui)[.]css|.+[.]mjs|icon(?:-maskable)?(?:-[0-9]+)?[.](?:png|svg))$/.test(name))
   .sort((left, right) => left.localeCompare(right, "en"));
 for (const name of publicRuntimeFiles) {
   const source = join(root, "public", name);
   const destination = join(playOutput, name);
   if (/\.(?:js|mjs)$/.test(name)) {
     await writeFile(destination, withAssetVersion(await readFile(source, "utf8"), release.version), "utf8");
+  } else if (name.endsWith(".css")) {
+    await writeFile(destination, minifyCss(await readFile(source, "utf8")), "utf8");
   } else {
     await copyFile(source, destination);
   }
 }
 await cp(join(root, "public", "screenshots"), join(playOutput, "screenshots"), { recursive: true, force: true });
+await cp(join(root, "public", "art"), join(playOutput, "art"), { recursive: true, force: true });
 await writeLocalWorldModule(join(playOutput, "local-world.mjs"));
 
 const manifest = JSON.parse(await readFile(join(root, "public", "manifest.webmanifest"), "utf8"));
@@ -196,7 +215,7 @@ manifest.short_name = "Constellore";
 manifest.id = "./";
 manifest.start_url = "./";
 manifest.scope = "./";
-manifest.description = "A target-based word-route puzzle with Signature Routes, a visual Living Atlas, Voyages, weekly events, and deterministic local practice.";
+manifest.description = "A cosmic word-combination puzzle where you discover new words and build a reachable path to the target.";
 manifest.icons = manifest.icons.map((icon) => ({ ...icon, src: `./${icon.src.split("/").pop()}` }));
 manifest.shortcuts = (manifest.shortcuts || []).map((shortcut) => ({
   ...shortcut,
@@ -206,14 +225,20 @@ manifest.shortcuts = (manifest.shortcuts || []).map((shortcut) => ({
 manifest.screenshots = (manifest.screenshots || []).map((screenshot) => ({ ...screenshot, src: `./screenshots/${screenshot.src.split("/").pop()}` }));
 await writeFile(join(playOutput, "manifest.webmanifest"), `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
 
-const practiceAssets = (await readdir(playOutput, { withFileTypes: true }))
-  .filter((entry) => entry.isFile() && entry.name !== "index.html" && entry.name !== "service-worker.js")
-  .map((entry) => `./${entry.name}${/\.(?:css|js|mjs)$/.test(entry.name) ? `?v=${release.version}` : ""}`)
+const practiceAssets = (await listRelativeFiles(playOutput))
+  .filter((name) => (
+    name !== "index.html"
+    && name !== "service-worker.js"
+    && !name.startsWith("screenshots/")
+    && !name.startsWith("art/ranks/")
+  ))
+  .map((name) => `./${name}${/\.(?:css|js|mjs)$/.test(name) ? `?v=${release.version}` : ""}`)
   .sort((left, right) => left.localeCompare(right, "en"));
 const serviceWorker = renderServiceWorker({
   cachePrefix: "constellore-pages-practice-",
   version: release.version,
   assets: practiceAssets,
+  lazyAssets: ["./art/ranks/"],
   legacyCaches: ["constellore-shell-v24", "constellore-pages-practice-v27"]
 });
 await writeFile(join(playOutput, "service-worker.js"), serviceWorker, "utf8");
@@ -224,3 +249,4 @@ console.log(`Built GitHub Pages site at ${output}`);
 console.log(externalBetaUrl ? `Playable server beta: ${externalBetaUrl}` : `Playable local-practice beta: ${localBetaUrl}`);
 console.log(itchUrl ? `itch.io CTA: ${itchUrl}` : "itch.io CTA: hidden (set PUBLIC_ITCH_URL after the public page exists)");
 console.log(itchUrl ? `Follow destination: itch.io (${itchUrl})` : "Follow destination: GitHub repository");
+console.log(feedbackApiUrl ? `Anonymous combination reports: ${feedbackApiUrl}` : "Anonymous combination reports: saved locally (set PUBLIC_FEEDBACK_API_URL for direct delivery)");

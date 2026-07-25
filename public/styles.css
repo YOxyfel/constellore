@@ -24,7 +24,7 @@ body[data-theme="solar"] { --violet: #ffba68; --violet-soft: rgba(255, 183, 99, 
 
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
-html, body { margin: 0; min-width: 320px; min-height: 100%; background: var(--void); color: var(--text); }
+html, body { margin: 0; min-width: 0; min-height: 100%; background: var(--void); color: var(--text); }
 html { color-scheme: dark; }
 body { font-family: Manrope, Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; font-size: 15px; -webkit-font-smoothing: antialiased; }
 button, input, select { font: inherit; }
@@ -371,6 +371,8 @@ body.board-blueprint .cosmos-board { background-color: #071528; background-image
 .inventory-word.wish .emoji { box-shadow: 0 0 14px var(--violet-soft); border: 1px solid var(--line-hot); }
 .inventory-word.gift .emoji { border: 1px solid color-mix(in srgb, var(--amber) 46%, var(--line)); box-shadow: 0 0 15px rgba(255,204,118,.13); }
 .inventory-word.gift .source-tag { color: var(--amber); }
+.inventory-word.loaned { border-color: color-mix(in srgb, var(--cyan) 28%, var(--line)); }
+.inventory-word.loaned .source-tag { color: var(--cyan); }
 .inventory-word.twist .emoji { border: 1px solid rgba(255,204,118,.48); box-shadow: 0 0 16px rgba(255,204,118,.2); }
 .inventory-word.twist .source-tag { color: var(--amber); }
 .inventory-word.new-discovery { border-color: color-mix(in srgb, var(--cyan) 40%, var(--line)); background: color-mix(in srgb, var(--cyan) 7%, transparent); animation: inventory-arrive .62s ease-out both; }

@@ -18,7 +18,7 @@ test("machine-readable content quality gates protect ranked and local goal play"
   assert.deepEqual(report.intentCoverage.failures, []);
   assert.equal(report.intentCorpus.attempts, report.intentCoverage.attempts);
   assert.ok(report.intentCorpus.sameWordAttempts >= 80);
-  assert.ok(report.officialTargetCount >= 30);
+  assert.equal(report.officialTargetCount, 500);
   assert.ok(Object.values(report.difficultyBands).every((count) => count > 0));
 
   assert.ok(report.routeValidity.checked > report.officialTargetCount);
@@ -38,15 +38,18 @@ test("machine-readable content quality gates protect ranked and local goal play"
 
   assert.equal(report.worldGraph.schemaVersion, 3);
   assert.equal(report.worldGraph.validationIssues.length, 0);
-  assert.ok(report.worldGraph.topology.intentionalTerminalDeadEndCount >= 190);
+  assert.ok(report.worldGraph.topology.intentionalEndpointCount >= 190);
+  assert.ok(
+    report.worldGraph.topology.intentionalTerminalDeadEndCount <= report.worldGraph.topology.intentionalEndpointCount,
+    "useful endpoints may gain onward recipes without losing their intentional-endpoint status"
+  );
   assert.ok(report.worldGraph.topology.problematicDeadEndCount <= report.worldGraph.topology.problematicDeadEndLimit);
   assert.equal(report.worldGraph.topology.deadEndCount, report.worldGraph.topology.problematicDeadEndCount);
   assert.ok(report.worldGraph.topology.thinConceptCount <= 220);
   assert.equal(report.worldGraph.targets.reachable, report.worldGraph.targets.count);
-  assert.equal(
-    report.worldGraph.targets.withMultipleFinalRecipes,
-    report.worldGraph.targets.count,
-    "every official goal should retain alternate final combinations"
+  assert.ok(
+    report.worldGraph.targets.withMultipleFinalRecipes >= 250,
+    "upper Route Ranks need a deep alternate-final target pool"
   );
   assert.ok(report.worldGraph.targets.withMultipleOpenings >= 12, "official routes should not all share one opening branch");
   const energyBottleneck = report.worldGraph.topology.bottlenecks.find((item) => item.word === "Energy");

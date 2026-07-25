@@ -158,6 +158,11 @@ test("local practice Sense has the same non-spoiling, permanently assisted contr
   await copyFile(new URL("../public/engagement-features.mjs", import.meta.url), join(directory, "engagement-features.mjs"));
   await copyFile(new URL("../public/universe-director.mjs", import.meta.url), join(directory, "universe-director.mjs"));
   await copyFile(new URL("../public/recipe-feedback.mjs", import.meta.url), join(directory, "recipe-feedback.mjs"));
+  await copyFile(new URL("../public/adaptive-difficulty.mjs", import.meta.url), join(directory, "adaptive-difficulty.mjs"));
+  await copyFile(new URL("../public/remix-progression.mjs", import.meta.url), join(directory, "remix-progression.mjs"));
+  await copyFile(new URL("../public/remix-readiness.mjs", import.meta.url), join(directory, "remix-readiness.mjs"));
+  await copyFile(new URL("../public/route-remixes.mjs", import.meta.url), join(directory, "route-remixes.mjs"));
+  await copyFile(new URL("../public/shuffled-start.mjs", import.meta.url), join(directory, "shuffled-start.mjs"));
   const { localRequest } = await import(`${pathToFileURL(join(directory, "local-beta.mjs")).href}?test=${Date.now()}`);
   const started = await localRequest("/api/run/start", {
     method: "POST",

@@ -6,6 +6,42 @@ import { buildCommunityResults } from "./public/community-results.mjs";
 import { cosmicEventCatalog, cosmicEventCollectionProgress, currentCosmicEvent } from "./public/cosmic-events.mjs";
 import { constellationVoyageCatalog, sanitizeVoyageProgress } from "./public/constellation-voyages.mjs";
 import { emptyRecipeFeedback, normalizeRecipeFeedback, recipeFeedbackSummary, recordRecipeFeedback } from "./public/recipe-feedback.mjs";
+import {
+  ROUTE_REMIX_FAMILIES,
+  ROUTE_REMIX_VERSION,
+  checkRouteRemixBeforeCombination,
+  checkRouteRemixCompletion,
+  createRouteRemixProgress,
+  markRouteRemixAnswerRevealed,
+  publicRouteRemixView,
+  recordRouteRemixCombination,
+  routeRemixProgress,
+  sanitizeRouteRemixProgress,
+  sanitizeRouteRemixRuntime
+} from "./public/route-remixes.mjs";
+import {
+  createRemixProgressionState,
+  getPromotionEligibility,
+  getRemixMasteryProgress,
+  getRemixRank,
+  getRemixRankPresentation,
+  recordRemixProgressionOutcome,
+  recordRemixPromotionTrialOutcome,
+  sanitizeRemixProgressionState,
+  startRemixPromotionTrial
+} from "./public/remix-progression.mjs";
+import {
+  createRemixReadinessState,
+  getAdaptiveRemixIntensity,
+  recordRemixReadinessOutcome,
+  sanitizeRemixReadinessState
+} from "./public/remix-readiness.mjs";
+import {
+  applyAdaptiveChallengeOutcome,
+  createAdaptiveDifficultyState,
+  rememberAdaptiveTarget,
+  sanitizeAdaptiveDifficultyState
+} from "./public/adaptive-difficulty.mjs";
 import { comparePersonalBest, createRouteSignature, sanitizeRouteSignature } from "./public/signature-routes.mjs";
 
 export const MARKET_CATALOG = Object.freeze([
@@ -87,7 +123,10 @@ const CHALLENGE_IDENTITY_VERSION = 3;
 const RANKED_RULES_VERSION = "ranked-v3";
 const MAX_LEDGER_ENTRIES = 50_000;
 const MAX_REJECTED_PAIR_REPORTS = 2_000;
+const MAX_REJECTED_PAIR_SUGGESTIONS = 20;
 const ANALYTICS_COHORT_PATTERN = /^[A-Za-z0-9_-]{16,80}$/;
+const COMBINATION_REPORT_MODES = new Set(["reach", "quick", "moves", "daily", "weekly", "challenge", "explore"]);
+const COMBINATION_REPORT_REASONS = new Set(["direct", "mixture", "repeat", "culture", "other"]);
 export const MARKET_REPRICE_INTERVAL_MS = 6 * 60 * 60_000;
 export const STORAGE_CONTRACT_VERSION = 1;
 
@@ -161,7 +200,7 @@ function emptyAnalyticsData() {
 }
 
 function emptyRejectedPairData() {
-  return { version: 1, entries: {}, updatedAt: null };
+  return { version: 2, entries: {}, updatedAt: null };
 }
 
 function normalizeRejectedPairData(value) {
@@ -175,14 +214,38 @@ function normalizeRejectedPairData(value) {
     const sample = Array.isArray(raw.sample) && raw.sample.length === 2
       ? raw.sample.map((word) => cleanCloudText(word, 28)).filter(Boolean)
       : [];
-    const modes = normalizeAnalyticsCounters(raw.modes, analyticsEnumDimensions.get("mode"));
+    const modes = normalizeAnalyticsCounters(raw.modes, COMBINATION_REPORT_MODES);
     const reporters = Object.fromEntries(Object.entries(isRecord(raw.reporters) ? raw.reporters : {})
       .filter(([digest, seenAt]) => /^[A-Za-z0-9_-]{32,64}$/.test(digest) && typeof seenAt === "string" && Number.isFinite(Date.parse(seenAt)))
       .slice(-256));
-    entries.push([fingerprint, { count, lastSeenAt, sample: sample.length === 2 ? sample : null, modes, reporters }]);
+    const reasons = normalizeAnalyticsCounters(raw.reasons, COMBINATION_REPORT_REASONS);
+    const suggestions = Object.fromEntries(Object.entries(isRecord(raw.suggestions) ? raw.suggestions : {})
+      .filter(([digest, suggestion]) => /^[A-Za-z0-9_-]{32,64}$/.test(digest) && isRecord(suggestion))
+      .map(([digest, suggestion]) => {
+        const word = cleanCloudText(suggestion.word, 28);
+        const suggestionCount = clamp(nonnegativeCounter(suggestion.count), 0, 1_000_000);
+        const suggestionLastSeenAt = typeof suggestion.lastSeenAt === "string" && Number.isFinite(Date.parse(suggestion.lastSeenAt))
+          ? new Date(suggestion.lastSeenAt).toISOString()
+          : null;
+        return word && suggestionCount && suggestionLastSeenAt
+          ? [digest, { word, count: suggestionCount, lastSeenAt: suggestionLastSeenAt }]
+          : null;
+      })
+      .filter(Boolean)
+      .sort((left, right) => right[1].count - left[1].count || Date.parse(right[1].lastSeenAt) - Date.parse(left[1].lastSeenAt))
+      .slice(0, MAX_REJECTED_PAIR_SUGGESTIONS));
+    entries.push([fingerprint, {
+      count,
+      lastSeenAt,
+      sample: sample.length === 2 ? sample : null,
+      modes,
+      reporters,
+      reasons,
+      suggestions
+    }]);
   }
   entries.sort((left, right) => Date.parse(right[1].lastSeenAt) - Date.parse(left[1].lastSeenAt));
-  return { version: 1, entries: Object.fromEntries(entries.slice(0, MAX_REJECTED_PAIR_REPORTS)), updatedAt: typeof data.updatedAt === "string" ? data.updatedAt : null };
+  return { version: 2, entries: Object.fromEntries(entries.slice(0, MAX_REJECTED_PAIR_REPORTS)), updatedAt: typeof data.updatedAt === "string" ? data.updatedAt : null };
 }
 
 function nonnegativeCounter(value) {
@@ -404,7 +467,37 @@ export function buildChallengeIdentity(game, { assist = "none", graphVersion = "
       timeLimit: Number.isFinite(Number(game?.timeLimit)) ? Math.max(0, Math.floor(Number(game.timeLimit))) : null,
       moveLimit: Number.isFinite(Number(game?.moveLimit)) ? Math.max(0, Math.floor(Number(game.moveLimit))) : null,
       stage: Number.isFinite(Number(game?.stage)) ? Math.max(0, Math.floor(Number(game.stage))) : null,
-      law: canonicalChallengeText(game?.law?.id, 40) || null
+      law: canonicalChallengeText(game?.law?.id, 40) || null,
+      start: Array.isArray(game?.starters) ? {
+        style: game?.startProfile?.style === "shuffled" || game?.startStyle === "shuffled"
+          ? "shuffled"
+          : "classic",
+        profileId: canonicalChallengeText(game?.startProfile?.profileId, 96) || null,
+        starterHash: canonicalChallengeText(game?.startProfile?.starterHash, 32) || null,
+        routeStartIndex: Number.isFinite(Number(game?.startProfile?.routeStartIndex))
+          ? Math.max(0, Math.floor(Number(game.startProfile.routeStartIndex)))
+          : 0,
+        routeLength: Number.isFinite(Number(game?.startProfile?.routeLength ?? game?.routeLength))
+          ? Math.max(0, Math.floor(Number(game?.startProfile?.routeLength ?? game?.routeLength)))
+          : null,
+        starters: game.starters.slice(0, 6).map((word) => canonicalChallengeText(word, 80)).filter(Boolean)
+      } : null,
+      remix: game?.remixes ? {
+        version: Math.max(1, Math.floor(Number(game.remixes.version) || 1)),
+        selectionId: canonicalChallengeText(game.remixes.selectionId, 64) || null,
+        rank: canonicalChallengeText(game.remixes.rank?.id, 32) || null,
+        rules: (Array.isArray(game.remixes.rules) ? game.remixes.rules : []).slice(0, 8).map((rule) => ({
+          family: canonicalChallengeText(rule?.family, 40),
+          detail: canonicalChallengeText(rule?.detail, 120)
+        }))
+      } : null,
+      promotion: game?.promotion?.active ? {
+        currentRank: canonicalChallengeText(game.promotion.currentRank?.id, 32) || null,
+        targetRank: canonicalChallengeText(game.promotion.targetRank?.id, 32) || null,
+        attempt: Math.max(1, Math.floor(Number(game.promotion.attempt) || 1)),
+        attemptsTotal: Math.max(1, Math.floor(Number(game.promotion.attemptsTotal) || 3)),
+        winsRequired: Math.max(1, Math.floor(Number(game.promotion.winsRequired) || 2))
+      } : null
     },
     graphVersion: canonicalChallengeText(game?.graphVersion || graphVersion, 64) || "world-v1",
     buildVersion: canonicalChallengeText(game?.buildVersion || buildVersion, 64) || "dev",
@@ -444,6 +537,25 @@ function assertAllowedKeys(value, allowed, code = "invalid_cloud_profile") {
 function cleanCloudText(value, maximum = 80) {
   const text = String(value ?? "").normalize("NFKC").replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim();
   return text && text.length <= maximum ? text : null;
+}
+
+function cleanCombinationReportConcept(value, { optional = false } = {}) {
+  if (typeof value !== "string") {
+    if (optional && (value === null || value === undefined)) return "";
+    throw serviceError(400, "Combination reports use short word fields only.", "invalid_combination_report_text");
+  }
+  if (/[\u0000-\u001f\u007f\u2028\u2029]/u.test(value)) {
+    throw serviceError(400, "Combination reports cannot contain line breaks or control characters.", "unsafe_combination_report_text");
+  }
+  if (/(?:https?:\/\/|www\.|mailto:)|[\p{L}\p{N}._%+-]+@[\p{L}\p{N}.-]+\.[\p{L}]{2,}|\b[\p{L}\p{N}-]+\.(?:app|bg|co|com|dev|eu|gg|io|me|net|org)\b/iu.test(value)) {
+    throw serviceError(400, "Do not include links, email addresses, or private contact details.", "unsafe_combination_report_text");
+  }
+  const clean = value.normalize("NFKC").replace(/ +/g, " ").trim();
+  if (!clean && optional) return "";
+  if (!clean || clean.length > 28 || clean.split(/\s+/u).length > 4 || !/^[\p{L}\p{N}][\p{L}\p{N} '&-]*$/u.test(clean)) {
+    throw serviceError(400, "Use a short word or phrase of up to 28 characters.", "invalid_combination_report_text");
+  }
+  return clean;
 }
 
 function normalizeDynamicRecipeRecord(value, key = "") {
@@ -950,6 +1062,27 @@ export class GameStore {
         player.cosmicEventDiscoveries = cosmicEventDiscoveries;
         playersMigrated = true;
       }
+      const routeProgression = sanitizeRemixProgressionState(
+        player.routeProgression ?? createRemixProgressionState()
+      );
+      if (JSON.stringify(player.routeProgression || {}) !== JSON.stringify(routeProgression)) {
+        player.routeProgression = routeProgression;
+        playersMigrated = true;
+      }
+      const remixReadiness = sanitizeRemixReadinessState(
+        player.remixReadiness ?? createRemixReadinessState()
+      );
+      if (JSON.stringify(player.remixReadiness || {}) !== JSON.stringify(remixReadiness)) {
+        player.remixReadiness = remixReadiness;
+        playersMigrated = true;
+      }
+      const adaptiveDifficulty = sanitizeAdaptiveDifficultyState(
+        player.adaptiveDifficulty ?? createAdaptiveDifficultyState()
+      );
+      if (JSON.stringify(player.adaptiveDifficulty || {}) !== JSON.stringify(adaptiveDifficulty)) {
+        player.adaptiveDifficulty = adaptiveDifficulty;
+        playersMigrated = true;
+      }
       if (!player.entitlements || typeof player.entitlements !== "object" || Array.isArray(player.entitlements)) {
         player.entitlements = {};
         playersMigrated = true;
@@ -1205,6 +1338,9 @@ export class GameStore {
       lifetimeDiscoveries: {},
       cosmicEventRewards: {},
       cosmicEventDiscoveries: {},
+      routeProgression: createRemixProgressionState(),
+      remixReadiness: createRemixReadinessState(),
+      adaptiveDifficulty: createAdaptiveDifficultyState(),
       cloudProfile: { version: 0, data: {}, updatedAt: null },
       entitlements: {},
       authVersion: 1,
@@ -1299,6 +1435,277 @@ export class GameStore {
     return { revoked: true, sessionId: parsed.sessionId };
   }
 
+  routeChallengeState(playerId) {
+    const player = this.data.players[playerId];
+    if (!player) throw serviceError(401, "Player not found.", "player_missing");
+    player.routeProgression = sanitizeRemixProgressionState(player.routeProgression);
+    player.remixReadiness = sanitizeRemixReadinessState(player.remixReadiness);
+    player.adaptiveDifficulty = sanitizeAdaptiveDifficultyState(player.adaptiveDifficulty);
+    const promotion = getPromotionEligibility(player.routeProgression);
+    const currentRank = getRemixRank(player.routeProgression.rankId);
+    const challengeRank = promotion.active && promotion.nextRank
+      ? getRemixRank(promotion.nextRank.id)
+      : currentRank;
+    return {
+      progression: structuredClone(player.routeProgression),
+      readiness: structuredClone(player.remixReadiness),
+      adaptiveDifficulty: structuredClone(player.adaptiveDifficulty),
+      currentRank: getRemixRankPresentation(currentRank),
+      challengeRank: getRemixRankPresentation(challengeRank),
+      promotion: {
+        active: promotion.active,
+        eligible: promotion.eligible,
+        status: promotion.status,
+        currentRank: promotion.rank,
+        targetRank: promotion.nextRank,
+        attempt: promotion.trial ? promotion.trial.attempts + 1 : 0,
+        attemptsCompleted: promotion.trial?.attempts || 0,
+        attemptsTotal: promotion.trialLength,
+        wins: promotion.trial?.wins || 0,
+        winsRequired: promotion.winsRequired,
+        flawlessWins: promotion.trial?.flawlessWins || 0
+      }
+    };
+  }
+
+  ensureRoutePromotion(playerId) {
+    const player = this.data.players[playerId];
+    if (!player) throw serviceError(401, "Player not found.", "player_missing");
+    player.routeProgression = sanitizeRemixProgressionState(player.routeProgression);
+    const started = startRemixPromotionTrial(player.routeProgression);
+    if (started.started) player.routeProgression = started.state;
+    return {
+      changed: started.started,
+      ...this.routeChallengeState(playerId)
+    };
+  }
+
+  rememberRouteChallengeTarget(playerId, target) {
+    const player = this.data.players[playerId];
+    if (!player) return null;
+    player.adaptiveDifficulty = rememberAdaptiveTarget(
+      player.adaptiveDifficulty,
+      target
+    );
+    return structuredClone(player.adaptiveDifficulty);
+  }
+
+  publicRouteRank(playerId) {
+    const state = this.routeChallengeState(playerId);
+    const mastery = getRemixMasteryProgress(state.progression);
+    const intensity = getAdaptiveRemixIntensity(
+      state.readiness,
+      state.challengeRank.id
+    );
+    return {
+      version: state.progression.version,
+      rank: state.currentRank,
+      challengeRank: state.challengeRank,
+      mastery: {
+        points: mastery.masteryPoints,
+        rankFloor: mastery.rankFloor,
+        nextThreshold: mastery.nextThreshold,
+        pointsIntoRank: mastery.pointsIntoRank,
+        pointsRequired: mastery.pointsRequired,
+        pointsRemaining: mastery.pointsRemaining,
+        fraction: mastery.fraction
+      },
+      promotion: state.promotion,
+      remixIntensity: {
+        activeCount: intensity.activeCount,
+        minimumCount: intensity.minimumCount,
+        maximumCount: intensity.maximumCount,
+        cleanWinsTowardNextStep: intensity.cleanWinsTowardNextStep,
+        cleanWinsNeededForNextStep: intensity.cleanWinsNeededForNextStep,
+        atMaximum: intensity.atMaximum
+      },
+      familyMastery: structuredClone(state.readiness.familyMastery),
+      adaptiveDifficulty: state.adaptiveDifficulty
+    };
+  }
+
+  /**
+   * Applies exactly one server-authored terminal Route Rank outcome. The
+   * run-scoped idempotency key makes retries and crash recovery safe.
+   */
+  routeRankOutcomeReceipt(playerId, outcomeId) {
+    const safeOutcomeId = cleanCloudText(outcomeId, 160);
+    if (!safeOutcomeId) return null;
+    const existing = (this.data.progressionLedger || []).find(
+      (entry) =>
+        entry.idempotencyKey === `route-rank:${playerId}:run:${safeOutcomeId}`
+        && entry.playerId === playerId
+    );
+    if (!existing) return null;
+    const routeRank = this.publicRouteRank(playerId);
+    return {
+      ...(structuredClone(existing.receipt) || {}),
+      changed: false,
+      duplicate: true,
+      routeRank,
+      readiness: {
+        ...(structuredClone(existing.receipt?.readiness) || {}),
+        intensity: routeRank.remixIntensity
+      }
+    };
+  }
+
+  recordRouteRankOutcome(playerId, event = {}) {
+    const player = this.data.players[playerId];
+    if (!player) throw serviceError(401, "Player not found.", "player_missing");
+    const outcomeId = cleanCloudText(event.outcomeId ?? event.runId, 160);
+    if (!outcomeId) throw new TypeError("Route Rank outcomes require a runId.");
+    const idempotencyKey = `route-rank:${playerId}:run:${outcomeId}`;
+    const existing = this.routeRankOutcomeReceipt(playerId, outcomeId);
+    if (existing) return existing;
+
+    const outcome = ["completed", "failed", "forfeit", "reveal"].includes(
+      String(event.outcome || "").trim().toLowerCase()
+    )
+      ? String(event.outcome).trim().toLowerCase()
+      : "failed";
+    const assisted = event.assisted === true
+      || event.paid === true
+      || event.usedMajorPowerup === true
+      || event.usedReveal === true;
+    const competitiveCompletion = outcome === "completed" && !assisted;
+    const rankId = getRemixRank(event.rankId).id;
+    const familyIds = Array.isArray(event.familyIds)
+      ? [...new Set(event.familyIds.map((value) => String(value || "").trim()).filter(Boolean))].slice(0, 5)
+      : [];
+    const progressionEvent = {
+      outcome,
+      assisted,
+      usedMajorPowerup: assisted,
+      // This additionally fails closed against older mastery engines that
+      // granted a token award for assisted completions.
+      revealed: assisted || outcome === "reveal",
+      usedReveal: assisted || outcome === "reveal",
+      source: outcome === "reveal" ? "reveal" : "server",
+      clean: competitiveCompletion && event.clean === true,
+      flawless: competitiveCompletion && event.flawless === true,
+      activeRemixes: familyIds.length
+    };
+
+    player.routeProgression = sanitizeRemixProgressionState(player.routeProgression);
+    const promotionWasActive = Boolean(player.routeProgression.promotionTrial);
+    const progressionResult = promotionWasActive
+      ? recordRemixPromotionTrialOutcome(player.routeProgression, progressionEvent)
+      : recordRemixProgressionOutcome(player.routeProgression, progressionEvent);
+    player.routeProgression = progressionResult.state;
+
+    player.remixReadiness = sanitizeRemixReadinessState(player.remixReadiness);
+    const readinessOutcome = outcome === "reveal"
+      ? "reveal"
+      : competitiveCompletion
+        ? "completed"
+        : "failed";
+    const readinessResult = recordRemixReadinessOutcome(player.remixReadiness, {
+      outcomeId,
+      outcome: readinessOutcome,
+      rankId,
+      families: familyIds,
+      clean: competitiveCompletion && event.clean === true,
+      assisted
+    });
+    player.remixReadiness = readinessResult.state;
+
+    player.adaptiveDifficulty = sanitizeAdaptiveDifficultyState(player.adaptiveDifficulty);
+    const adaptiveResult = applyAdaptiveChallengeOutcome(player.adaptiveDifficulty, {
+      mode: event.mode,
+      custom: false,
+      outcome: competitiveCompletion ? "completed" : readinessOutcome,
+      flawless: competitiveCompletion && event.flawless === true,
+      surge: event.surge === true,
+      surgeBaseLevel: event.surgeBaseLevel
+    });
+    player.adaptiveDifficulty = rememberAdaptiveTarget(
+      adaptiveResult.state,
+      event.target
+    );
+
+    const routeRank = this.publicRouteRank(playerId);
+    const receipt = {
+      changed: true,
+      duplicate: false,
+      runId: outcomeId,
+      outcome,
+      competitive: competitiveCompletion,
+      masteryAward: promotionWasActive
+        ? 0
+        : Math.max(0, Number(progressionResult.masteryAward) || 0),
+      promotion: {
+        wasActive: promotionWasActive,
+        active: Boolean(routeRank.promotion.active),
+        passed: Boolean(progressionResult.passed),
+        failed: Boolean(progressionResult.failed),
+        promoted: Boolean(progressionResult.promoted),
+        bonusMastery: Math.max(0, Number(progressionResult.bonusMastery) || 0),
+        message: String(progressionResult.message || "")
+      },
+      readiness: {
+        duplicate: Boolean(readinessResult.duplicate),
+        masteryGained: readinessResult.masteryGained || [],
+        intensity: routeRank.remixIntensity
+      },
+      adaptive: {
+        adjustment: adaptiveResult.adjustment,
+        message: adaptiveResult.message,
+        metadata: adaptiveResult.metadata
+      },
+      routeRank
+    };
+    this.appendLedger("progressionLedger", {
+      idempotencyKey,
+      type: "route_rank_outcome",
+      runId: outcomeId,
+      playerId,
+      outcome,
+      competitive: competitiveCompletion,
+      rankId,
+      familyIds,
+      masteryAward: receipt.masteryAward,
+      receipt,
+      createdAt: this.now().toISOString()
+    });
+    return structuredClone(receipt);
+  }
+
+  recordRouteRankRunOutcome(run, outcome = "completed") {
+    if (!run?.game?.adaptive) return null;
+    const assisted = Boolean(
+      run.scoringDisabled
+      || run.forfeited
+      || run.assist !== "none"
+      || run.usedBend
+      || run.giftUsed
+    );
+    const clean = outcome === "completed"
+      && !assisted
+      && run.rejectedAttempts === 0;
+    const routeLength = Math.max(
+      1,
+      Math.floor(Number(run.game.routeLength || run.game.parMoves) || 1)
+    );
+    const flawless = clean && run.moves <= routeLength;
+    return this.recordRouteRankOutcome(run.playerId, {
+      outcomeId: run.runId,
+      outcome,
+      mode: run.game.mode,
+      target: run.game.target,
+      rankId: run.game.remixes?.rank?.id || "bronze",
+      familyIds: (run.game.remixes?.rules || []).map((rule) => rule.family),
+      assisted,
+      paid: run.usedBend && ["market", "wish"].includes(run.assist),
+      usedMajorPowerup: run.giftUsed || ["sense", "gift", "market", "wish"].includes(run.assist),
+      usedReveal: outcome === "reveal",
+      clean,
+      flawless,
+      surge: Boolean(run.game.adaptiveSurge || run.game.surge),
+      surgeBaseLevel: run.game.adaptiveSurgeBaseLevel ?? run.game.surgeBaseLevel
+    });
+  }
+
   publicPlayer(playerId) {
     const player = this.data.players[playerId];
     if (!player) return null;
@@ -1312,6 +1719,7 @@ export class GameStore {
       dailyWishUsedDate: player.dailyWishUsedDate || "",
       cloudProfileVersion: Math.max(0, Math.floor(Number(player.cloudProfile?.version) || 0)),
       competitiveProgression: this.competitiveProgression(playerId),
+      routeRank: this.publicRouteRank(playerId),
       vault: MARKET_CATALOG.filter((item) => player.licenses[item.id]).map((item) => ({ ...item, owned: true }))
     };
   }
@@ -1566,21 +1974,51 @@ export class GameStore {
     return { campaign, interested, changed };
   }
 
-  recordRejectedPairExpectation({ a, b, mode = "reach", sessionId = "", cohortId = "" }, date = new Date(), { allowPlaintext = false } = {}) {
+  recordRejectedPairExpectation({
+    a,
+    b,
+    expected = "",
+    reason = "",
+    mode = "reach",
+    reporterId = "",
+    sessionId = "",
+    cohortId = ""
+  }, date = new Date(), { allowPlaintext = false } = {}) {
     const words = [cleanCloudText(a, 28), cleanCloudText(b, 28)].filter(Boolean);
     if (words.length !== 2) throw serviceError(400, "Two valid concepts are required.", "invalid_rejected_pair");
     const canonical = words.map((word) => canonicalChallengeText(word, 28)).sort();
     const fingerprint = this.signFor("rejected-pair", canonical.join("+"));
-    const reporterSource = String(cohortId || sessionId || "").trim();
+    const reporterSource = String(reporterId || cohortId || sessionId || "").trim();
     const reporter = reporterSource ? this.signFor("rejected-pair-reporter", reporterSource) : "";
     const data = this.data.rejectedPairs = normalizeRejectedPairData(this.data.rejectedPairs);
-    const existing = data.entries[fingerprint] || { count: 0, lastSeenAt: date.toISOString(), sample: null, modes: {}, reporters: {} };
+    const existing = data.entries[fingerprint] || {
+      count: 0,
+      lastSeenAt: date.toISOString(),
+      sample: null,
+      modes: {},
+      reporters: {},
+      reasons: {},
+      suggestions: {}
+    };
     const duplicate = Boolean(reporter && existing.reporters[reporter]);
     if (!duplicate) existing.count += 1;
     existing.lastSeenAt = date.toISOString();
     if (allowPlaintext) existing.sample = canonical;
-    const safeMode = analyticsDimensionValue("mode", mode) || "reach";
+    const safeMode = COMBINATION_REPORT_MODES.has(String(mode)) ? String(mode) : "reach";
     if (!duplicate) existing.modes[safeMode] = (existing.modes[safeMode] || 0) + 1;
+    const safeReason = COMBINATION_REPORT_REASONS.has(String(reason)) ? String(reason) : "";
+    if (!duplicate && safeReason) existing.reasons[safeReason] = (existing.reasons[safeReason] || 0) + 1;
+    const safeExpected = allowPlaintext && expected ? canonicalChallengeText(expected, 28) : "";
+    if (!duplicate && safeExpected) {
+      const suggestionFingerprint = this.signFor("rejected-pair-suggestion", `${fingerprint}:${safeExpected}`);
+      const suggestion = existing.suggestions[suggestionFingerprint] || { word: safeExpected, count: 0, lastSeenAt: date.toISOString() };
+      suggestion.count += 1;
+      suggestion.lastSeenAt = date.toISOString();
+      existing.suggestions[suggestionFingerprint] = suggestion;
+      existing.suggestions = Object.fromEntries(Object.entries(existing.suggestions)
+        .sort((left, right) => right[1].count - left[1].count || Date.parse(right[1].lastSeenAt) - Date.parse(left[1].lastSeenAt))
+        .slice(0, MAX_REJECTED_PAIR_SUGGESTIONS));
+    }
     if (reporter) existing.reporters[reporter] = date.toISOString();
     data.entries[fingerprint] = existing;
     data.entries = Object.fromEntries(Object.entries(data.entries)
@@ -1590,14 +2028,58 @@ export class GameStore {
     return { accepted: true, fingerprint, duplicate, reviewable: Boolean(existing.sample) };
   }
 
+  async recordCombinationReport({ a, b, expected = "", reason = "", mode, reporterId }, date = new Date()) {
+    if (!(date instanceof Date) || Number.isNaN(date.getTime())) {
+      throw serviceError(400, "A valid report date is required.", "invalid_combination_report_date");
+    }
+    const safeA = cleanCombinationReportConcept(a);
+    const safeB = cleanCombinationReportConcept(b);
+    const safeExpected = cleanCombinationReportConcept(expected, { optional: true });
+    if (reason !== null && reason !== undefined && typeof reason !== "string") {
+      throw serviceError(400, "Choose one of the available report reasons.", "invalid_combination_report_reason");
+    }
+    const safeReason = reason || "";
+    if (safeReason && !COMBINATION_REPORT_REASONS.has(safeReason)) {
+      throw serviceError(400, "Choose one of the available report reasons.", "invalid_combination_report_reason");
+    }
+    const safeMode = String(mode || "");
+    if (!COMBINATION_REPORT_MODES.has(safeMode)) {
+      throw serviceError(400, "That game mode cannot be reported.", "invalid_combination_report_mode");
+    }
+    if (typeof reporterId !== "string" || !ANALYTICS_COHORT_PATTERN.test(reporterId)) {
+      throw serviceError(400, "A privacy-safe reporter ID is required.", "invalid_combination_report_reporter");
+    }
+    const result = this.recordRejectedPairExpectation({
+      a: safeA,
+      b: safeB,
+      expected: safeExpected,
+      reason: safeReason,
+      mode: safeMode,
+      reporterId
+    }, date, { allowPlaintext: true });
+    await this.persist();
+    return result;
+  }
+
   rejectedPairSummary({ minimumReports = 1, limit = 100 } = {}) {
     const threshold = clamp(Math.floor(Number(minimumReports) || 1), 1, 100_000);
     const cappedLimit = clamp(Math.floor(Number(limit) || 100), 1, 500);
     const data = normalizeRejectedPairData(this.data.rejectedPairs);
     return {
-      privacy: "keyed fingerprints; plaintext only for server-reviewed known concepts",
+      privacy: "reporter IDs are one-way keyed digests; reports contain only bounded word suggestions",
       reports: Object.entries(data.entries)
-        .map(([fingerprint, entry]) => ({ fingerprint, count: entry.count, pair: entry.sample, modes: entry.modes, lastSeenAt: entry.lastSeenAt }))
+        .map(([fingerprint, entry]) => ({
+          fingerprint,
+          count: entry.count,
+          pair: entry.sample,
+          suggestions: Object.values(entry.suggestions)
+            .map((suggestion) => ({ word: suggestion.word, count: suggestion.count, lastSeenAt: suggestion.lastSeenAt }))
+            .sort((left, right) => right.count - left.count || Date.parse(right.lastSeenAt) - Date.parse(left.lastSeenAt)),
+          reasons: entry.reasons,
+          modes: entry.modes,
+          lastSeenAt: entry.lastSeenAt,
+          reviewable: Boolean(entry.sample)
+        }))
         .filter((entry) => entry.count >= threshold)
         .sort((left, right) => right.count - left.count || Date.parse(right.lastSeenAt) - Date.parse(left.lastSeenAt))
         .slice(0, cappedLimit),
@@ -2383,7 +2865,29 @@ export class GameStore {
   }
 }
 
-const RUN_SNAPSHOT_VERSION = 4;
+const RUN_SNAPSHOT_VERSION = 5;
+const ORIGIN_STARTER_WORDS = new Set(["earth", "water", "fire", "air"]);
+
+function runStarterItem(game, word) {
+  const clean = String(word || "").normalize("NFKC").trim().replace(/\s+/g, " ").slice(0, 80);
+  const item = [
+    ...(Array.isArray(game?.starterItems) ? game.starterItems : []),
+    ...(Array.isArray(game?.startProfile?.starterItems) ? game.startProfile.starterItems : [])
+  ].find((candidate) => String(candidate?.word || "").trim().toLowerCase() === clean.toLowerCase());
+  const loaned = !ORIGIN_STARTER_WORDS.has(clean.toLowerCase());
+  return {
+    word: clean,
+    emoji: String(item?.emoji || "").trim().slice(0, 24),
+    category: item?.category == null ? null : String(item.category).trim().toLowerCase().slice(0, 40) || null,
+    source: loaned ? "loaned-start" : "origin",
+    note: loaned ? "Loaned for this challenge." : "One of the four original elements.",
+    loaned,
+    premium: false,
+    paid: false,
+    access: loaned ? "loaned" : "origin",
+    feedbackEligible: true
+  };
+}
 
 function sanitizeRunTipRecords(raw) {
   const records = [];
@@ -2444,6 +2948,8 @@ function serializeRun(run) {
     solutionRecipes: run.solutionRecipes instanceof Map
       ? [...run.solutionRecipes.entries()].map(([key, result]) => [key, structuredClone(result)])
       : [],
+    remixRuntime: run.remixRuntime ? structuredClone(run.remixRuntime) : null,
+    remixProgress: run.remixProgress ? structuredClone(run.remixProgress) : null,
     giftUsed: Boolean(run.giftUsed),
     giftItem: run.giftItem ? structuredClone(run.giftItem) : null,
     tipRecords: sanitizeRunTipRecords(run.tipRecords),
@@ -2458,6 +2964,102 @@ function serializeRun(run) {
     submitted: Boolean(run.submitted),
     verifiedSignature: sanitizeRouteSignature(run.verifiedSignature)
   };
+}
+
+const ROUTE_REMIX_FAMILY_SET = new Set(ROUTE_REMIX_FAMILIES);
+
+function storedRemixFamily(value) {
+  const family = String(value || "").trim().toLowerCase().replace(/[\s-]+/g, "_");
+  return ROUTE_REMIX_FAMILY_SET.has(family) ? family : "";
+}
+
+function validatedSnapshotRemixRuntime(game, candidate) {
+  const envelope = game?.remixes;
+  if (!envelope) return candidate == null
+    ? { valid: true, runtime: null }
+    : { valid: false, runtime: null };
+  if (
+    !envelope
+    || typeof envelope !== "object"
+    || Array.isArray(envelope)
+    || !Array.isArray(envelope.rules)
+    || envelope.rules.length > ROUTE_REMIX_FAMILIES.length
+    || !candidate
+    || typeof candidate !== "object"
+    || Array.isArray(candidate)
+  ) return { valid: false, runtime: null };
+
+  const expectedFamilies = [];
+  const expectedDetails = [];
+  const seen = new Set();
+  for (const rule of envelope.rules) {
+    if (!rule || typeof rule !== "object" || Array.isArray(rule)) return { valid: false, runtime: null };
+    const family = storedRemixFamily(rule.family);
+    if (!family || seen.has(family)) return { valid: false, runtime: null };
+    seen.add(family);
+    expectedFamilies.push(family);
+    expectedDetails.push(String(rule.detail || ""));
+  }
+  const activeCount = Number(envelope.activeCount);
+  const version = Number(envelope.version);
+  if (
+    !Number.isInteger(activeCount)
+    || activeCount !== expectedFamilies.length
+    || version !== ROUTE_REMIX_VERSION
+    || !/^rmx1_[a-z0-9]+$/.test(String(envelope.selectionId || ""))
+  ) return { valid: false, runtime: null };
+
+  const runtime = sanitizeRouteRemixRuntime(candidate);
+  if (
+    runtime.version !== version
+    || runtime.target.toLowerCase() !== String(game.target || "").trim().toLowerCase()
+    || runtime.activeFamilies.length !== expectedFamilies.length
+    || runtime.activeFamilies.some((family, index) => family !== expectedFamilies[index])
+  ) return { valid: false, runtime: null };
+
+  const publicRules = publicRouteRemixView(runtime).remixes;
+  if (
+    publicRules.length !== expectedDetails.length
+    || publicRules.some((rule, index) => (
+      rule.family !== expectedFamilies[index]
+      || rule.detail !== expectedDetails[index]
+    ))
+  ) return { valid: false, runtime: null };
+  return { valid: true, runtime };
+}
+
+function rebuildSnapshotRemixProgress(runtime, history) {
+  let progress = createRouteRemixProgress();
+  let completed = false;
+  for (const step of history) {
+    if (step.revealed === true || String(step.source || "").toLowerCase() === "reveal") continue;
+    if (
+      completed
+      || typeof step.a !== "string"
+      || typeof step.b !== "string"
+      || typeof step.word !== "string"
+      || !step.a.trim()
+      || !step.b.trim()
+      || !step.word.trim()
+    ) return null;
+    const recorded = recordRouteRemixCombination(runtime, progress, {
+      a: step.a,
+      b: step.b,
+      word: step.word,
+      successful: true
+    });
+    if (!recorded.accepted) return null;
+    progress = recorded.progress;
+    if (step.word.trim().toLowerCase() === runtime.target.toLowerCase()) {
+      completed = checkRouteRemixCompletion(runtime, progress, step.word).complete;
+    }
+  }
+  return { progress, completed };
+}
+
+function sameRemixProgress(left, right) {
+  return JSON.stringify(sanitizeRouteRemixProgress(left))
+    === JSON.stringify(sanitizeRouteRemixProgress(right));
 }
 
 function hydrateRun(snapshot, players) {
@@ -2480,7 +3082,9 @@ function hydrateRun(snapshot, players) {
     discovered.set(item.word.trim().toLowerCase(), structuredClone(item));
   }
   for (const word of game.starters.slice(0, 32)) {
-    if (typeof word === "string" && word.trim() && !discovered.has(word.trim().toLowerCase())) discovered.set(word.trim().toLowerCase(), { word: word.trim(), source: "origin", feedbackEligible: true });
+    if (typeof word === "string" && word.trim() && !discovered.has(word.trim().toLowerCase())) {
+      discovered.set(word.trim().toLowerCase(), runStarterItem(game, word));
+    }
   }
 
   const solutionRecipes = new Map();
@@ -2528,6 +3132,28 @@ function hydrateRun(snapshot, players) {
       };
     });
 
+  const remixValidation = validatedSnapshotRemixRuntime(game, snapshot.remixRuntime);
+  if (!remixValidation.valid || (!game.remixes && snapshot.remixProgress != null)) return null;
+  let remixProgress = null;
+  if (remixValidation.runtime) {
+    const rebuilt = rebuildSnapshotRemixProgress(remixValidation.runtime, history);
+    if (!rebuilt) return null;
+    const revealStudy = Array.isArray(snapshot.revealRoute) && snapshot.revealRoute.length > 0;
+    if (revealStudy && !(completedAt && scoringDisabled && forfeited && assist === "reveal")) return null;
+    remixProgress = revealStudy
+      ? markRouteRemixAnswerRevealed(rebuilt.progress)
+      : rebuilt.progress;
+    if (snapshotVersion >= RUN_SNAPSHOT_VERSION) {
+      if (
+        !snapshot.remixProgress
+        || typeof snapshot.remixProgress !== "object"
+        || Array.isArray(snapshot.remixProgress)
+        || !sameRemixProgress(snapshot.remixProgress, remixProgress)
+      ) return null;
+    }
+    if (!revealStudy && Boolean(completedAt) !== rebuilt.completed) return null;
+  }
+
   return {
     runId,
     playerId,
@@ -2558,6 +3184,8 @@ function hydrateRun(snapshot, players) {
     revealRoute: Array.isArray(snapshot.revealRoute) ? structuredClone(snapshot.revealRoute.slice(0, 1_000)) : null,
     solutionRoute: Array.isArray(snapshot.solutionRoute) ? structuredClone(snapshot.solutionRoute.slice(0, 1_000)) : null,
     solutionRecipes,
+    remixRuntime: remixValidation.runtime,
+    remixProgress,
     giftUsed,
     giftItem,
     tipRecords: sanitizeRunTipRecords(snapshot.tipRecords),
@@ -2612,8 +3240,34 @@ export class RunRegistry {
     return this.store.persist();
   }
 
-  start(playerId, game, { ranked = false, challengeId = "", scoringDisabled = false, forfeitReason = "" } = {}) {
+  start(playerId, game, {
+    ranked = false,
+    challengeId = "",
+    scoringDisabled = false,
+    forfeitReason = "",
+    remixRuntime = null
+  } = {}) {
     this.cleanup();
+    if (game?.adaptive) {
+      const activeAdaptive = [...this.runs.values()].find((candidate) =>
+        candidate.playerId === playerId
+        && candidate.game?.adaptive
+        && !candidate.completedAt
+        && this.store.now().getTime() <= candidate.expiresAt
+      );
+      if (activeAdaptive) {
+        throw serviceError(
+          409,
+          game?.promotion?.active || activeAdaptive.game?.promotion?.active
+            ? "A promotion challenge is already active. Resume it before starting another."
+            : "A Route Rank challenge is already active. Resume or give it up before starting another.",
+          game?.promotion?.active || activeAdaptive.game?.promotion?.active
+            ? "promotion_attempt_active"
+            : "adaptive_attempt_active",
+          { runId: activeAdaptive.runId }
+        );
+      }
+    }
     if (ranked) {
       const active = [...this.runs.values()].find((candidate) => candidate.playerId === playerId
         && candidate.ranked
@@ -2632,7 +3286,7 @@ export class RunRegistry {
       challengeId: challengeId || `practice:${runId}`,
       startedAt,
       expiresAt: startedAt + Math.max((game.timeLimit || 0) * 1000 + 10_000, 30 * 60_000),
-      discovered: new Map(game.starters.map((word) => [word.toLowerCase(), { word, source: "origin", feedbackEligible: true }])),
+      discovered: new Map(game.starters.map((word) => [word.toLowerCase(), runStarterItem(game, word)])),
       moves: 0,
       attempts: 0,
       rejectedAttempts: 0,
@@ -2644,6 +3298,8 @@ export class RunRegistry {
       forfeited: Boolean(scoringDisabled),
       forfeitReason: scoringDisabled ? studyAssistFor(forfeitReason) : null,
       forfeitedAt: scoringDisabled ? startedAt : null,
+      remixRuntime: remixRuntime ? sanitizeRouteRemixRuntime(remixRuntime) : null,
+      remixProgress: remixRuntime ? createRouteRemixProgress() : null,
       revealRoute: null,
       giftUsed: false,
       giftItem: null,
@@ -2678,8 +3334,26 @@ export class RunRegistry {
   canCombine(run, a, b) {
     if (run.completedAt) throw serviceError(409, "This orbit is already complete.", "run_complete");
     if (!run.discovered.has(String(a).toLowerCase()) || !run.discovered.has(String(b).toLowerCase())) throw serviceError(422, "That combination contains an undiscovered word.", "impossible_combination");
-    if (run.game.moveLimit && run.attempts >= run.game.moveLimit) throw serviceError(409, "No moves remain in this orbit.", "move_limit");
+    // A move is a successful fusion. Rejected guesses are tracked separately
+    // for scoring, but must not silently spend the limited-moves budget.
+    if (run.game.moveLimit && run.moves >= run.game.moveLimit) {
+      const masterRoute = run.game.remixes?.rules?.some((rule) => rule.family === "master_route");
+      throw serviceError(
+        409,
+        masterRoute ? "The Master Route fusion limit is reached." : "No moves remain in this orbit.",
+        masterRoute ? "master_route_limit" : "move_limit"
+      );
+    }
     if (run.game.timeLimit && this.store.now().getTime() - run.startedAt > run.game.timeLimit * 1000 + 3000) throw serviceError(409, "Time has expired for this orbit.", "time_limit");
+    if (run.remixRuntime) {
+      const remixCheck = checkRouteRemixBeforeCombination(run.remixRuntime, run.remixProgress, { a, b });
+      if (!remixCheck.allowed) {
+        throw serviceError(409, remixCheck.reason, "remix_pair_blocked", {
+          remixCode: remixCheck.code,
+          terminal: remixCheck.terminal
+        });
+      }
+    }
   }
 
   recordCombination(run, result, { a = "", b = "" } = {}) {
@@ -2690,7 +3364,7 @@ export class RunRegistry {
     }
     const ingredientA = run.discovered.get(String(a).trim().toLowerCase());
     const ingredientB = run.discovered.get(String(b).trim().toLowerCase());
-    const safeIngredientSources = new Set(["origin", "world", "twist", "ai", "semantic"]);
+    const safeIngredientSources = new Set(["origin", "loaned-start", "world", "twist", "ai", "semantic"]);
     const safeResultSources = new Set(["world", "twist", "ai", "semantic"]);
     const ingredientFeedbackSafe = (item) => Boolean(item && item.feedbackEligible !== false && safeIngredientSources.has(String(item.source || "")));
     const feedbackEligible = ingredientFeedbackSafe(ingredientA)
@@ -2734,10 +3408,29 @@ export class RunRegistry {
     };
     run.history.push(historyEntry);
     run.discovered.set(result.word.toLowerCase(), { ...result, feedbackEligible });
+    if (run.remixRuntime) {
+      const remixRecord = recordRouteRemixCombination(run.remixRuntime, run.remixProgress, {
+        a,
+        b,
+        word: result.word,
+        successful: true
+      });
+      if (remixRecord.accepted) run.remixProgress = remixRecord.progress;
+      historyEntry.remixProgress = routeRemixProgress(run.remixRuntime, run.remixProgress);
+    }
     if (["ai", "ai-route"].includes(result.source)) run.assist = combineAssistance(run.assist, "ai").id;
     if (result.word.toLowerCase() === run.game.target.toLowerCase()) {
-      run.completedAt = this.store.now().getTime();
-      if (run.ranked) run.expiresAt = Math.max(run.expiresAt, run.completedAt + COMPLETED_RANKED_RUN_RETENTION_MS);
+      const remixCompletion = run.remixRuntime
+        ? checkRouteRemixCompletion(run.remixRuntime, run.remixProgress, result.word)
+        : { complete: true, failed: false, code: "complete", reason: "" };
+      historyEntry.targetMade = true;
+      historyEntry.completionBlocked = !remixCompletion.complete;
+      historyEntry.remixCompletion = remixCompletion;
+      if (remixCompletion.complete) {
+        run.completedAt = this.store.now().getTime();
+        if (run.ranked) run.expiresAt = Math.max(run.expiresAt, run.completedAt + COMPLETED_RANKED_RUN_RETENTION_MS);
+        this.store.recordRouteRankRunOutcome(run, "completed");
+      }
     }
     this.checkpoint(run);
     return historyEntry;
@@ -2759,7 +3452,13 @@ export class RunRegistry {
   }
 
   reveal(run, route) {
-    if (run.revealRoute) return run.revealRoute;
+    if (run.revealRoute) {
+      if (run.remixRuntime && !run.remixProgress?.answerRevealed) {
+        run.remixProgress = markRouteRemixAnswerRevealed(run.remixProgress);
+        this.checkpoint(run);
+      }
+      return run.revealRoute;
+    }
     if (run.submitted) throw serviceError(409, "This score was already submitted.", "already_submitted");
     if (run.completedAt) throw serviceError(409, "This orbit is already complete.", "run_complete");
     if (!Array.isArray(route)) throw serviceError(422, "No verified answer path is available.", "route_unavailable");
@@ -2791,9 +3490,38 @@ export class RunRegistry {
       run.discovered.set(step.word.toLowerCase(), { ...step, source: "reveal" });
       run.moves += 1;
     }
+    if (run.remixRuntime) {
+      // Reveal is a zero-score Study outcome. Mark it visually complete so
+      // resume/progress agree with `completedAt`, while scored completion
+      // validation continues to return `answer_revealed`.
+      run.remixProgress = markRouteRemixAnswerRevealed(run.remixProgress);
+    }
     run.completedAt = this.store.now().getTime();
+    this.store.recordRouteRankRunOutcome(run, "reveal");
     this.checkpoint(run);
     return run.revealRoute;
+  }
+
+  forfeit(run, reason = "forfeit") {
+    if (
+      run.completedAt
+      && run.forfeited
+      && String(run.forfeitReason || "").toLowerCase() === "forfeit"
+    ) {
+      this.store.recordRouteRankRunOutcome(run, "forfeit");
+      return run;
+    }
+    if (run.submitted) throw serviceError(409, "This score was already submitted.", "already_submitted");
+    if (run.completedAt) throw serviceError(409, "This orbit is already complete.", "run_complete");
+    run.assist = "reveal";
+    run.scoringDisabled = true;
+    run.forfeited = true;
+    run.forfeitReason = String(reason || "forfeit").trim().slice(0, 32) || "forfeit";
+    run.forfeitedAt = this.store.now().getTime();
+    run.completedAt = run.forfeitedAt;
+    this.store.recordRouteRankRunOutcome(run, "forfeit");
+    this.checkpoint(run);
+    return run;
   }
 
   sense(run) {
@@ -2893,13 +3621,23 @@ export class RunRegistry {
       bendItem: run.bendItem ? structuredClone(run.bendItem) : null,
       giftUsed: Boolean(run.giftUsed),
       giftItem: run.giftItem ? structuredClone(run.giftItem) : null,
-      tipsUsed: sanitizeRunTipRecords(run.tipRecords).length
+      tipsUsed: sanitizeRunTipRecords(run.tipRecords).length,
+      remixProgress: run.remixRuntime
+        ? routeRemixProgress(run.remixRuntime, run.remixProgress)
+        : null
     };
   }
 
   finalize(run, callsign) {
     if (run.scoringDisabled || run.forfeited) throw serviceError(409, "Assisted orbits cannot submit a score.", "assisted_run");
     if (!run.completedAt) throw serviceError(422, "The target has not been reached.", "target_missing");
+    if (run.remixRuntime && !checkRouteRemixCompletion(
+      run.remixRuntime,
+      run.remixProgress,
+      run.game.target
+    ).complete) {
+      throw serviceError(422, "The route rules are not complete.", "remix_incomplete");
+    }
     if (run.submitted) throw serviceError(409, "This score was already submitted.", "already_submitted");
     run.submitted = true;
     const elapsedMs = Math.max(1, run.completedAt - run.startedAt);
@@ -2968,6 +3706,7 @@ export class RunRegistry {
     const now = this.store.now().getTime();
     for (const [id, run] of this.runs) {
       if (now <= run.expiresAt + 60_000) continue;
+      if (!run.completedAt) this.store.recordRouteRankRunOutcome(run, "failed");
       this.runs.delete(id);
       delete this.store.data.runs[id];
     }

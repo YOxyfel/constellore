@@ -11,14 +11,20 @@ import { writeLocalWorldModule } from "../scripts/build-local-world.mjs";
 
 const giftResponseKeys = [
   "assist", "assisted", "division", "item", "leaderboardEligible", "ranked",
-  "rewardEligible", "scoreEligible", "scoreMultiplier", "scoringDisabled"
+  "rewardEligible", "routeProgress", "scoreEligible", "scoreMultiplier", "scoringDisabled"
 ];
 const localGiftResponseKeys = [...giftResponseKeys, "localOnly"].sort();
 const giftItemKeys = ["category", "emoji", "source", "word"];
+const routeProgressKeys = ["complete", "percent", "remaining", "total"];
 
 function assertSafeGift(payload, { local = false } = {}) {
   assert.deepEqual(Object.keys(payload).sort(), local ? localGiftResponseKeys : giftResponseKeys);
   assert.deepEqual(Object.keys(payload.item).sort(), giftItemKeys);
+  assert.deepEqual(Object.keys(payload.routeProgress).sort(), routeProgressKeys);
+  assert.ok(Number.isInteger(payload.routeProgress.total));
+  assert.ok(Number.isInteger(payload.routeProgress.remaining));
+  assert.ok(Number.isInteger(payload.routeProgress.percent));
+  assert.equal(typeof payload.routeProgress.complete, "boolean");
   assert.equal(payload.item.source, "gift");
   assert.ok(payload.item.word);
   assert.equal(payload.assisted, true);
@@ -174,7 +180,7 @@ test("local-practice Word Gift mirrors the safe contract and fails closed during
   const directory = await mkdtemp(join(tmpdir(), "constellore-local-gift-"));
   context.after(() => rm(directory, { recursive: true, force: true }));
   await writeLocalWorldModule(join(directory, "local-world.mjs"));
-  for (const file of ["local-beta.mjs", "cosmic-twists.mjs", "engagement-features.mjs", "universe-director.mjs", "recipe-feedback.mjs"]) {
+  for (const file of ["local-beta.mjs", "cosmic-twists.mjs", "engagement-features.mjs", "universe-director.mjs", "recipe-feedback.mjs", "adaptive-difficulty.mjs", "remix-progression.mjs", "remix-readiness.mjs", "route-remixes.mjs", "shuffled-start.mjs"]) {
     await copyFile(new URL(`../public/${file}`, import.meta.url), join(directory, file));
   }
   const moduleUrl = pathToFileURL(join(directory, "local-beta.mjs")).href;

@@ -3,27 +3,27 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#070914">
-  <meta name="description" content="Constellore is a destination-based word puzzle. Combine Earth, Water, Fire, and Air through a reviewed recipe map until you create the target word.">
+  <meta name="theme-color" content="#071923">
+  <meta name="description" content="Constellore is a free word-combination game with a clear goal: combine ideas, discover new words, and build a route to the target.">
   <meta name="robots" content="index, follow, max-image-preview:large">
   <meta property="og:type" content="website">
-  <meta property="og:title" content="Constellore — find a route to the target word">
-  <meta property="og:description" content="A free cosmic word puzzle by Oxyfel Games. Every run gives you a destination; your job is to craft the route.">
+  <meta property="og:title" content="Constellore — make the target word">
+  <meta property="og:description" content="Combine words, reach checked and reachable targets, earn permanent ranks, and watch your cosmic board evolve. Play free in your browser.">
   <meta property="og:site_name" content="Constellore">
   <meta property="og:locale" content="en_US">
   <meta property="og:image" content="https://yoxyfel.github.io/constellore/social-card-v3.jpg">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
-  <meta property="og:image:type" content="image/png">
-  <meta property="og:image:alt" content="Constellore: one destination, countless possible routes.">
+  <meta property="og:image:type" content="image/jpeg">
+  <meta property="og:image:alt" content="Constellore, a cosmic word-combination puzzle about reaching a target word.">
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="Constellore — find a route to the target word">
-  <meta name="twitter:description" content="Start with four elements. Combine ideas. Reach the destination word.">
+  <meta name="twitter:title" content="Constellore — make the target word">
+  <meta name="twitter:description" content="Combine ideas, discover new words, and build a route to the target as the cosmic board evolves.">
   <meta name="twitter:image" content="https://yoxyfel.github.io/constellore/social-card-v3.jpg">
-  <title>Constellore — a destination-based word puzzle</title>
+  <title>Constellore — make the target word</title>
   <link rel="icon" href="icon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="website.css?v=3.0.0-beta.2">
-  <script src="website.js?v=3.0.0-beta.2" defer></script>
+  <link rel="stylesheet" href="website.css?v=3.3.0-beta.1">
+  <script src="website.js?v=3.3.0-beta.1" defer></script>
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -31,7 +31,7 @@
     "name": "Constellore",
     "url": "https://yoxyfel.github.io/constellore/",
     "image": "https://yoxyfel.github.io/constellore/social-card-v3.jpg",
-    "description": "A destination-based word puzzle where players combine ideas from four starting elements to reach a target word.",
+    "description": "A free cosmic word-combination puzzle where players discover new concepts and build a reachable path to a target word.",
     "applicationCategory": "GameApplication",
     "operatingSystem": "Any modern web browser",
     "playMode": "SinglePlayer",
@@ -46,236 +46,164 @@
   data-beta-url="/play/"
   data-itch-url=""
   data-repository-url="https://github.com/YOxyfel/constellore"
-  data-build-version="3.0.0-beta.2"
-  data-build-id="3.0.0-beta.2+source"
+  data-build-version="3.3.0-beta.1"
+  data-build-id="3.3.0-beta.1+source"
 >
-  <a class="skip-link" href="#main">Skip to content</a>
+  <a class="skip-link" href="#main">Skip to the game</a>
 
   <header class="site-header" id="top">
     <a class="brand" href="#top" aria-label="Constellore home">
-      <span class="brand-mark" aria-hidden="true"><i></i><b>✦</b></span>
-      <span><strong>CONSTELLORE</strong><small>OXYFEL GAMES</small></span>
+      <span class="brand-mark" aria-hidden="true">✦</span>
+      <span>Constellore</span>
     </a>
-
-    <button class="menu-button" id="menuButton" type="button" aria-expanded="false" aria-controls="mobileNav">
-      <span></span><span></span><span></span><span class="sr-only">Open navigation</span>
-    </button>
-
-    <nav class="site-nav" aria-label="Main navigation">
-      <a href="#how">How to play</a>
-      <a href="#why">Why Constellore</a>
-      <a href="#questions">FAQ</a>
-    </nav>
-
-    <a class="header-play" href="/play/">Play free beta</a>
+    <a class="button header-button" href="/play/">Play free</a>
   </header>
 
-  <nav class="mobile-nav" id="mobileNav" aria-label="Mobile navigation">
-    <a href="#how">How to play</a>
-    <a href="#why">Why Constellore</a>
-    <a href="#questions">FAQ</a>
-    <a class="mobile-play" href="/play/">Play free beta <span aria-hidden="true">→</span></a>
-  </nav>
-
   <main id="main">
-    <section class="hero" aria-labelledby="heroTitle">
+    <section class="hero section-shell" aria-labelledby="heroTitle">
       <div class="hero-copy reveal">
-        <p class="eyebrow"><span></span> FREE PUBLIC BETA</p>
-        <h1 id="heroTitle">You know the word.<br><em>Can you find the route?</em></h1>
-        <p class="hero-lede">Every run gives you a destination. Start with Earth, Water, Fire, and Air, combine logical ideas, and build your way to the target.</p>
-        <div class="hero-actions">
-          <a class="primary-button" href="/play/"><span>Play the beta</span><b aria-hidden="true">→</b></a>
-          <a class="secondary-button" data-follow-link href="https://github.com/YOxyfel/constellore" target="_blank" rel="noopener noreferrer">
-            <span data-follow-label>Follow development on GitHub</span><b aria-hidden="true">↗</b>
-          </a>
-        </div>
-        <p class="hero-note">Free in your browser. No account or payment required. Practice progress stays on this device.</p>
+        <p class="label">Free browser game</p>
+        <h1 id="heroTitle">Make the word.</h1>
+        <p class="hero-lede">Every game gives you one word to find. Start with a few useful words, combine two to make something new, and keep building until you make the target word. As you improve, the routes, rules, and sky grow with you.</p>
+        <a class="button hero-button" href="/play/">Play free</a>
+        <p class="small-note">No account needed. Practice progress stays on this device.</p>
       </div>
 
-      <div class="craft-preview reveal" data-delay="1" aria-labelledby="previewTitle">
+      <div class="hero-example reveal" data-delay="1" aria-hidden="true">
+        <span>Water</span>
+        <b>+</b>
+        <span>Fire</span>
+        <b>=</b>
+        <strong>Steam</strong>
+      </div>
+    </section>
+
+    <section class="try-section section-shell" aria-labelledby="previewHeading">
+      <div class="simple-heading reveal">
+        <p class="label">Try it</p>
+        <h2 id="previewHeading">Make Storm</h2>
+        <p>Tap two words to put them together.</p>
+      </div>
+
+      <div class="craft-preview reveal" data-delay="1" data-preview-goal="GOAL: STORM" aria-labelledby="previewTitle">
         <div class="preview-topbar">
-          <span><i aria-hidden="true"></i> PLAYABLE PREVIEW</span>
-          <strong id="previewTitle">GOAL: STORM</strong>
+          <strong id="previewTitle">Target: Storm</strong>
+          <span id="previewInstruction">Pick two words</span>
         </div>
+
         <div class="preview-board">
-          <div class="preview-stars" aria-hidden="true"></div>
-          <div class="goal-beacon" aria-hidden="true"><i></i><span>STORM</span></div>
-
-          <div class="preview-instruction">
-            <span>TRY A FUSION</span>
-            <strong id="previewInstruction">Choose two words</strong>
-          </div>
-
-          <div class="word-tray" id="wordTray" aria-label="Words available in the preview">
-            <button type="button" class="word-chip" data-word="Earth"><span>🌍</span>Earth</button>
-            <button type="button" class="word-chip" data-word="Water"><span>💧</span>Water</button>
-            <button type="button" class="word-chip" data-word="Fire"><span>🔥</span>Fire</button>
-            <button type="button" class="word-chip" data-word="Air"><span>💨</span>Air</button>
-          </div>
-
           <div class="fusion-stage" aria-live="polite">
             <div class="fusion-input" id="fusionFirst">?</div>
-            <span class="fusion-plus" aria-hidden="true">+</span>
+            <span aria-hidden="true">+</span>
             <div class="fusion-input" id="fusionSecond">?</div>
-            <span class="fusion-equals" aria-hidden="true">=</span>
+            <span aria-hidden="true">=</span>
             <div class="fusion-result" id="fusionResult">New word</div>
           </div>
 
-          <button class="preview-reset" id="previewReset" type="button">Reset preview</button>
-        </div>
-        <div class="preview-caption">
-          <p id="previewMessage">Hint: heat Water first, then give the result Air.</p>
-          <span>Find Cloud and Energy, then combine them.</span>
+          <div class="word-tray" id="wordTray" aria-label="Words you can choose">
+            <button type="button" class="word-chip" data-word="Earth" aria-pressed="false"><span aria-hidden="true">🌍</span>Earth</button>
+            <button type="button" class="word-chip" data-word="Water" aria-pressed="false"><span aria-hidden="true">💧</span>Water</button>
+            <button type="button" class="word-chip" data-word="Fire" aria-pressed="false"><span aria-hidden="true">🔥</span>Fire</button>
+            <button type="button" class="word-chip" data-word="Air" aria-pressed="false"><span aria-hidden="true">💨</span>Air</button>
+          </div>
+
+          <p class="preview-message" id="previewMessage">Need a hint? Make Steam, then add Air.</p>
+          <button class="plain-button" id="previewReset" type="button">Start over</button>
         </div>
       </div>
     </section>
 
     <section class="how section-shell" id="how" aria-labelledby="howTitle">
-      <div class="section-heading reveal">
-        <p class="section-label">HOW TO PLAY</p>
-        <h2 id="howTitle">One destination.<br><em>Three simple actions.</em></h2>
+      <div class="simple-heading reveal">
+        <p class="label">How to play</p>
+        <h2 id="howTitle">Three simple steps</h2>
       </div>
 
       <div class="steps">
         <article class="step reveal">
-          <span class="step-number">01</span>
+          <span class="step-number">1</span>
           <div>
             <h3>See your target</h3>
-            <p>The word you are trying to create is always visible before the run starts.</p>
+            <p>The game shows the word you need to make.</p>
           </div>
         </article>
         <article class="step reveal" data-delay="1">
-          <span class="step-number">02</span>
+          <span class="step-number">2</span>
           <div>
             <h3>Combine ideas</h3>
-            <p>Drag one word onto another. A logical connection becomes a new word immediately.</p>
+            <p>Drag one word onto another to make a new word.</p>
           </div>
         </article>
         <article class="step reveal" data-delay="2">
-          <span class="step-number">03</span>
+          <span class="step-number">3</span>
           <div>
             <h3>Reach the word</h3>
-            <p>Use each discovery to build a route to the destination, then try a cleaner route.</p>
+            <p>Use your new words until you make the target.</p>
           </div>
         </article>
       </div>
     </section>
 
-    <section class="proof" id="why" aria-labelledby="proofTitle">
-      <div class="section-shell proof-grid">
-        <div class="proof-copy reveal">
-          <p class="section-label">WHY CONSTELLORE</p>
-          <h2 id="proofTitle">Word crafting<br><em>with a purpose.</em></h2>
-          <p>Open-ended combination games ask what you can make. Constellore also asks whether you can reach a specific destination. Your route—not only the final word—is the puzzle.</p>
-          <p class="accuracy-note"><strong>The current public beta is deterministic.</strong> Its official combinations come from a reviewed recipe map, so ranked answers are not invented by live AI.</p>
-        </div>
-
-        <div class="proof-panel reveal" data-delay="1">
-          <div class="proof-stat">
-            <strong>4</strong>
-            <span>starting elements</span>
-          </div>
-          <div class="proof-stat">
-            <strong>1,066</strong>
-            <span>authored recipes</span>
-          </div>
-          <div class="proof-stat">
-            <strong>40/40</strong>
-            <span>beta targets route-checked</span>
-          </div>
-          <div class="proof-feature">
-            <span aria-hidden="true">✦</span>
-            <div><strong>Surprising, not random</strong><p>Every official destination has a tested path from the four starting words.</p></div>
-          </div>
-          <div class="proof-feature">
-            <span aria-hidden="true">◎</span>
-            <div><strong>Your route tells the story</strong><p>Compare moves, discover alternatives, and turn each solution into a constellation.</p></div>
-          </div>
-        </div>
+    <section class="why section-shell" id="why" aria-labelledby="whyTitle">
+      <div class="simple-heading reveal">
+        <p class="label">Why Constellore?</p>
+        <h2 id="whyTitle">Word crafting with a purpose</h2>
+      </div>
+      <div class="reasons reveal" data-delay="1">
+        <article>
+          <h3>Clear goal</h3>
+          <p>You always know which word you are trying to make.</p>
+        </article>
+        <article>
+          <h3>Checked answers</h3>
+          <p>Explore 3,199 tested combinations. Every target has a real path.</p>
+        </article>
+        <article>
+          <h3>Fits your pace</h3>
+          <p>One Play button adjusts the target and starting words. Earn permanent ranks, new route rules, promotion games, and ever-richer cosmic board skies.</p>
+        </article>
       </div>
     </section>
 
     <section class="play-section" id="play" aria-labelledby="playTitle">
       <div class="section-shell play-card reveal">
         <div class="play-copy">
-          <p class="section-label">PLAY IN YOUR BROWSER</p>
-          <h2 id="playTitle">Your next word<br><em>is waiting.</em></h2>
-          <p>Launch the complete beta here. It is designed for mouse, keyboard, and touch.</p>
-          <div class="play-actions">
-            <button class="primary-button" id="inlinePlayButton" type="button"><span>Launch the beta</span><b aria-hidden="true">→</b></button>
-            <a class="text-link" href="/play/" target="_blank" rel="noopener noreferrer">Open full screen <span aria-hidden="true">↗</span></a>
-          </div>
+          <p class="label">Ready?</p>
+          <h2 id="playTitle">Play Constellore</h2>
+          <p>Play the full beta with a mouse, keyboard, or touch screen.</p>
         </div>
-        <button class="play-poster" id="posterPlayButton" type="button" aria-label="Launch the playable Constellore beta">
-          <span class="poster-goal">TODAY'S DESTINATION</span>
-          <strong>Find Telescope</strong>
-          <span class="poster-orbit" aria-hidden="true"><i></i><b>▶</b></span>
-          <small>PLAY FREE</small>
-        </button>
+
+        <button class="button play-now-button" id="posterPlayButton" type="button">Play free</button>
+
         <div class="game-embed" id="gameEmbed" hidden>
           <div class="embed-bar">
-            <span><i aria-hidden="true"></i> CONSTELLORE BETA</span>
-            <div><a href="/play/" target="_blank" rel="noopener noreferrer">Full screen ↗</a><button type="button" id="closeEmbed">Close</button></div>
+            <strong>Constellore</strong>
+            <div>
+              <a href="/play/" target="_blank" rel="noopener noreferrer">Full screen</a>
+              <button class="plain-button" type="button" id="closeEmbed">Close</button>
+            </div>
           </div>
-          <iframe id="gameFrame" title="Playable Constellore beta" allow="fullscreen"></iframe>
+          <iframe id="gameFrame" title="Play Constellore" allow="fullscreen"></iframe>
         </div>
       </div>
-    </section>
-
-    <section class="questions section-shell" id="questions" aria-labelledby="questionsTitle">
-      <div class="questions-heading reveal">
-        <p class="section-label">QUICK ANSWERS</p>
-        <h2 id="questionsTitle">Before you<br><em>start crafting.</em></h2>
-      </div>
-      <div class="faq-list reveal">
-        <details>
-          <summary>What am I trying to do?<span aria-hidden="true">+</span></summary>
-          <p>Create the target word shown for your run. Combine two existing words to discover a new one, then use those discoveries as steps toward the target.</p>
-        </details>
-        <details>
-          <summary>Is the beta free?<span aria-hidden="true">+</span></summary>
-          <p>Yes. The public browser beta has no checkout or rewarded advertising. No account is required.</p>
-        </details>
-        <details>
-          <summary>Does AI invent the answers?<span aria-hidden="true">+</span></summary>
-          <p>No. This public beta uses a prebuilt, reviewed recipe map. Experimental generation is not required for any official target and is not part of the local practice build.</p>
-        </details>
-        <details>
-          <summary>Where is my progress saved?<span aria-hidden="true">+</span></summary>
-          <p>The public web and itch practice editions save progress in this browser. Clearing site data resets it, and this build does not upload gameplay analytics or scores.</p>
-        </details>
-      </div>
-    </section>
-
-    <section class="final-cta" aria-labelledby="finalTitle">
-      <div class="final-orbit" aria-hidden="true"></div>
-      <p class="section-label">READY TO BEGIN?</p>
-      <h2 id="finalTitle">Find your route<br><em>through the cosmos.</em></h2>
-      <div class="final-actions">
-        <a class="primary-button" href="/play/"><span>Play the free beta</span><b aria-hidden="true">→</b></a>
-        <a class="secondary-button" data-follow-link href="https://github.com/YOxyfel/constellore" target="_blank" rel="noopener noreferrer">
-          <span data-follow-label>Follow development on GitHub</span><b aria-hidden="true">↗</b>
-        </a>
-      </div>
-      <p class="follow-note" id="followNote">Follow the open beta on GitHub for releases and development updates.</p>
     </section>
   </main>
 
   <footer class="site-footer">
-    <a class="brand footer-brand" href="#top" aria-label="Back to top">
-      <span class="brand-mark" aria-hidden="true"><i></i><b>✦</b></span>
-      <span><strong>CONSTELLORE</strong><small>OXYFEL GAMES</small></span>
-    </a>
-    <nav aria-label="Footer navigation">
-      <a href="#how">How to play</a>
-      <a href="#questions">FAQ</a>
+    <div>
+      <a class="brand footer-brand" href="#top" aria-label="Back to the top">
+        <span class="brand-mark" aria-hidden="true">✦</span>
+        <span>Constellore</span>
+      </a>
+      <p>A cosmic word puzzle by Oxyfel Games.</p>
+    </div>
+    <nav aria-label="Footer links">
       <a href="privacy.html">Privacy</a>
-      <a href="terms.html">Beta terms</a>
-      <a href="support.html">Support</a>
+      <a href="terms.html">Terms</a>
+      <a href="support.html">Help</a>
       <a href="https://github.com/YOxyfel/constellore" target="_blank" rel="noopener noreferrer">GitHub</a>
     </nav>
-    <p>© 2026 Oxyfel Games. Made by Yane Zhekov in Bulgaria.</p>
-    <div class="footer-meta"><span>FREE BETA</span><span>BUILD <b id="siteBuildVersion">3.0.0-beta.1</b></span></div>
+    <p>© 2026 Oxyfel Games · Beta <b id="siteBuildVersion">3.3.0-beta.1</b></p>
   </footer>
 </body>
 </html>

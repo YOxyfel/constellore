@@ -4,6 +4,7 @@ import test from "node:test";
 
 const app = await readFile(new URL("../public/app.js", import.meta.url), "utf8");
 const styles = await readFile(new URL("../public/styles.css", import.meta.url), "utf8");
+const simpleStyles = await readFile(new URL("../public/simple-ui.css", import.meta.url), "utf8");
 const page = await readFile(new URL("../public/index.html", import.meta.url), "utf8");
 const releaseVersion = JSON.parse(await readFile(new URL("../package.json", import.meta.url), "utf8")).version;
 
@@ -29,6 +30,29 @@ test("tray drops share an immediate-combine path on mouse and touch", () => {
   assert.match(styles, /[.]tray-drag-ghost\s*\{/);
 });
 
+test("word surfaces expose bounded category and source hooks for atlas styling", () => {
+  const visualStart = app.indexOf("function visualWordToken");
+  const visualEnd = app.indexOf("function recentInventoryWords", visualStart);
+  const visual = app.slice(visualStart, visualEnd);
+  assert.ok(visual.includes('return /^[a-z][a-z0-9-]{0,31}$/.test(token) ? token : "unknown";'));
+  assert.ok(visual.includes('["force", "nature", "life", "structure", "celestial"].includes(category) ? category : "unknown"'));
+  const inventoryStart = app.indexOf("function renderInventory");
+  const inventoryEnd = app.indexOf("function renderBoard", inventoryStart);
+  const inventory = app.slice(inventoryStart, inventoryEnd);
+  assert.match(inventory, /button[.]dataset[.]category = visualWordCategory\(item[.]category\)/);
+  assert.match(inventory, /button[.]dataset[.]source = visualWordToken\(item[.]source\)/);
+  const boardStart = app.indexOf("function syncBoardNodeElement");
+  const boardEnd = app.indexOf("function createBoardNode", boardStart);
+  const board = app.slice(boardStart, boardEnd);
+  assert.match(board, /button[.]dataset[.]category = visualWordCategory\(node[.]item[.]category\)/);
+  assert.match(board, /button[.]dataset[.]source = visualWordToken\(node[.]item[.]source\)/);
+  const trayStart = app.indexOf("function startTrayPointerDrag");
+  const trayEnd = app.indexOf("function addNode", trayStart);
+  const tray = app.slice(trayStart, trayEnd);
+  assert.match(tray, /ghost[.]dataset[.]category = visualWordCategory\(item[.]category\)/);
+  assert.match(tray, /ghost[.]dataset[.]source = visualWordToken\(item[.]source\)/);
+});
+
 test("mobile training reserves playable board space in portrait and short landscape", () => {
   assert.match(app, /const safeTop = guideRect/);
   assert.match(app, /top: safeTop/);
@@ -49,12 +73,27 @@ test("tap chains are discoverable, cancellable, and work from the inventory", ()
   assert.match(app, /cancelTapChain\(\{ announce: true \}\)/);
 });
 
-test("board clearing is undoable and orbit tidying is score-neutral", () => {
-  assert.match(page, /id="tidyBoard"/);
+test("Undo, Redo, Tidy, and Clear stay in a visible quick board toolbar", () => {
+  const tools = page.match(/<nav\b(?=[^>]*\bid="boardQuickTools")[^>]*>[\s\S]*?<\/nav>/i)?.[0] || "";
+  assert.match(tools, /class="board-quick-tools"/);
+  assert.doesNotMatch(tools.match(/<nav\b[^>]*>/i)?.[0] || "", /\bhidden\b/i);
+  for (const [id, label] of [["undoBoardAction", "Undo"], ["redoBoardAction", "Redo"], ["tidyBoard", "Tidy"], ["resetBoard", "Clear"]]) {
+    assert.match(tools, new RegExp(`id="${id}"[\\s\\S]*?<b>${label}<\\/b>`), `${label} must be in the quick toolbar`);
+  }
+  const pause = page.match(/<dialog\b(?=[^>]*\bid="pauseDialog")[^>]*>[\s\S]*?<\/dialog>/i)?.[0] || "";
+  for (const id of ["undoBoardAction", "redoBoardAction", "tidyBoard", "resetBoard"]) {
+    assert.doesNotMatch(pause, new RegExp(`id="${id}"`), `${id} must not be buried in the pause menu`);
+  }
+  assert.match(app, /const MAX_BOARD_HISTORY = 30/);
+  assert.match(app, /function undoBoardEdit\([\s\S]*boardHistory[.]past[.]pop\(\)[\s\S]*boardHistory[.]future[.]push/);
+  assert.match(app, /function redoBoardEdit\([\s\S]*boardHistory[.]future[.]pop\(\)[\s\S]*boardHistory[.]past[.]push/);
+  assert.match(app, /els[.]undoBoardAction[.]disabled = boardLocked \|\| !boardHistory[.]past[.]length/);
+  assert.match(app, /els[.]redoBoardAction[.]disabled = boardLocked \|\| !boardHistory[.]future[.]length/);
   assert.match(page, /id="undoBoardClear"/);
-  assert.match(app, /clearUndoTimer = setTimeout\(dismissClearUndo, 6000\)/);
-  assert.match(app, /function undoBoardClear\(/);
+  assert.match(app, /boardUndoTimer = setTimeout\(dismissClearUndo, 6000\)/);
+  assert.match(app, /function undoBoardClear\([\s\S]*undoBoardEdit\(\)/);
   assert.match(app, /const packed = packOrbit\(/);
+  assert.match(app, /commitBoardEdit\(before, "tidy words"\)/);
   assert.match(app, /Orbit tidied · score unchanged/);
 });
 
@@ -100,48 +139,49 @@ test("Star Compass preserves its visible Open penalty on an ambiguous network re
   assert.match(app, /[$]\("#buySense"\)[.]disabled = state[.]powerups[.]busy/);
 });
 
-test("Cosmic Powerups clearly present the graded assistance ladder", () => {
+test("Help presents three plain choices with their exact scoring effects", () => {
   const dialog = page.match(/<dialog\b(?=[^>]*\bid="senseDialog")[^>]*>[\s\S]*?<\/dialog>/i)?.[0] || "";
   assert.match(dialog, /id="powerupsIntro"/);
   for (const id of ["useQuickTip", "quickTipMessage", "useWordGift", "wordGiftMessage", "useSense", "senseMessage"]) {
     assert.match(dialog, new RegExp(`id="${id}"`));
   }
-  assert.match(dialog, /ROUTE SIGNAL[\s\S]*SCORE SAFE/);
-  assert.match(dialog, /WORD GIFT[\s\S]*OPEN · 50% SCORE/);
-  assert.match(dialog, /STAR COMPASS[\s\S]*OPEN · 75% SCORE/);
-  assert.equal((dialog.match(/<h3>/g) || []).length, 3, "each powerup is a navigable dialog heading");
-  assert.match(dialog, /Automatic Reveal is the only full Study option at 0 score/);
+  assert.match(dialog, /Need help[?]/);
+  assert.match(dialog, /Hint[\s\S]*Your points stay the same/);
+  assert.match(dialog, /Add a helpful word[\s\S]*You keep half your points/);
+  assert.match(dialog, /Show the answer[\s\S]*You get no points/);
+  assert.ok(dialog.indexOf('id="useQuickTip"') < dialog.indexOf('id="useWordGift"'));
+  assert.ok(dialog.indexOf('id="useWordGift"') < dialog.indexOf('id="revealPathButton"'));
+  assert.match(dialog, /class="simple-hidden"[^>]*aria-hidden="true"[\s\S]*id="useSense"/, "legacy advanced help stays out of the primary choice list");
   assert.match(app, /async function useQuickTip\([\s\S]*fetchJson\("\/api\/run\/tip"[\s\S]*tipIndex/);
   assert.match(app, /state[.]powerups[.]tipsUsed = clamp\(Number\(tip[.]used\)/);
   assert.match(app, /tipsUsed: clamp\(Number\(state[.]powerups[.]tipsUsed\)/, "Quick Tip use survives interrupted-run restore");
-  assert.match(styles, /[.]powerup-action, [.]powerup-buy\s*\{[^}]*min-height:\s*48px/);
-  assert.match(styles, /[.]powerup-message\s*\{[^}]*font-size:\s*15px/);
-  assert.match(styles, /[.]powerups-modal\s*\{[^}]*height:\s*100dvh/);
-  assert.match(styles, /@media \(max-width: 700px\)[\s\S]*[.]powerup-grid\s*\{\s*grid-template-columns:\s*1fr/);
+  assert.match(simpleStyles, /[.]powerup-action,[\s\S]*?[.]powerup-buy,[\s\S]*?\)\s*\{[^}]*min-height:\s*52px/);
+  assert.match(simpleStyles, /[.]powerup-message\s*\{[^}]*font-size:\s*16px/);
+  assert.match(simpleStyles, /@media \(max-width:\s*520px\)[\s\S]*[.]sense-modal/);
 });
 
-test("board powerup shortcuts stay synchronized, safe, and touch accessible", () => {
-  const tools = page.match(/<div\b(?=[^>]*\bclass="board-tools")[^>]*>[\s\S]*?<\/div>\s*<button class="rival-ghost"/i)?.[0] || "";
+test("the board shows one Help action while advanced shortcuts stay hidden and safe", () => {
+  const hudStart = page.indexOf('<div class="game-hud">');
+  const tools = page.slice(hudStart, page.indexOf("</header>", hudStart));
   assert.match(tools, /class="powerup-shortcuts"[^>]*role="group"/);
   for (const id of ["senseButton", "quickTipShortcut", "wordGiftShortcut", "senseShortcut", "powerupShopShortcut"]) {
     assert.match(tools, new RegExp(`id="${id}"`));
   }
-  assert.match(tools, /id="powerupShopShortcut"[\s\S]*Buy more Star Compass charges/);
+  assert.match(tools, /id="senseButton"[^>]*aria-label="Open help"[\s\S]*<b>Help<\/b>/);
+  for (const id of ["quickTipShortcut", "wordGiftShortcut", "senseShortcut", "powerupShopShortcut"]) {
+    assert.match(tools, new RegExp(`id="${id}"[^>]*\\shidden(?:\\s|>)`), `${id} must not compete with Help`);
+  }
   assert.match(app, /quickTipShortcutCount[.]textContent = String\(tipsRemaining\)/);
   assert.match(app, /wordGiftShortcutCount[.]textContent = armedKind === "gift"/);
   assert.match(app, /senseShortcutCount[.]textContent = armedKind === "sense"/);
   assert.match(app, /function activateOpenPowerupShortcut\(kind, action\)[\s\S]*activeArmedPowerup\(\) === kind[\s\S]*keeps [^`]+ score in Open/);
-  assert.match(app, /if \(!els[.]senseDialog[.]open\) showAlchemy\(`ROUTE SIGNAL/);
+  assert.match(app, /if \(!els[.]senseDialog[.]open\) showAlchemy\(`HINT/);
   assert.match(app, /function openPowerupShop\(\)[\s\S]*scrollIntoView[\s\S]*focus\(\{ preventScroll: true \}\)/);
   assert.match(app, /function buySenseCharge\(\)[\s\S]*saveProfile\(\{ fields: \["progression"\] \}\);[\s\S]*renderProfile\(\)/);
   assert.match(app, /wordGiftShortcut[.]addEventListener\("click", useWordGiftShortcut\)/);
   assert.match(app, /senseShortcut[.]addEventListener\("click", useSenseShortcut\)/);
-  assert.match(styles, /[.]sense-tool em\s*\{[^}]*min-width:\s*max-content[^}]*white-space:\s*nowrap/);
-  assert.match(styles, /[.]board-tools [.]quick-power-button, [.]board-tools [.]powerup-shop-shortcut\s*\{[^}]*width:\s*44px[^}]*min-height:\s*44px/);
-  assert.match(styles, /@media \(max-width: 780px\)[\s\S]*[.]run-milestone\s*\{\s*display:\s*none/);
-  assert.match(styles, /@media \(max-width: 359px\)[\s\S]*grid-template-rows:\s*44px 44px/);
-  assert.match(styles, /@media \(max-width: 700px\) and \(max-height: 500px\) and \(min-width: 520px\)[\s\S]*[.]board-tools\s*\{[^}]*width:\s*244px[^}]*grid-template-rows:\s*44px 44px/);
-  assert.match(styles, /@media \(max-width: 700px\)\s*\{\s*[.]game-screen[.]first-ranked-orbit [.]board-tools [.]sense-tool\s*\{[^}]*width:\s*112px[^}]*min-width:\s*112px/, "the first ranked orbit's Powers KIT pill stays inside a mobile board");
+  assert.match(simpleStyles, /[.]game-hud #senseButton\s*\{[^}]*min-height:\s*50px/);
+  assert.match(simpleStyles, /[.]game-hud [.]powerup-shortcuts > :not\(#senseButton\)\s*\{[^}]*display:\s*none !important/, "shortcut widgets stay visually removed");
 });
 
 test("Word Gift is one-use, server-selected, durable, and commits its Open penalty before its request", () => {
@@ -153,7 +193,7 @@ test("Word Gift is one-use, server-selected, durable, and commits its Open penal
   assert.ok(localPenalty >= 0 && localPenalty < request, "Open status commits before the Gift request");
   assert.match(giftSource, /body: JSON[.]stringify\(\{ runId, runToken: priorRun[.]token \}\)/);
   assert.match(giftSource, /state[.]powerups[.]giftUsed = true/);
-  assert.match(giftSource, /retry to recover the same bridge/);
+  assert.match(giftSource, /Try again to add the same word/);
   assert.match(giftSource, /if \(!els[.]senseDialog[.]open\) showToast/);
   assert.match(giftSource, /error[.]code === "gift_unavailable"[)] state[.]powerups[.]giftUnavailable = true/);
   assert.match(app, /giftUsed: Boolean\(state[.]powerups[.]giftUsed\)/);
@@ -245,7 +285,7 @@ test("the home screen explains the loop, presents one next action, and groups ev
   assert.match(page, /<button\b(?=[^>]*id="primaryOrbitButton")(?=[^>]*class="[^"]*primary-orbit-button)/);
   assert.equal((page.match(/\bid="primaryOrbitButton"/g) || []).length, 1);
   assert.match(page, /id="primaryOrbitSecondary"/);
-  assert.match(page, /Combine two words to make a new one[.] Keep discovering until you create the target word[.]/);
+  assert.match(page, /Combine two words to make a new word[.] Keep going until you make the target[.]/);
   assert.match(page, /aria-label="Example: Earth plus Water makes Mud"/);
   assert.match(page, /<details\b(?=[^>]*id="modePicker")(?=[^>]*data-progressive="secondary")/);
   assert.match(page, /<details\b(?=[^>]*id="adventuresHub")(?=[^>]*data-progressive="adventure")/);
@@ -264,6 +304,20 @@ test("the home screen explains the loop, presents one next action, and groups ev
   assert.match(styles, /body[.]first-session \[data-progressive="secondary"\]/);
   assert.match(styles, /body:not\([.]adventures-ready\) \[data-progressive="adventure"\]/);
   assert.match(styles, /[.]primary-orbit-button\s*\{[^}]*min-height:\s*60px/);
+});
+
+test("menus keep readable cards and separate next, replay, and main-menu actions", () => {
+  const hubDialog = page.match(/<dialog\b(?=[^>]*id="hubMenuDialog")[\s\S]*?<\/dialog>/)?.[0] || "";
+  const resultDialog = page.match(/<dialog\b(?=[^>]*id="resultDialog")[\s\S]*?<\/dialog>/)?.[0] || "";
+  assert.match(hubDialog, /id="hubMenuTitle">Menu</);
+  assert.match(simpleStyles, /[.]simple-ui [.]hub-menu-grid > [.]hub-menu-action\s*\{[^}]*display:\s*grid[^}]*grid-template-columns:\s*42px minmax\(0,\s*1fr\) 18px/);
+  assert.match(simpleStyles, /@media \(max-width:\s*760px\)[\s\S]*[.]simple-ui [.]hub-menu-grid\s*\{[^}]*grid-template-columns:\s*1fr/);
+  for (const id of ["resultRetry", "resultReplay", "resultPrimary"]) assert.match(resultDialog, new RegExp(`id="${id}"`));
+  assert.match(resultDialog, /id="resultNextOptions"[\s\S]*Next challenge starts with[\s\S]*data-start-style="auto"/);
+  assert.match(app, /async function replayFinishedChallenge\([\s\S]*fetchJson\("\/api\/run\/replay"[\s\S]*runId:\s*state[.]run[.]id[\s\S]*startWithGame\(payload[.]game, payload[.]run\)/);
+  assert.match(app, /resultReplay["']\)[.]addEventListener\("click", replayFinishedChallenge\)/);
+  assert.match(app, /async function submitRankedScore\([\s\S]*resultCanReplayTarget = adaptiveSeriesEligible\(\)[\s\S]*els[.]resultReplay[.]hidden = !resultCanReplayTarget[\s\S]*resultNextOptions/);
+  assert.match(simpleStyles, /@media \(max-height:\s*520px\) and \(min-width:\s*521px\)[\s\S]*[.]result-actions\s*\{[^}]*grid-template-columns:\s*repeat\(auto-fit,\s*minmax\(170px,\s*1fr\)\)/);
 });
 
 test("seeing or skipping training never unlocks the full home shell by itself", () => {
@@ -301,7 +355,7 @@ test("local diagnostics are bounded aggregates and players can export or reset t
 });
 
 test("returning home preserves the post-win recovery decision without leaking it into pointer cleanup", () => {
-  const returnHome = app.slice(app.indexOf("function returnHome()"), app.indexOf("async function beginPrimaryOrbit"));
+  const returnHome = app.slice(app.indexOf("function returnHome("), app.indexOf("async function beginPrimaryOrbit"));
   const pointerCleanup = app.slice(app.indexOf("function cancelActivePointerGestures()"), app.indexOf("function pointInsideBoard"));
   assert.match(returnHome, /const showRecoveryAfterExit = Boolean\(state[.]finished && state[.]recoveryKit[?][.]code && profile[.]wins > 0\)/);
   assert.match(returnHome, /if \(showRecoveryAfterExit\) showRecoveryKit\(\)/);
@@ -319,16 +373,20 @@ test("Dev Logs exposes the complete accessible, readable, responsive update hist
   assert.match(dialog.match(/<dialog\b[^>]*>/i)?.[0] || "", /\baria-labelledby="updatesTitle"/i);
   assert.match(dialog, /id="updatesTitle"/i);
   assert.match(dialog, /data-close="updatesDialog"/i);
-  assert.equal((dialog.match(/\bdata-update-entry(?:=|\s|>)/gi) || []).length, 7, "the 3.0 log has exactly seven updates");
-  for (const label of ["Release", "Ctrl", "Shift", "Route Signals", "Living Atlas", "Signature Constellations", "Path Becomes the Game"]) assert.match(dialog, new RegExp(`\\b${label}\\b`, "i"));
-  assert.match(dialog, /7 ENTRIES/i);
+  assert.equal((dialog.match(/\bdata-update-entry(?:=|\s|>)/gi) || []).length, 10, "the 3.3 log retains all ten updates");
+  for (const label of ["Release", "Ctrl", "Shift", "Route Signals", "Living Atlas", "Signature Constellations", "Path Becomes the Game", "Clearer Play, Better Answers", "A Journey That Learns How You Play", "One Play, a Growing Universe"]) assert.match(dialog, new RegExp(`\\b${label}\\b`, "i"));
+  assert.match(dialog, /10 UPDATES/i);
   assert.equal((dialog.match(/\bis-latest\b/gi) || []).length, 1, "the log has exactly one latest entry");
   assert.equal((dialog.match(/>LATEST</gi) || []).length, 1, "the log has exactly one latest badge");
   const latest = dialog.match(/<li\b(?=[^>]*\bis-latest\b)[^>]*>[\s\S]*?<\/li>/i)?.[0] || "";
   assert.ok(latest, "the log identifies its latest entry");
   assert.ok(latest.toUpperCase().includes(`VERSION ${releaseVersion.toUpperCase()}`));
-  assert.match(latest, /Pages and itch are deterministic local practice without live rankings, accounts, or AI/i);
-  assert.match(latest, /Beta progress may reset/i);
+  assert.match(latest, /main Play button/i);
+  assert.match(latest, /Twelve permanent Route Ranks/i);
+  assert.match(latest, /Six board skies/i);
+  assert.match(latest, /do not enter shared leaderboards/i);
+  assert.match(dialog, /Pages and itch are deterministic local practice without live rankings, accounts, or AI/i);
+  assert.match(dialog, /Beta progress may reset/i);
 
   assert.match(app, /[$]\(["']#updatesButton["']\)[.]addEventListener\(["']click["']/);
   assert.match(app, /(?:[$]\(["']#updatesDialog["']\)|els[.]updatesDialog)[\s\S]{0,160}?[.]showModal\(\)/);
@@ -358,7 +416,7 @@ test("mode selection opens an accessible mission briefing before creating a run"
   assert.match(app, /beginCustomTarget[\s\S]*requestMissionPreview\(request\)[\s\S]*openMissionBriefing\(preview[.]game, preview[.]request/);
   assert.match(app, /skipBriefing:\s*true/);
   assert.match(app, /acknowledgeRecoveryKit\(\)[\s\S]*state[.]pendingMission[\s\S]*presentMissionBriefing/);
-  assert.match(page, /id="primaryOrbitDescription"[^>]*>Your target is Wall[.][\s\S]*id="primaryOrbitMeta">TARGET: WALL · GUIDED · NO SCORE/);
+  assert.match(page, /id="primaryOrbitDescription"[^>]*>Your first target is Wall[.] We will show you how to play[.][\s\S]*id="primaryOrbitMeta">Wall/);
   assert.match(styles, /[.]mission-briefing-modal\[open\]\s*\{[^}]*display:\s*flex[^}]*overflow:\s*hidden/);
   assert.match(styles, /[.]mission-scroll\s*\{[^}]*overflow-y:\s*auto/);
   assert.match(styles, /[.]mission-target-lockup h2\s*\{[^}]*overflow-wrap:\s*anywhere/);
@@ -421,7 +479,7 @@ test("Cosmos Scout renders a spoiler-safe encrypted progress window", () => {
 test("automatic placement and Tidy avoid visible board HUD overlays", () => {
   assert.match(app, /function visibleBoardOverlayRectangles\(/);
   assert.match(app, /rectangle[?][.]left \?\? rectangle[?][.]x/);
-  assert.match(app, /els[.]rivalGhost, els[.]ghostPreview, document[.]querySelector\("[.]board-tools"\)/);
+  assert.match(app, /els[.]rivalGhost, els[.]ghostPreview, document[.]querySelector\("[.]board-quick-tools"\)/);
   assert.match(app, /packOrbitAroundOverlays\(measured, packBounds, visibleBoardOverlayRectangles\(boardRect\)\)/);
   assert.match(app, /concat\(visibleBoardOverlayRectangles\(rect\)\)/);
   assert.match(app, /findOpenSpawn\(preferred, item, \[[.][.][.]blockers, [.][.][.]placed\]/);

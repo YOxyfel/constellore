@@ -89,5 +89,5 @@ test("completed Voyage replays only advertise continuation when progress advance
   assert.ok(finish.includes("let voyageProgressAdvanced = false"));
   assert.ok(finish.includes("if (advanced.advanced)"));
   assert.ok(finish.includes("voyageProgressAdvanced = true"));
-  assert.ok(finish.includes('state.journeyContext?.kind === "voyage" && voyageProgressAdvanced ? "Continue Voyage"'));
+  assert.ok(finish.includes('state.journeyContext?.kind === "voyage" && voyageProgressAdvanced ? "Continue story"'));
 });

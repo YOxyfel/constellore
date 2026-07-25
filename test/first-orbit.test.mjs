@@ -12,6 +12,7 @@ import {
 const app = await readFile(new URL("../public/app.js", import.meta.url), "utf8");
 const page = await readFile(new URL("../public/index.html", import.meta.url), "utf8");
 const styles = await readFile(new URL("../public/styles.css", import.meta.url), "utf8");
+const simpleStyles = await readFile(new URL("../public/simple-ui.css", import.meta.url), "utf8");
 
 test("the First Orbit is a fixed three-combination logical route", () => {
   assert.deepEqual(FIRST_ORBIT_ROUTE.map(({ a, b, word }) => ({ a, b, word })), [
@@ -57,7 +58,7 @@ test("training resolver accepts either pair order and only the current recipe", 
 
   const history = [{ a: "Earth", b: "Water", word: "Mud" }];
   assert.equal(resolveFirstOrbitCombination("Fire", "Mud", history).word, "Brick");
-  assert.match(firstOrbitWrongPairMessage(history), /Mud with Fire/);
+  assert.match(firstOrbitWrongPairMessage(history), /Mud and Fire/);
 });
 
 test("revealed routes cannot complete tutorial progress", () => {
@@ -75,8 +76,8 @@ test("training UI is accessible, skippable, and replayable from Profile", () => 
   assert.match(page, /id="firstOrbitInstruction" aria-live="polite"/);
   assert.match(page, /id="skipFirstOrbit"/);
   assert.match(page, /id="replayFirstOrbit"/);
-  assert.match(page, /TRAINING ORBIT &middot; 0 SCORE/);
-  assert.match(styles, /[.]first-orbit-guide p[^}]+font-size:\s*15px/);
+  assert.match(page, /LEARN TO PLAY/);
+  assert.match(simpleStyles, /[.]first-orbit-guide p\s*\{[^}]*font-size:\s*18px/);
 });
 
 test("training combinations remain local, deterministic, and reward-ineligible", () => {

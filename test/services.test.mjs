@@ -219,6 +219,34 @@ test("server runs reject impossible inputs and only complete through combination
   assert.equal(entry.moves, 1);
 });
 
+test("rejected guesses never spend the limited-moves budget", async () => {
+  const store = await new GameStore(":memory:").init();
+  const player = await store.registerPlayer();
+  const runs = new RunRegistry(store);
+  const game = {
+    mode: "moves",
+    target: "House",
+    tier: 1,
+    moveLimit: 2,
+    starters: ["Earth", "Water", "Fire", "Air"]
+  };
+  const { run } = runs.start(player.id, game, { ranked: true, challengeId: "moves:rejections-are-free" });
+
+  runs.recordRejectedAttempt(run, { a: "Earth", b: "Fire" });
+  runs.recordRejectedAttempt(run, { a: "Water", b: "Air" });
+  assert.equal(run.attempts, 2);
+  assert.equal(run.rejectedAttempts, 2);
+  assert.equal(run.moves, 0);
+  assert.doesNotThrow(() => runs.canCombine(run, "Earth", "Water"), "failed guesses must not exhaust the move limit");
+
+  runs.recordCombination(run, { word: "Mud", emoji: "🟤", source: "world" }, { a: "Earth", b: "Water" });
+  assert.doesNotThrow(() => runs.canCombine(run, "Mud", "Fire"));
+
+  runs.recordCombination(run, { word: "Brick", emoji: "🧱", source: "world" }, { a: "Mud", b: "Fire" });
+  assert.equal(run.moves, 2);
+  assert.throws(() => runs.canCombine(run, "Earth", "Water"), (error) => error.serviceCode === "move_limit");
+});
+
 test("server runs retain a canonical restore ledger and the exact Reality Bend", async () => {
   const store = await new GameStore(":memory:").init();
   const player = await store.registerPlayer();

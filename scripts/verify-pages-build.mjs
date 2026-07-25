@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readdir, readFile, stat } from "node:fs/promises";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { validatePublicFeedbackApiUrl } from "./public-feedback-config.mjs";
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const output = join(root, "dist-pages");
@@ -12,10 +13,12 @@ const rootHtml = await readFile(join(output, "index.html"), "utf8");
 const websiteApp = await readFile(join(output, "website.js"), "utf8");
 const gameHtml = await readFile(join(output, "play", "index.html"), "utf8");
 const gameApp = await readFile(join(output, "play", "app.js"), "utf8");
+const gameLocalBeta = await readFile(join(output, "play", "local-beta.mjs"), "utf8");
 const gameServiceWorker = await readFile(join(output, "play", "service-worker.js"), "utf8");
 const gameManifest = JSON.parse(await readFile(join(output, "play", "manifest.webmanifest"), "utf8"));
 const rootRelease = JSON.parse(await readFile(join(output, "release.json"), "utf8"));
 const gameRelease = JSON.parse(await readFile(join(output, "play", "release.json"), "utf8"));
+const expectedFeedbackApiUrl = validatePublicFeedbackApiUrl(process.env.PUBLIC_FEEDBACK_API_URL);
 
 function bodyDataAttribute(document, name) {
   const body = document.match(/<body\b[^>]*>/i)?.[0] || "";
@@ -60,8 +63,8 @@ function imageDimensions(buffer, file) {
 
 assert.match(rootHtml, /data-beta-url="https:\/\/[^\"]+\/play\/"/);
 assert.match(rootHtml, /Practice progress stays on this device/i);
-assert.match(rootHtml, /destination-based word puzzle/i);
-for (const promise of ["You know the word", "See your target", "Combine ideas", "Reach the word", "Word crafting[\\s\\S]{0,80}with a purpose"]) {
+assert.match(rootHtml, /free word-combination game/i);
+for (const promise of ["Every game gives you one word", "See your target", "Combine ideas", "Reach the word", "Word crafting[\\s\\S]{0,80}with a purpose"]) {
   assert.match(rootHtml, new RegExp(promise, "i"), `The landing page is missing its ${promise} promise.`);
 }
 assert.equal((rootHtml.match(/class="step reveal"/g) || []).length, 3, "The landing page must explain the loop in exactly three steps.");
@@ -96,6 +99,11 @@ if (itchUrl) {
   assert.ok(parsedItchUrl.hostname === "itch.io" || parsedItchUrl.hostname.endsWith(".itch.io"), "The itch CTA must stay on itch.io.");
 }
 assert.match(gameHtml, /data-runtime="local-practice"/);
+assert.equal(
+  bodyDataAttribute(gameHtml, "data-feedback-api"),
+  expectedFeedbackApiUrl,
+  "The Pages artifact must contain the exact validated PUBLIC_FEEDBACK_API_URL used for this release."
+);
 assert.match(gameHtml, /One visual replay is available\./);
 assert.match(gameApp, /async function replayRevealPathOnce\(\)/);
 assert.match(gameApp, /await playRevealPath\(route, \{ replay: true \}\)/);
@@ -104,10 +112,11 @@ for (const expected of [
   'href="./manifest.webmanifest"',
   'rel="apple-touch-icon" href="./icon-192.png"',
   `href="./styles.css?v=${releaseVersion}"`,
+  `href="./simple-ui.css?v=${releaseVersion}"`,
   `src="./app.js?v=${releaseVersion}"`
 ]) assert.ok(gameHtml.includes(expected), `Missing ${expected} from the Pages game document.`);
 assert.equal(bodyDataAttribute(gameHtml, "data-build-version"), releaseVersion);
-for (const forbidden of ['href="/manifest', 'href="/styles', 'href="/icon', 'src="/app']) {
+for (const forbidden of ['href="/manifest', 'href="/styles', 'href="/simple-ui', 'href="/icon', 'src="/app']) {
   assert.ok(!gameHtml.includes(forbidden), `Root-absolute game path remains: ${forbidden}`);
 }
 
@@ -119,22 +128,37 @@ const updatesDialog = gameHtml.match(/<dialog\b(?=[^>]*\bid="updatesDialog")[^>]
 assert.ok(updatesDialog, "The Pages game is missing the updates dialog.");
 const updateEntryCount = (updatesDialog.match(/\bdata-update-entry(?:=|\s|>)/gi) || []).length;
 assert.ok(updateEntryCount >= 6, "The Pages updates dialog must retain the complete release history.");
-for (const label of ["Release", "Ctrl", "Shift", "Route Signals", "Living Atlas", "Signature Constellations"]) {
+for (const label of ["Release", "Ctrl", "Shift", "Route Signals", "Living Atlas", "Signature Constellations", "Clearer Play, Better Answers", "A Journey That Learns How You Play", "One Play, a Growing Universe"]) {
   assert.match(updatesDialog, new RegExp(`\\b${label}\\b`, "i"), `The Pages updates dialog is missing the ${label} entry.`);
 }
-const declaredUpdateCount = Number(updatesDialog.match(/TRANSMISSION ARCHIVE\s*\u00b7\s*(\d+) ENTRIES/i)?.[1]);
+const declaredUpdateCount = Number(updatesDialog.match(/(\d+)\s+UPDATES/i)?.[1]);
 assert.equal(declaredUpdateCount, updateEntryCount, "The Pages updates dialog entry count is stale.");
 assert.equal((updatesDialog.match(/\bis-latest\b/gi) || []).length, 1, "The Pages updates dialog must have exactly one latest entry.");
 assert.equal((updatesDialog.match(/>LATEST</gi) || []).length, 1, "The Pages updates dialog must have exactly one latest badge.");
 const latestUpdate = updatesDialog.match(/<li\b(?=[^>]*\bis-latest\b)[^>]*>[\s\S]*?<\/li>/i)?.[0] || "";
 assert.ok(latestUpdate, "The Pages updates dialog must identify its latest entry.");
 assert.match(latestUpdate, new RegExp(`VERSION ${releaseVersionPattern}`, "i"), "The latest Pages update must name the exact package version.");
-assert.match(latestUpdate, /Pages and itch are deterministic local practice without live rankings, accounts, or AI/i, "The latest Pages update must state static-host limitations.");
-assert.match(latestUpdate, /Beta progress may reset/i, "The latest Pages update must warn that beta progress can reset.");
+assert.match(latestUpdate, /main Play button/i, "The latest Pages update must describe the one-action opening.");
+assert.match(latestUpdate, /Twelve permanent Route Ranks/i, "The latest Pages update must describe rank progression.");
+assert.match(latestUpdate, /Six board skies/i, "The latest Pages update must describe evolving rank art.");
+assert.match(latestUpdate, /do not enter shared leaderboards/i, "The latest Pages update must state the adaptive fairness boundary.");
+assert.match(updatesDialog, /Pages and itch are deterministic local practice without live rankings, accounts, or AI/i, "The Pages update history must state static-host limitations.");
+assert.match(updatesDialog, /Beta progress may reset/i, "The Pages update history must warn that beta progress can reset.");
 
-for (const file of ["app.js", "home-menu.mjs", "ctrl-hover.mjs", "shift-board.mjs", "frictionless.mjs", "mission-briefing.mjs", "styles.css", "local-beta.mjs", "local-world.mjs", "cosmic-twists.mjs", "recipe-mastery.mjs", "engagement-features.mjs", "first-orbit.mjs", "second-orbit.mjs", "explore-sandbox.mjs", "universe-director.mjs", "constellation-card.mjs", "cosmetic-economy.mjs", "recipe-feedback.mjs", "pending-scores.mjs", "signature-routes.mjs", "living-atlas.mjs", "constellation-voyages.mjs", "recipe-insight.mjs", "community-results.mjs", "cosmic-events.mjs", "manifest.webmanifest", "release.json", "service-worker.js", "icon.svg", "icon-192.png", "icon-512.png", "icon-maskable-512.png"]) {
+const rankArtFiles = [
+  "tier-01-common",
+  "tier-02-dawn",
+  "tier-03-nebula",
+  "tier-04-aurora",
+  "tier-05-rift",
+  "tier-06-singularity"
+].flatMap((tier) => ["sm", "md", "lg"].map((size) => `art/ranks/${tier}-${size}.webp`));
+for (const file of ["app.js", "home-menu.mjs", "ctrl-hover.mjs", "shift-board.mjs", "frictionless.mjs", "mission-briefing.mjs", "combination-report-delivery.mjs", "route-distance.mjs", "run-iq.mjs", "adaptive-difficulty.mjs", "remix-progression.mjs", "remix-readiness.mjs", "route-remixes.mjs", "shuffled-start.mjs", "rank-board-art.mjs", "rank-board-art-runtime.mjs", "styles.css", "simple-ui.css", "local-beta.mjs", "local-world.mjs", "cosmic-twists.mjs", "recipe-mastery.mjs", "engagement-features.mjs", "first-orbit.mjs", "second-orbit.mjs", "explore-sandbox.mjs", "universe-director.mjs", "constellation-card.mjs", "cosmetic-economy.mjs", "recipe-feedback.mjs", "pending-scores.mjs", "signature-routes.mjs", "living-atlas.mjs", "constellation-voyages.mjs", "recipe-insight.mjs", "community-results.mjs", "cosmic-events.mjs", "manifest.webmanifest", "release.json", "service-worker.js", "icon.svg", "icon-192.png", "icon-512.png", "icon-maskable-512.png", "art/celestial-atlas-bg-v1.webp", ...rankArtFiles]) {
   assert.ok((await stat(join(output, "play", file))).size > 0, `${file} is missing or empty.`);
 }
+const celestialAtlasArt = await readFile(join(output, "play", "art", "celestial-atlas-bg-v1.webp"));
+assert.equal(celestialAtlasArt.subarray(0, 4).toString("ascii"), "RIFF", "The celestial atlas art is not a WebP RIFF file.");
+assert.equal(celestialAtlasArt.subarray(8, 12).toString("ascii"), "WEBP", "The celestial atlas art is not a valid WebP container.");
 for (const file of ["social-card-v3.jpg", "icon.svg"]) assert.ok((await stat(join(output, file))).size > 0, `${file} is missing from the landing artifact.`);
 for (const [file, width, height] of [["social-card-v3.jpg", 1200, 630], ["play/icon-192.png", 192, 192], ["play/icon-512.png", 512, 512], ["play/icon-maskable-512.png", 512, 512]]) {
   const dimensions = imageDimensions(await readFile(join(output, file)), file);
@@ -161,12 +185,26 @@ for (const screenshot of gameManifest.screenshots) {
   assert.equal(png.readUInt32BE(20), expectedHeight, `${screenshot.src} has the wrong height.`);
 }
 assert.match(gameServiceWorker, /cosmic-twists[.]mjs/);
+assert.match(gameServiceWorker, /art\/celestial-atlas-bg-v1[.]webp/);
+assert.match(gameServiceWorker, new RegExp(`simple-ui[.]css[?]v=${releaseVersionPattern}`));
 assert.match(gameServiceWorker, new RegExp(`home-menu[.]mjs[?]v=${releaseVersionPattern}`));
 assert.match(gameApp, new RegExp(`home-menu[.]mjs[?]v=${releaseVersionPattern}`));
 assert.match(gameServiceWorker, /ctrl-hover[.]mjs/);
 assert.match(gameServiceWorker, /shift-board[.]mjs/);
 assert.match(gameServiceWorker, /frictionless[.]mjs/);
 assert.match(gameServiceWorker, /mission-briefing[.]mjs/);
+assert.match(gameServiceWorker, /combination-report-delivery[.]mjs/);
+assert.match(gameServiceWorker, /route-distance[.]mjs/);
+assert.match(gameServiceWorker, /run-iq[.]mjs/);
+assert.match(gameServiceWorker, /adaptive-difficulty[.]mjs/);
+assert.match(gameServiceWorker, /remix-progression[.]mjs/);
+assert.match(gameServiceWorker, /remix-readiness[.]mjs/);
+assert.match(gameServiceWorker, /route-remixes[.]mjs/);
+assert.match(gameServiceWorker, /shuffled-start[.]mjs/);
+assert.match(gameServiceWorker, /rank-board-art[.]mjs/);
+assert.match(gameServiceWorker, /rank-board-art-runtime[.]mjs/);
+assert.match(gameServiceWorker, /[.]\/art\/ranks\//);
+assert.doesNotMatch(gameServiceWorker, /const SHELL = [^;]+tier-0[1-6]-/);
 assert.match(gameServiceWorker, /recipe-mastery[.]mjs/);
 assert.match(gameServiceWorker, /engagement-features[.]mjs/);
 assert.match(gameServiceWorker, /first-orbit[.]mjs/);
@@ -189,10 +227,12 @@ assert.match(gameServiceWorker, new RegExp(`CACHE_PREFIX[}]${releaseVersionPatte
 assert.match(gameServiceWorker, /response[.]ok/);
 assert.match(gameServiceWorker, /response[.]type !== "opaque"/);
 assert.doesNotMatch(gameServiceWorker, /keys[.]filter\(\(key\) => key !== CACHE\)/, "The practice worker must not delete unrelated origin caches.");
-for (const module of ["engagement-features", "recipe-mastery", "cosmetic-economy", "mission-briefing", "shift-board", "second-orbit", "explore-sandbox", "signature-routes", "living-atlas", "constellation-voyages", "recipe-insight", "community-results", "cosmic-events"]) {
+for (const module of ["engagement-features", "recipe-mastery", "cosmetic-economy", "mission-briefing", "shift-board", "second-orbit", "explore-sandbox", "signature-routes", "living-atlas", "constellation-voyages", "recipe-insight", "community-results", "cosmic-events", "adaptive-difficulty", "remix-progression"]) {
   assert.match(gameServiceWorker, new RegExp(`${module}[.]mjs[?]v=${releaseVersionPattern}`));
   assert.match(gameApp, new RegExp(`${module}[.]mjs[?]v=${releaseVersionPattern}`));
 }
+assert.match(gameServiceWorker, new RegExp(`route-remixes[.]mjs[?]v=${releaseVersionPattern}`));
+assert.match(gameLocalBeta, new RegExp(`route-remixes[.]mjs[?]v=${releaseVersionPattern}`));
 
 const playRoot = resolve(output, "play");
 const visitedModules = new Set();
@@ -227,7 +267,7 @@ assert.equal(world.lookupLocalCombination("Fire", "Fire").word, "Inferno");
 assert.equal(world.lookupLocalCombination("Species", "Air").word, "Bird");
 assert.ok(world.lookupLocalCombination("Great Wall", "Earth").word);
 assert.equal(world.lookupLocalCombination("Dragon", "Telescope"), null);
-assert.ok(world.localContentQuality.officialTargetCount >= 30);
+assert.equal(world.localContentQuality.officialTargetCount, 500);
 assert.equal(world.localContentQuality.dailyRotation.cycleLength, 90);
 assert.equal(world.localContentQuality.dailyRotation.distinctChallenges, 90);
 assert.ok(world.localContentQuality.dailyRotation.distinctTargets >= 28);
@@ -238,12 +278,16 @@ assert.ok(world.localContentQuality.outputConcentration.distinctOutputs >= 715);
 assert.ok(world.localContentQuality.outputConcentration.maximumPairsPerOutput <= 5);
 assert.equal(world.localContentQuality.routeValidity.failures.length, 0);
 assert.equal(world.localContentQuality.worldGraph.validationIssues.length, 0);
-assert.ok(world.localContentQuality.worldGraph.topology.intentionalTerminalDeadEndCount >= 190);
+assert.ok(world.localContentQuality.worldGraph.topology.intentionalEndpointCount >= 190);
+assert.ok(
+  world.localContentQuality.worldGraph.topology.intentionalTerminalDeadEndCount
+    <= world.localContentQuality.worldGraph.topology.intentionalEndpointCount
+);
 assert.ok(
   world.localContentQuality.worldGraph.topology.problematicDeadEndCount
     <= world.localContentQuality.worldGraph.topology.problematicDeadEndLimit
 );
-assert.ok(world.localContentQuality.worldGraph.targets.withMultipleFinalRecipes >= 20);
+assert.ok(world.localContentQuality.worldGraph.targets.withMultipleFinalRecipes >= 250);
 assert.equal(world.buildLocalGame("reach", 5, "Telescope").ranked, false);
 
 const workflowToken = process.env.GITHUB_TOKEN?.trim();
@@ -254,4 +298,4 @@ if (workflowToken) {
   }
 }
 
-console.log("GitHub Pages artifact verified: destination-first landing page, local game route, compact world, and subpath-safe assets.");
+console.log("GitHub Pages artifact verified: plain-language landing page, local game, compact world, and subpath-safe assets.");

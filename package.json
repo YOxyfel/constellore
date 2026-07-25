@@ -1,13 +1,14 @@
 {
   "name": "constellore",
-  "version": "3.0.0-beta.2",
-  "description": "A mobile-first, target-based word-route puzzle game.",
+  "version": "3.3.0-beta.1",
+  "description": "Combine words on a cosmic board, discover new ideas, and build a path to the target.",
   "private": true,
   "type": "module",
   "scripts": {
     "start": "node server.mjs",
     "dev": "node --watch server.mjs",
     "preview:pages": "node scripts/serve-pages-preview.mjs",
+    "operator:feedback": "node scripts/export-operator-feedback.mjs",
     "release:sync": "node scripts/sync-public-release.mjs",
     "assets:release": "node scripts/generate-release-assets.mjs",
     "build:pages": "node scripts/build-pages.mjs",

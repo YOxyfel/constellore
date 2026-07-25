@@ -5,9 +5,9 @@ const ROUTE = [
     word: "Mud",
     emoji: "🟤",
     category: "nature",
-    title: "Make your first discovery",
-    instruction: "Bring Earth and Water together to create Mud.",
-    tip: "Drag one word onto the other, or tap both words."
+    title: "Make Mud",
+    instruction: "Combine Earth and Water.",
+    tip: "Drop one word onto the other."
   },
   {
     a: "Mud",
@@ -15,9 +15,9 @@ const ROUTE = [
     word: "Brick",
     emoji: "🧱",
     category: "structure",
-    title: "Build with what you found",
-    instruction: "Combine Mud with Fire to forge Brick.",
-    tip: "New discoveries stay in your word tray and can be used again."
+    title: "Make Brick",
+    instruction: "Combine Mud and Fire.",
+    tip: "New words stay in your list."
   },
   {
     a: "Brick",
@@ -25,9 +25,9 @@ const ROUTE = [
     word: "Wall",
     emoji: "🧱",
     category: "structure",
-    title: "Use a word twice",
-    instruction: "Place Brick twice, then combine the two Bricks into Wall.",
-    tip: "Every discovered word can be summoned more than once."
+    title: "Make Wall",
+    instruction: "Place Brick twice. Combine the two Bricks.",
+    tip: "You can use every word more than once."
   }
 ];
 
@@ -81,7 +81,7 @@ export function resolveFirstOrbitCombination(a, b, history) {
     word: progress.step.word,
     emoji: progress.step.emoji,
     category: progress.step.category,
-    note: "Mapped in the First Orbit training constellation.",
+    note: "Made in the first lesson.",
     source: "training",
     completed: progress.index === progress.total - 1,
     ranked: false,
@@ -91,6 +91,6 @@ export function resolveFirstOrbitCombination(a, b, history) {
 
 export function firstOrbitWrongPairMessage(history) {
   const progress = firstOrbitProgress(history);
-  if (!progress.step) return "Your First Orbit is already complete.";
-  return `Follow the training signal: combine ${progress.step.a} with ${progress.step.b}.`;
+  if (!progress.step) return "This lesson is complete.";
+  return `Try ${progress.step.a} and ${progress.step.b}.`;
 }

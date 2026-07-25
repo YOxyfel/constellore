@@ -21,7 +21,7 @@ test("an active orbit exposes one accessible pause menu on keyboard and touch", 
   assert.match(trigger, /\btype="button"/i);
   assert.match(trigger, /\baria-haspopup="dialog"/i);
   assert.match(trigger, /\baria-controls="pauseDialog"/i);
-  assert.match(trigger, /\baria-label="[^"]*(?:pause|orbit menu)[^"]*"/i);
+  assert.match(trigger, /\baria-label="[^"]*(?:pause|game menu)[^"]*"/i);
 
   assert.ok(pauseDialog, "the pause dialog must be present");
   assert.match(pauseDialog.match(/<dialog\b[^>]*>/i)?.[0] || "", /\baria-labelledby="pauseTitle"/i);
@@ -29,6 +29,9 @@ test("an active orbit exposes one accessible pause menu on keyboard and touch", 
   assert.match(pauseDialog, /\bid="resumePausedRun"/i);
   assert.match(pauseDialog, /\bid="pauseRestart"/i);
   assert.match(pauseDialog, /\bid="pauseExit"/i);
+  for (const boardTool of ["undoBoardAction", "redoBoardAction", "tidyBoard", "resetBoard"]) {
+    assert.doesNotMatch(pauseDialog, new RegExp(`\\bid="${boardTool}"`), `${boardTool} belongs on the live board, not in Pause`);
+  }
 });
 
 test("the pause trigger remains a readable 44px mobile target", () => {
@@ -68,7 +71,7 @@ test("opening and closing the menu suspends updates without extending a ranked d
   assert.ok(stopAt >= 0 && showAt > stopAt, "the visible clock interval must stop before the menu opens");
   assert.match(open, /stopTimer\(\)/);
   assert.match(open, /showModal\(\)/);
-  assert.match(open, /resumePausedRun[^\n]*focus|querySelector\([^\n]*resumePausedRun[^\n]*focus/s, "focus must enter the modal");
+  assert.match(open, /resumePausedRun["']?\)[?]?[.]focus\(\{ preventScroll: true \}\)/s, "focus must enter the modal");
 
   const close = functionSource("closePauseMenu");
   assert.match(close, /pauseDialog[.]close\(\)/);
@@ -78,13 +81,23 @@ test("opening and closing the menu suspends updates without extending a ranked d
   const timer = functionSource("startTimer", "stopTimer");
   assert.match(timer, /run[?][.]deadlineAt[\s\S]*Date[.]parse\(state[.]run[.]deadlineAt\)/, "hosted Quick time must stay anchored to its authoritative deadline");
   assert.doesNotMatch(app, /deadlineAt\s*=|run[.]deadlineAt\s*=|startedAt\s*\+=\s*[^;]*pause/i, "opening a client menu must not manufacture extra ranked time");
-  assert.match(pauseDialog, /timed[^<]*(?:continues|keeps running)|(?:continues|keeps running)[^<]*timed/i, "the menu must disclose competitive timer behavior");
+  assert.match(pauseDialog, /timer keeps running/i, "the menu must disclose competitive timer behavior");
 });
 
 test("pause actions resume, restart the exact orbit, or exit to modes", () => {
   assert.match(app, /resumePausedRun"\)[.]addEventListener\("click", closePauseMenu\)/);
-  assert.match(app, /pauseRestart"\)[.]addEventListener\("click",[\s\S]{0,260}retryGame\(\)/);
-  assert.match(app, /pauseExit"\)[.]addEventListener\("click",[\s\S]{0,260}returnHome\(\)/);
+  const restartAction = app.slice(
+    app.indexOf(`$("#pauseRestart").addEventListener`),
+    app.indexOf(`$("#pauseExit").addEventListener`)
+  );
+  const exitAction = app.slice(
+    app.indexOf(`$("#pauseExit").addEventListener`),
+    app.indexOf("els.resetBoard.addEventListener")
+  );
+  assert.match(restartAction, /await submitRunForfeit\(priorRun, priorGame/);
+  assert.match(restartAction, /retryGame\(\)/);
+  assert.match(exitAction, /await submitRunForfeit\(priorRun, priorGame/);
+  assert.match(exitAction, /returnHome\(\{\s*skipForfeit:\s*true\s*\}\)/);
 
   const retry = functionSource("retryGame", "startTimer");
   assert.match(retry, /const mode = state[.]game[.]mode/);

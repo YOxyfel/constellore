@@ -13,6 +13,7 @@ test("profile diagnostics actions remain readable in the desktop dialog", async 
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.goto("/play/");
   await page.locator("#profileDialog").evaluate((dialog) => {
+    dialog.querySelector(".profile-more").open = true;
     dialog.querySelector(".profile-data").open = true;
     dialog.showModal();
   });

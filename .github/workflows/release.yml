@@ -40,6 +40,8 @@ jobs:
           test -z "$(git status --porcelain)"
       - run: npm run check
       - run: npm run build:release
+        env:
+          PUBLIC_FEEDBACK_API_URL: ${{ vars.PUBLIC_FEEDBACK_API_URL }}
       - name: Install browser release gate
         run: npx playwright install --with-deps chromium
       - name: Smoke-test the packaged web artifact

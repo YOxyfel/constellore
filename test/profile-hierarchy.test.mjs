@@ -8,9 +8,11 @@ const app = readFileSync(new URL("../public/app.js", import.meta.url), "utf8");
 const profile = page.slice(page.indexOf('<dialog id="profileDialog"'), page.indexOf('<dialog id="recoveryDialog"'));
 
 test("the player profile leads with a compact overview and progressively reveals secondary tools", () => {
-  assert.match(profile, /YOUR CONSTELLATION/);
+  assert.match(profile, /<h2 id="profileRankTitle">Your progress<\/h2>/);
   assert.doesNotMatch(profile, /YOUR LIVING ATLAS/);
-  assert.match(profile, /class="profile-overview"[\s\S]*id="profileTotalDust"[\s\S]*id="profileWords"[\s\S]*id="profileWins"[\s\S]*id="profileStreak"/);
+  assert.match(profile, /class="profile-total simple-hidden"[\s\S]*id="profileTotalDust"/);
+  assert.match(profile, /class="profile-overview"[\s\S]*id="profileWords"[\s\S]*id="profileWins"[\s\S]*id="profileStreak"/);
+  assert.match(profile, /<details class="profile-more">\s*<summary>More<\/summary>/);
 
   for (const className of ["profile-archive", "profile-badges", "profile-account", "profile-preferences", "profile-data"]) {
     assert.match(profile, new RegExp(`<details class="[^"]*${className}[^"]*"`));

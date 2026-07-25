@@ -29,7 +29,7 @@ test("each featured target has a recipe", () => {
 
 test("at least 30 official targets span five reachable difficulty bands", () => {
   const targets = officialTargetCatalog();
-  assert.ok(targets.length >= 30);
+  assert.equal(targets.length, 500);
   assert.deepEqual([...new Set(targets.map((entry) => entry.tier))].sort(), [1, 2, 3, 4, 5]);
   const known = reachableFromStarters();
   for (const { target } of targets) assert.ok(known.has(target.toLowerCase()), `${target} should be reachable`);

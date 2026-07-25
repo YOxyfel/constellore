@@ -2,10 +2,12 @@ import assert from "node:assert/strict";
 import { readFile, stat } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { validatePublicFeedbackApiUrl } from "./public-feedback-config.mjs";
 import { createDeterministicZip, readZip, sha256 } from "./release-archive.mjs";
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const packageMetadata = JSON.parse(await readFile(join(root, "package.json"), "utf8"));
+const expectedFeedbackApiUrl = validatePublicFeedbackApiUrl(process.env.PUBLIC_FEEDBACK_API_URL);
 const releaseVersionPattern = packageMetadata.version.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 const artifactName = `constellore-html5-v${packageMetadata.version}.zip`;
 const artifactPath = process.argv[2] ? join(process.cwd(), process.argv[2]) : join(root, "dist-itch", artifactName);
@@ -18,11 +20,22 @@ assert.equal(sidecar, `${sha256(archive)}  ${artifactName}\n`, "The artifact che
 const entries = readZip(archive);
 assert.deepEqual(archive, createDeterministicZip(entries), "The itch package is not in canonical deterministic ZIP form.");
 const files = new Map(entries.map((entry) => [entry.path, entry.data]));
+const rankArtFiles = [
+  "tier-01-common",
+  "tier-02-dawn",
+  "tier-03-nebula",
+  "tier-04-aurora",
+  "tier-05-rift",
+  "tier-06-singularity"
+].flatMap((tier) => ["sm", "md", "lg"].map((size) => `art/ranks/${tier}-${size}.webp`));
 for (const required of [
-  "index.html", "app.js", "home-menu.mjs", "second-orbit.mjs", "explore-sandbox.mjs", "styles.css", "local-beta.mjs", "local-world.mjs", "release.json", "service-worker.js", "manifest.webmanifest",
+  "index.html", "app.js", "home-menu.mjs", "second-orbit.mjs", "explore-sandbox.mjs", "combination-report-delivery.mjs", "route-distance.mjs", "run-iq.mjs", "adaptive-difficulty.mjs", "remix-progression.mjs", "remix-readiness.mjs", "route-remixes.mjs", "shuffled-start.mjs", "rank-board-art.mjs", "rank-board-art-runtime.mjs", "styles.css", "simple-ui.css", "local-beta.mjs", "local-world.mjs", "release.json", "service-worker.js", "manifest.webmanifest",
   "signature-routes.mjs", "living-atlas.mjs", "constellation-voyages.mjs", "recipe-insight.mjs", "community-results.mjs", "cosmic-events.mjs",
-  "icon.svg", "icon-192.png", "icon-512.png", "icon-maskable-512.png", "release-manifest.json", "SHA256SUMS.txt"
+  "icon.svg", "icon-192.png", "icon-512.png", "icon-maskable-512.png", "art/celestial-atlas-bg-v1.webp", ...rankArtFiles, "release-manifest.json", "SHA256SUMS.txt"
 ]) assert.ok(files.has(required), `The itch package is missing ${required}.`);
+const celestialAtlasArt = files.get("art/celestial-atlas-bg-v1.webp");
+assert.equal(celestialAtlasArt.subarray(0, 4).toString("ascii"), "RIFF", "The itch celestial atlas art is not a WebP RIFF file.");
+assert.equal(celestialAtlasArt.subarray(8, 12).toString("ascii"), "WEBP", "The itch celestial atlas art is not a valid WebP container.");
 
 for (const forbidden of ["server.mjs", "game-services.mjs", ".env", "package.json", "data/constellore.json"]) {
   assert.ok(!files.has(forbidden), `Server or private file leaked into the itch package: ${forbidden}`);
@@ -30,17 +43,29 @@ for (const forbidden of ["server.mjs", "game-services.mjs", ".env", "package.jso
 
 const html = files.get("index.html").toString("utf8");
 assert.match(html, /data-runtime="local-practice"/);
+const feedbackApiAttribute = html.match(/<body\b[^>]*\bdata-feedback-api="([^"]*)"/i)?.[1];
+assert.notEqual(feedbackApiAttribute, undefined, "The itch package is missing its data-feedback-api configuration.");
+assert.equal(
+  feedbackApiAttribute,
+  expectedFeedbackApiUrl,
+  "The itch package must contain the exact validated PUBLIC_FEEDBACK_API_URL used for this release."
+);
 assert.match(html, /LOCAL PRACTICE · SAVED ON THIS DEVICE · NO PAYMENTS/);
 assert.match(html, /rel="apple-touch-icon" href="[.]\/icon-192[.]png"/);
 assert.match(html, new RegExp(`href="[.]\\/styles[.]css[?]v=${releaseVersionPattern}"`));
+assert.match(html, new RegExp(`href="[.]\\/simple-ui[.]css[?]v=${releaseVersionPattern}"`));
 assert.match(html, new RegExp(`src="[.]\\/app[.]js[?]v=${releaseVersionPattern}"`));
 assert.ok((html.match(/\bdata-update-entry(?:=|\s|>)/gi) || []).length >= 6, "The itch build must ship the complete Dev Log.");
 const latestUpdate = html.match(/<li\b(?=[^>]*\bis-latest\b)[^>]*>[\s\S]*?<\/li>/i)?.[0] || "";
 assert.match(latestUpdate, new RegExp(`VERSION ${releaseVersionPattern}`, "i"), "The itch build must identify the package version as its latest update.");
-assert.match(latestUpdate, /Pages and itch are deterministic local practice without live rankings, accounts, or AI/i);
+assert.match(latestUpdate, /main Play button/i, "The itch build must describe the one-action opening.");
+assert.match(latestUpdate, /Twelve permanent Route Ranks/i, "The itch build must describe rank progression.");
+assert.match(latestUpdate, /Six board skies/i, "The itch build must describe evolving rank art.");
+assert.match(latestUpdate, /do not enter shared leaderboards/i, "The itch build must state the adaptive fairness boundary.");
+assert.match(html, /Pages and itch are deterministic local practice without live rankings, accounts, or AI/i);
 assert.doesNotMatch(html, /rel="canonical"|property="og:url"/i, "The portable itch package must not claim the Pages URL as canonical.");
 assert.doesNotMatch(html, /fonts[.]googleapis[.]com|fonts[.]gstatic[.]com/);
-for (const forbiddenPath of ['href="/manifest', 'href="/styles', 'href="/icon', 'src="/app']) {
+for (const forbiddenPath of ['href="/manifest', 'href="/styles', 'href="/simple-ui', 'href="/icon', 'src="/app']) {
   assert.ok(!html.includes(forbiddenPath), `Root-absolute asset path remains in itch HTML: ${forbiddenPath}`);
 }
 
@@ -80,11 +105,24 @@ assert.match(localWorld, /\"problematicDeadEndLimit\":140/);
 
 const worker = files.get("service-worker.js").toString("utf8");
 assert.match(worker, /CACHE_PREFIX/);
+assert.match(worker, /art\/celestial-atlas-bg-v1[.]webp/);
+assert.match(worker, new RegExp(`simple-ui[.]css[?]v=${releaseVersionPattern}`));
 assert.match(worker, new RegExp(`home-menu[.]mjs[?]v=${releaseVersionPattern}`));
+assert.match(worker, new RegExp(`route-distance[.]mjs[?]v=${releaseVersionPattern}`));
+assert.match(worker, new RegExp(`run-iq[.]mjs[?]v=${releaseVersionPattern}`));
+assert.match(worker, new RegExp(`adaptive-difficulty[.]mjs[?]v=${releaseVersionPattern}`));
+assert.match(worker, new RegExp(`remix-progression[.]mjs[?]v=${releaseVersionPattern}`));
+assert.match(worker, new RegExp(`remix-readiness[.]mjs[?]v=${releaseVersionPattern}`));
+assert.match(worker, new RegExp(`route-remixes[.]mjs[?]v=${releaseVersionPattern}`));
+assert.match(worker, new RegExp(`shuffled-start[.]mjs[?]v=${releaseVersionPattern}`));
+assert.match(worker, new RegExp(`rank-board-art[.]mjs[?]v=${releaseVersionPattern}`));
+assert.match(worker, new RegExp(`rank-board-art-runtime[.]mjs[?]v=${releaseVersionPattern}`));
+assert.match(worker, /[.]\/art\/ranks\//);
+assert.doesNotMatch(worker, /const SHELL = [^;]+tier-0[1-6]-/);
 assert.match(worker, /key[.]startsWith\(CACHE_PREFIX\)/);
 assert.match(worker, /response[.]ok/);
 assert.match(worker, new RegExp(`CACHE_PREFIX[}]${releaseVersionPattern}`));
-for (const module of ["second-orbit", "explore-sandbox", "signature-routes", "living-atlas", "constellation-voyages", "recipe-insight", "community-results", "cosmic-events"]) {
+for (const module of ["second-orbit", "explore-sandbox", "signature-routes", "living-atlas", "constellation-voyages", "recipe-insight", "community-results", "cosmic-events", "combination-report-delivery", "adaptive-difficulty", "remix-progression", "remix-readiness", "route-remixes", "shuffled-start", "rank-board-art", "rank-board-art-runtime"]) {
   assert.match(worker, new RegExp(`${module}[.]mjs[?]v=${releaseVersionPattern}`));
 }
 assert.doesNotMatch(worker, /keys[.]filter\(\(key\) => key !== CACHE\)/);

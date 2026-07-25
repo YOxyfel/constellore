@@ -1,4 +1,5 @@
 import { createServer } from "node:http";
+import { isIP } from "node:net";
 import { createHash, randomUUID, timingSafeEqual } from "node:crypto";
 import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
@@ -7,10 +8,37 @@ import { fileURLToPath } from "node:url";
 import { ANALYTICS_EVENT_NAMES, CREATIVE_COMMERCE_CATALOG, GameStore, MARKET_CATALOG, RunRegistry, isoWeekKey, serviceError } from "./game-services.mjs";
 import { cosmicTwistSeedFor, selectCosmicTwist } from "./public/cosmic-twists.mjs";
 import { assistancePolicy, rankSenseCandidates, selectRouteNavigationTip, selectWordGift } from "./public/engagement-features.mjs";
+import {
+  adaptiveChallengeProfile,
+  adaptiveModePolicy,
+  adaptiveRewardMultiplier,
+  estimateAdaptiveChallengeLevel,
+  sanitizeAdaptiveDifficultyState,
+  selectAdaptiveChallenge
+} from "./public/adaptive-difficulty.mjs";
+import {
+  getRemixRankPresentation,
+  selectChallengeRemixes
+} from "./public/remix-progression.mjs";
+import { selectAdaptiveRemixPlan } from "./public/remix-readiness.mjs";
+import {
+  CLASSIC_STARTERS,
+  createChallengeStartProfile
+} from "./public/shuffled-start.mjs";
+import {
+  createRouteRemixPlan,
+  detectRouteRemixCapabilities,
+  routeRemixProgress
+} from "./public/route-remixes.mjs";
+import { createTargetPool } from "./public/target-pool.mjs";
 import { recipeFingerprint, sanitizeRecipeRating } from "./public/recipe-feedback.mjs";
+import { buildAuthoredRouteProgress, createAuthoredRouteGraph } from "./public/route-distance.mjs";
 import { annotateUniverseResult, buildUniverseManifest, selectUniverse, validateUniverseRoute } from "./public/universe-director.mjs";
 import { AiRequestGate, MemoryRateLimiter, safeConcept, safeDiscoveryContext, trustedWriteOrigin } from "./server-safety.mjs";
 import { EXPANDED_RECIPES } from "./content/expanded-recipes.mjs";
+import {
+  selectLogicalPairExpansion
+} from "./content/logical-pair-expansion-3-1.mjs";
 
 const projectRoot = fileURLToPath(new URL(".", import.meta.url));
 const root = join(projectRoot, "public");
@@ -27,11 +55,11 @@ const runRegistry = new RunRegistry(gameStore);
 await runRegistry.flush();
 const backupDirectory = storePath === ":memory:" ? "" : (process.env.CONSTELLORE_BACKUP_DIR || join(dirname(storePath), "backups"));
 const backupRetention = Math.min(30, Math.max(1, Number(process.env.CONSTELLORE_BACKUP_KEEP) || 7));
-const APP_VERSION = process.env.CONSTELLORE_VERSION || packageMetadata.version || "3.0.0-beta.2";
+const APP_VERSION = process.env.CONSTELLORE_VERSION || packageMetadata.version || "3.3.0-beta.1";
 const BUILD_VERSION = process.env.CONSTELLORE_BUILD_VERSION || process.env.GIT_COMMIT || process.env.RENDER_GIT_COMMIT || "local-dev";
 const GRAPH_VERSION = process.env.CONSTELLORE_GRAPH_VERSION || `world-${APP_VERSION}`;
 const RANKED_RULES_VERSION = "ranked-v3";
-const STARTERS = ["Earth", "Water", "Fire", "Air"];
+const STARTERS = [...CLASSIC_STARTERS];
 const recipes = new Map();
 const dynamicRecipes = new Map();
 let authoredSolutionPlansCache = null;
@@ -472,6 +500,32 @@ for (const recipe of EXPANDED_RECIPES) {
   add(recipe.a, recipe.b, recipe.word, recipe.emoji, recipe.note);
 }
 
+// The v3.1 logic atlas is selected only after the foundational and expanded
+// worlds are registered. Older hand-authored answers therefore stay
+// authoritative while every accepted atlas bundle remains conflict-free.
+const logicalPairExpansion = selectLogicalPairExpansion([...recipes.values()]);
+for (const recipe of logicalPairExpansion.recipes) {
+  add(recipe.a, recipe.b, recipe.word, recipe.emoji, recipe.note);
+}
+const logicalPairExpansionKeySet = new Set(logicalPairExpansion.keys);
+const logicalPairExpansionEndpointSet = new Set(logicalPairExpansion.endpoints.map((word) => word.toLowerCase()));
+
+export function logicalPairExpansionCatalog() {
+  return logicalPairExpansion.recipes.map((recipe) => ({ ...recipe }));
+}
+
+export function logicalPairExpansionQualityReport() {
+  return structuredClone(logicalPairExpansion.report);
+}
+
+export function logicalPairExpansionKeys() {
+  return new Set(logicalPairExpansionKeySet);
+}
+
+export function logicalPairExpansionEndpoints() {
+  return new Set(logicalPairExpansionEndpointSet);
+}
+
 const emojiByWord = { Earth: "🌍", Water: "💧", Fire: "🔥", Air: "💨" };
 
 const officialTarget = (target, clue, tier) => ({ target, emoji: emojiForWord(target), clue, tier });
@@ -479,7 +533,7 @@ const officialTarget = (target, clue, tier) => ({ target, emoji: emojiForWord(ta
 // Ranked destinations are authored, route-verified concepts rather than
 // arbitrary outputs from the experimental semantic mixer. Each difficulty
 // band contains enough destinations to keep daily and sprint play rotating.
-const targetCatalog = [
+const coreTargetCatalog = [
   officialTarget("Mud", "Soften the ground with something that flows.", 1),
   officialTarget("Steam", "Let heat meet water.", 1),
   officialTarget("Brick", "Shape wet earth, then harden it with fire.", 1),
@@ -526,12 +580,42 @@ const targetCatalog = [
   officialTarget("Space Station", "Build a home, build a rocket, then leave Earth.", 5)
 ];
 
-// A full non-repeating month of medium-to-expert destinations. Tier-one
-// concepts remain onboarding/sprint material rather than Daily repeats.
+const targetPoolRecipes = [...recipes.values()];
+const targetPoolRoutes = new Map(
+  [...reachableFromStarters()]
+    .filter(([key]) => !STARTERS.some((starter) => starter.toLowerCase() === key))
+    .map(([key, word]) => [key, solutionRoute(word)])
+    .filter(([, route]) => Array.isArray(route) && route.length > 0)
+);
+const targetPoolConcepts = [
+  ...new Map(targetPoolRecipes.map((recipe) => [
+    recipe.word.toLowerCase(),
+    { word: recipe.word, emoji: recipe.emoji }
+  ])).values()
+];
+const targetCatalog = createTargetPool({
+  routes: targetPoolRoutes,
+  recipes: targetPoolRecipes,
+  concepts: targetPoolConcepts,
+  officialTargets: coreTargetCatalog,
+  starters: STARTERS,
+  minimumFinalRecipes: 1,
+  maximumEnergyShare: 0.19
+}).map(({ route, routeSignature, qualityScore, ...entry }) => ({
+  ...entry,
+  routeLength: route.length
+}));
+
+// The Daily catalog now rotates through hundreds of checked destinations.
+// Tier-one concepts remain onboarding/sprint material rather than Daily repeats.
 const dailyTargets = targetCatalog.filter((entry) => entry.tier >= 2);
 
 export function officialTargetCatalog() {
   return targetCatalog.map((entry) => ({ ...entry }));
+}
+
+export function coreOfficialTargetCatalog() {
+  return coreTargetCatalog.map((entry) => ({ ...entry }));
 }
 
 const cosmicLaws = [
@@ -786,6 +870,24 @@ export function authoredCombination(a, b) {
   return recipes.get(keyFor(a, b)) || null;
 }
 
+function authoredConceptExists(value) {
+  const key = String(value || "").trim().toLowerCase();
+  if (!key) return false;
+  if (STARTERS.some((word) => word.toLowerCase() === key)) return true;
+  for (const recipe of recipes.values()) {
+    if (
+      recipe.a.toLowerCase() === key
+      || recipe.b.toLowerCase() === key
+      || recipe.word.toLowerCase() === key
+    ) return true;
+  }
+  return false;
+}
+
+export function authoredRecipeCatalog() {
+  return [...recipes.values()].map((recipe) => ({ ...recipe }));
+}
+
 export function contextualCombination(a, b) {
   const groups = [semanticCategoryFor(a), semanticCategoryFor(b)].filter(Boolean).sort();
   if (groups.length !== 2) return null;
@@ -912,19 +1014,227 @@ export function solutionRoute(target, { includeDynamic = false } = {}) {
   return plan ? [...plan.steps.values()].map((step) => ({ ...step })) : null;
 }
 
+export function authoredRouteProgress(target, available, { total = 0, extraRecipes = [] } = {}) {
+  const requestedTotal = Math.max(0, Math.trunc(Number(total) || 0));
+  const canonicalTotal = requestedTotal || solutionRoute(target)?.length || 0;
+  return buildAuthoredRouteProgress({
+    graph: createAuthoredRouteGraph(recipes),
+    extraRecipes,
+    available,
+    target,
+    total: canonicalTotal
+  });
+}
+
+function routeProgressForRun(run) {
+  const total = Math.max(0, Math.trunc(Number(run?.game?.routeLength) || solutionRoute(run?.game?.target)?.length || 0));
+  const starterKeys = new Set((run?.game?.starters || STARTERS).map((word) => String(word).trim().toLowerCase()));
+  const discoveredKeys = run?.discovered instanceof Map ? [...run.discovered.keys()] : [];
+  if (discoveredKeys.length === starterKeys.size && discoveredKeys.every((word) => starterKeys.has(String(word).toLowerCase()))) {
+    return { total, remaining: total, complete: total === 0, percent: total === 0 ? 100 : 0 };
+  }
+  const options = { total: 999, extraRecipes: run?.solutionRecipes || [] };
+  const baselineDistance = authoredRouteProgress(run?.game?.target, [...starterKeys], options).remaining;
+  const currentDistance = authoredRouteProgress(run?.game?.target, run?.discovered || [], options).remaining;
+  // A remixed route is complete only when the run registry has accepted a
+  // target-making fusion (or a zero-score Reveal has explicitly completed the
+  // run). Merely owning the target and later satisfying a waypoint must not
+  // make the progress meter claim that an unfinished run is done.
+  const complete = run?.remixRuntime
+    ? Boolean(run.completedAt)
+    : currentDistance === 0;
+  const distanceGained = Math.max(0, baselineDistance - currentDistance);
+  const remaining = complete ? 0 : total ? Math.max(1, total - distanceGained) : 0;
+  return {
+    total,
+    remaining,
+    complete,
+    percent: complete ? 100 : total ? Math.max(0, Math.min(99, Math.round(((total - remaining) / total) * 100))) : 0
+  };
+}
+
+let trustedStaticRecipeCatalog = null;
+let canonicalStaticRecipeItemIndex = null;
+
 function trustedRecipeCatalog({ includeDynamic = false } = {}) {
+  if (!includeDynamic && trustedStaticRecipeCatalog) return trustedStaticRecipeCatalog;
   const catalog = [...recipes.values()];
   if (includeDynamic) {
     for (const [key, recipe] of dynamicRecipes) if (!recipes.has(key)) catalog.push(recipe);
   }
-  return catalog.map((recipe) => ({
+  const trusted = catalog.map((recipe) => ({
     ...recipe,
     category: semanticCategoryFor(recipe.word) || null
   }));
+  if (!includeDynamic) trustedStaticRecipeCatalog = trusted;
+  return trusted;
+}
+
+function canonicalStarterMetadata(word) {
+  const clean = String(word || "").normalize("NFKC").trim().replace(/\s+/g, " ");
+  const classic = STARTERS.some((starter) => starter.toLowerCase() === clean.toLowerCase());
+  if (!canonicalStaticRecipeItemIndex) {
+    canonicalStaticRecipeItemIndex = new Map();
+    for (const recipe of recipes.values()) {
+      const key = recipe.word.toLowerCase();
+      if (!canonicalStaticRecipeItemIndex.has(key)) canonicalStaticRecipeItemIndex.set(key, recipe);
+    }
+  }
+  const recipe = canonicalStaticRecipeItemIndex.get(clean.toLowerCase())
+    || [...dynamicRecipes.values()].find((candidate) => candidate.word.toLowerCase() === clean.toLowerCase());
+  return {
+    word: clean,
+    emoji: recipe?.emoji || emojiByWord[clean] || emojiForWord(clean),
+    category: semanticCategoryFor(clean) || null,
+    source: classic ? "origin" : "loaned-start",
+    loaned: !classic,
+    premium: false,
+    paid: false,
+    access: classic ? "origin" : "loaned",
+    recognizable: true,
+    valid: true
+  };
+}
+
+function canonicalStarterHash(starters) {
+  return stableHash(
+    starters
+      .map((word) => String(word || "").normalize("NFKC").trim().replace(/\s+/g, " ").toLocaleLowerCase("en-US"))
+      .sort()
+      .join("|")
+  ).toString(16).padStart(8, "0");
+}
+
+function publicStarterItem(item, word) {
+  const canonical = canonicalStarterMetadata(word);
+  return {
+    word: canonical.word,
+    emoji: String(item?.emoji || canonical.emoji || "").trim().slice(0, 24),
+    category: item?.category == null
+      ? canonical.category
+      : String(item.category).trim().toLowerCase().slice(0, 40) || canonical.category,
+    source: canonical.source,
+    loaned: canonical.loaned,
+    premium: false,
+    paid: false,
+    access: canonical.access
+  };
+}
+
+function publicStartProfile(profile, { fallbackReason = profile?.fallbackReason || null } = {}) {
+  if (!profile || !Array.isArray(profile.starters)) return null;
+  const starters = profile.starters
+    .map((word) => String(word || "").normalize("NFKC").trim().replace(/\s+/g, " "))
+    .filter(Boolean)
+    .slice(0, 6);
+  const itemByWord = new Map(
+    (Array.isArray(profile.starterItems) ? profile.starterItems : [])
+      .map((item) => [String(item?.word || "").trim().toLowerCase(), item])
+  );
+  const starterItems = starters.map((word) => publicStarterItem(itemByWord.get(word.toLowerCase()), word));
+  const selection = profile.selection && typeof profile.selection === "object"
+    ? {
+        reason: String(fallbackReason || profile.selection.reason || "").slice(0, 48),
+        cadencePosition: Number.isInteger(profile.selection.cadencePosition)
+          ? Math.max(0, profile.selection.cadencePosition)
+          : null,
+        cadenceLength: Number.isInteger(profile.selection.cadenceLength)
+          ? Math.max(1, profile.selection.cadenceLength)
+          : null,
+        locked: Boolean(profile.selection.locked),
+        rank: {
+          id: String(profile.selection.rank?.id || "bronze").slice(0, 32),
+          number: Math.max(1, Math.min(12, Math.trunc(Number(profile.selection.rank?.number) || 1)))
+        }
+      }
+    : null;
+  const difficulty = profile.difficulty && typeof profile.difficulty === "object"
+    ? {
+        rankId: String(profile.difficulty.rankId || selection?.rank?.id || "bronze").slice(0, 32),
+        rankNumber: Math.max(1, Math.min(12, Math.trunc(Number(profile.difficulty.rankNumber) || selection?.rank?.number || 1))),
+        level: Math.max(1, Math.min(5, Math.trunc(Number(profile.difficulty.level) || 1))),
+        requestedRouteLength: Math.max(1, Math.trunc(Number(profile.difficulty.requestedRouteLength) || 1)),
+        actualRouteLength: Math.max(1, Math.trunc(Number(profile.difficulty.actualRouteLength) || profile.routeLength || 1)),
+        starterCount: starters.length,
+        productiveStarterCount: Math.max(1, Math.min(starters.length, Math.trunc(Number(profile.difficulty.productiveStarterCount) || starters.length))),
+        sidePathCount: Math.max(0, Math.min(2, Math.trunc(Number(profile.difficulty.sidePathCount) || 0))),
+        score: Math.max(1, Math.trunc(Number(profile.difficulty.score) || 1))
+      }
+    : null;
+  return {
+    version: Math.max(1, Math.trunc(Number(profile.version) || 1)),
+    profileId: String(profile.profileId || "").slice(0, 96),
+    style: profile.style === "shuffled" ? "shuffled" : "classic",
+    requestedStyle: ["classic", "shuffled"].includes(profile.requestedStyle)
+      ? profile.requestedStyle
+      : "auto",
+    starterHash: canonicalStarterHash(starters),
+    canonicalRouteLength: Math.max(1, Math.trunc(Number(profile.canonicalRouteLength) || profile.routeLength || 1)),
+    routeStartIndex: Math.max(0, Math.trunc(Number(profile.routeStartIndex) || 0)),
+    routeLength: Math.max(1, Math.trunc(Number(profile.routeLength) || 1)),
+    starterCount: starters.length,
+    productiveStarterCount: Math.max(1, Math.min(starters.length, Math.trunc(Number(profile.productiveStarterCount) || starters.length))),
+    sidePathCount: Math.max(0, Math.min(2, Math.trunc(Number(profile.sidePathCount) || 0))),
+    hasValidOpening: profile.hasValidOpening === true,
+    fallback: Boolean(profile.fallback || fallbackReason),
+    fallbackReason: fallbackReason ? String(fallbackReason).slice(0, 64) : null,
+    selection,
+    difficulty,
+    starterItems
+  };
+}
+
+function routeFromSignedStartProfile(game, canonicalRoute) {
+  const profile = game?.startProfile;
+  if (!profile) return canonicalRoute;
+  if (!["classic", "shuffled"].includes(profile.style)) return null;
+  if (!Array.isArray(game.starters) || game.starters.length < 1 || game.starters.length > 6) return null;
+  if (new Set(game.starters.map((word) => String(word).trim().toLowerCase())).size !== game.starters.length) return null;
+  if (game.startStyle !== profile.style || profile.hasValidOpening !== true) return null;
+  const startIndex = Math.trunc(Number(profile.routeStartIndex));
+  if (
+    !Number.isInteger(startIndex)
+    || startIndex < 0
+    || startIndex >= canonicalRoute.length
+    || Number(profile.canonicalRouteLength) !== canonicalRoute.length
+    || Number(profile.routeLength) !== canonicalRoute.length - startIndex
+    || Number(profile.starterCount) !== game.starters.length
+    || profile.starterHash !== canonicalStarterHash(game.starters)
+  ) return null;
+  if (profile.style === "classic" && (
+    startIndex !== 0
+    || game.starters.length !== STARTERS.length
+    || game.starters.some((word, index) => word.toLowerCase() !== STARTERS[index].toLowerCase())
+  )) return null;
+  if (profile.style === "shuffled" && startIndex === 0) return null;
+  const itemWords = (Array.isArray(game.starterItems) ? game.starterItems : [])
+    .map((item) => String(item?.word || "").trim().toLowerCase());
+  const profileItemWords = (Array.isArray(profile.starterItems) ? profile.starterItems : [])
+    .map((item) => String(item?.word || "").trim().toLowerCase());
+  if (
+    itemWords.length !== game.starters.length
+    || profileItemWords.length !== game.starters.length
+    || game.starters.some((word) => !itemWords.includes(word.toLowerCase()))
+    || game.starters.some((word) => !profileItemWords.includes(word.toLowerCase()))
+    || game.starterItems.some((item) => item?.premium === true || item?.paid === true)
+    || profile.starterItems.some((item) => item?.premium === true || item?.paid === true)
+  ) return null;
+  for (const item of [...game.starterItems, ...profile.starterItems]) {
+    const origin = STARTERS.some((starter) => starter.toLowerCase() === String(item.word).trim().toLowerCase());
+    if (
+      item.source !== (origin ? "origin" : "loaned-start")
+      || item.loaned !== !origin
+      || item.premium !== false
+      || item.paid !== false
+    ) return null;
+  }
+  return canonicalRoute.slice(startIndex);
 }
 
 function verifiedServerRoute(game, { includeDynamic = false } = {}) {
-  const route = game ? solutionRoute(game.target, { includeDynamic }) : null;
+  const canonicalRoute = game ? solutionRoute(game.target, { includeDynamic }) : null;
+  if (!Array.isArray(canonicalRoute)) return null;
+  const route = routeFromSignedStartProfile(game, canonicalRoute);
   if (!Array.isArray(route)) return null;
   if (game.moveLimit && route.length > game.moveLimit) return null;
   const validation = validateUniverseRoute({
@@ -934,6 +1244,32 @@ function verifiedServerRoute(game, { includeDynamic = false } = {}) {
     recipes: trustedRecipeCatalog({ includeDynamic })
   });
   return validation.valid ? { route, validation } : null;
+}
+
+function adaptiveRemixSelectionSeed(game, completedChallenges, routeContext = null) {
+  const rankId = routeContext?.challengeRank?.id || game?.remixes?.rank?.id || "";
+  const promotionAttempt = routeContext?.promotion?.active
+    ? routeContext.promotion.attempt
+    : game?.promotion?.active
+      ? game.promotion.attempt
+      : 0;
+  return [
+    adaptiveRemixSeed(game, completedChallenges),
+    rankId,
+    Math.max(0, Math.trunc(Number(promotionAttempt) || 0)),
+    String(game?.startProfile?.profileId || "classic-legacy")
+  ].join("|");
+}
+
+function remixRuntimeForGame(game, route, { includeDynamic = false } = {}) {
+  if (!game?.remixes || !Array.isArray(game.remixes.rules) || !Array.isArray(route)) return null;
+  return createRouteRemixPlan({
+    route,
+    recipes: trustedRecipeCatalog({ includeDynamic }),
+    target: game.target,
+    families: game.remixes.rules.map((rule) => rule.family),
+    seed: adaptiveRemixSelectionSeed(game, game.remixes.completedChallenges)
+  }).runtime;
 }
 
 export function isSensibleResult(result, a = "", b = "") {
@@ -953,6 +1289,17 @@ export function isSensibleResult(result, a = "", b = "") {
   return result.note.trim().length <= 100 && result.emoji.trim().length <= 12;
 }
 
+let classicStarterItemsCache = null;
+
+function classicStarterItems() {
+  if (!classicStarterItemsCache) {
+    classicStarterItemsCache = STARTERS.map((word) =>
+      publicStarterItem(canonicalStarterMetadata(word), word)
+    );
+  }
+  return classicStarterItemsCache.map((item) => ({ ...item }));
+}
+
 function gameFor(targetEntry, mode, extras = {}) {
   const rules = {
     reach: { mode: "reach", modeName: "Reach", timeLimit: null, moveLimit: null, reward: 70 },
@@ -966,10 +1313,361 @@ function gameFor(targetEntry, mode, extras = {}) {
     ...targetEntry,
     ...rules,
     ...extras,
+    startStyle: "classic",
     starters: STARTERS,
+    starterItems: classicStarterItems(),
     aiEnabled: Boolean(process.env.OPENAI_API_KEY),
-    worldSize: reachableFromStarters().size
+    worldSize: targetPoolRoutes.size + STARTERS.length
   };
+}
+
+function adaptiveCandidateLevel(entry, routeLength) {
+  return Math.min(10, Math.max(1, Math.round(routeLength * 0.65 + Number(entry.tier || 1) * 0.9 - 1)));
+}
+
+let adaptiveFinalRecipeCounts = null;
+
+function adaptiveFinalRecipeCount(target) {
+  if (!adaptiveFinalRecipeCounts) {
+    adaptiveFinalRecipeCounts = new Map();
+    for (const recipe of recipes.values()) {
+      const resultKey = recipe.word.toLowerCase();
+      adaptiveFinalRecipeCounts.set(resultKey, (adaptiveFinalRecipeCounts.get(resultKey) || 0) + 1);
+    }
+  }
+  const key = String(target || "").trim().toLowerCase();
+  return Math.max(1, adaptiveFinalRecipeCounts.get(key) || 0);
+}
+
+function adaptiveRemixFamiliesForRoute(route, target) {
+  if (!Array.isArray(route) || !route.length) return [];
+  const families = ["master_route", "graph_safe_rule"];
+  if (route.length > 1) families.push("required_waypoint");
+  if (adaptiveFinalRecipeCount(target) > 1) families.push("forbidden_shortcut");
+  const previous = route.at(-2);
+  const final = route.at(-1);
+  if (
+    previous
+    && final
+    && [final.a, final.b].some((word) => word.toLowerCase() === previous.word.toLowerCase())
+  ) families.push("orbit_chain");
+  return families;
+}
+
+let adaptiveCandidateCatalogCache = null;
+
+function adaptiveCandidateCatalog() {
+  if (adaptiveCandidateCatalogCache) return adaptiveCandidateCatalogCache;
+  adaptiveCandidateCatalogCache = targetCatalog.flatMap((entry) => {
+    const route = solutionRoute(entry.target);
+    if (!Array.isArray(route)) return [];
+    const remixFamilies = adaptiveRemixFamiliesForRoute(route, entry.target);
+    return [{
+      entry,
+      routeLength: route.length,
+      pathCount: adaptiveFinalRecipeCount(entry.target),
+      remixFamilies,
+      difficultyLevel: adaptiveCandidateLevel(entry, route.length)
+    }];
+  });
+  return adaptiveCandidateCatalogCache;
+}
+
+function adaptiveCandidatesForMode(mode, seed, remixRank = getRemixRankPresentation("bronze")) {
+  return adaptiveCandidateCatalog().flatMap((candidate) => {
+    if (mode === "quick" && candidate.routeLength > 8) return [];
+    if (mode === "moves" && candidate.routeLength > 12) return [];
+    const remixFamilies = candidate.remixFamilies;
+    const realizedUnlocked = remixRank.unlockedFamilies.filter((family) => remixFamilies.includes(family));
+    if (realizedUnlocked.length < remixRank.minimumRemixes) return [];
+    return [{
+      ...gameFor(candidate.entry, mode, { seed: Math.abs(Number(seed) || 0) }),
+      routeLength: candidate.routeLength,
+      pathCount: candidate.pathCount,
+      remixFamilies,
+      difficultyLevel: candidate.difficultyLevel,
+      reachable: true,
+      routeValid: true
+    }];
+  });
+}
+
+function adaptiveChallengeMessage(profile) {
+  if (profile.surge) {
+    return "Surge challenge: one much harder game. If it is not completed, your normal level stays safe.";
+  }
+  const progress = profile.completionsTowardNextLevel;
+  return progress
+    ? `${progress} of 3 challenges complete toward the next difficulty level.`
+    : "Complete 3 challenges to raise the difficulty.";
+}
+
+function adaptiveRemixSeed(game, completedChallenges) {
+  return [
+    GRAPH_VERSION,
+    game.mode,
+    Math.abs(Number(game.seed) || 0),
+    game.target,
+    Math.max(0, Math.trunc(Number(completedChallenges) || 0))
+  ].join("|");
+}
+
+function buildAuthoritativeStartProfile(game, canonicalRoute, routeContext, completedChallenges, startStyle = null) {
+  if (!routeContext) return null;
+  return createChallengeStartProfile({
+    target: game.target,
+    canonicalRoute,
+    recipes: trustedRecipeCatalog(),
+    itemLookup: canonicalStarterMetadata,
+    seed: game.seed,
+    startStyle: startStyle || routeContext.startStylePreference || "auto",
+    rank: routeContext.challengeRank?.id || "bronze",
+    challengeIndex: routeContext.progression?.completedChallenges ?? completedChallenges,
+    lastOutcome: routeContext.readiness?.recentOutcomes?.at(-1)?.outcome || "",
+    failureRecovery: Number(routeContext.adaptiveDifficulty?.failureStreak) > 0,
+    promotion: routeContext.promotion?.active === true,
+    promotionAttempt: routeContext.promotion?.attemptsCompleted || 0,
+    difficulty: {
+      level: Math.max(
+        1,
+        Math.min(5, Math.ceil(Math.max(1, Number(routeContext.adaptiveDifficulty?.level) || 1) / 2))
+      )
+    }
+  });
+}
+
+function gameWithStartProfile(game, profile, fallbackReason = null) {
+  if (!profile) return game;
+  const startProfile = publicStartProfile(profile, { fallbackReason });
+  const starterItems = startProfile.starterItems.map((item) => ({ ...item }));
+  return {
+    ...game,
+    startStyle: startProfile.style,
+    starters: profile.starters.map((word) => String(word)),
+    starterItems,
+    startProfile: {
+      ...startProfile,
+      starterItems: starterItems.map((item) => ({ ...item }))
+    },
+    routeLength: startProfile.routeLength
+  };
+}
+
+function adaptiveRemixSelectionForRoute(game, route, completedChallenges, routeContext, recipeCatalog) {
+  const remixSeed = adaptiveRemixSelectionSeed(game, completedChallenges, routeContext);
+  const capabilities = detectRouteRemixCapabilities({
+    route,
+    recipes: recipeCatalog,
+    target: game.target
+  });
+  const authoritativePlan = routeContext
+    ? selectAdaptiveRemixPlan({
+        state: routeContext.readiness,
+        rank: routeContext.challengeRank.id,
+        seed: remixSeed,
+        availableFamilies: capabilities.availableFamilies
+      })
+    : null;
+  const selection = authoritativePlan
+    ? {
+        rank: authoritativePlan.rank,
+        requestedCount: authoritativePlan.requestedCount,
+        modifierIds: authoritativePlan.familyIds,
+        introducesFamily: authoritativePlan.introducesFamily,
+        reducedForAvailability: authoritativePlan.reducedForAvailability,
+        reducedForCompatibility: authoritativePlan.reducedForCompatibility,
+        reducedForOnboarding: authoritativePlan.reducedForOnboarding,
+        intensity: authoritativePlan.intensity
+      }
+    : selectChallengeRemixes({
+        completedChallenges,
+        seed: remixSeed,
+        availableFamilies: capabilities.availableFamilies,
+        capabilities: capabilities.capability
+      });
+  return { capabilities, remixSeed, selection };
+}
+
+function withAdaptiveRouteRemixes(game, completedChallenges, routeContext = null) {
+  const canonicalRoute = solutionRoute(game?.target);
+  if (!game || !Array.isArray(canonicalRoute) || !canonicalRoute.length) return game;
+  const recipeCatalog = trustedRecipeCatalog();
+  let fullStartProfile = buildAuthoritativeStartProfile(
+    game,
+    canonicalRoute,
+    routeContext,
+    completedChallenges
+  );
+  let preparedGame = gameWithStartProfile(game, fullStartProfile);
+  let route = fullStartProfile?.challengeRoute || canonicalRoute;
+  let remixSelection = adaptiveRemixSelectionForRoute(
+    preparedGame,
+    route,
+    completedChallenges,
+    routeContext,
+    recipeCatalog
+  );
+
+  // A new route-rule family is introduced only from the familiar elemental
+  // start. The player learns one new concept at a time; Shuffled starts return
+  // automatically after the family has been mastered.
+  if (fullStartProfile?.style === "shuffled" && remixSelection.selection.introducesFamily) {
+    const requestedStyle = fullStartProfile.requestedStyle;
+    const originalSelection = fullStartProfile.selection;
+    const classicProfile = buildAuthoritativeStartProfile(
+      game,
+      canonicalRoute,
+      routeContext,
+      completedChallenges,
+      "classic"
+    );
+    fullStartProfile = {
+      ...classicProfile,
+      requestedStyle,
+      selection: originalSelection,
+      fallback: true,
+      fallbackReason: "new_remix_family"
+    };
+    preparedGame = gameWithStartProfile(game, fullStartProfile, "new_remix_family");
+    route = fullStartProfile.challengeRoute;
+    remixSelection = adaptiveRemixSelectionForRoute(
+      preparedGame,
+      route,
+      completedChallenges,
+      routeContext,
+      recipeCatalog
+    );
+  }
+
+  const { remixSeed, selection } = remixSelection;
+  const plan = createRouteRemixPlan({
+    route,
+    recipes: recipeCatalog,
+    target: game.target,
+    families: selection.modifierIds,
+    seed: remixSeed
+  });
+  if (plan.runtime.activeFamilies.length < selection.modifierIds.length) {
+    throw new Error(`Target ${game.target} cannot satisfy ${selection.rank.name} Route Rank.`);
+  }
+  const masterCap = plan.runtime.constraints.master_route?.moveCap || null;
+  const rules = plan.public.remixes.map((rule, index) => ({
+    id: `${rule.family}:${index + 1}`,
+    family: rule.family,
+    title: rule.label,
+    instruction: rule.instruction,
+    detail: rule.detail
+  }));
+  return {
+    ...preparedGame,
+    routeLength: route.length,
+    moveLimit: masterCap
+      ? Math.min(Number.isFinite(Number(preparedGame.moveLimit)) ? Number(preparedGame.moveLimit) : masterCap, masterCap)
+      : preparedGame.moveLimit,
+    remixes: {
+      version: plan.version,
+      selectionId: `rmx1_${stableHash(remixSeed).toString(36)}`,
+      rank: selection.rank,
+      masteryPoints: Math.max(
+        0,
+        Math.trunc(Number(routeContext?.progression?.masteryPoints) || 0)
+      ),
+      completedChallenges: Math.max(0, Math.trunc(Number(completedChallenges) || 0)),
+      requestedCount: selection.requestedCount,
+      activeCount: rules.length,
+      introducesFamily: selection.introducesFamily || null,
+      adaptiveIntensity: selection.intensity
+        ? {
+            activeCount: selection.intensity.activeCount,
+            minimumCount: selection.intensity.minimumCount,
+            maximumCount: selection.intensity.maximumCount,
+            cleanWinsTowardNextStep: selection.intensity.cleanWinsTowardNextStep,
+            cleanWinsNeededForNextStep: selection.intensity.cleanWinsNeededForNextStep
+          }
+        : null,
+      summary: plan.public.summary,
+      rules
+    },
+    promotion: routeContext?.promotion?.active
+      ? {
+          active: true,
+          currentRank: routeContext.promotion.currentRank,
+          targetRank: routeContext.promotion.targetRank,
+          attempt: routeContext.promotion.attempt,
+          attemptsCompleted: routeContext.promotion.attemptsCompleted,
+          attemptsTotal: routeContext.promotion.attemptsTotal,
+          wins: routeContext.promotion.wins,
+          winsRequired: routeContext.promotion.winsRequired,
+          flawlessWins: routeContext.promotion.flawlessWins,
+          instruction: `Win ${routeContext.promotion.winsRequired} of ${routeContext.promotion.attemptsTotal} challenges to reach ${routeContext.promotion.targetRank?.name || "the next rank"}.`
+        }
+      : null
+  };
+}
+
+function adaptiveGameForMode(mode, seed, candidateState, requestedTarget = "", routeContext = null) {
+  const policy = adaptiveModePolicy({ mode });
+  if (!policy.eligible) return null;
+  const state = sanitizeAdaptiveDifficultyState(candidateState);
+  const profile = adaptiveChallengeProfile(state);
+  const remixRank = routeContext?.challengeRank
+    ? getRemixRankPresentation(routeContext.challengeRank.id)
+    : getRemixRankPresentation({ completedChallenges: profile.completedChallenges });
+  const candidates = adaptiveCandidatesForMode(mode, seed, remixRank);
+  const requestedKey = String(requestedTarget || "").trim().toLowerCase();
+  const fixedCandidate = requestedKey
+    ? candidates.find((candidate) => candidate.target.toLowerCase() === requestedKey)
+    : null;
+  const selection = fixedCandidate
+    ? {
+        selected: fixedCandidate,
+        metadata: {
+          baseLevel: profile.baseLevel,
+          requestedLevel: profile.effectiveLevel,
+          effectiveLevel: profile.effectiveLevel,
+          surge: profile.surge,
+          surgePending: profile.surgePending,
+          majorChallengeBonus: profile.majorChallengeBonus,
+          candidateLevel: estimateAdaptiveChallengeLevel(fixedCandidate),
+          routeLength: fixedCandidate.routeLength,
+          pathCount: fixedCandidate.pathCount,
+          reason: "personal_restart_target"
+        }
+      }
+    : selectAdaptiveChallenge({
+        state,
+        candidates,
+        context: { mode, seed }
+      });
+  if (!selection.selected) return null;
+  const challengeLevel = estimateAdaptiveChallengeLevel(selection.selected);
+  const rewardMultiplier = adaptiveRewardMultiplier(challengeLevel);
+  return withAdaptiveRouteRemixes({
+    ...selection.selected,
+    reward: Math.max(1, Math.round(Number(selection.selected.reward || 0) * rewardMultiplier)),
+    adaptive: true,
+    adaptiveVersion: state.version,
+    adaptiveLevel: state.level,
+    adaptiveBaseLevel: profile.baseLevel,
+    adaptiveEffectiveLevel: profile.effectiveLevel,
+    adaptiveCompletedChallenges: profile.completedChallenges,
+    adaptiveCompletionsTowardNextLevel: profile.completionsTowardNextLevel,
+    adaptiveCompletionsUntilNextLevel: profile.completionsUntilNextLevel,
+    adaptiveMajorChallengePending: state.majorChallengePending,
+    adaptiveMajorChallengeBaseLevel: state.majorChallengeBaseLevel,
+    adaptiveSurge: profile.surge,
+    adaptiveSurgeBonus: profile.majorChallengeBonus,
+    adaptiveSurgeBaseLevel: state.majorChallengeBaseLevel,
+    surge: profile.surge,
+    surgeBaseLevel: profile.baseLevel,
+    challengeLevel,
+    adaptiveRewardMultiplier: rewardMultiplier,
+    adaptiveMessage: adaptiveChallengeMessage(profile),
+    ranked: false,
+    scoreEligible: true,
+    rewardEligible: true,
+    leaderboardEligible: false
+  }, routeContext?.progression?.completedChallenges ?? profile.completedChallenges, routeContext);
 }
 
 function directedServerGame(game) {
@@ -978,8 +1676,34 @@ function directedServerGame(game) {
   return { ...game, seed, universe: selectUniverse(seed) };
 }
 
-export function buildGameForMode(mode, seed = 0, customTarget = "", stage = 0) {
+let standardModeTargetPools = null;
+
+function standardTargetPoolForMode(mode) {
+  if (!standardModeTargetPools) {
+    standardModeTargetPools = {
+      reach: targetCatalog.filter((entry) => entry.tier <= 4),
+      quick: targetCatalog.filter((entry) => entry.tier >= 1 && entry.tier <= 2),
+      moves: targetCatalog.filter((entry) => entry.tier >= 2
+        && entry.tier <= 3
+        && (solutionRoute(entry.target)?.length || Infinity) <= 12),
+      challenge: targetCatalog
+    };
+  }
+  return standardModeTargetPools[mode] || standardModeTargetPools.reach;
+}
+
+export function buildGameForMode(mode, seed = 0, customTarget = "", stage = 0, adaptiveState = null, routeContext = null) {
   const normalizedMode = ["reach", "quick", "moves", "daily", "weekly", "challenge"].includes(mode) ? mode : "reach";
+  if (adaptiveState) {
+    const adaptiveGame = adaptiveGameForMode(
+      normalizedMode,
+      seed,
+      adaptiveState,
+      customTarget,
+      routeContext
+    );
+    if (adaptiveGame) return adaptiveGame;
+  }
   if (customTarget) {
     const known = reachableFromStarters();
     const canonical = known.get(customTarget.trim().toLowerCase());
@@ -999,13 +1723,7 @@ export function buildGameForMode(mode, seed = 0, customTarget = "", stage = 0) {
     const target = targetCatalog.find((entry) => entry.target === targetName);
     return gameFor(target, "weekly", { seed: Math.abs(seed), stage: safeStage, stageCount: 3, moveLimit: 10 + safeStage * 2, law: cosmicLaws[(Math.abs(seed) + safeStage) % cosmicLaws.length] });
   }
-  const pools = {
-    reach: targetCatalog.filter((entry) => entry.tier <= 4),
-    quick: targetCatalog.filter((entry) => entry.tier >= 1 && entry.tier <= 2),
-    moves: targetCatalog.filter((entry) => entry.tier >= 2 && entry.tier <= 3 && (solutionRoute(entry.target)?.length || Infinity) <= 12),
-    challenge: targetCatalog
-  };
-  const pool = pools[normalizedMode];
+  const pool = standardTargetPoolForMode(normalizedMode);
   return gameFor(pool[Math.abs(seed) % pool.length], normalizedMode, { seed: Math.abs(seed) });
 }
 
@@ -1156,6 +1874,7 @@ const mime = {
 const requestLimiter = new MemoryRateLimiter({ windowMs: 60_000, maximumKeys: 10_000 });
 const interestRequestWindows = new Map();
 const analyticsRequestWindows = new Map();
+const combinationReportRequestWindows = new Map();
 const recoveryRequestWindows = new Map();
 const recipeFeedbackRequestWindows = new Map();
 const adminRequestWindows = new Map();
@@ -1163,6 +1882,9 @@ const INTEREST_RATE_WINDOW_MS = 10 * 60_000;
 const INTEREST_RATE_LIMIT = 20;
 const INTEREST_RATE_MAX_KEYS = 5_000;
 const ANALYTICS_RATE_MAX_KEYS = 5_000;
+const COMBINATION_REPORT_RATE_WINDOW_MS = 10 * 60_000;
+const COMBINATION_REPORT_RATE_LIMIT = 12;
+const COMBINATION_REPORT_RATE_MAX_KEYS = 5_000;
 const RECOVERY_RATE_WINDOW_MS = 15 * 60_000;
 const RECOVERY_RATE_LIMIT = 10;
 const analyticsEvents = new Set(ANALYTICS_EVENT_NAMES);
@@ -1184,6 +1906,29 @@ function analyticsRateLimited(request, limit = 240) {
   }
   current.count += 1;
   return current.count > limit;
+}
+
+function combinationReportRateLimited(request) {
+  const socketAddress = request.socket.remoteAddress || "unknown";
+  const forwarded = process.env.CONSTELLORE_TRUST_PROXY === "true"
+    ? String(request.headers["x-forwarded-for"] || "").split(",")[0].trim()
+    : "";
+  const clientAddress = isIP(forwarded) ? forwarded : socketAddress;
+  const key = gameStore.sign(`rate:combination-report:${clientAddress}`);
+  const now = Date.now();
+  const current = combinationReportRequestWindows.get(key);
+  if (!current || now - current.startedAt > COMBINATION_REPORT_RATE_WINDOW_MS) {
+    for (const [storedKey, window] of combinationReportRequestWindows) {
+      if (now - window.startedAt > COMBINATION_REPORT_RATE_WINDOW_MS) combinationReportRequestWindows.delete(storedKey);
+    }
+    while (combinationReportRequestWindows.size >= COMBINATION_REPORT_RATE_MAX_KEYS) {
+      combinationReportRequestWindows.delete(combinationReportRequestWindows.keys().next().value);
+    }
+    combinationReportRequestWindows.set(key, { startedAt: now, count: 1 });
+    return false;
+  }
+  current.count += 1;
+  return current.count > COMBINATION_REPORT_RATE_LIMIT;
 }
 
 function adminRateLimited(request, limit = 240) {
@@ -1340,6 +2085,12 @@ function hasExactKeys(value, keys) {
     && Object.keys(value).sort().join(",") === [...keys].sort().join(",");
 }
 
+function hasOnlyKeys(value, required, allowed) {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value)
+    && required.every((key) => Object.hasOwn(value, key))
+    && Object.keys(value).every((key) => allowed.includes(key));
+}
+
 function billingSettings() {
   let checkoutUrl = "";
   try {
@@ -1365,29 +2116,79 @@ async function createSafeBackup() {
   return gameStore.exportSafeBackup(backupDirectory, { keep: backupRetention });
 }
 
-function officialRunDetails(mode, requestedSeed, stage = 0, requestedTarget = "", custom = false) {
+function officialRunDetails(
+  mode,
+  requestedSeed,
+  stage = 0,
+  requestedTarget = "",
+  custom = false,
+  adaptiveRequest = null,
+  playerId = ""
+) {
   const today = new Date().toISOString().slice(0, 10);
   const week = isoWeekKey();
   const safeStage = Math.min(2, Math.max(0, Number(stage) || 0));
-  const ranked = ["daily", "weekly", "quick", "moves"].includes(mode);
+  const adaptivePolicy = adaptiveModePolicy({ mode, custom });
+  const adaptive = Boolean(adaptiveRequest?.adaptive === true && adaptivePolicy.eligible && !custom);
+  const routeChallengeState = adaptive && playerId
+    ? gameStore.routeChallengeState(playerId)
+    : null;
+  const requestedStartStyle = ["classic", "shuffled"].includes(
+    String(adaptiveRequest?.startStyle || "").trim().toLowerCase()
+  )
+    ? String(adaptiveRequest.startStyle).trim().toLowerCase()
+    : "auto";
+  const authoritativeRouteContext = routeChallengeState
+    ? {
+        ...routeChallengeState,
+        // This is only a presentation preference. Rank, cadence position,
+        // recovery state and promotion state remain server-owned inputs.
+        startStylePreference: requestedStartStyle
+      }
+    : null;
+  const adaptiveState = adaptive
+    ? authoritativeRouteContext?.adaptiveDifficulty
+      || sanitizeAdaptiveDifficultyState({
+          version: adaptiveRequest?.adaptiveVersion,
+          level: adaptiveRequest?.adaptiveLevel,
+          failureStreak: adaptiveRequest?.failureStreak,
+          completedChallenges: adaptiveRequest?.adaptiveCompletedChallenges ?? adaptiveRequest?.completedChallenges,
+          majorChallengePending: adaptiveRequest?.adaptiveMajorChallengePending ?? adaptiveRequest?.majorChallengePending,
+          majorChallengeBaseLevel: adaptiveRequest?.adaptiveMajorChallengeBaseLevel ?? adaptiveRequest?.majorChallengeBaseLevel,
+          recentTargets: adaptiveRequest?.recentTargets
+        })
+    : null;
+  const ranked = ["daily", "weekly", "quick", "moves"].includes(mode) && !adaptive;
   let seed = Number.isFinite(Number(requestedSeed)) ? Math.abs(Number(requestedSeed)) : stableHash(`${Date.now()}:${mode}`);
   // Sequential UTC day numbers guarantee that the official destination moves
   // to the next catalog entry instead of merely hoping a date hash changes it.
   if (mode === "daily") seed = Math.floor(Date.parse(`${today}T00:00:00Z`) / 86_400_000);
   if (mode === "weekly") seed = stableHash(`weekly:${week}`);
-  if (["quick", "moves"].includes(mode)) seed = stableHash(`${mode}:${today}`);
-  const target = ["challenge", "reach"].includes(mode) ? requestedTarget : "";
-  const game = directedServerGame(buildGameForMode(mode, seed, target, safeStage));
+  if (["quick", "moves"].includes(mode) && !adaptive) seed = stableHash(`${mode}:${today}`);
+  const target = adaptive
+    ? String(adaptiveRequest?.adaptiveTarget || "")
+    : ["challenge", "reach"].includes(mode) ? requestedTarget : "";
+  const game = directedServerGame(buildGameForMode(
+    mode,
+    seed,
+    target,
+    safeStage,
+    adaptiveState,
+    authoritativeRouteContext
+  ));
   if (!game) return null;
   const challengeId = mode === "daily" ? `daily:${today}`
     : mode === "weekly" ? `weekly:${week}:${safeStage}`
+      : adaptive ? `practice:adaptive:${mode}:${stableHash(`${game.target}:${seed}`)}`
       : ["quick", "moves"].includes(mode) ? `${mode}:${today}`
         : `practice:${mode}:${seed}`;
   return {
     game: { ...game, ranked, challengeId, graphVersion: GRAPH_VERSION, buildVersion: BUILD_VERSION, rulesVersion: RANKED_RULES_VERSION },
     ranked,
     challengeId,
-    seed
+    seed,
+    adaptiveState,
+    adaptiveTarget: adaptive ? target : ""
   };
 }
 
@@ -1408,11 +2209,123 @@ function missionBriefingFingerprint(game) {
     timeLimit: game.timeLimit ?? null,
     moveLimit: game.moveLimit ?? null,
     reward: game.reward,
+    startStyle: game.startStyle === "shuffled" ? "shuffled" : "classic",
+    starters: Array.isArray(game.starters)
+      ? game.starters.map((word) => String(word || "")).slice(0, 6)
+      : [],
+    starterItems: Array.isArray(game.starterItems)
+      ? game.starterItems.slice(0, 6).map((item) => ({
+          word: String(item?.word || ""),
+          emoji: String(item?.emoji || ""),
+          category: item?.category == null ? null : String(item.category),
+          source: item?.source === "loaned-start" ? "loaned-start" : "origin",
+          loaned: item?.loaned === true,
+          premium: false,
+          paid: false,
+          access: item?.loaned === true ? "loaned" : "origin"
+        }))
+      : [],
+    startProfile: game.startProfile ? {
+      version: Math.max(1, Math.trunc(Number(game.startProfile.version) || 1)),
+      profileId: String(game.startProfile.profileId || ""),
+      style: game.startProfile.style === "shuffled" ? "shuffled" : "classic",
+      requestedStyle: ["classic", "shuffled"].includes(game.startProfile.requestedStyle)
+        ? game.startProfile.requestedStyle
+        : "auto",
+      starterHash: String(game.startProfile.starterHash || ""),
+      canonicalRouteLength: Math.max(1, Math.trunc(Number(game.startProfile.canonicalRouteLength) || 1)),
+      routeStartIndex: Math.max(0, Math.trunc(Number(game.startProfile.routeStartIndex) || 0)),
+      routeLength: Math.max(1, Math.trunc(Number(game.startProfile.routeLength) || 1)),
+      starterCount: Math.max(1, Math.min(6, Math.trunc(Number(game.startProfile.starterCount) || 1))),
+      productiveStarterCount: Math.max(1, Math.min(6, Math.trunc(Number(game.startProfile.productiveStarterCount) || 1))),
+      sidePathCount: Math.max(0, Math.min(2, Math.trunc(Number(game.startProfile.sidePathCount) || 0))),
+      hasValidOpening: game.startProfile.hasValidOpening === true,
+      fallback: game.startProfile.fallback === true,
+      fallbackReason: game.startProfile.fallbackReason ? String(game.startProfile.fallbackReason) : null,
+      selection: game.startProfile.selection ? {
+        reason: String(game.startProfile.selection.reason || ""),
+        cadencePosition: Number.isInteger(game.startProfile.selection.cadencePosition)
+          ? game.startProfile.selection.cadencePosition
+          : null,
+        cadenceLength: Number.isInteger(game.startProfile.selection.cadenceLength)
+          ? game.startProfile.selection.cadenceLength
+          : null,
+        locked: game.startProfile.selection.locked === true,
+        rank: {
+          id: String(game.startProfile.selection.rank?.id || ""),
+          number: Math.max(1, Math.trunc(Number(game.startProfile.selection.rank?.number) || 1))
+        }
+      } : null,
+      difficulty: game.startProfile.difficulty ? { ...game.startProfile.difficulty } : null
+    } : null,
     law: game.law ? { id: game.law.id, name: game.law.name, description: game.law.description } : null,
     ranked: Boolean(game.ranked),
     scoreEligible: game.scoreEligible !== false,
     rewardEligible: game.rewardEligible !== false,
     leaderboardEligible: Boolean(game.leaderboardEligible),
+    adaptive: Boolean(game.adaptive),
+    adaptiveVersion: Number.isFinite(Number(game.adaptiveVersion)) ? Math.max(1, Math.round(Number(game.adaptiveVersion))) : null,
+    adaptiveLevel: Number.isFinite(Number(game.adaptiveLevel)) ? Math.max(1, Math.min(10, Math.round(Number(game.adaptiveLevel)))) : null,
+    adaptiveBaseLevel: Number.isFinite(Number(game.adaptiveBaseLevel)) ? Math.max(1, Math.min(10, Math.round(Number(game.adaptiveBaseLevel)))) : null,
+    adaptiveEffectiveLevel: Number.isFinite(Number(game.adaptiveEffectiveLevel)) ? Math.max(1, Math.min(10, Math.round(Number(game.adaptiveEffectiveLevel)))) : null,
+    adaptiveCompletedChallenges: Number.isFinite(Number(game.adaptiveCompletedChallenges)) ? Math.max(0, Math.round(Number(game.adaptiveCompletedChallenges))) : 0,
+    adaptiveCompletionsTowardNextLevel: Number.isFinite(Number(game.adaptiveCompletionsTowardNextLevel)) ? Math.max(0, Math.min(2, Math.round(Number(game.adaptiveCompletionsTowardNextLevel)))) : 0,
+    adaptiveCompletionsUntilNextLevel: Number.isFinite(Number(game.adaptiveCompletionsUntilNextLevel)) ? Math.max(1, Math.min(3, Math.round(Number(game.adaptiveCompletionsUntilNextLevel)))) : 3,
+    adaptiveMajorChallengePending: Boolean(game.adaptiveMajorChallengePending),
+    adaptiveMajorChallengeBaseLevel: Number.isFinite(Number(game.adaptiveMajorChallengeBaseLevel)) ? Math.max(1, Math.min(10, Math.round(Number(game.adaptiveMajorChallengeBaseLevel)))) : null,
+    adaptiveSurge: Boolean(game.adaptiveSurge),
+    adaptiveSurgeBonus: Number.isFinite(Number(game.adaptiveSurgeBonus)) ? Math.max(0, Math.min(3, Math.round(Number(game.adaptiveSurgeBonus)))) : 0,
+    adaptiveSurgeBaseLevel: Number.isFinite(Number(game.adaptiveSurgeBaseLevel)) ? Math.max(1, Math.min(10, Math.round(Number(game.adaptiveSurgeBaseLevel)))) : null,
+    surge: Boolean(game.surge),
+    surgeBaseLevel: Number.isFinite(Number(game.surgeBaseLevel)) ? Math.max(1, Math.min(10, Math.round(Number(game.surgeBaseLevel)))) : null,
+    challengeLevel: Number.isFinite(Number(game.challengeLevel)) ? Math.max(1, Math.min(10, Math.round(Number(game.challengeLevel)))) : null,
+    adaptiveRewardMultiplier: Number.isFinite(Number(game.adaptiveRewardMultiplier)) ? Number(game.adaptiveRewardMultiplier) : null,
+    adaptiveMessage: game.adaptive ? String(game.adaptiveMessage || "").slice(0, 120) : "",
+    remixes: game.remixes ? {
+      version: Number(game.remixes.version) || 1,
+      selectionId: String(game.remixes.selectionId || ""),
+      rank: {
+        id: String(game.remixes.rank?.id || ""),
+        number: Number(game.remixes.rank?.number) || 1
+      },
+      masteryPoints: Math.max(0, Math.trunc(Number(game.remixes.masteryPoints) || 0)),
+      completedChallenges: Math.max(0, Math.trunc(Number(game.remixes.completedChallenges) || 0)),
+      requestedCount: Math.max(0, Math.trunc(Number(game.remixes.requestedCount) || 0)),
+      activeCount: Math.max(0, Math.trunc(Number(game.remixes.activeCount) || 0)),
+      introducesFamily: String(game.remixes.introducesFamily || ""),
+      adaptiveIntensity: game.remixes.adaptiveIntensity ? {
+        activeCount: Math.max(0, Math.trunc(Number(game.remixes.adaptiveIntensity.activeCount) || 0)),
+        minimumCount: Math.max(0, Math.trunc(Number(game.remixes.adaptiveIntensity.minimumCount) || 0)),
+        maximumCount: Math.max(0, Math.trunc(Number(game.remixes.adaptiveIntensity.maximumCount) || 0)),
+        cleanWinsTowardNextStep: Math.max(0, Math.trunc(Number(game.remixes.adaptiveIntensity.cleanWinsTowardNextStep) || 0)),
+        cleanWinsNeededForNextStep: Math.max(0, Math.trunc(Number(game.remixes.adaptiveIntensity.cleanWinsNeededForNextStep) || 0))
+      } : null,
+      rules: Array.isArray(game.remixes.rules) ? game.remixes.rules.map((rule) => ({
+        id: String(rule.id || ""),
+        family: String(rule.family || ""),
+        title: String(rule.title || ""),
+        instruction: String(rule.instruction || ""),
+        detail: String(rule.detail || "")
+      })) : []
+    } : null,
+    promotion: game.promotion?.active ? {
+      active: true,
+      currentRank: {
+        id: String(game.promotion.currentRank?.id || ""),
+        number: Number(game.promotion.currentRank?.number) || 1
+      },
+      targetRank: {
+        id: String(game.promotion.targetRank?.id || ""),
+        number: Number(game.promotion.targetRank?.number) || 1
+      },
+      attempt: Math.max(1, Math.trunc(Number(game.promotion.attempt) || 1)),
+      attemptsCompleted: Math.max(0, Math.trunc(Number(game.promotion.attemptsCompleted) || 0)),
+      attemptsTotal: Math.max(1, Math.trunc(Number(game.promotion.attemptsTotal) || 3)),
+      wins: Math.max(0, Math.trunc(Number(game.promotion.wins) || 0)),
+      winsRequired: Math.max(1, Math.trunc(Number(game.promotion.winsRequired) || 2)),
+      flawlessWins: Math.max(0, Math.trunc(Number(game.promotion.flawlessWins) || 0)),
+      instruction: String(game.promotion.instruction || "").slice(0, 160)
+    } : null,
     challengeId: game.challengeId || "",
     graphVersion: game.graphVersion || GRAPH_VERSION,
     buildVersion: game.buildVersion || BUILD_VERSION,
@@ -1427,13 +2340,25 @@ function missionPreviewRequest(details, body) {
     seed: details.seed,
     target: ["reach", "challenge"].includes(mode) ? String(body.target || "") : "",
     stage: mode === "weekly" ? Math.min(2, Math.max(0, Number(body.stage) || 0)) : 0,
-    custom: Boolean(body.custom)
+    custom: Boolean(body.custom),
+    adaptive: Boolean(details.game.adaptive),
+    adaptiveVersion: details.adaptiveState?.version || 0,
+    adaptiveLevel: details.adaptiveState?.level || 0,
+    failureStreak: details.adaptiveState?.failureStreak || 0,
+    adaptiveCompletedChallenges: details.adaptiveState?.completedChallenges || 0,
+    adaptiveMajorChallengePending: Boolean(details.adaptiveState?.majorChallengePending),
+    adaptiveMajorChallengeBaseLevel: details.adaptiveState?.majorChallengeBaseLevel ?? null,
+    recentTargets: details.adaptiveState?.recentTargets || [],
+    adaptiveTarget: details.game.adaptive ? String(details.adaptiveTarget || "") : "",
+    startStyle: ["classic", "shuffled"].includes(String(body.startStyle || "").trim().toLowerCase())
+      ? String(body.startStyle).trim().toLowerCase()
+      : "auto"
   };
 }
 
 function createMissionPreviewToken(playerId, request, game, route = []) {
   const payload = Buffer.from(JSON.stringify({
-    v: 1,
+    v: 3,
     playerId,
     expiresAt: Date.now() + MISSION_PREVIEW_TTL_MS,
     request,
@@ -1462,8 +2387,13 @@ function readMissionPreviewToken(token, playerId) {
     if (!validPurposeSignature && !validLegacySignature) throw new Error("invalid");
     const payload = JSON.parse(Buffer.from(encoded, "base64url").toString("utf8"));
     if (!hasExactKeys(payload, ["v", "playerId", "expiresAt", "request", "fingerprint", "route"])) throw new Error("invalid");
-    if (payload.v !== 1 || payload.playerId !== playerId || !Number.isFinite(payload.expiresAt) || payload.expiresAt <= Date.now()) throw new Error("invalid");
-    if (!hasExactKeys(payload.request, ["mode", "seed", "target", "stage", "custom"]) || typeof payload.fingerprint !== "string" || !Array.isArray(payload.route) || payload.route.length > 9) throw new Error("invalid");
+    if (payload.v !== 3 || payload.playerId !== playerId || !Number.isFinite(payload.expiresAt) || payload.expiresAt <= Date.now()) throw new Error("invalid");
+    if (!hasExactKeys(payload.request, ["mode", "seed", "target", "stage", "custom", "adaptive", "adaptiveVersion", "adaptiveLevel", "failureStreak", "adaptiveCompletedChallenges", "adaptiveMajorChallengePending", "adaptiveMajorChallengeBaseLevel", "recentTargets", "adaptiveTarget", "startStyle"])
+      || typeof payload.fingerprint !== "string"
+      || !Array.isArray(payload.request.recentTargets)
+      || payload.request.recentTargets.length > 8
+      || !Array.isArray(payload.route)
+      || payload.route.length > 9) throw new Error("invalid");
     return payload;
   } catch {
     throw serviceError(409, "This mission briefing expired or changed. Review the refreshed mission before starting.", "mission_stale");
@@ -1471,22 +2401,27 @@ function readMissionPreviewToken(token, playerId) {
 }
 
 function publicRun(run, token) {
-  const scoreMultiplier = run.scoringDisabled ? 0 : assistancePolicy(run.assist).scoreMultiplier;
+  const scoreEligible = !run.scoringDisabled && run.game?.scoreEligible !== false;
+  const scoreMultiplier = scoreEligible ? assistancePolicy(run.assist).scoreMultiplier : 0;
   return {
     id: run.runId,
     token,
     ranked: run.ranked,
     scoringDisabled: Boolean(run.scoringDisabled),
-    scoreEligible: !run.scoringDisabled,
+    scoreEligible,
     scoreMultiplier,
-    rewardEligible: !run.scoringDisabled,
-    leaderboardEligible: Boolean(run.ranked && !run.scoringDisabled),
+    rewardEligible: Boolean(scoreEligible && run.game?.rewardEligible !== false),
+    leaderboardEligible: Boolean(run.ranked && scoreEligible && run.game?.leaderboardEligible !== false),
     assist: run.assist,
     challengeId: run.challengeId,
     challengeKey: run.challengeBaseIdentity?.key || null,
     challenge: run.challengeBaseIdentity?.descriptor || null,
     startedAt: new Date(run.startedAt).toISOString(),
-    deadlineAt: run.game.timeLimit ? new Date(run.startedAt + run.game.timeLimit * 1000).toISOString() : null
+    deadlineAt: run.game.timeLimit ? new Date(run.startedAt + run.game.timeLimit * 1000).toISOString() : null,
+    routeProgress: routeProgressForRun(run),
+    remixProgress: run.remixRuntime
+      ? routeRemixProgress(run.remixRuntime, run.remixProgress)
+      : null
   };
 }
 
@@ -1537,6 +2472,24 @@ function allowAnalyticsOrigin(request, response) {
   return true;
 }
 
+function allowCombinationReportOrigin(request, response) {
+  if (allowAnalyticsOrigin(request, response)) return true;
+  const rawOrigin = String(request.headers.origin || "").trim();
+  let origin;
+  try { origin = new URL(rawOrigin); }
+  catch { return false; }
+  const hostname = origin.hostname.toLowerCase();
+  const officialItchHost = origin.protocol === "https:" && (
+    hostname === "itch.io"
+    || hostname.endsWith(".itch.io")
+    || hostname.endsWith(".itch.zone")
+  );
+  if (!officialItchHost) return false;
+  response.setHeader("Access-Control-Allow-Origin", origin.origin);
+  response.setHeader("Vary", "Origin");
+  return true;
+}
+
 export const experimentalCombination = contextualCombination;
 
 function studyAssistForReason(reason) {
@@ -1547,15 +2500,6 @@ function studyAssistForReason(reason) {
 function studyForfeitMessage(assist) {
   if (["sense", "gift"].includes(assist)) return "This challenge was forfeited under an earlier beta assistance rule.";
   return "Reveal Path forfeited this orbit's score and rewards.";
-}
-
-function originItem(word) {
-  return {
-    word,
-    emoji: emojiByWord[word] || emojiForWord(word),
-    category: semanticCategoryFor(word) || null,
-    source: "origin"
-  };
 }
 
 async function jsonBody(request, maximumBytes = 50_000) {
@@ -1600,7 +2544,7 @@ export const server = createServer(async (request, response) => {
   try {
     const url = new URL(request.url, `http://${request.headers.host || "localhost"}`);
     const isApiWrite = ["POST", "PUT", "PATCH", "DELETE"].includes(request.method) && url.pathname.startsWith("/api/");
-    const hasDedicatedCorsPolicy = url.pathname === "/api/interest" || url.pathname === "/api/analytics";
+    const hasDedicatedCorsPolicy = ["/api/interest", "/api/analytics", "/api/combination-reports"].includes(url.pathname);
     if (isApiWrite && !hasDedicatedCorsPolicy && !allowApiWriteOrigin(request)) {
       return sendJson(response, 403, { error: "That origin is not allowed to change game data.", code: "write_origin_denied" });
     }
@@ -1643,7 +2587,7 @@ export const server = createServer(async (request, response) => {
     }
     if (request.method === "GET" && ["/healthz", "/readyz"].includes(url.pathname)) {
       const verifiedTargets = targetCatalog.filter((entry) => verifiedServerRoute(gameFor(entry, "reach"))).length;
-      const contentReady = targetCatalog.length >= 30 && verifiedTargets === targetCatalog.length;
+      const contentReady = targetCatalog.length === 500 && verifiedTargets === targetCatalog.length;
       const storage = gameStore.storageHealth();
       const durableEnough = process.env.NODE_ENV !== "production" || storage.kind !== "memory";
       const ready = contentReady && storage.ready && durableEnough;
@@ -1661,8 +2605,16 @@ export const server = createServer(async (request, response) => {
         billingEnabled: billingSettings().billingEnabled
       });
     }
-    if (url.pathname === "/api/analytics" && request.method === "OPTIONS") {
-      if (!allowAnalyticsOrigin(request, response)) return sendJson(response, 403, { error: "That origin is not allowed.", code: "analytics_origin_denied" });
+    if (["/api/analytics", "/api/combination-reports"].includes(url.pathname) && request.method === "OPTIONS") {
+      const allowed = url.pathname === "/api/combination-reports"
+        ? allowCombinationReportOrigin(request, response)
+        : allowAnalyticsOrigin(request, response);
+      if (!allowed) return sendJson(response, 403, {
+        error: "That origin is not allowed.",
+        code: url.pathname === "/api/combination-reports"
+          ? "combination_report_origin_denied"
+          : "analytics_origin_denied"
+      });
       response.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
       response.setHeader("Access-Control-Allow-Headers", "Content-Type");
       response.setHeader("Access-Control-Max-Age", "600");
@@ -1790,7 +2742,17 @@ export const server = createServer(async (request, response) => {
       const result = { ...item, source: "market", note: "Activated from your persistent beta Word Vault." };
       runRegistry.addBend(run, result, "market");
       await runRegistry.persist(run);
-      return sendJson(response, 200, { item: result, assist: run.assist, division: "open", competitive: false });
+      const policy = assistancePolicy(run.assist);
+      return sendJson(response, 200, {
+        item: result,
+        assist: run.assist,
+        division: policy.division,
+        competitive: false,
+        scoringDisabled: Boolean(run.scoringDisabled || policy.study),
+        scoreEligible: !run.scoringDisabled && policy.scoreEligible,
+        scoreMultiplier: run.scoringDisabled ? 0 : policy.scoreMultiplier,
+        routeProgress: routeProgressForRun(run)
+      });
     }
     if (request.method === "GET" && url.pathname === "/api/events/current") {
       if (rateLimited(request, 120, "event-current")) return sendJson(response, 429, { error: "Too many Cosmic Event requests.", code: "event_rate_limited" });
@@ -1835,7 +2797,19 @@ export const server = createServer(async (request, response) => {
       const player = requirePlayer(request);
       const body = await jsonBody(request);
       const mode = ["reach", "quick", "moves", "daily", "weekly", "challenge"].includes(body.mode) ? body.mode : "reach";
-      const details = officialRunDetails(mode, body.seed, body.stage, String(body.target || ""), Boolean(body.custom));
+      if (body.adaptive === true && adaptiveModePolicy({ mode, custom: Boolean(body.custom) }).eligible) {
+        const prepared = gameStore.ensureRoutePromotion(player.id);
+        if (prepared.changed) await gameStore.persist();
+      }
+      const details = officialRunDetails(
+        mode,
+        body.seed,
+        body.stage,
+        String(body.target || ""),
+        Boolean(body.custom),
+        body,
+        player.id
+      );
       if (!details) throw serviceError(422, "That target has no verified route yet.", "target_unavailable");
       if (mode === "daily" && gameStore.hasScore(player.id, details.challengeId)) throw serviceError(409, "Today's ranked Word has already been completed.", "daily_complete");
       const priorForfeit = details.ranked ? gameStore.forfeitedChallenge(player.id, details.challengeId) : null;
@@ -1865,10 +2839,22 @@ export const server = createServer(async (request, response) => {
       const preview = body.previewToken ? readMissionPreviewToken(body.previewToken, player.id) : null;
       const runRequest = preview?.request || body;
       const mode = ["reach", "quick", "moves", "daily", "weekly", "challenge"].includes(runRequest.mode) ? runRequest.mode : "reach";
-      let details = officialRunDetails(mode, runRequest.seed, runRequest.stage, String(runRequest.target || ""), Boolean(runRequest.custom));
+      if (runRequest.adaptive === true && adaptiveModePolicy({ mode, custom: Boolean(runRequest.custom) }).eligible) {
+        const prepared = gameStore.ensureRoutePromotion(player.id);
+        if (prepared.changed) await gameStore.persist();
+      }
+      let details = officialRunDetails(
+        mode,
+        runRequest.seed,
+        runRequest.stage,
+        String(runRequest.target || ""),
+        Boolean(runRequest.custom),
+        runRequest,
+        player.id
+      );
       if (!details && preview?.request.custom && preview.route.length) {
         registerDynamicRoute(preview.route, preview.request.target);
-        details = officialRunDetails(mode, runRequest.seed, runRequest.stage, String(runRequest.target || ""), true);
+        details = officialRunDetails(mode, runRequest.seed, runRequest.stage, String(runRequest.target || ""), true, runRequest);
       }
       if (!details && preview) throw serviceError(409, "This mission briefing expired or changed. Review the refreshed mission before starting.", "mission_stale");
       if (!details) throw serviceError(422, "That target has no verified route yet.", "target_unavailable");
@@ -1891,22 +2877,76 @@ export const server = createServer(async (request, response) => {
       const universeManifest = buildUniverseManifest({ seed: candidateGame.seed, validation: verified.validation });
       if (!universeManifest) throw serviceError(422, "That target has no verified universe manifest.", "target_unavailable");
       const game = { ...candidateGame, universeManifest, routeLength: verified.route.length };
+      if (game.adaptive) gameStore.rememberRouteChallengeTarget(player.id, game.target);
       // Ranked solution steps are validated before acceptance but deliberately
       // remain outside the run snapshot and every public response.
       const scopedSolutionRoute = !ranked ? verified.route : null;
+      const remixRuntime = remixRuntimeForGame(game, verified.route, { includeDynamic: !details.ranked });
       const started = runRegistry.start(player.id, game, {
         ranked,
         challengeId: details.challengeId,
         scoringDisabled: Boolean(priorForfeit),
-        forfeitReason: priorForfeit?.reason
+        forfeitReason: priorForfeit?.reason,
+        remixRuntime
       });
-      for (const word of game.starters) started.run.discovered.set(word.toLowerCase(), originItem(word));
       if (scopedSolutionRoute) {
         started.run.solutionRoute = scopedSolutionRoute.map((step) => ({ ...step }));
         started.run.solutionRecipes = new Map(scopedSolutionRoute.map((step) => [keyFor(step.a, step.b), { ...step }]));
       }
       await runRegistry.persist(started.run);
       return sendJson(response, 201, { game, run: publicRun(started.run, started.token), player: gameStore.publicPlayer(player.id) });
+    }
+    if (request.method === "POST" && url.pathname === "/api/run/replay") {
+      if (rateLimited(request, 80, "run-replay")) return sendJson(response, 429, { error: "Too many challenges restarted." });
+      const player = requirePlayer(request);
+      const body = await jsonBody(request, 1_024);
+      if (!hasExactKeys(body, ["runId", "runToken"])) {
+        throw serviceError(400, "Restart requires only runId and runToken.", "invalid_replay_request");
+      }
+      const source = runRegistry.get(body.runId, player.id, body.runToken);
+      if (!source.completedAt) {
+        runRegistry.forfeit(source);
+        await runRegistry.persist(source);
+      }
+      const sourceAdaptive = Boolean(source.game?.adaptive || source.game?.replayOf?.adaptive);
+      const game = {
+        ...structuredClone(source.game),
+        adaptive: false,
+        ranked: false,
+        scoringDisabled: false,
+        scoreEligible: false,
+        rewardEligible: false,
+        leaderboardEligible: false,
+        practiceReplay: true,
+        replayOf: {
+          runId: source.runId,
+          adaptive: sourceAdaptive,
+          challengeId: String(source.challengeId || "").slice(0, 160)
+        }
+      };
+      const verified = verifiedServerRoute(game, { includeDynamic: true });
+      if (!verified) throw serviceError(422, "That exact challenge can no longer be verified.", "replay_unavailable");
+      const universeManifest = buildUniverseManifest({ seed: game.seed, validation: verified.validation });
+      if (!universeManifest) throw serviceError(422, "That exact challenge universe is unavailable.", "replay_unavailable");
+      game.universeManifest = universeManifest;
+      game.routeLength = verified.route.length;
+      const remixRuntime = remixRuntimeForGame(game, verified.route, { includeDynamic: true });
+      const challengeId = `practice:replay:${source.runId}`;
+      game.challengeId = challengeId;
+      const started = runRegistry.start(player.id, game, {
+        ranked: false,
+        challengeId,
+        scoringDisabled: false,
+        remixRuntime
+      });
+      started.run.solutionRoute = verified.route.map((step) => ({ ...step }));
+      started.run.solutionRecipes = new Map(verified.route.map((step) => [keyFor(step.a, step.b), { ...step }]));
+      await runRegistry.persist(started.run);
+      return sendJson(response, 201, {
+        game,
+        run: publicRun(started.run, started.token),
+        player: gameStore.publicPlayer(player.id)
+      });
     }
     if (request.method === "POST" && url.pathname === "/api/run/resume") {
       const player = requirePlayer(request);
@@ -1923,6 +2963,7 @@ export const server = createServer(async (request, response) => {
         eventProgress: eventState.progress,
         eventReward: eventState.reward,
         eventServerTime: eventState.serverTime,
+        routeRankOutcome: gameStore.routeRankOutcomeReceipt(player.id, run.runId),
         player: gameStore.publicPlayer(player.id)
       });
     }
@@ -1990,7 +3031,8 @@ export const server = createServer(async (request, response) => {
         rewardEligible: !scoringDisabled,
         leaderboardEligible: Boolean(run.ranked && !scoringDisabled),
         ranked: Boolean(run.ranked),
-        division: scoringDisabled ? "study" : policy.division
+        division: scoringDisabled ? "study" : policy.division,
+        routeProgress: routeProgressForRun(run)
       });
     }
     if (request.method === "POST" && url.pathname === "/api/run/gift") {
@@ -2037,7 +3079,8 @@ export const server = createServer(async (request, response) => {
         rewardEligible: !scoringDisabled,
         leaderboardEligible: Boolean(run.ranked && !scoringDisabled),
         ranked: Boolean(run.ranked),
-        division: scoringDisabled ? "study" : policy.division
+        division: scoringDisabled ? "study" : policy.division,
+        routeProgress: routeProgressForRun(run)
       });
     }
     if (request.method === "POST" && url.pathname === "/api/run/reveal") {
@@ -2062,7 +3105,36 @@ export const server = createServer(async (request, response) => {
         score: 0,
         ranked: false,
         target: run.game.target,
+        routeRankOutcome: gameStore.routeRankOutcomeReceipt(player.id, run.runId),
+        routeRank: gameStore.publicRouteRank(player.id),
+        routeProgress: routeProgressForRun(run),
         route: revealedRoute
+      });
+    }
+    if (request.method === "POST" && url.pathname === "/api/run/forfeit") {
+      const player = requirePlayer(request);
+      const body = await jsonBody(request, 1_024);
+      if (!hasExactKeys(body, ["runId", "runToken"])) {
+        throw serviceError(
+          400,
+          "Giving up requires only runId and runToken.",
+          "invalid_forfeit_request"
+        );
+      }
+      const run = runRegistry.get(body.runId, player.id, body.runToken);
+      runRegistry.forfeit(run);
+      await runRegistry.persist(run);
+      return sendJson(response, 200, {
+        completed: false,
+        forfeited: true,
+        scoringDisabled: true,
+        scoreEligible: false,
+        rewardEligible: false,
+        leaderboardEligible: false,
+        score: 0,
+        target: run.game.target,
+        routeRankOutcome: gameStore.routeRankOutcomeReceipt(player.id, run.runId),
+        routeRank: gameStore.publicRouteRank(player.id)
       });
     }
     if (request.method === "POST" && url.pathname === "/api/run/submit") {
@@ -2218,6 +3290,46 @@ export const server = createServer(async (request, response) => {
       const result = await createSafeBackup();
       return sendJson(response, 201, { ...result, filename: basename(result.filename) });
     }
+    if (request.method === "POST" && url.pathname === "/api/combination-reports") {
+      if (!allowCombinationReportOrigin(request, response)) {
+        return sendJson(response, 403, { error: "That origin is not allowed.", code: "combination_report_origin_denied" });
+      }
+      if (combinationReportRateLimited(request)) {
+        return sendJson(response, 429, { error: "Too many combination reports. Please try again later.", code: "combination_report_rate_limited" });
+      }
+      const body = await jsonBody(request, 1_024);
+      if (!hasOnlyKeys(body, ["a", "b", "mode", "reporterId"], ["a", "b", "expected", "reason", "mode", "reporterId"])) {
+        throw serviceError(
+          400,
+          "Combination reports accept only a, b, expected, reason, mode, and reporterId.",
+          "invalid_combination_report_request"
+        );
+      }
+      const reportA = safeConcept(body.a, 28);
+      const reportB = safeConcept(body.b, 28);
+      if (!reportA || !reportB) {
+        throw serviceError(400, "Combination reports require two short, recognizable concepts.", "invalid_combination_report_text");
+      }
+      if (!authoredConceptExists(reportA) || !authoredConceptExists(reportB)) {
+        throw serviceError(422, "That report includes a concept outside the released word graph.", "combination_report_unknown_concept");
+      }
+      if (authoredCombination(reportA, reportB)) {
+        throw serviceError(409, "That combination already has an authored result.", "combination_report_already_authored");
+      }
+      const report = await gameStore.recordCombinationReport({
+        a: reportA,
+        b: reportB,
+        expected: body.expected ?? "",
+        reason: body.reason ?? "",
+        mode: body.mode,
+        reporterId: body.reporterId
+      });
+      return sendJson(response, 202, {
+        accepted: true,
+        duplicate: report.duplicate,
+        reviewable: report.reviewable
+      });
+    }
     if (request.method === "POST" && url.pathname === "/api/analytics") {
       if (!allowAnalyticsOrigin(request, response)) return sendJson(response, 403, { error: "That origin is not allowed.", code: "analytics_origin_denied" });
       if (analyticsRateLimited(request, 240)) return sendJson(response, 429, { error: "Too many events." });
@@ -2243,7 +3355,14 @@ export const server = createServer(async (request, response) => {
       runRegistry.addBend(run, item, "wish");
       await gameStore.consumeWish(player.id);
       await runRegistry.flush();
-      return sendJson(response, 200, { ...item, player: gameStore.publicPlayer(player.id), assist: run.assist, division: "open", competitive: false });
+      return sendJson(response, 200, {
+        ...item,
+        player: gameStore.publicPlayer(player.id),
+        assist: run.assist,
+        division: "open",
+        competitive: false,
+        routeProgress: routeProgressForRun(run)
+      });
     }
     if (request.method === "POST" && url.pathname === "/api/custom-target") {
       if (rateLimited(request, 30, "custom-target")) return sendJson(response, 429, { error: "Too many routes requested. Try again shortly." });
@@ -2331,7 +3450,7 @@ export const server = createServer(async (request, response) => {
       let universeContext = null;
       if (run) {
         runRegistry.canCombine(run, safeA, safeB);
-        const twist = selectCosmicTwist({
+        const twist = run.game.remixes?.activeCount ? null : selectCosmicTwist({
           a: safeA,
           b: safeB,
           canonicalResult: responseResult,
@@ -2363,7 +3482,13 @@ export const server = createServer(async (request, response) => {
           feedbackEligible: Boolean(historyEntry?.feedbackEligible),
           newDiscovery: historyEntry?.newDiscovery === true,
           progressionEligible: historyEntry?.progressionEligible === true,
-          eventEligible: historyEntry?.eventEligible === true
+          eventEligible: historyEntry?.eventEligible === true,
+          remixProgress: historyEntry?.remixProgress || null,
+          targetMade: historyEntry?.targetMade === true,
+          completionBlocked: historyEntry?.completionBlocked === true,
+          remixMessage: historyEntry?.completionBlocked
+            ? String(historyEntry?.remixCompletion?.reason || "")
+            : ""
         };
       }
       const eventState = run && runPlayer ? gameStore.cosmicEventState(runPlayer.id, new Date(run.startedAt)) : null;
@@ -2379,6 +3504,16 @@ export const server = createServer(async (request, response) => {
         scoreEligible: !scoringDisabled && runPolicy.scoreEligible,
         scoreMultiplier: scoringDisabled ? 0 : runPolicy.scoreMultiplier,
         division: scoringDisabled ? "study" : runPolicy.division,
+        ...(run ? { routeProgress: routeProgressForRun(run) } : {}),
+        ...(run?.completedAt && runPlayer
+          ? {
+              routeRank: gameStore.publicRouteRank(runPlayer.id),
+              routeRankOutcome: gameStore.routeRankOutcomeReceipt(
+                runPlayer.id,
+                run.runId
+              )
+            }
+          : {}),
         ...(eventState ? {
           cosmicEvent: eventState.event,
           eventProgress: eventState.progress,
@@ -2400,9 +3535,18 @@ export const server = createServer(async (request, response) => {
     ]);
     const isPlayDocument = url.pathname === "/play" || url.pathname === "/play/";
     const isPlayServiceWorker = url.pathname === "/play/service-worker.js";
+    const requestedPlayAsset = !isPlayDocument && url.pathname.startsWith("/play/")
+      ? url.pathname.slice("/play/".length)
+      : "";
     const requestedSiteAsset = siteAssets.get(url.pathname);
     const base = requestedSiteAsset ? websiteRoot : root;
-    const pathname = requestedSiteAsset || (isPlayDocument ? "index.html" : isPlayServiceWorker ? "service-worker.js" : url.pathname);
+    const pathname = requestedSiteAsset || (
+      isPlayDocument
+        ? "index.html"
+        : isPlayServiceWorker
+          ? "service-worker.js"
+          : requestedPlayAsset || url.pathname
+    );
     const filePath = normalize(join(base, pathname));
     if (!filePath.startsWith(base)) return sendJson(response, 403, { error: "Forbidden" });
     const file = await readFile(filePath);

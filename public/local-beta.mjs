@@ -2,15 +2,50 @@ import {
   buildLocalGame,
   canonicalLocalTarget,
   canonicalLocalWord,
+  localAdaptiveCandidates,
   localItemFor,
+  localRemixRecipesFor,
   localRouteTo,
   localSuggestions,
   lookupLocalCombination
-} from "./local-world.mjs?v=3.0.0-beta.2";
-import { cosmicTwistOptions, cosmicTwistSeedFor, selectCosmicTwist } from "./cosmic-twists.mjs?v=3.0.0-beta.2";
-import { QUICK_TIP_LIMIT, assistancePolicy, combineAssistance, rankSenseCandidates, selectRouteNavigationTip, selectWordGift } from "./engagement-features.mjs?v=3.0.0-beta.2";
-import { annotateUniverseResult, selectUniverse, validateUniverseRoute } from "./universe-director.mjs?v=3.0.0-beta.2";
-import { sanitizeRecipeRating } from "./recipe-feedback.mjs?v=3.0.0-beta.2";
+} from "./local-world.mjs?v=3.3.0-beta.1";
+import {
+  adaptiveChallengeProfile,
+  adaptiveModePolicy,
+  adaptiveRewardMultiplier,
+  estimateAdaptiveChallengeLevel,
+  sanitizeAdaptiveDifficultyState,
+  selectAdaptiveChallenge
+} from "./adaptive-difficulty.mjs?v=3.3.0-beta.1";
+import {
+  createRemixProgressionState,
+  getPromotionEligibility,
+  getRemixRankPresentation,
+  sanitizeRemixProgressionState,
+  selectChallengeRemixes
+} from "./remix-progression.mjs?v=3.3.0-beta.1";
+import {
+  sanitizeRemixReadinessState,
+  selectAdaptiveRemixPlan
+} from "./remix-readiness.mjs?v=3.3.0-beta.1";
+import {
+  CLASSIC_STARTERS,
+  createChallengeStartProfile
+} from "./shuffled-start.mjs?v=3.3.0-beta.1";
+import {
+  checkRouteRemixBeforeCombination,
+  checkRouteRemixCompletion,
+  createRouteRemixPlan,
+  createRouteRemixProgress,
+  detectRouteRemixCapabilities,
+  markRouteRemixAnswerRevealed,
+  recordRouteRemixCombination,
+  routeRemixProgress
+} from "./route-remixes.mjs?v=3.3.0-beta.1";
+import { cosmicTwistOptions, cosmicTwistSeedFor, selectCosmicTwist } from "./cosmic-twists.mjs?v=3.3.0-beta.1";
+import { QUICK_TIP_LIMIT, assistancePolicy, combineAssistance, rankSenseCandidates, selectRouteNavigationTip, selectWordGift } from "./engagement-features.mjs?v=3.3.0-beta.1";
+import { annotateUniverseResult, selectUniverse, validateUniverseRoute } from "./universe-director.mjs?v=3.3.0-beta.1";
+import { sanitizeRecipeRating } from "./recipe-feedback.mjs?v=3.3.0-beta.1";
 
 const runs = new Map();
 const missionPreviews = new Map();
@@ -38,6 +73,15 @@ function localId(prefix) {
   return `${prefix}-${globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`}`;
 }
 
+function stableHash(value) {
+  let hash = 2166136261;
+  for (const character of String(value)) {
+    hash ^= character.charCodeAt(0);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
+}
+
 function fail(message, code = "local_beta_error", status = 422) {
   const error = new Error(message);
   error.code = code;
@@ -56,7 +100,7 @@ function publicPlayer() {
 }
 
 function cloneMissionGame(game) {
-  return JSON.parse(JSON.stringify(game));
+  return structuredClone(game);
 }
 
 function pruneMissionPreviews() {
@@ -67,15 +111,427 @@ function pruneMissionPreviews() {
   while (missionPreviews.size >= 24) missionPreviews.delete(missionPreviews.keys().next().value);
 }
 
-function directedLocalGame(mode, seed, target, stage) {
-  const game = buildLocalGame(mode, seed, target, stage);
-  if (!game) return null;
-  const route = localRouteTo(game.target);
+function adaptiveChallengeMessage(profile) {
+  if (profile.surge) {
+    return "Surge challenge: one much harder game. If it is not completed, your normal level stays safe.";
+  }
+  const progress = profile.completionsTowardNextLevel;
+  return progress
+    ? `${progress} of 3 challenges complete toward the next difficulty level.`
+    : "Complete 3 challenges to raise the difficulty.";
+}
+
+function localAdaptiveRemixSeed(game, completedChallenges) {
+  return [
+    "local-world",
+    game.mode,
+    Math.abs(Number(game.seed) || 0),
+    game.target,
+    Math.max(0, Math.trunc(Number(completedChallenges) || 0)),
+    game.startStyle === "shuffled" ? game.startProfile?.profileId || "shuffled" : "classic"
+  ].join("|");
+}
+
+function localRemixContext(game, suppliedRoute = null) {
+  const route = Array.isArray(suppliedRoute) ? suppliedRoute : localRouteTo(game?.target);
+  if (!game || !Array.isArray(route) || !route.length) return null;
+  const recipes = localRemixRecipesFor(game.target);
+  return {
+    route,
+    recipes,
+    capabilities: detectRouteRemixCapabilities({
+      route,
+      recipes,
+      target: game.target
+    })
+  };
+}
+
+function localChallengeContext(request, legacyCompletedChallenges = 0) {
+  const saved = isRecord(request?.localChallengeContext)
+    ? request.localChallengeContext
+    : null;
+  const progressionCandidate = saved?.progression ?? request?.routeProgression;
+  const progression = isRecord(progressionCandidate)
+    ? sanitizeRemixProgressionState(progressionCandidate)
+    : createRemixProgressionState(legacyCompletedChallenges);
+  const readinessProvided = saved?.readinessProvided === true
+    || isRecord(request?.remixReadiness);
+  const readiness = sanitizeRemixReadinessState(
+    saved?.readiness ?? request?.remixReadiness
+  );
+  const eligibility = getPromotionEligibility(progression);
+  const currentRank = getRemixRankPresentation(progression.rankId);
+  const challengeRank = eligibility.active && eligibility.nextRank
+    ? getRemixRankPresentation(eligibility.nextRank.id)
+    : currentRank;
+  const lastOutcome = String(
+    saved?.lastOutcome
+    ?? request?.lastRouteOutcome
+    ?? readiness.recentOutcomes.at(-1)?.outcome
+    ?? ""
+  ).trim().toLowerCase();
+  const promotion = {
+    active: eligibility.active,
+    currentRank: eligibility.rank,
+    targetRank: eligibility.nextRank,
+    attempt: eligibility.trial ? eligibility.trial.attempts + 1 : 0,
+    attemptsCompleted: eligibility.trial?.attempts || 0,
+    attemptsTotal: eligibility.trialLength,
+    wins: eligibility.trial?.wins || 0,
+    winsRequired: eligibility.winsRequired,
+    flawlessWins: eligibility.trial?.flawlessWins || 0
+  };
+  return {
+    version: 1,
+    progression,
+    readiness,
+    readinessProvided,
+    currentRank,
+    challengeRank,
+    promotion,
+    lastOutcome
+  };
+}
+
+function withLocalAdaptiveRemixes(game, completedChallenges, routeContext = null, suppliedRoute = null) {
+  const context = localRemixContext(game, suppliedRoute);
+  if (!context) return game;
+  const remixSeed = localAdaptiveRemixSeed(game, completedChallenges);
+  const adaptivePlan = routeContext?.readinessProvided
+    ? selectAdaptiveRemixPlan({
+        state: routeContext.readiness,
+        rank: routeContext.challengeRank.id,
+        seed: remixSeed,
+        availableFamilies: context.capabilities.availableFamilies
+      })
+    : null;
+  const selection = adaptivePlan
+    ? {
+        rank: adaptivePlan.rank,
+        requestedCount: adaptivePlan.requestedCount,
+        modifierIds: adaptivePlan.familyIds,
+        introducesFamily: adaptivePlan.introducesFamily,
+        reducedForAvailability: adaptivePlan.reducedForAvailability,
+        reducedForCompatibility: adaptivePlan.reducedForCompatibility,
+        reducedForOnboarding: adaptivePlan.reducedForOnboarding,
+        intensity: adaptivePlan.intensity
+      }
+    : selectChallengeRemixes({
+        completedChallenges,
+        seed: remixSeed,
+        availableFamilies: context.capabilities.availableFamilies,
+        capabilities: context.capabilities.capability
+      });
+  const plan = createRouteRemixPlan({
+    route: context.route,
+    recipes: context.recipes,
+    target: game.target,
+    families: selection.modifierIds,
+    seed: remixSeed
+  });
+  if (plan.runtime.activeFamilies.length < selection.modifierIds.length) return null;
+  const masterCap = plan.runtime.constraints.master_route?.moveCap || null;
+  const rules = plan.public.remixes.map((rule, index) => ({
+    id: `${rule.family}:${index + 1}`,
+    family: rule.family,
+    title: rule.label,
+    instruction: rule.instruction,
+    detail: rule.detail
+  }));
   return {
     ...game,
-    ...(Array.isArray(route) ? { routeLength: route.length } : {}),
+    moveLimit: masterCap
+      ? Math.min(Number.isFinite(Number(game.moveLimit)) ? Number(game.moveLimit) : masterCap, masterCap)
+      : game.moveLimit,
+    remixes: {
+      version: plan.version,
+      selectionId: `rmx1_${stableHash(remixSeed).toString(36)}`,
+      rank: selection.rank,
+      masteryPoints: Math.max(
+        0,
+        Math.trunc(Number(routeContext?.progression?.masteryPoints) || 0)
+      ),
+      completedChallenges: Math.max(0, Math.trunc(Number(completedChallenges) || 0)),
+      requestedCount: selection.requestedCount,
+      activeCount: rules.length,
+      introducesFamily: selection.introducesFamily || null,
+      adaptiveIntensity: selection.intensity
+        ? {
+            activeCount: selection.intensity.activeCount,
+            minimumCount: selection.intensity.minimumCount,
+            maximumCount: selection.intensity.maximumCount,
+            cleanWinsTowardNextStep: selection.intensity.cleanWinsTowardNextStep,
+            cleanWinsNeededForNextStep: selection.intensity.cleanWinsNeededForNextStep
+          }
+        : null,
+      reducedForAvailability: Boolean(selection.reducedForAvailability),
+      reducedForCompatibility: Boolean(selection.reducedForCompatibility),
+      reducedForOnboarding: Boolean(selection.reducedForOnboarding),
+      summary: plan.public.summary,
+      rules
+    },
+    promotion: routeContext?.promotion?.active
+      ? {
+          active: true,
+          currentRank: routeContext.promotion.currentRank,
+          targetRank: routeContext.promotion.targetRank,
+          attempt: routeContext.promotion.attempt,
+          attemptsCompleted: routeContext.promotion.attemptsCompleted,
+          attemptsTotal: routeContext.promotion.attemptsTotal,
+          wins: routeContext.promotion.wins,
+          winsRequired: routeContext.promotion.winsRequired,
+          flawlessWins: routeContext.promotion.flawlessWins,
+          instruction: `Win ${routeContext.promotion.winsRequired} of ${routeContext.promotion.attemptsTotal} challenges to reach ${routeContext.promotion.targetRank?.name || "the next rank"}.`
+        }
+      : null
+  };
+}
+
+function localRemixRuntimeForGame(game, route) {
+  if (!game?.remixes || !Array.isArray(game.remixes.rules) || !Array.isArray(route)) return null;
+  return createRouteRemixPlan({
+    route,
+    recipes: localRemixRecipesFor(game.target),
+    target: game.target,
+    families: game.remixes.rules.map((rule) => rule.family),
+    seed: localAdaptiveRemixSeed(game, game.remixes.completedChallenges)
+  }).runtime;
+}
+
+function adaptiveLocalGame(mode, seed, stage, request) {
+  const policy = adaptiveModePolicy({
+    mode,
+    custom: Boolean(request?.custom),
+    shared: Boolean(request?.shared),
+    fixed: Boolean(request?.fixed)
+  });
+  if (request?.adaptive !== true || !policy.eligible) return null;
+  const adaptiveState = sanitizeAdaptiveDifficultyState({
+    version: request.adaptiveVersion,
+    level: request.adaptiveLevel,
+    failureStreak: request.failureStreak,
+    completedChallenges: request.adaptiveCompletedChallenges ?? request.completedChallenges,
+    majorChallengePending: request.adaptiveMajorChallengePending ?? request.majorChallengePending,
+    majorChallengeBaseLevel: request.adaptiveMajorChallengeBaseLevel ?? request.majorChallengeBaseLevel,
+    recentTargets: request.recentTargets
+  });
+  const profile = adaptiveChallengeProfile(adaptiveState);
+  const routeContext = localChallengeContext(request, profile.completedChallenges);
+  const remixRank = routeContext.challengeRank;
+  const candidates = localAdaptiveCandidates(mode).filter((candidate) => {
+    const context = localRemixContext(candidate);
+    if (!context) return false;
+    const realizedUnlocked = remixRank.unlockedFamilies.filter(
+      (family) => context.capabilities.availableFamilies.includes(family)
+    );
+    return realizedUnlocked.length >= remixRank.minimumRemixes;
+  });
+  const requestedTarget = canonicalLocalTarget(request.adaptiveTarget);
+  const selection = requestedTarget
+    ? {
+        selected: candidates.find((candidate) => candidate.target.toLowerCase() === requestedTarget.toLowerCase()),
+        metadata: {
+          baseLevel: profile.baseLevel,
+          requestedLevel: profile.effectiveLevel,
+          effectiveLevel: profile.effectiveLevel,
+          surge: profile.surge,
+          surgePending: profile.surgePending,
+          majorChallengeBonus: profile.majorChallengeBonus,
+          reason: "personal_restart_target"
+        }
+      }
+    : selectAdaptiveChallenge({
+        state: adaptiveState,
+        candidates,
+        context: { mode, seed }
+      });
+  const selected = selection.selected;
+  if (!selected) return null;
+  const game = buildLocalGame(mode, seed, selected.target, stage);
+  if (!game) return null;
+  const challengeLevel = estimateAdaptiveChallengeLevel(selected);
+  const rewardMultiplier = adaptiveRewardMultiplier(challengeLevel);
+  return {
+    ...game,
+    reward: Math.max(1, Math.round(Number(game.reward || 0) * rewardMultiplier)),
+    adaptive: true,
+    adaptiveVersion: adaptiveState.version,
+    adaptiveLevel: adaptiveState.level,
+    adaptiveBaseLevel: profile.baseLevel,
+    adaptiveEffectiveLevel: profile.effectiveLevel,
+    adaptiveCompletedChallenges: profile.completedChallenges,
+    adaptiveCompletionsTowardNextLevel: profile.completionsTowardNextLevel,
+    adaptiveCompletionsUntilNextLevel: profile.completionsUntilNextLevel,
+    adaptiveMajorChallengePending: adaptiveState.majorChallengePending,
+    adaptiveMajorChallengeBaseLevel: adaptiveState.majorChallengeBaseLevel,
+    adaptiveSurge: profile.surge,
+    adaptiveSurgeBonus: profile.majorChallengeBonus,
+    adaptiveSurgeBaseLevel: adaptiveState.majorChallengeBaseLevel,
+    surge: profile.surge,
+    surgeBaseLevel: profile.baseLevel,
+    challengeLevel,
+    adaptiveRewardMultiplier: rewardMultiplier,
+    adaptiveMessage: adaptiveChallengeMessage(profile),
+    ranked: false,
+    scoreEligible: true,
+    rewardEligible: true,
+    leaderboardEligible: false,
+    localChallengeContext: routeContext
+  };
+}
+
+function localStartSeed(game, routeContext) {
+  return [
+    "local-start-v1",
+    game.mode,
+    Math.abs(Number(game.seed) || 0),
+    game.target,
+    routeContext?.challengeRank?.id || "bronze",
+    routeContext?.progression?.completedChallenges || 0,
+    routeContext?.promotion?.attemptsCompleted || 0
+  ].join("|");
+}
+
+function localStartProfileFor(game, route, request, routeContext, forcedStyle = "") {
+  const requestedStyle = forcedStyle
+    || request?.startStyle
+    || "classic";
+  const effectiveLevel = Math.max(
+    1,
+    Number(game.adaptiveEffectiveLevel || game.challengeLevel || 1)
+  );
+  return createChallengeStartProfile({
+    target: game.target,
+    canonicalRoute: route,
+    recipeLookup(a, b) {
+      const result = lookupLocalCombination(a, b);
+      return result ? { a, b, ...result } : null;
+    },
+    itemLookup: localItemFor,
+    seed: localStartSeed(game, routeContext),
+    startStyle: requestedStyle,
+    rank: routeContext?.challengeRank?.id || "bronze",
+    challengeIndex: routeContext?.progression?.completedChallenges || 0,
+    lastOutcome: routeContext?.lastOutcome || "",
+    failureRecovery: ["failed", "forfeit", "reveal"].includes(routeContext?.lastOutcome),
+    promotion: routeContext?.promotion?.active === true,
+    promotionAttempt: routeContext?.promotion?.attemptsCompleted || 0,
+    difficulty: {
+      level: Math.max(1, Math.min(5, Math.ceil(effectiveLevel / 2)))
+    }
+  });
+}
+
+function localStarterItems(profile) {
+  const baseWords = new Set(CLASSIC_STARTERS.map((word) => word.toLowerCase()));
+  return profile.starterItems.map((item) => {
+    const loaned = profile.style === "shuffled" && !baseWords.has(item.word.toLowerCase());
+    return {
+      ...item,
+      premium: false,
+      loaned,
+      source: loaned ? "loaned-start" : "origin"
+    };
+  });
+}
+
+function publicLocalStartProfile(profile) {
+  return {
+    version: profile.version,
+    profileId: profile.profileId,
+    style: profile.style,
+    requestedStyle: profile.requestedStyle,
+    starterHash: profile.starterHash,
+    canonicalRouteLength: profile.canonicalRouteLength,
+    routeStartIndex: profile.routeStartIndex,
+    routeLength: profile.routeLength,
+    starterCount: profile.starters.length,
+    productiveStarterCount: profile.productiveStarterCount,
+    sidePathCount: profile.sidePathCount,
+    hasValidOpening: profile.hasValidOpening,
+    fallback: profile.fallback,
+    fallbackReason: profile.fallbackReason,
+    selection: {
+      reason: profile.selection.reason,
+      cadencePosition: profile.selection.cadencePosition,
+      cadenceLength: profile.selection.cadenceLength,
+      locked: profile.selection.locked,
+      rank: profile.selection.rank
+    },
+    difficulty: structuredClone(profile.difficulty),
+    starterItems: localStarterItems(profile)
+  };
+}
+
+function gameWithLocalStart(game, profile) {
+  const startProfile = publicLocalStartProfile(profile);
+  return {
+    ...game,
+    startStyle: profile.style,
+    startProfile,
+    starters: [...profile.starters],
+    starterItems: structuredClone(startProfile.starterItems),
+    routeLength: profile.routeLength
+  };
+}
+
+function directedLocalGame(mode, seed, target, stage, adaptiveRequest = null) {
+  const request = adaptiveRequest || {};
+  const game = adaptiveLocalGame(mode, seed, stage, request)
+    || buildLocalGame(mode, seed, target, stage);
+  if (!game) return null;
+  const route = localRouteTo(game.target);
+  if (!Array.isArray(route) || !route.length) return null;
+  const routeContext = game.localChallengeContext
+    || localChallengeContext(request, game.adaptiveCompletedChallenges || 0);
+  const shouldUseStartProfiles = game.adaptive === true
+    || request.startStyle != null;
+  if (!shouldUseStartProfiles) {
+    return {
+      ...game,
+      routeLength: route.length,
+      universe: selectUniverse(game.seed)
+    };
+  }
+
+  const baseGame = {
+    ...game,
+    localChallengeContext: routeContext,
     universe: selectUniverse(game.seed)
   };
+  let profile = localStartProfileFor(baseGame, route, request, routeContext);
+  let prepared = gameWithLocalStart(baseGame, profile);
+  let remixed = game.adaptive
+    ? withLocalAdaptiveRemixes(
+        prepared,
+        routeContext.progression.completedChallenges,
+        routeContext,
+        profile.challengeRoute
+      )
+    : prepared;
+  if (!remixed) return null;
+
+  if (profile.style === "shuffled" && remixed.remixes?.introducesFamily) {
+    const requestedStyle = profile.requestedStyle;
+    profile = localStartProfileFor(baseGame, route, request, routeContext, "classic");
+    profile.requestedStyle = requestedStyle;
+    profile.fallback = true;
+    profile.fallbackReason = "new_remix_family";
+    profile.selection = {
+      ...profile.selection,
+      reason: "new_remix_family"
+    };
+    prepared = gameWithLocalStart(baseGame, profile);
+    remixed = withLocalAdaptiveRemixes(
+      prepared,
+      routeContext.progression.completedChallenges,
+      routeContext,
+      profile.challengeRoute
+    );
+    if (!remixed) return null;
+  }
+  return remixed;
 }
 
 function canonicalRouteRecipes(route) {
@@ -89,8 +545,26 @@ function canonicalRouteRecipes(route) {
 }
 
 function verifiedLocalRoute(game) {
-  const route = game ? localRouteTo(game.target) : null;
-  if (!Array.isArray(route)) return null;
+  const canonicalRoute = game ? localRouteTo(game.target) : null;
+  if (!Array.isArray(canonicalRoute)) return null;
+  const routeStartIndex = game.startProfile == null
+    ? 0
+    : boundedInteger(game.startProfile.routeStartIndex, -1, canonicalRoute.length);
+  if (
+    routeStartIndex < 0
+    || routeStartIndex >= canonicalRoute.length
+    || game.startProfile?.canonicalRouteLength != null
+      && Number(game.startProfile.canonicalRouteLength) !== canonicalRoute.length
+  ) {
+    return null;
+  }
+  const route = canonicalRoute.slice(routeStartIndex);
+  if (
+    game.startProfile?.routeLength != null
+    && Number(game.startProfile.routeLength) !== route.length
+  ) {
+    return null;
+  }
   const canonicalRecipes = canonicalRouteRecipes(route);
   const validation = validateUniverseRoute({
     starters: game.starters,
@@ -154,8 +628,61 @@ function restoredHistory(value) {
   return history;
 }
 
+function localRouteProgressFor(route, target, available) {
+  const cleanRoute = Array.isArray(route) ? route : [];
+  const total = cleanRoute.length;
+  const known = new Set(
+    (Array.isArray(available) ? available : [...(available || [])])
+      .map((item) => String(item?.word || item || "").trim().toLowerCase())
+      .filter(Boolean)
+  );
+  const targetKey = String(target || "").trim().toLowerCase();
+  if (!total || !targetKey) {
+    return { total, remaining: 0, complete: false, percent: 0 };
+  }
+  if (known.has(targetKey)) {
+    return { total, remaining: 0, complete: true, percent: 100 };
+  }
+  const needed = new Set([targetKey]);
+  let remaining = 0;
+  for (let index = cleanRoute.length - 1; index >= 0; index -= 1) {
+    const step = cleanRoute[index];
+    const result = String(step?.word || "").trim().toLowerCase();
+    if (!needed.has(result)) continue;
+    needed.delete(result);
+    if (known.has(result)) continue;
+    remaining += 1;
+    needed.add(String(step.a || "").trim().toLowerCase());
+    needed.add(String(step.b || "").trim().toLowerCase());
+  }
+  return {
+    total,
+    remaining,
+    complete: false,
+    percent: total
+      ? Math.max(0, Math.min(99, Math.round(((total - remaining) / total) * 100)))
+      : 0
+  };
+}
+
+function localRouteProgressForRun(run) {
+  const progress = localRouteProgressFor(
+    run.solutionRoute,
+    run.game.target,
+    run.available
+  );
+  if (!run.remixRuntime || run.completed) return progress;
+  if (!progress.complete) return progress;
+  return {
+    ...progress,
+    remaining: Math.max(1, Number(progress.remaining) || 0),
+    complete: false,
+    percent: Math.min(99, Number(progress.percent) || 0)
+  };
+}
+
 function publicRun(run) {
-  const scoreEligible = !run.scoringDisabled;
+  const scoreEligible = !run.scoringDisabled && run.game?.scoreEligible !== false;
   const scoreMultiplier = scoreEligible ? assistancePolicy(run.assist).scoreMultiplier : 0;
   return {
     id: run.id,
@@ -168,9 +695,30 @@ function publicRun(run) {
     scoringDisabled: Boolean(run.scoringDisabled),
     scoreEligible,
     scoreMultiplier,
-    rewardEligible: scoreEligible,
-    leaderboardEligible: false
+    rewardEligible: scoreEligible && run.game?.rewardEligible !== false,
+    leaderboardEligible: false,
+    routeProgress: localRouteProgressForRun(run),
+    remixProgress: run.remixRuntime
+      ? routeRemixProgress(run.remixRuntime, run.remixProgress)
+      : null
   };
+}
+
+function publicDiscoveredItem(run, word) {
+  const key = String(word || "").toLowerCase();
+  if (run.giftItem?.word.toLowerCase() === key) return { ...run.giftItem };
+  const starter = (run.game.starterItems || []).find(
+    (item) => String(item?.word || "").toLowerCase() === key
+  );
+  if (starter?.loaned === true) {
+    return {
+      ...starter,
+      source: "loaned-start",
+      loaned: true,
+      premium: false
+    };
+  }
+  return localItemFor(word);
 }
 
 function publicProgress(run) {
@@ -178,9 +726,7 @@ function publicProgress(run) {
     moves: run.moves,
     completed: Boolean(run.completed),
     submitted: Boolean(run.submitted),
-    discovered: [...run.available].map((word) => run.giftItem?.word.toLowerCase() === String(word).toLowerCase()
-      ? { ...run.giftItem }
-      : localItemFor(word)).filter(Boolean),
+    discovered: [...run.available].map((word) => publicDiscoveredItem(run, word)).filter(Boolean),
     history: structuredClone(run.history),
     usedBend: Boolean(run.wished),
     usedWish: Boolean(run.wished),
@@ -191,7 +737,10 @@ function publicProgress(run) {
     tipsUsed: Math.min(QUICK_TIP_LIMIT, Array.isArray(run.tipRecords) ? run.tipRecords.length : 0),
     assist: run.assist,
     scoringDisabled: Boolean(run.scoringDisabled),
-    scoreMultiplier: run.scoringDisabled ? 0 : assistancePolicy(run.assist).scoreMultiplier
+    scoreMultiplier: run.scoringDisabled ? 0 : assistancePolicy(run.assist).scoreMultiplier,
+    remixProgress: run.remixRuntime
+      ? routeRemixProgress(run.remixRuntime, run.remixProgress)
+      : null
   };
 }
 
@@ -336,12 +885,45 @@ function restoreRun(body) {
   }
   const target = canonicalLocalTarget(snapshotGame.target);
   if (!target) fail("That saved destination is not mapped in local practice.", "resume_invalid", 422);
-  const game = directedLocalGame(mode, snapshotGame.seed, target, snapshotGame.stage);
+  const restoreRequest = {
+    ...(snapshotGame.adaptive === true ? {
+      adaptive: true,
+      adaptiveVersion: snapshotGame.adaptiveVersion,
+      adaptiveLevel: snapshotGame.adaptiveLevel,
+      adaptiveCompletedChallenges: snapshotGame.adaptiveCompletedChallenges,
+      adaptiveMajorChallengePending: snapshotGame.adaptiveMajorChallengePending ?? snapshotGame.adaptiveSurge,
+      adaptiveMajorChallengeBaseLevel: snapshotGame.adaptiveMajorChallengeBaseLevel ?? snapshotGame.adaptiveSurgeBaseLevel,
+      adaptiveTarget: target
+    } : {}),
+    ...(snapshotGame.startProfile ? {
+      startStyle: snapshotGame.startProfile.requestedStyle || snapshotGame.startStyle,
+      localChallengeContext: snapshotGame.localChallengeContext
+    } : {})
+  };
+  const game = directedLocalGame(
+    mode,
+    snapshotGame.seed,
+    target,
+    snapshotGame.stage,
+    Object.keys(restoreRequest).length ? restoreRequest : null
+  );
   if (!game || game.target.toLowerCase() !== target.toLowerCase()) {
     fail("The local universe could not reconstruct that orbit.", "resume_invalid", 422);
   }
+  if (snapshotGame.startProfile) {
+    const sameStarters = JSON.stringify(game.starters) === JSON.stringify(snapshotGame.starters);
+    const sameProfile = game.startProfile?.profileId === snapshotGame.startProfile.profileId
+      && game.startProfile?.starterHash === snapshotGame.startProfile.starterHash
+      && game.startProfile?.style === snapshotGame.startProfile.style;
+    const sameRemixes = String(game.remixes?.selectionId || "") === String(snapshotGame.remixes?.selectionId || "")
+      && JSON.stringify(game.remixes?.rules || []) === JSON.stringify(snapshotGame.remixes?.rules || []);
+    if (!sameStarters || !sameProfile || !sameRemixes) {
+      fail("That saved orbit's starting constellation changed.", "resume_invalid", 422);
+    }
+  }
   const solutionRoute = verifiedLocalRoute(game);
   if (!solutionRoute) fail("That saved orbit no longer has a verified local route.", "resume_invalid", 422);
+  const remixRuntime = localRemixRuntimeForGame(game, solutionRoute);
 
   const startedValue = Date.parse(snapshotRun.startedAt);
   const startedAtMs = Number.isFinite(startedValue) && startedValue <= Date.now() + 60_000 ? startedValue : Date.now();
@@ -358,8 +940,31 @@ function restoreRun(body) {
   const wished = Boolean(progress.usedBend || progress.usedWish || progress.wished);
   if (bendItem) available.add(bendItem.word.toLowerCase());
   const history = restoredHistory(progress.history);
+  let remixProgress = remixRuntime ? createRouteRemixProgress() : null;
+  if (remixRuntime) {
+    for (const entry of history) {
+      // Reveal steps are a zero-score demonstration, not proof that the
+      // player satisfied competitive route rules. Replaying them through the
+      // no-repeat and move-cap gates can also reject an otherwise valid Study
+      // snapshot when its canonical answer overlaps earlier play.
+      if (entry.revealed || String(entry.source || "").toLowerCase() === "reveal") continue;
+      const recorded = recordRouteRemixCombination(remixRuntime, remixProgress, {
+        a: entry.a,
+        b: entry.b,
+        word: entry.word,
+        successful: true
+      });
+      if (!recorded.accepted) {
+        fail("That saved orbit breaks its route rules.", "resume_invalid", 422);
+      }
+      remixProgress = recorded.progress;
+    }
+  }
   for (const entry of history) available.add(entry.word.toLowerCase());
   const assistValue = String(progress.assist || snapshotRun.assist || "none").toLowerCase();
+  if (remixRuntime && assistValue === "reveal" && progress.completed) {
+    remixProgress = markRouteRemixAnswerRevealed(remixProgress);
+  }
   const rawGiftItem = isRecord(progress.giftItem)
     ? progress.giftItem
     : Array.isArray(progress.discovered)
@@ -380,7 +985,14 @@ function restoreRun(body) {
   const moves = Math.max(history.length, boundedInteger(progress.moves, history.length, moveMaximum));
   const tipsUsed = boundedInteger(progress.tipsUsed, 0, QUICK_TIP_LIMIT);
   const targetFound = available.has(game.target.toLowerCase());
-  const completed = Boolean(progress.completed && targetFound);
+  const remixCompletion = remixRuntime
+    ? checkRouteRemixCompletion(remixRuntime, remixProgress, game.target)
+    : { complete: true };
+  const completed = Boolean(
+    progress.completed
+    && targetFound
+    && (assistValue === "reveal" || remixCompletion.complete)
+  );
   const twistEntry = history.find((entry) => entry.twisted);
   const restoredPrivateTips = privateTipRecordsFor({ id: runId, token: runToken }).slice(0, tipsUsed);
   const tipRecords = Array.from({ length: tipsUsed }, (_, index) => restoredPrivateTips[index] || ({
@@ -411,6 +1023,8 @@ function restoreRun(body) {
     tipRecords,
     twistUsed: Boolean(twistEntry),
     twistedPairKey: twistEntry ? [twistEntry.a, twistEntry.b].map((word) => word.toLowerCase()).sort().join("+") : null,
+    remixRuntime,
+    remixProgress,
     solutionRoute,
     feedbackMoves: new Set(),
     revealRoute: null
@@ -432,6 +1046,11 @@ function revealedRun(run) {
     leaderboardEligible: false,
     score: 0,
     ranked: false,
+    routeProgress: localRouteProgressFor(
+      run.solutionRoute,
+      run.game.target,
+      run.available
+    ),
     localOnly: true
   };
 }
@@ -476,7 +1095,7 @@ export async function localRequest(url, options = {}) {
   if (method === "POST" && path === "/api/run/preview") {
     const target = body.target ? canonicalLocalTarget(body.target) : "";
     if (body.target && !target) fail("That target is not mapped in local practice yet.", "local_target_unknown");
-    const game = directedLocalGame(body.mode, body.seed, target, body.stage);
+    const game = directedLocalGame(body.mode, body.seed, target, body.stage, body);
     if (!game) fail("The local universe could not map that orbit.");
     if (!verifiedLocalRoute(game)) fail("The local universe could not verify a route to that target.", "local_route_invalid", 409);
     const missionGame = {
@@ -510,11 +1129,12 @@ export async function localRequest(url, options = {}) {
     } else {
       const target = body.target ? canonicalLocalTarget(body.target) : "";
       if (body.target && !target) fail("That target is not mapped in local practice yet.", "local_target_unknown");
-      game = directedLocalGame(body.mode, body.seed, target, body.stage);
+      game = directedLocalGame(body.mode, body.seed, target, body.stage, body);
     }
     if (!game) fail("The local universe could not map that orbit.");
     const solutionRoute = verifiedLocalRoute(game);
     if (!solutionRoute) fail("The local universe could not verify a route to that target.", "local_route_invalid", 409);
+    const remixRuntime = localRemixRuntimeForGame(game, solutionRoute);
     const startedAt = new Date();
     const run = {
       id: localId("run"),
@@ -538,6 +1158,77 @@ export async function localRequest(url, options = {}) {
       tipRecords: [],
       twistUsed: false,
       twistedPairKey: null,
+      remixRuntime,
+      remixProgress: remixRuntime ? createRouteRemixProgress() : null,
+      solutionRoute,
+      feedbackMoves: new Set(),
+      revealRoute: null
+    };
+    runs.set(run.id, run);
+    return {
+      player: publicPlayer(),
+      game,
+      run: publicRun(run)
+    };
+  }
+
+  if (method === "POST" && path === "/api/run/replay") {
+    if (!hasExactKeys(body, ["runId", "runToken"])) {
+      fail("Restart requires only runId and runToken.", "invalid_replay_request", 400);
+    }
+    const source = requireRun(body);
+    if (!source.completed) {
+      source.completed = true;
+      source.scoringDisabled = true;
+      source.assist = "reveal";
+      source.forfeited = true;
+      source.forfeitReason = "forfeit";
+      source.forfeitedAt = Date.now();
+    }
+    const sourceAdaptive = Boolean(source.game?.adaptive || source.game?.replayOf?.adaptive);
+    const game = {
+      ...structuredClone(source.game),
+      adaptive: false,
+      ranked: false,
+      scoringDisabled: false,
+      scoreEligible: false,
+      rewardEligible: false,
+      leaderboardEligible: false,
+      practiceReplay: true,
+      replayOf: {
+        runId: source.id,
+        adaptive: sourceAdaptive,
+        challengeId: String(source.game?.challengeId || "").slice(0, 160)
+      }
+    };
+    const solutionRoute = verifiedLocalRoute(game);
+    if (!solutionRoute) fail("That exact challenge can no longer be verified.", "replay_unavailable", 422);
+    const remixRuntime = localRemixRuntimeForGame(game, solutionRoute);
+    const startedAt = new Date();
+    const run = {
+      id: localId("run"),
+      token: localId("token"),
+      ranked: false,
+      localOnly: true,
+      game,
+      startedAt: startedAt.toISOString(),
+      deadlineAt: game.timeLimit ? new Date(startedAt.getTime() + game.timeLimit * 1000).toISOString() : null,
+      available: new Set(game.starters.map((word) => word.toLowerCase())),
+      history: [],
+      moves: 0,
+      completed: false,
+      submitted: false,
+      wished: false,
+      bendItem: null,
+      assist: "none",
+      scoringDisabled: false,
+      giftUsed: false,
+      giftItem: null,
+      tipRecords: [],
+      twistUsed: false,
+      twistedPairKey: null,
+      remixRuntime,
+      remixProgress: remixRuntime ? createRouteRemixProgress() : null,
       solutionRoute,
       feedbackMoves: new Set(),
       revealRoute: null
@@ -656,6 +1347,7 @@ export async function localRequest(url, options = {}) {
       rewardEligible: !scoringDisabled,
       leaderboardEligible: false,
       ranked: false,
+      routeProgress: localRouteProgressForRun(run),
       localOnly: true
     };
   }
@@ -672,6 +1364,9 @@ export async function localRequest(url, options = {}) {
     run.assist = "reveal";
     run.scoringDisabled = true;
     run.completed = true;
+    if (run.remixRuntime) {
+      run.remixProgress = markRouteRemixAnswerRevealed(run.remixProgress);
+    }
     for (const step of route) {
       run.available.add(step.word.toLowerCase());
       run.history.push({ ...step, source: "reveal", revealed: true });
@@ -694,10 +1389,21 @@ export async function localRequest(url, options = {}) {
       fail("Use words already discovered in this orbit.", "word_unavailable", 409);
     }
     if (run?.deadlineAt && Date.now() > Date.parse(run.deadlineAt)) fail("This quick orbit has ended.", "time_expired", 409);
-    if (run?.game.moveLimit && run.moves >= run.game.moveLimit) fail("No moves remain in this orbit.", "move_limit", 409);
+    if (run?.game.moveLimit && run.moves >= run.game.moveLimit) {
+      const masterRoute = run.game.remixes?.rules?.some((rule) => rule.family === "master_route");
+      fail(
+        masterRoute ? "The Master Route fusion limit is reached." : "No moves remain in this orbit.",
+        masterRoute ? "master_route_limit" : "move_limit",
+        409
+      );
+    }
     const canonicalResult = lookupLocalCombination(a, b);
     if (!canonicalResult) fail("Those ideas are outside this local universe.", "combination_missing");
-    const twist = run ? selectCosmicTwist({
+    if (run?.remixRuntime) {
+      const remixCheck = checkRouteRemixBeforeCombination(run.remixRuntime, run.remixProgress, { a, b });
+      if (!remixCheck.allowed) fail(remixCheck.reason, "remix_pair_blocked", 409);
+    }
+    const twist = run && !run.remixRuntime ? selectCosmicTwist({
       a,
       b,
       canonicalResult,
@@ -720,6 +1426,8 @@ export async function localRequest(url, options = {}) {
       run.twistUsed = true;
       run.twistedPairKey = [a, b].map((word) => word.toLowerCase()).sort().join("+");
     }
+    let remixCompletion = null;
+    let publicRemixProgress = null;
     if (run) {
       run.moves += 1;
       run.available.add(result.word.toLowerCase());
@@ -732,13 +1440,33 @@ export async function localRequest(url, options = {}) {
         source: result.source,
         ...(result.twisted ? { twisted: true, canonicalWord: result.twist?.canonicalWord || canonicalResult.word } : {})
       });
-      run.completed ||= result.word.toLowerCase() === run.game.target.toLowerCase();
+      if (run.remixRuntime) {
+        const remixRecord = recordRouteRemixCombination(run.remixRuntime, run.remixProgress, {
+          a,
+          b,
+          word: result.word,
+          successful: true
+        });
+        if (remixRecord.accepted) run.remixProgress = remixRecord.progress;
+        publicRemixProgress = routeRemixProgress(run.remixRuntime, run.remixProgress);
+      }
+      if (result.word.toLowerCase() === run.game.target.toLowerCase()) {
+        remixCompletion = run.remixRuntime
+          ? checkRouteRemixCompletion(run.remixRuntime, run.remixProgress, result.word)
+          : { complete: true, reason: "" };
+        run.completed ||= remixCompletion.complete;
+      }
     }
     return {
       ...result,
       ...(annotation ? { universeContext: annotation.context } : {}),
       feedbackEligible: !twist,
       completed: Boolean(run?.completed),
+      remixProgress: publicRemixProgress,
+      targetMade: Boolean(run && result.word.toLowerCase() === run.game.target.toLowerCase()),
+      completionBlocked: Boolean(remixCompletion && !remixCompletion.complete),
+      remixMessage: remixCompletion && !remixCompletion.complete ? remixCompletion.reason : "",
+      ...(run ? { routeProgress: localRouteProgressForRun(run) } : {}),
       ranked: false,
       localOnly: true,
       division: run?.assist && run.assist !== "none" ? "local-assisted" : "local"
@@ -755,7 +1483,14 @@ export async function localRequest(url, options = {}) {
     run.assist = combineAssistance(run.assist, "wish").id;
     run.bendItem = { ...item };
     run.available.add(item.word.toLowerCase());
-    return { ...item, assist: run.assist, scoreMultiplier: assistancePolicy(run.assist).scoreMultiplier, player: publicPlayer(), localOnly: true };
+    return {
+      ...item,
+      assist: run.assist,
+      scoreMultiplier: assistancePolicy(run.assist).scoreMultiplier,
+      player: publicPlayer(),
+      routeProgress: localRouteProgressForRun(run),
+      localOnly: true
+    };
   }
 
   if (method === "POST" && path === "/api/run/submit") return {

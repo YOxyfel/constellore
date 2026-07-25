@@ -30,57 +30,57 @@ export function createHomeMenuState({ firstOrbit, secondOrbit, wins, dailyComple
   if (!training.completed && completedWins === 0 && !training.seen) {
     primary = {
       action: "training",
-      kicker: "RECOMMENDED · ABOUT 90 SECONDS",
-      title: "Learn the game in three real combinations.",
-      description: "Your target is Wall. Drag or tap words together and discover the short route at your own pace.",
-      label: "Play First Orbit",
-      meta: "TARGET: WALL · GUIDED · NO SCORE",
-      secondaryAction: "reach",
-      secondaryLabel: "Skip tutorial · Play relaxed"
+      kicker: "RECOMMENDED",
+      title: "Ready to play?",
+      description: "Your first target is Wall. We will show you how.",
+      label: "Play",
+      meta: "Wall",
+      secondaryAction: "modes",
+      secondaryLabel: "Choose game"
     };
   } else if (!training.completed && completedWins === 0) {
     primary = {
       action: "reach",
-      kicker: "READY WHEN YOU ARE",
-      title: "Reach one word at your own pace.",
-      description: "Start with four elements and combine toward a guaranteed reachable target. There is no timer or move limit.",
-      label: "Start relaxed game",
-      meta: "RANDOM TARGET · NO CLOCK · NO MOVE CAP",
+      kicker: "READY",
+      title: "Make a new target word.",
+      description: "There is no timer and no move limit.",
+      label: "Play",
+      meta: "No timer",
       secondaryAction: "training",
-      secondaryLabel: "Play the 90-second tutorial"
+      secondaryLabel: "Learn how to play"
     };
   } else if (!bridgeComplete) {
     primary = {
       action: "second-orbit",
-      kicker: "NEXT LESSON · ABOUT 2 MINUTES",
-      title: "Reach Mountain with one gentle signal.",
-      description: "You know the controls. Now follow a three-fusion route while every logical combination remains open.",
-      label: "Play Second Orbit",
-      meta: "TARGET: MOUNTAIN · FREE EXPERIMENTATION · NO SCORE",
-      secondaryAction: "reach",
-      secondaryLabel: "Skip lesson · play relaxed"
+      kicker: "NEXT LESSON",
+      title: "Make Mountain.",
+      description: "Try a short game with one helpful hint.",
+      label: "Play",
+      meta: "Mountain",
+      secondaryAction: "modes",
+      secondaryLabel: "Choose game"
     };
   } else if (dailyAvailable) {
     primary = {
       action: "daily",
-      kicker: "NEXT UP · TODAY'S WORD",
-      title: "Reach today's shared target.",
-      description: "Everyone gets the same destination. Your combinations, discoveries, and route are entirely your own.",
-      label: "Play today's word",
-      meta: "ONE DAILY TARGET · SCORE EXPLAINED BEFORE START",
+      kicker: "TODAY'S WORD",
+      title: "Make today’s word.",
+      description: "Everyone gets the same target.",
+      label: "Play",
+      meta: "Today’s target",
       secondaryAction: "modes",
-      secondaryLabel: "Choose another mode"
+      secondaryLabel: "Choose game"
     };
   } else {
     primary = {
       action: "reach",
-      kicker: "TODAY'S WORD COMPLETE · KEEP EXPLORING",
-      title: "Follow a new route at your own pace.",
-      description: "Reach gives you a guaranteed target with no clock and no move limit. Every logical discovery joins your universe.",
-      label: "Start a relaxed game",
-      meta: "RANDOM TARGET · NO CLOCK · NO MOVE CAP",
+      kicker: "READY",
+      title: "Make a new target word.",
+      description: "Play without a timer or move limit.",
+      label: "Play",
+      meta: "No timer",
       secondaryAction: "modes",
-      secondaryLabel: "Choose another mode"
+      secondaryLabel: "Choose game"
     };
   }
 

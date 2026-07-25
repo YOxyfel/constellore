@@ -14,9 +14,11 @@ test("the player constellation is glanceable before secondary detail is requeste
 
   const dialog = page.locator("#profileDialog");
   await expect(dialog).toHaveJSProperty("open", true);
-  await expect(dialog.getByText("YOUR CONSTELLATION", { exact: true })).toBeVisible();
+  await expect(dialog.getByRole("heading", { name: "Your progress" })).toBeVisible();
   await expect(dialog.locator(".profile-overview")).toBeVisible();
-  await expect(dialog.locator(".progression-dashboard")).toBeVisible();
+  await expect(dialog.locator(".profile-core-grid")).toBeVisible();
+  await expect(dialog.locator(".progression-dashboard")).toBeHidden();
+  await expect(dialog.locator(".profile-more")).not.toHaveAttribute("open", "");
 
   for (const selector of [".profile-archive", ".profile-badges", ".profile-preferences", ".profile-data"]) {
     await expect(dialog.locator(selector)).not.toHaveAttribute("open", "");
@@ -34,9 +36,16 @@ test("the player constellation is glanceable before secondary detail is requeste
     viewportWidth: document.documentElement.clientWidth,
     hasHorizontalOverflow: element.scrollWidth > element.clientWidth + 1
   }));
-  if (layout.viewportWidth > 700) expect(layout.dialogWidth).toBeGreaterThanOrEqual(740);
-  else expect(layout.dialogWidth).toBeGreaterThanOrEqual(layout.viewportWidth - 2);
+  if (layout.viewportWidth > 700) {
+    expect(layout.dialogWidth).toBeGreaterThanOrEqual(520);
+    expect(layout.dialogWidth).toBeLessThanOrEqual(640);
+  } else {
+    expect(layout.dialogWidth).toBeGreaterThanOrEqual(layout.viewportWidth - 2);
+  }
   expect(layout.hasHorizontalOverflow).toBe(false);
+
+  await dialog.locator(".profile-more > summary").click();
+  await expect(dialog.locator(".profile-more")).toHaveAttribute("open", "");
 
   await dialog.locator(".profile-badges > summary").click();
   await expect(dialog.locator(".profile-badges")).toHaveAttribute("open", "");

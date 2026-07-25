@@ -10,6 +10,17 @@ const publicDirectory = join(root, "public");
 const websiteDirectory = join(root, "Website");
 const pkg = await packageMetadata();
 
+async function listRelativeFiles(directory, prefix = "") {
+  const files = [];
+  for (const entry of await readdir(directory, { withFileTypes: true })) {
+    const name = prefix ? `${prefix}/${entry.name}` : entry.name;
+    const path = join(directory, entry.name);
+    if (entry.isDirectory()) files.push(...await listRelativeFiles(path, name));
+    else if (entry.isFile()) files.push(name);
+  }
+  return files.sort((left, right) => left.localeCompare(right, "en"));
+}
+
 function setBodyDataAttribute(document, name, value) {
   let foundBody = false;
   const updated = document.replace(/<body\b([^>]*)>/i, (tag, attributes) => {
@@ -42,20 +53,31 @@ for (const name of ["index.html", "privacy.html", "terms.html", "support.html"])
   if (name === "index.html") {
     source = setBodyDataAttribute(source, "data-build-version", pkg.version);
     source = setBodyDataAttribute(source, "data-build-id", `${pkg.version}+source`);
+    source = source.replace(
+      /(<b\b[^>]*\bid="siteBuildVersion"[^>]*>)[^<]*(<\/b>)/i,
+      `$1${pkg.version}$2`
+    );
   }
   await writeFile(path, source, "utf8");
 }
 
 await generateReleaseAssets();
 await writeReleaseMetadata(join(publicDirectory, "release.json"), { channel: "server-beta", runtime: "server", revision: "source" });
-const runtimeAssets = (await readdir(publicDirectory, { withFileTypes: true }))
-  .filter((entry) => entry.isFile() && entry.name !== "index.html" && entry.name !== "service-worker.js" && !entry.name.startsWith("social-card"))
-  .map((entry) => `/${entry.name}${/\.(?:css|js|mjs)$/.test(entry.name) ? `?v=${pkg.version}` : ""}`)
+const runtimeAssets = (await listRelativeFiles(publicDirectory))
+  .filter((name) => (
+    name !== "index.html"
+    && name !== "service-worker.js"
+    && !name.startsWith("social-card")
+    && !name.startsWith("screenshots/")
+    && !name.startsWith("art/ranks/")
+  ))
+  .map((name) => `/${name}${/\.(?:css|js|mjs)$/.test(name) ? `?v=${pkg.version}` : ""}`)
   .sort((left, right) => left.localeCompare(right, "en"));
 const worker = renderServiceWorker({
   cachePrefix: "constellore-play-",
   version: pkg.version,
   assets: runtimeAssets,
+  lazyAssets: ["/art/ranks/"],
   navigationPath: "/play/",
   legacyCaches: ["constellore-shell-v24", "constellore-play-v27"]
 });

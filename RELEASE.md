@@ -81,8 +81,11 @@ The Pages workflow always publishes the marketing site and local-practice game. 
 | --- | --- | --- |
 | `PUBLIC_ITCH_URL` | Reveals the prominent itch CTA after validating an HTTPS `itch.io` URL. | Empty; CTA remains hidden. |
 | `PUBLIC_BETA_URL` | Sends play CTAs to a separately operated online beta. Must be the full HTTPS game URL ending in `/play/`, not the server root. | Empty; Pages local practice is used. |
+| `PUBLIC_FEEDBACK_API_URL` | Sends anonymous missing-combination reports directly to the hosted receiver. It must be the exact HTTPS URL ending in `/api/combination-reports`; this is public configuration, never a token or secret. | Empty; reports stay in the device-local outbox. |
 
 Do not guess the itch creator URL. Add `PUBLIC_ITCH_URL` only after the exact public game page has been opened and tested while signed out.
+
+Configured Pages, CI, and tagged-release builds inject this endpoint into the artifact, and their artifact verifier requires an exact match to the validated value. Deliberate local or offline builds may leave the variable empty; their verifier then requires the embedded value to be empty as well.
 
 ## Pre-publish smoke test
 
