@@ -109,8 +109,10 @@ for (const viewport of viewports) {
     const primaryButton = page.locator("#primaryOrbitButton");
     await expect(primaryOrbit).toBeVisible();
     await expect(primaryButton).toBeVisible();
+    await primaryButton.scrollIntoViewIfNeeded();
 
-    const art = await page.request.get("/art/celestial-atlas-bg-v1.webp");
+    const artUrl = await page.evaluate(() => new URL("art/celestial-atlas-bg-v1.webp", window.location.href).href);
+    const art = await page.request.get(artUrl);
     expect(art.ok(), "the celestial-atlas background must be served by the playable build").toBe(true);
     expect(art.headers()["content-type"]).toContain("image/webp");
     expect((await art.body()).byteLength, "the atlas art must not regress to an empty placeholder").toBeGreaterThan(50_000);

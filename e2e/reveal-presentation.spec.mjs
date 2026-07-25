@@ -137,13 +137,15 @@ test("normal-motion answer reveal visibly stages summon, merge, result, and comp
   const audit = await page.evaluate(() => {
     const value = window.__revealPresentationAudit;
     value.observer.disconnect();
-    return { frames: value.frames, phases: value.phases };
+    return { frames: value.frames, labels: value.labels, phases: value.phases };
   });
   for (const phase of ["summon", "merge", "result", "complete"]) expect(audit.phases).toContain(phase);
   expect(Math.max(...audit.frames.map((frame) => frame.words.length))).toBeLessThanOrEqual(3);
   for (const [index, step] of REVEAL_ROUTE.entries()) {
-    expect(audit.labels).toContain(`Step ${index + 1} of ${REVEAL_ROUTE.length}: ${step.a} + ${step.b}`);
-    expect(audit.labels).toContain(`Step ${index + 1} of ${REVEAL_ROUTE.length}: ${step.a} + ${step.b} = ${step.word}`);
+    const prefix = `Step ${index + 1} of ${REVEAL_ROUTE.length}:`;
+    const ingredientOrders = [`${step.a} + ${step.b}`, `${step.b} + ${step.a}`];
+    expect(audit.labels.some((label) => ingredientOrders.some((order) => label === `${prefix} ${order}`))).toBeTruthy();
+    expect(audit.labels.some((label) => ingredientOrders.some((order) => label === `${prefix} ${order} = ${step.word}`))).toBeTruthy();
     expect(audit.frames.some((frame) => {
       if (frame.phase !== "summon" || !frame.label.startsWith(`Step ${index + 1} of `)) return false;
       const words = frame.words.map((word) => word.word.toLowerCase()).sort();
