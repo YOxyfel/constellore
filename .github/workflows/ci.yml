@@ -24,10 +24,26 @@ jobs:
       - run: npm run check
 
   browser-e2e:
-    name: Browser journeys
+    name: Server runtime / ${{ matrix.label }}
     needs: verify
     runs-on: ubuntu-latest
-    timeout-minutes: 40
+    timeout-minutes: ${{ matrix.timeout }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: Chromium
+            browser: chromium
+            timeout: 30
+            projects: --project=chromium-mobile --project=chromium-desktop --project=chromium-reduced-motion
+          - label: WebKit
+            browser: webkit
+            timeout: 20
+            projects: --project=webkit-mobile
+          - label: Firefox
+            browser: firefox
+            timeout: 20
+            projects: --project=firefox-desktop
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -35,8 +51,22 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci --ignore-scripts
-      - run: npx playwright install --with-deps chromium firefox webkit
-      - run: npm run test:e2e
+      - run: npx playwright install --with-deps ${{ matrix.browser }}
+      - run: npx playwright test ${{ matrix.projects }}
+
+  pages-e2e:
+    name: Pages runtime / Chromium
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - run: npx playwright install --with-deps chromium
       - run: npm run build:pages
         env:
           PUBLIC_FEEDBACK_API_URL: ${{ vars.PUBLIC_FEEDBACK_API_URL }}

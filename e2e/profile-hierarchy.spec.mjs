@@ -21,23 +21,21 @@ test.beforeEach(async ({ page }) => {
       })
     });
   });
-  await page.addInitScript(() => {
-    if (sessionStorage.getItem("profile-hierarchy-seeded") === "true") return;
-    localStorage.clear();
-    sessionStorage.clear();
-    const profile = {
-      version: 8,
-      wins: 1,
-      playerId: "profile-menu-e2e",
-      playerToken: "profile-menu-e2e-token",
-      firstOrbit: { seen: true, completed: true },
-      secondOrbit: { seen: true, completed: true }
-    };
-    localStorage.setItem("constellore-profile-v1", JSON.stringify(profile));
-    localStorage.setItem("constellore-local-profile-v1", JSON.stringify(profile));
-    sessionStorage.setItem("profile-hierarchy-seeded", "true");
+  const profile = {
+    version: 8,
+    wins: 1,
+    playerId: "profile-menu-e2e",
+    playerToken: "profile-menu-e2e-token",
+    firstOrbit: { seen: true, completed: true },
+    secondOrbit: { seen: true, completed: true }
+  };
+  await installSeenIntroFixture(page, {
+    resetStorage: true,
+    localStorageEntries: [
+      ["constellore-profile-v1", JSON.stringify(profile)],
+      ["constellore-local-profile-v1", JSON.stringify(profile)]
+    ]
   });
-  await installSeenIntroFixture(page);
 });
 
 test("the Rank control stays recognizable at every responsive header width", async ({ page }) => {
@@ -168,9 +166,7 @@ test("the player constellation is glanceable before secondary detail is requeste
     return [preferences?.volume, preferences?.musicVolume, preferences?.sfxVolume];
   })).toEqual([.4, .65, .3]);
 
-  await page.reload();
-  await page.locator("#hubMenuButton").click();
-  await page.locator("#hubMenuDialog .profile-preferences > summary").click();
+  await page.reload({ waitUntil: "domcontentloaded" });
   await expect(page.locator("#masterVolumePreference")).toHaveValue("0.4");
   await expect(page.locator("#musicVolumePreference")).toHaveValue("0.65");
   await expect(page.locator("#sfxVolumePreference")).toHaveValue("0.3");

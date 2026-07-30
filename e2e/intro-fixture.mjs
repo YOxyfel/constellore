@@ -17,7 +17,8 @@ const STORAGE_RESET_MARKER = "constellore-e2e-seen-intro-storage-reset-v1";
  */
 export async function installSeenIntroFixture(page, {
   resetStorage = false,
-  localStorageEntries = []
+  localStorageEntries = [],
+  launchToMenu = false
 } = {}) {
   await page.addInitScript(({
     key,
@@ -26,7 +27,8 @@ export async function installSeenIntroFixture(page, {
     resetMarker,
     record,
     shouldResetStorage,
-    seededLocalStorageEntries
+    seededLocalStorageEntries,
+    shouldLaunchToMenu
   }) => {
     const firstStorageReset = shouldResetStorage
       && sessionStorage.getItem(resetMarker) !== "true";
@@ -41,7 +43,8 @@ export async function installSeenIntroFixture(page, {
       }
     }
     localStorage.setItem(key, JSON.stringify(record));
-    sessionStorage.setItem(bypassKey, "true");
+    if (shouldLaunchToMenu) sessionStorage.removeItem(bypassKey);
+    else sessionStorage.setItem(bypassKey, "true");
     sessionStorage.setItem(sessionKey, "played");
   }, {
     key: FIRST_OPEN_CINEMATIC_STORAGE_KEY,
@@ -50,6 +53,7 @@ export async function installSeenIntroFixture(page, {
     resetMarker: STORAGE_RESET_MARKER,
     record: COMPLETED_INTRO_RECORD,
     shouldResetStorage: resetStorage,
-    seededLocalStorageEntries: localStorageEntries
+    seededLocalStorageEntries: localStorageEntries,
+    shouldLaunchToMenu: launchToMenu
   });
 }

@@ -100,20 +100,23 @@ async function atlasSurfaceDetails(page) {
 
 test.beforeEach(async ({ page }, testInfo) => {
   const freshFirstOrbit = testInfo.title.includes("unfinished first constellation");
-  await page.addInitScript((startFresh) => {
-    localStorage.clear();
-    sessionStorage.clear();
-    if (startFresh) return;
-    const profile = {
-      version: 7,
-      wins: 0,
-      firstOrbit: { seen: true, completed: true },
-      secondOrbit: { seen: true, completed: true }
-    };
-    localStorage.setItem("constellore-profile-v1", JSON.stringify(profile));
-    localStorage.setItem("constellore-local-profile-v1", JSON.stringify(profile));
-  }, freshFirstOrbit);
-  await installSeenIntroFixture(page);
+  const profile = {
+    version: 7,
+    wins: 0,
+    firstOrbit: { seen: true, completed: true },
+    secondOrbit: { seen: true, completed: true }
+  };
+  const localStorageEntries = freshFirstOrbit
+    ? []
+    : [
+        ["constellore-profile-v1", JSON.stringify(profile)],
+        ["constellore-local-profile-v1", JSON.stringify(profile)]
+      ];
+  await installSeenIntroFixture(page, {
+    resetStorage: true,
+    localStorageEntries,
+    launchToMenu: freshFirstOrbit
+  });
 });
 
 for (const viewport of viewports) {

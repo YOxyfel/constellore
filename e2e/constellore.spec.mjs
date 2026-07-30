@@ -95,7 +95,7 @@ test("a first-time player opens directly into a guaranteed game, celebrates, and
   });
   expect(incomplete).toEqual({ seen: true, completed: false });
 
-  await page.reload();
+  await page.reload({ waitUntil: "domcontentloaded" });
   await expect(page.locator("#gameScreen")).toBeVisible();
   await expect(page.locator("#targetWord")).toHaveText("Mud");
   await installPresentationExclusionAudit(page);
@@ -125,7 +125,7 @@ test("a first-time player opens directly into a guaranteed game, celebrates, and
   await expect(page.locator("#targetWord")).toHaveText("Mountain", { timeout: 8_000 });
   await expect(page.locator("#missionBriefingDialog")).toHaveJSProperty("open", true, { timeout: 8_000 });
 
-  await page.reload();
+  await page.reload({ waitUntil: "domcontentloaded" });
   await expect(page.locator("#gameScreen")).toBeVisible();
   await expect(page.locator("#targetWord")).toHaveText("Mountain");
   await expect(page.locator("#cosmicGate")).toBeHidden();
@@ -165,7 +165,9 @@ test("the full-motion first discovery launches all space-confetti particles with
   await expect(page.locator("#cosmicGate")).toBeHidden();
   await expect(page.locator("#resultDialog")).toHaveJSProperty("open", false);
   await page.waitForTimeout(650);
-  await expect(page.locator("#cosmicGate")).toBeHidden();
+  await expect(page.locator("#cosmicGate")).toHaveAttribute("aria-hidden", "true");
+  await expect(page.locator("#cosmicGate")).toHaveAttribute("data-phase", "closed");
+  await expect(page.locator("#cosmicGate")).toHaveAttribute("data-content", "hidden");
   await expect(page.locator("#resultDialog")).toHaveJSProperty("open", false);
   await expect(page.locator(".cosmic-gate__first-discovery")).toBeVisible({ timeout: 4_000 });
   await expect(page.locator(".cosmic-gate__first-discovery-particle")).toHaveCount(42);
