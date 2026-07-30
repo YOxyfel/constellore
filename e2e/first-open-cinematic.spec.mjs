@@ -89,7 +89,7 @@ test("the first opening plays the Oxyfel brand film and launch video at 1x", asy
   ));
   expect(marker).toMatchObject({ schemaVersion: 1, completed: true });
 
-  await page.reload({ waitUntil: "domcontentloaded" });
+  await page.goto("/play/", { waitUntil: "domcontentloaded" });
   await expect(page.locator(".first-open-cinematic")).toHaveCount(0);
   await expect(page.locator("#cosmicGate")).toBeHidden();
   await expect(page.locator("#startScreen")).toBeVisible();
@@ -257,7 +257,7 @@ test("refreshing an active lesson restores the exact orbit without replaying eit
   await assertRestoredOrbit();
 
   await page.waitForTimeout(250);
-  await page.reload({ waitUntil: "domcontentloaded" });
+  await page.goto("/play/", { waitUntil: "domcontentloaded" });
   await assertRestoredOrbit();
 });
 

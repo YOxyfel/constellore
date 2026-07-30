@@ -31,10 +31,17 @@ export async function installSeenIntroFixture(page, {
     shouldLaunchToMenu
   }) => {
     const firstStorageReset = shouldResetStorage
-      && sessionStorage.getItem(resetMarker) !== "true";
+      && sessionStorage.getItem(resetMarker) !== "true"
+      && localStorage.getItem(resetMarker) !== "true";
     if (firstStorageReset) {
       localStorage.clear();
       sessionStorage.clear();
+    }
+    if (shouldResetStorage) {
+      // WebKit can expose the new document before its session storage marker
+      // is restored. Mirror the one-time guard in durable origin storage so a
+      // reload cannot accidentally clear and reseed the active test profile.
+      localStorage.setItem(resetMarker, "true");
       sessionStorage.setItem(resetMarker, "true");
     }
     if (!shouldResetStorage || firstStorageReset) {

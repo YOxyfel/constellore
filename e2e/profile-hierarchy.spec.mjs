@@ -166,7 +166,7 @@ test("the player constellation is glanceable before secondary detail is requeste
     return [preferences?.volume, preferences?.musicVolume, preferences?.sfxVolume];
   })).toEqual([.4, .65, .3]);
 
-  await page.reload({ waitUntil: "domcontentloaded" });
+  await page.goto("/play/", { waitUntil: "domcontentloaded" });
   await expect(page.locator("#masterVolumePreference")).toHaveValue("0.4");
   await expect(page.locator("#musicVolumePreference")).toHaveValue("0.65");
   await expect(page.locator("#sfxVolumePreference")).toHaveValue("0.3");

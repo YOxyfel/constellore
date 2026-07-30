@@ -95,7 +95,7 @@ test("a first-time player opens directly into a guaranteed game, celebrates, and
   });
   expect(incomplete).toEqual({ seen: true, completed: false });
 
-  await page.reload({ waitUntil: "domcontentloaded" });
+  await page.goto("/play/", { waitUntil: "domcontentloaded" });
   await expect(page.locator("#gameScreen")).toBeVisible();
   await expect(page.locator("#targetWord")).toHaveText("Mud");
   await installPresentationExclusionAudit(page);
@@ -125,7 +125,7 @@ test("a first-time player opens directly into a guaranteed game, celebrates, and
   await expect(page.locator("#targetWord")).toHaveText("Mountain", { timeout: 8_000 });
   await expect(page.locator("#missionBriefingDialog")).toHaveJSProperty("open", true, { timeout: 8_000 });
 
-  await page.reload({ waitUntil: "domcontentloaded" });
+  await page.goto("/play/", { waitUntil: "domcontentloaded" });
   await expect(page.locator("#gameScreen")).toBeVisible();
   await expect(page.locator("#targetWord")).toHaveText("Mountain");
   await expect(page.locator("#cosmicGate")).toBeHidden();
