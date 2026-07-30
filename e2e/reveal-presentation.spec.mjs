@@ -96,19 +96,19 @@ async function openDeterministicReveal(page, { pauseAtStart = false } = {}) {
 }
 
 test.beforeEach(async ({ page }) => {
-  await page.addInitScript(() => {
-    localStorage.clear();
-    sessionStorage.clear();
-    const profile = {
-      version: 7,
-      wins: 0,
-      firstOrbit: { seen: true, completed: true },
-      secondOrbit: { seen: true, completed: true }
-    };
-    localStorage.setItem("constellore-profile-v1", JSON.stringify(profile));
-    localStorage.setItem("constellore-local-profile-v1", JSON.stringify(profile));
+  const profile = {
+    version: 7,
+    wins: 0,
+    firstOrbit: { seen: true, completed: true },
+    secondOrbit: { seen: true, completed: true }
+  };
+  await installSeenIntroFixture(page, {
+    resetStorage: true,
+    localStorageEntries: [
+      ["constellore-profile-v1", JSON.stringify(profile)],
+      ["constellore-local-profile-v1", JSON.stringify(profile)]
+    ]
   });
-  await installSeenIntroFixture(page);
 });
 
 test("answer reveal grows parallel branches and leaves the full path on the board", async ({ page, browserName }) => {
@@ -177,7 +177,7 @@ test("answer reveal grows parallel branches and leaves the full path on the boar
   await page.setViewportSize({ width: 1200, height: 600 });
   await page.evaluate(() => window.dispatchEvent(new Event("resize")));
   await expect(page.locator("#board")).toHaveAttribute("data-reveal-compact", "false");
-  const rotatedLayout = await page.evaluate(() => {
+  await expect.poll(() => page.evaluate(() => {
     const board = document.querySelector("#board").getBoundingClientRect();
     const canvas = document.querySelector("#cosmosCanvas").getBoundingClientRect();
     const nodes = [...document.querySelectorAll(".board-word.reveal-source")].map((element) => element.getBoundingClientRect());
@@ -195,8 +195,7 @@ test("answer reveal grows parallel branches and leaves the full path on the boar
       ),
       overlaps
     };
-  });
-  expect(rotatedLayout).toEqual({ canvasAligned: true, nodesInside: true, overlaps: false });
+  })).toEqual({ canvasAligned: true, nodesInside: true, overlaps: false });
 
   await page.locator("#revealSkip").click();
   await expect(page.locator("#resultDialog")).toHaveJSProperty("open", true);

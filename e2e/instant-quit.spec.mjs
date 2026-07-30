@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { installSeenIntroFixture } from "./intro-fixture.mjs";
 
 test.skip(({ browserName }) => browserName !== "chromium", "The instant mobile quit contract is covered in Chromium.");
 
@@ -10,22 +11,20 @@ test("one Quit game click returns Home before the held forfeit response", async 
   const registration = await registrationResponse.json();
   const today = new Date().toISOString().slice(0, 10);
 
-  await page.addInitScript(({ playerId, playerToken, dailyCompleted }) => {
-    localStorage.clear();
-    sessionStorage.clear();
-    localStorage.setItem("constellore-profile-v1", JSON.stringify({
-      version: 8,
-      playerId,
-      playerToken,
-      wins: 1,
-      firstOrbit: { seen: true, completed: true },
-      secondOrbit: { seen: true, completed: true },
-      dailyCompleted
-    }));
-  }, {
-    playerId: registration.player.id,
-    playerToken: registration.playerToken,
-    dailyCompleted: today
+  await installSeenIntroFixture(page, {
+    resetStorage: true,
+    localStorageEntries: [[
+      "constellore-profile-v1",
+      JSON.stringify({
+        version: 8,
+        playerId: registration.player.id,
+        playerToken: registration.playerToken,
+        wins: 1,
+        firstOrbit: { seen: true, completed: true },
+        secondOrbit: { seen: true, completed: true },
+        dailyCompleted: today
+      })
+    ]]
   });
 
   let forfeitRequests = 0;

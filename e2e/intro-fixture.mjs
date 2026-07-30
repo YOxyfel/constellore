@@ -8,20 +8,48 @@ const COMPLETED_INTRO_RECORD = Object.freeze({
   completedAt: "2026-01-01T00:00:00.000Z"
 });
 
+const STORAGE_RESET_MARKER = "constellore-e2e-seen-intro-storage-reset-v1";
+
 /**
- * Keep non-cinematic browser tests deterministic. Install this after any
- * per-spec storage reset so the application starts on the surface the test is
- * actually intended to exercise.
+ * Keep non-cinematic browser tests deterministic. Storage resets and seed
+ * values can be installed in this same init script so their order cannot race
+ * the returning-player cinematic marker.
  */
-export async function installSeenIntroFixture(page) {
-  await page.addInitScript(({ key, bypassKey, sessionKey, record }) => {
+export async function installSeenIntroFixture(page, {
+  resetStorage = false,
+  localStorageEntries = []
+} = {}) {
+  await page.addInitScript(({
+    key,
+    bypassKey,
+    sessionKey,
+    resetMarker,
+    record,
+    shouldResetStorage,
+    seededLocalStorageEntries
+  }) => {
+    const firstStorageReset = shouldResetStorage
+      && sessionStorage.getItem(resetMarker) !== "true";
+    if (firstStorageReset) {
+      localStorage.clear();
+      sessionStorage.clear();
+      sessionStorage.setItem(resetMarker, "true");
+    }
+    if (!shouldResetStorage || firstStorageReset) {
+      for (const [entryKey, entryValue] of seededLocalStorageEntries) {
+        localStorage.setItem(entryKey, entryValue);
+      }
+    }
     localStorage.setItem(key, JSON.stringify(record));
-    sessionStorage.removeItem(bypassKey);
+    sessionStorage.setItem(bypassKey, "true");
     sessionStorage.setItem(sessionKey, "played");
   }, {
     key: FIRST_OPEN_CINEMATIC_STORAGE_KEY,
     bypassKey: FIRST_OPEN_CINEMATIC_BYPASS_KEY,
     sessionKey: FIRST_OPEN_CINEMATIC_SESSION_KEY,
-    record: COMPLETED_INTRO_RECORD
+    resetMarker: STORAGE_RESET_MARKER,
+    record: COMPLETED_INTRO_RECORD,
+    shouldResetStorage: resetStorage,
+    seededLocalStorageEntries: localStorageEntries
   });
 }

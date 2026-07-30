@@ -65,14 +65,7 @@ async function expectNoPresentationCollisions(page) {
 }
 
 test.beforeEach(async ({ page }) => {
-  await page.addInitScript(() => {
-    const cleanMarker = "constellore-e2e-storage-clean-v1";
-    if (sessionStorage.getItem(cleanMarker) === "true") return;
-    localStorage.clear();
-    sessionStorage.clear();
-    sessionStorage.setItem(cleanMarker, "true");
-  });
-  await installSeenIntroFixture(page);
+  await installSeenIntroFixture(page, { resetStorage: true });
 });
 
 test("marketing path makes the playable beta obvious and mobile-safe", async ({ page }) => {
@@ -133,9 +126,20 @@ test("a first-time player opens directly into a guaranteed game, celebrates, and
   await expect(page.locator("#missionBriefingDialog")).toHaveJSProperty("open", true, { timeout: 8_000 });
 
   await page.reload();
+  await expect(page.locator("#gameScreen")).toBeVisible();
+  await expect(page.locator("#targetWord")).toHaveText("Mountain");
+  await expect(page.locator("#cosmicGate")).toBeHidden();
+  await page.locator("#pauseRunButton").click();
+  await expect(page.locator("#pauseDialog")).toHaveJSProperty("open", true);
+  await page.locator("#pauseExit").click();
   await expect(page.locator("#startScreen")).toBeVisible();
   await expect(page.locator("#gameScreen")).toBeHidden();
   const customize = page.locator("#customizeButton");
+  if ((page.viewportSize()?.width || 0) <= 520) {
+    await expect(customize).toBeHidden();
+    await expectNoHorizontalOverflow(page);
+    return;
+  }
   await expect(customize).toBeVisible();
   await expect(customize).toContainText("Customize");
   const customizeBox = await customize.boundingBox();

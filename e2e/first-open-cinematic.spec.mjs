@@ -104,7 +104,7 @@ test("phones receive the portrait cinematic and it paints edge to edge", async (
   const video = cinematic.locator("video");
   await expect(cinematic).toBeVisible();
   await expect(cinematic).toHaveAttribute("data-video-layout", "phone");
-  await expect(cinematic).toHaveAttribute("data-brand-rate-cue", "8.166667");
+  await expect(cinematic).toHaveAttribute("data-brand-rate-cue", "15.25");
   await expect(video).toHaveAttribute("src", /cinematic\/intro-video-phone[.]mp4(?:\?.*)?$/);
   await expect.poll(() => video.evaluate((element) => (
     element.videoWidth > 0 && element.videoHeight > 0
