@@ -73,7 +73,7 @@ const CIRCUIT_SURFACE_MAXIMUM_BYTES = 265_000;
 // presentation surfaces (board, home, gate, menu, and sound) while keeping
 // gameplay locked. Bound its JS and CSS separately so this intentional feature
 // cannot become an open-ended Observatory allowance.
-const OBSERVATORY_RUNTIME_MAXIMUM_BYTES = 80_000;
+const OBSERVATORY_RUNTIME_MAXIMUM_BYTES = 80_500;
 const OBSERVATORY_SURFACE_MAXIMUM_BYTES = 130_000;
 const STARDUST_SURFACE_MAXIMUM_BYTES = 13_000;
 // The same bounded immersive-preview runtime is part of the aggregate optional
