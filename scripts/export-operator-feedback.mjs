@@ -12,7 +12,7 @@ function boundedInteger(name, fallback, minimum, maximum) {
 
 function operatorBaseUrl(value) {
   if (!value) {
-    throw new Error("Set CONSTELLORE_OPERATOR_BASE_URL to the Node server origin, for example https://constellore-beta.onrender.com.");
+    throw new Error("Set CONSTELLORE_OPERATOR_BASE_URL to the Node server or feedback Worker origin.");
   }
   let url;
   try {
@@ -28,7 +28,7 @@ function operatorBaseUrl(value) {
     throw new Error("The operator URL cannot contain credentials, a query, or a fragment.");
   }
   if (!["", "/"].includes(url.pathname)) {
-    throw new Error("Use the Node server origin, not /play/ or another path.");
+    throw new Error("Use the service origin, not /play/, /api/, or another path.");
   }
   return url.origin;
 }
@@ -61,7 +61,7 @@ async function main() {
   const baseUrl = operatorBaseUrl(env.CONSTELLORE_OPERATOR_BASE_URL);
   const token = String(env.CONSTELLORE_ADMIN_TOKEN || "").trim();
   if (token.length < 24) {
-    throw new Error("CONSTELLORE_ADMIN_TOKEN must contain the same high-entropy secret (at least 24 characters) configured on the Node server.");
+    throw new Error("CONSTELLORE_ADMIN_TOKEN must contain the same high-entropy secret (at least 24 characters) configured on the service.");
   }
 
   const minimumReports = boundedInteger("CONSTELLORE_REPORT_MINIMUM_REPORTS", 1, 1, 100_000);

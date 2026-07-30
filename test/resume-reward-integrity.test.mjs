@@ -3,19 +3,26 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 const app = await readFile(new URL("../public/app.js", import.meta.url), "utf8");
+const defaultProfile = await readFile(new URL("../public/default-profile.mjs", import.meta.url), "utf8");
+const sessionResume = await readFile(new URL("../public/session-resume.mjs", import.meta.url), "utf8");
+
+function betweenSource(source, start, end) {
+  const from = source.indexOf(start);
+  const to = source.indexOf(end, from + start.length);
+  assert.ok(from >= 0 && to > from, `missing source range ${start} -> ${end}`);
+  return source.slice(from, to);
+}
 
 function between(start, end) {
-  const from = app.indexOf(start);
-  const to = app.indexOf(end, from + start.length);
-  assert.ok(from >= 0 && to > from, `missing source range ${start} -> ${end}`);
-  return app.slice(from, to);
+  return betweenSource(app, start, end);
 }
 
 test("hosted resume sends credentials only and rebuilds presentation from authoritative history", () => {
   const restore = between("async function restoreInterruptedRun", "function startWithGame");
   assert.ok(restore.includes("isStaticBeta"));
-  assert.ok(restore.includes("{ runId: snapshot.run.id, runToken: snapshot.run.token }"));
-  assert.ok(restore.includes("{ runId: snapshot.run.id, runToken: snapshot.run.token, snapshot }"), "local practice may retain its validated visual snapshot path");
+  assert.match(restore, /\{\s*runId:\s*snapshot[.]run[.]id,\s*runToken:\s*snapshot[.]run[.]token,\s*deferActivation:\s*pendingActivation\s*\}/);
+  assert.match(restore, /\{\s*runId:\s*snapshot[.]run[.]id,\s*runToken:\s*snapshot[.]run[.]token,\s*snapshot,\s*deferActivation:\s*pendingActivation\s*\}/, "local practice may retain its validated visual snapshot path");
+  assert.ok(restore.includes("shouldRestoreObjective("), "a pending restored run must remain paused on its objective");
 
   const decorate = between("function decorateRestoredHistory", "function reconcileRestoredMastery");
   for (const marker of [
@@ -33,8 +40,67 @@ test("hosted resume sends credentials only and rebuilds presentation from author
   assert.ok(hydrate.includes("state.newDiscoveries = state.history.reduce"));
 });
 
+test("client-only resume accepts only canonical lesson and sandbox reconstructions", () => {
+  assert.match(app, /import \{[^}]*CLIENT_ONLY_RESUME_MODES[^}]*activeRunSnapshotIsValid[^}]*clientOnlyRestorePayload[^}]*createClientRunPersistence[^}]*\} from "[.]\/session-resume[.]mjs[?]v=/);
+  assert.match(sessionResume, /export const CLIENT_ONLY_RESUME_MODES = new Set\(\["training", "second-orbit", "explore"\]\)/);
+
+  const clientRestore = betweenSource(
+    sessionResume,
+    "function clientOnlyRestoreGame",
+    "export function activeRunSnapshotIsValid"
+  );
+  assert.match(clientRestore, /mode === "training"[\s\S]*createFirstOrbitGame\(selectUniverse\(101\)\)/);
+  assert.match(clientRestore, /mode === "second-orbit"[\s\S]*createSecondOrbitGame\(selectUniverse\(202\)\)/);
+  assert.match(clientRestore, /mode === "explore"[\s\S]*exploreGame\(seed\)[\s\S]*selectUniverse\(game[.]seed\)/);
+  assert.match(clientRestore, /!Number[.]isSafeInteger\(seed\) \|\| seed < 0 \|\| seed >= 1_000_000/);
+  assert.match(clientRestore, /savedTarget !== String\(game[.]target \|\| ""\)[\s\S]*Number\(snapshot[?][.]game[?][.]seed\) !== Number\(game[.]seed\)/);
+  assert.doesNotMatch(clientRestore, /structuredClone\(snapshot[.]game\)/, "a local snapshot must not supply executable game rules");
+
+  assert.match(clientRestore, /run[?][.]clientOnly !== true[\s\S]*!CLIENT_ONLY_RESUME_MODES[.]has\(mode\)/);
+  assert.match(clientRestore, /run[.]localOnly !== true[\s\S]*run[.]ranked !== false[\s\S]*run[.]scoreEligible !== false/);
+  assert.match(clientRestore, /run[.]hasRuntimeRun !== hasRuntimeRun/);
+  assert.match(clientRestore, /expectedIdPrefix = hasRuntimeRun \? "training-" : `client-\$\{mode\}-`/);
+  assert.match(clientRestore, /expectedToken = hasRuntimeRun \? "local-training" : "client-only"/);
+  assert.match(clientRestore, /progress[.]completed === true[\s\S]*progress[.]submitted === true[\s\S]*progress[.]scoringDisabled !== true/);
+
+  const persistence = between("function activeRunPersistence", "function buildActiveRunSnapshot");
+  assert.match(persistence, /createClientRunPersistence\(\{\s*game:\s*state[.]game,\s*mode:\s*state[.]mode,\s*startedAt:\s*state[.]startedAt\s*\}\)/);
+  const reader = between("function readActiveRunSnapshot", "async function enterPreparedMission");
+  assert.match(reader, /if \(!activeRunSnapshotIsValid\(snapshot\)\) \{[\s\S]*clearActiveRunSnapshot\(\)/);
+
+  const restore = between("async function restoreInterruptedRun", "function missionModeLabel");
+  assert.match(restore, /if \(snapshot[.]run[.]clientOnly === true\) \{[\s\S]*clientOnlyRestorePayload\(snapshot\)/);
+  assert.match(restore, /if \(!payload\) \{\s*clearActiveRunSnapshot\(\);\s*return false/);
+  assert.match(restore, /startWithGame\(payload[.]game, payload[.]run, \{[\s\S]*restored:\s*true[\s\S]*persistenceRun:\s*payload[.]persistenceRun/);
+  assert.match(restore, /hydrateRestoredRun\(payload, snapshot\)[\s\S]*source:\s*"client"/);
+
+  const snapshot = between("function buildActiveRunSnapshot", "function flushRunSave");
+  assert.match(snapshot, /const persistenceRun = activeRunPersistence\(\)/);
+  assert.match(snapshot, /clientOnly:\s*CLIENT_ONLY_RESUME_MODES[.]has\(state[.]mode\)/);
+  assert.match(snapshot, /hasRuntimeRun:\s*Boolean\(state[.]run[?][.]id && state[.]run[?][.]token\)/);
+});
+
+test("client-only and unranked snapshots can never enter pending-score recovery", () => {
+  const completed = between("function saveCompletedRunSnapshot", "function scheduleRunSave");
+  assert.match(completed, /snapshot[.]run[.]clientOnly === true \|\| snapshot[.]run[.]ranked !== true/);
+  assert.ok(
+    completed.indexOf("snapshot.run.clientOnly === true")
+      < completed.indexOf("rememberPendingScore(snapshot)"),
+    "the eligibility guard must run before pending-score persistence"
+  );
+
+  const pending = between("function rememberPendingScore", "function markPendingScoreUploaded");
+  assert.match(pending, /snapshot[?][.]run[?][.]clientOnly === true/);
+  assert.match(pending, /snapshot[?][.]run[?][.]ranked !== true/);
+  assert.ok(
+    pending.indexOf("snapshot?.run?.ranked !== true")
+      < pending.indexOf("savePendingScoreRecord("),
+    "unranked local play must return before score credentials are written"
+  );
+});
+
 test("completed-run progression receipts prevent reward replay across resume and cloud sync", () => {
-  assert.match(app, /version:\s*7,[\s\S]*?rewardedRunIds:\s*\[\]/);
+  assert.match(defaultProfile, /version:\s*8,[\s\S]*?rewardedRunIds:\s*\[\]/);
   const sanitizer = between("function sanitizeRewardedRunIds", "function sanitizeEventProgress");
   assert.ok(sanitizer.includes("ids.length >= 256"));
   assert.ok(sanitizer.includes("seen.has(id)"));
@@ -64,11 +130,11 @@ test("event claims survive response loss and account recovery preserves server e
   const cloudRestore = recovery.indexOf("await syncCloudProfile({ replaceRemote: true })");
   const eventRefresh = recovery.indexOf("await refreshCosmicEventState()", cloudRestore);
   assert.ok(cloudRestore >= 0 && eventRefresh > cloudRestore, "recovery must restore cloud first, then reapply server event truth");
-  assert.ok(recovery.includes("if (state.cloudDirty) scheduleCloudProfileSync"));
+  assert.ok(recovery.includes("if (config.cloudProfileEnabled === true && state.cloudDirty)"));
 });
 
 test("client mastery obeys the server's per-combination progression eligibility", () => {
-  const mastery = between("function recordMasteryStep", "const cosmeticClassNames");
+  const mastery = between("function recordMasteryStep", "function founderCosmeticsOwned");
   assert.ok(mastery.includes('step.progressionEligible === false || state.scoringDisabled || state.assist !== "none"'));
 
   const combine = between("async function combineNodes", "function scheduleRecipeFeedbackExpiry");

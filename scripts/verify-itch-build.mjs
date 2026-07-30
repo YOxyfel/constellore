@@ -2,15 +2,61 @@ import assert from "node:assert/strict";
 import { readFile, stat } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { assertCosmeticAsset, assertCosmeticPacksAreLazy, COSMETIC_PACKS } from "./cosmetic-assets.mjs";
+import { assertAudioAsset, AUDIO_PACKS } from "./audio-assets.mjs";
+import {
+  assertAdaptiveScenePreloadContract,
+  assertScenePreloadSet,
+  runCosmeticPreloadBootstrap
+} from "./cosmetic-preload-bootstrap-audit.mjs";
+import { assertCosmicGateAsset, COSMIC_GATE_ASSETS } from "./cosmic-gate-assets.mjs";
+import { assertHomeCosmosAsset, HOME_COSMOS_ASSETS } from "./home-cosmos-assets.mjs";
+import { minifyCss } from "./minify-css.mjs";
+import { validatePublicDuelApiUrl } from "./public-duel-config.mjs";
 import { validatePublicFeedbackApiUrl } from "./public-feedback-config.mjs";
 import { createDeterministicZip, readZip, sha256 } from "./release-archive.mjs";
+import { withAssetVersion } from "./release-metadata.mjs";
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const packageMetadata = JSON.parse(await readFile(join(root, "package.json"), "utf8"));
+const expectedDuelApiUrl = validatePublicDuelApiUrl(process.env.PUBLIC_DUEL_API_URL);
 const expectedFeedbackApiUrl = validatePublicFeedbackApiUrl(process.env.PUBLIC_FEEDBACK_API_URL);
 const releaseVersionPattern = packageMetadata.version.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 const artifactName = `constellore-html5-v${packageMetadata.version}.zip`;
 const artifactPath = process.argv[2] ? join(process.cwd(), process.argv[2]) : join(root, "dist-itch", artifactName);
+const STORY_PACK_PATHS = [
+  "story/combination-story.mjs",
+  "story/combination-story-view.mjs",
+  "story/combination-story-runtime.mjs",
+  "story/combination-story.css"
+];
+const STORY_PACK_MAXIMUM_BYTES = 40_000;
+const GOLDEN_PAIR_PACK_PATHS = [
+  "story/golden-fusions/golden-pair-animations.mjs",
+  "story/golden-fusions/golden-pair-view.mjs",
+  "story/golden-fusions/golden-pair-runtime.mjs",
+  "story/golden-fusions/golden-pair.css"
+];
+const GOLDEN_PAIR_PACK_MAXIMUM_BYTES = 56_000;
+const CINEMATIC_RUNTIME_PATHS = [
+  "cinematic/first-open-cinematic.mjs",
+  "cinematic/first-open-cinematic.css"
+];
+const CINEMATIC_VIDEO_PATHS = [
+  "cinematic/intro-video.mp4",
+  "cinematic/intro-video-phone.mp4"
+];
+const CINEMATIC_PACK_PATHS = [...CINEMATIC_RUNTIME_PATHS, ...CINEMATIC_VIDEO_PATHS];
+const CINEMATIC_PACK_MAXIMUM_BYTES = 11_000_000;
+const SCRAMBLE_LAZY_FILES = [
+  "scramble.mjs",
+  "scramble-runtime.mjs",
+  "scramble-app-bridge.mjs",
+  "scramble-arena.mjs",
+  "forge-clash.mjs",
+  "scramble.css"
+];
+const COSMIC_INTERLUDE_LAZY_FILE = "cosmic-interlude.css";
 const archive = await readFile(artifactPath);
 assert.ok((await stat(artifactPath)).size > 100_000, "The itch package is unexpectedly small.");
 
@@ -28,21 +74,144 @@ const rankArtFiles = [
   "tier-05-rift",
   "tier-06-singularity"
 ].flatMap((tier) => ["sm", "md", "lg"].map((size) => `art/ranks/${tier}-${size}.webp`));
+for (const required of SCRAMBLE_LAZY_FILES) {
+  assert.ok(files.has(required), `The itch package is missing lazy Scramble asset ${required}.`);
+  const source = await readFile(join(root, "public", required), "utf8");
+  const built = files.get(required).toString("utf8");
+  const expected = required.endsWith(".css")
+    ? minifyCss(source)
+    : withAssetVersion(source, packageMetadata.version);
+  assert.equal(built, expected, `${required} was not transformed as a versioned lazy Scramble asset.`);
+}
+{
+  const source = await readFile(join(root, "public", COSMIC_INTERLUDE_LAZY_FILE), "utf8");
+  const built = files.get(COSMIC_INTERLUDE_LAZY_FILE)?.toString("utf8");
+  assert.ok(built, "The itch package is missing lazy Cosmic Interlude CSS.");
+  assert.equal(built, minifyCss(source), "Cosmic Interlude CSS was not emitted as a minified lazy asset.");
+}
 for (const required of [
-  "index.html", "app.js", "home-menu.mjs", "second-orbit.mjs", "explore-sandbox.mjs", "combination-report-delivery.mjs", "route-distance.mjs", "run-iq.mjs", "adaptive-difficulty.mjs", "remix-progression.mjs", "remix-readiness.mjs", "route-remixes.mjs", "shuffled-start.mjs", "rank-board-art.mjs", "rank-board-art-runtime.mjs", "styles.css", "simple-ui.css", "local-beta.mjs", "local-world.mjs", "release.json", "service-worker.js", "manifest.webmanifest",
+  "index.html", "app.js", "default-profile.mjs", "mastery-catalog.mjs", "secondary-surface-loader.mjs", "victory-handoff.mjs", "audio-runtime.mjs", "cosmos-circuit-runtime.mjs", "cosmos-circuit.mjs", "cosmos-circuit-copy.mjs", "circuit-lobby-tabs.mjs", "circuit-live-ops.mjs", "star-path.mjs", "account-profile.mjs", "run-entry.mjs", "hero-recipes.mjs", "cosmic-gate.mjs", "cosmic-quotes.mjs", "cosmic-interludes.mjs", "cosmic-interlude-runtime.mjs", COSMIC_INTERLUDE_LAZY_FILE, "reveal-tree.mjs", "reveal-presentation.mjs", "home-menu.mjs", "home-menu-view.mjs", "profile-rank-surface.mjs", "golden-targets.mjs", "first-game-experience.mjs", "first-orbit.mjs", "second-orbit.mjs", "explore-sandbox.mjs", "combination-report-delivery.mjs", "route-distance.mjs", "path-guard.mjs", "run-iq.mjs", "adaptive-difficulty.mjs", "remix-progression.mjs", "remix-readiness.mjs", "route-remixes.mjs", "shuffled-start.mjs", "rank-board-art.mjs", "rank-board-art-runtime.mjs", "styles.css", "simple-ui.css", "cosmic-gate.css", "epic-home.css", "cosmos-circuit.css", "cosmetic-world-preview.css", "cosmetic-world-preview.mjs", "developer-console.css", "developer-console.mjs", "developer-console-runtime.mjs", "share-card-runtime.mjs", "local-beta.mjs", "local-world.mjs", "release.json", "service-worker.js", "manifest.webmanifest",
   "signature-routes.mjs", "living-atlas.mjs", "constellation-voyages.mjs", "recipe-insight.mjs", "community-results.mjs", "cosmic-events.mjs",
-  "icon.svg", "icon-192.png", "icon-512.png", "icon-maskable-512.png", "art/celestial-atlas-bg-v1.webp", ...rankArtFiles, "release-manifest.json", "SHA256SUMS.txt"
+  "icon.svg", "icon-192.png", "icon-512.png", "icon-maskable-512.png", "art/celestial-atlas-bg-v1.webp", ...STORY_PACK_PATHS, ...GOLDEN_PAIR_PACK_PATHS, ...CINEMATIC_PACK_PATHS, ...COSMIC_GATE_ASSETS.map((asset) => asset.path), ...HOME_COSMOS_ASSETS.map((asset) => asset.path), ...rankArtFiles, "release-manifest.json", "SHA256SUMS.txt"
 ]) assert.ok(files.has(required), `The itch package is missing ${required}.`);
+assert.ok(files.has("initial-app-state.mjs"), "The itch package is missing initial-app-state.mjs.");
+assert.ok(files.has("stardust-store.mjs"), "The itch package is missing stardust-store.mjs.");
+assert.ok(files.has("stardust-store.css"), "The itch package is missing stardust-store.css.");
+for (const file of STORY_PACK_PATHS) {
+  const source = await readFile(join(root, "public", file), "utf8");
+  const built = files.get(file).toString("utf8");
+  const expected = file.endsWith(".css")
+    ? minifyCss(source)
+    : withAssetVersion(source, packageMetadata.version);
+  assert.equal(built, expected, `${file} was not transformed as a versioned optional story asset.`);
+}
+const storyPackBytes = [...files.entries()]
+  .filter(([path]) => STORY_PACK_PATHS.includes(path))
+  .reduce((sum, [, data]) => sum + data.length, 0);
+assert.ok(storyPackBytes <= STORY_PACK_MAXIMUM_BYTES, `Combination Story exceeded its 40 KB optional-pack budget (${storyPackBytes} bytes).`);
+for (const file of GOLDEN_PAIR_PACK_PATHS) {
+  const source = await readFile(join(root, "public", file), "utf8");
+  const built = files.get(file).toString("utf8");
+  const expected = file.endsWith(".css")
+    ? minifyCss(source)
+    : withAssetVersion(source, packageMetadata.version);
+  assert.equal(built, expected, `${file} was not transformed as a versioned Golden Pair asset.`);
+}
+const goldenPairPackBytes = GOLDEN_PAIR_PACK_PATHS
+  .reduce((sum, path) => sum + files.get(path).length, 0);
+assert.ok(goldenPairPackBytes <= GOLDEN_PAIR_PACK_MAXIMUM_BYTES, `Golden Pair animations exceeded their 56 KB optional-pack budget (${goldenPairPackBytes} bytes).`);
+for (const file of CINEMATIC_RUNTIME_PATHS) {
+  const source = await readFile(join(root, "public", file), "utf8");
+  const built = files.get(file).toString("utf8");
+  const expected = file.endsWith(".css")
+    ? minifyCss(source)
+    : withAssetVersion(source, packageMetadata.version);
+  assert.equal(built, expected, `${file} was not transformed as a versioned optional cinematic asset.`);
+}
+for (const file of CINEMATIC_VIDEO_PATHS) {
+  assert.deepEqual(
+    files.get(file),
+    await readFile(join(root, "public", file)),
+    `The itch launch video ${file} does not match the optimized source asset.`
+  );
+}
+const cinematicPackBytes = [...files.entries()]
+  .filter(([path]) => path.startsWith("cinematic/"))
+  .reduce((sum, [, data]) => sum + data.length, 0);
+assert.ok(cinematicPackBytes <= CINEMATIC_PACK_MAXIMUM_BYTES, `Launch cinematic exceeded its 11 MB optional-pack budget (${cinematicPackBytes} bytes).`);
+const cosmeticRuntimeFiles = [
+  "cosmetic-preload-bootstrap.js",
+  "cosmetic-canvas.mjs",
+  "cosmetic-catalog.mjs",
+  "cosmetic-economy.mjs",
+  "cosmetics-observatory.css",
+  "cosmetics-observatory.mjs",
+  "cosmetic-world-preview.css",
+  "cosmetic-world-preview.mjs",
+  "cosmetics.css",
+  ...COSMETIC_PACKS.flatMap((pack) => pack.assets.map((asset) => asset.path))
+];
+for (const required of cosmeticRuntimeFiles) {
+  assert.ok(files.has(required), `The itch package is missing cosmetic runtime asset ${required}.`);
+}
 const celestialAtlasArt = files.get("art/celestial-atlas-bg-v1.webp");
 assert.equal(celestialAtlasArt.subarray(0, 4).toString("ascii"), "RIFF", "The itch celestial atlas art is not a WebP RIFF file.");
 assert.equal(celestialAtlasArt.subarray(8, 12).toString("ascii"), "WEBP", "The itch celestial atlas art is not a valid WebP container.");
+assert.deepEqual(
+  [...files.keys()].filter((path) => path.startsWith("art/transitions/")).sort((left, right) => left.localeCompare(right, "en")),
+  COSMIC_GATE_ASSETS.map((asset) => asset.path).sort((left, right) => left.localeCompare(right, "en")),
+  "The itch package must contain exactly the three responsive Cosmic Gate assets."
+);
+for (const asset of COSMIC_GATE_ASSETS) assertCosmicGateAsset(files.get(asset.path), asset, asset.path);
+assert.deepEqual(
+  [...files.keys()].filter((path) => path.startsWith("art/home/")).sort((left, right) => left.localeCompare(right, "en")),
+  HOME_COSMOS_ASSETS.map((asset) => asset.path).sort((left, right) => left.localeCompare(right, "en")),
+  "The itch package must contain exactly the three responsive Home Cosmos assets."
+);
+for (const asset of HOME_COSMOS_ASSETS) assertHomeCosmosAsset(files.get(asset.path), asset, asset.path);
+const cosmeticPaths = COSMETIC_PACKS.flatMap((pack) => pack.assets.map((asset) => asset.path));
+assert.deepEqual(
+  [...files.keys()].filter((path) => path.startsWith("art/cosmetics/")).sort((left, right) => left.localeCompare(right, "en")),
+  [...cosmeticPaths].sort((left, right) => left.localeCompare(right, "en")),
+  "The itch package must contain exactly the declared responsive cosmetic scene packs."
+);
+for (const pack of COSMETIC_PACKS) {
+  let packBytes = 0;
+  for (const asset of pack.assets) {
+    const data = files.get(asset.path);
+    assertCosmeticAsset(data, asset, asset.path);
+    packBytes += data.length;
+  }
+  assert.ok(packBytes <= pack.maximumBytes, `${pack.slug} exceeded its optional-pack budget (${packBytes} bytes).`);
+}
+const audioPaths = AUDIO_PACKS.flatMap((pack) => pack.assets.map((asset) => asset.path));
+assert.deepEqual(
+  [...files.keys()].filter((path) => path.startsWith("audio/")).sort((left, right) => left.localeCompare(right, "en")),
+  [...audioPaths].sort((left, right) => left.localeCompare(right, "en")),
+  "The itch package must contain exactly the declared soundtrack and SFX packs."
+);
+for (const pack of AUDIO_PACKS) {
+  let packBytes = 0;
+  for (const asset of pack.assets) {
+    const data = files.get(asset.path);
+    assertAudioAsset(data, asset, asset.path);
+    packBytes += data.length;
+  }
+  assert.ok(packBytes <= pack.maximumBytes, `${pack.slug} exceeded its optional audio-pack budget (${packBytes} bytes).`);
+}
 
 for (const forbidden of ["server.mjs", "game-services.mjs", ".env", "package.json", "data/constellore.json"]) {
   assert.ok(!files.has(forbidden), `Server or private file leaked into the itch package: ${forbidden}`);
 }
 
 const html = files.get("index.html").toString("utf8");
+const gameApp = files.get("app.js").toString("utf8");
+const cosmeticPreloadBootstrap = files.get("cosmetic-preload-bootstrap.js").toString("utf8");
+const cosmicGateStyles = files.get("cosmic-gate.css").toString("utf8");
+const epicHomeStyles = files.get("epic-home.css").toString("utf8");
 assert.match(html, /data-runtime="local-practice"/);
+assert.doesNotMatch(gameApp, /\b(?:ensureCosmosCircuit|openCosmosCircuit|COSMOS_CIRCUIT_RELEASE_ENABLED)\b/, "The itch shell must not ship staged Cosmos Circuit host glue.");
+assert.match(gameApp, /localStorage[.]removeItem\(COSMOS_CIRCUIT_SAVE_KEY\)/, "Legacy Cosmos Circuit state cleanup must remain available.");
 const feedbackApiAttribute = html.match(/<body\b[^>]*\bdata-feedback-api="([^"]*)"/i)?.[1];
 assert.notEqual(feedbackApiAttribute, undefined, "The itch package is missing its data-feedback-api configuration.");
 assert.equal(
@@ -50,22 +219,70 @@ assert.equal(
   expectedFeedbackApiUrl,
   "The itch package must contain the exact validated PUBLIC_FEEDBACK_API_URL used for this release."
 );
-assert.match(html, /LOCAL PRACTICE · SAVED ON THIS DEVICE · NO PAYMENTS/);
+const duelApiAttribute = html.match(/<body\b[^>]*\bdata-duel-api="([^"]*)"/i)?.[1];
+assert.notEqual(duelApiAttribute, undefined, "The itch package is missing its data-duel-api configuration.");
+assert.equal(
+  duelApiAttribute,
+  expectedDuelApiUrl,
+  "The itch package must contain the exact validated PUBLIC_DUEL_API_URL used for this release."
+);
+assert.match(html, /<strong>LOCAL PRACTICE<\/strong>/);
+assert.match(html, /class="practice-banner__detail">SAVED ON THIS DEVICE · NO PAYMENTS<\/small>/);
+assert.match(html, /class="practice-banner__compact">SAVED HERE · NO PAYMENTS<\/small>/);
 assert.match(html, /rel="apple-touch-icon" href="[.]\/icon-192[.]png"/);
 assert.match(html, new RegExp(`href="[.]\\/styles[.]css[?]v=${releaseVersionPattern}"`));
 assert.match(html, new RegExp(`href="[.]\\/simple-ui[.]css[?]v=${releaseVersionPattern}"`));
+assert.match(html, new RegExp(`href="[.]\\/cosmic-gate[.]css[?]v=${releaseVersionPattern}"`));
+assert.match(html, new RegExp(`href="[.]\\/epic-home[.]css[?]v=${releaseVersionPattern}"`));
+assert.match(html, new RegExp(`href="[.]\\/cosmetics[.]css[?]v=${releaseVersionPattern}"`));
+assert.match(html, new RegExp(`src="[.]\\/cosmetic-preload-bootstrap[.]js[?]v=${releaseVersionPattern}"`));
+assert.match(html, new RegExp(`src="[.]\\/hero-recipes[.]mjs[?]v=${releaseVersionPattern}"`));
 assert.match(html, new RegExp(`src="[.]\\/app[.]js[?]v=${releaseVersionPattern}"`));
-assert.ok((html.match(/\bdata-update-entry(?:=|\s|>)/gi) || []).length >= 6, "The itch build must ship the complete Dev Log.");
+assert.doesNotMatch(html, /<link[^>]+(?:cosmetics-observatory|cosmos-circuit|cosmic-interlude|scramble)[.]css/i, "Secondary surface CSS must not block the itch game shell.");
+const itchGameHref = "https://example.test/portable-game/";
+assertAdaptiveScenePreloadContract(html, { bootstrapSource: cosmeticPreloadBootstrap, pageHref: itchGameHref });
+const itchPreloadResult = runCosmeticPreloadBootstrap(html, { bootstrapSource: cosmeticPreloadBootstrap, pageHref: itchGameHref });
+assertScenePreloadSet(itchPreloadResult, "home", "celestial");
+assertScenePreloadSet(itchPreloadResult, "gate", "celestial");
+const itchHomePreloads = itchPreloadResult.links.filter((link) => link.dataset.scenePreload === "home");
+const itchGatePreloads = itchPreloadResult.links.filter((link) => link.dataset.scenePreload === "gate");
+for (const asset of COSMIC_GATE_ASSETS) {
+  const reference = `./${asset.path}`;
+  assert.ok(cosmicGateStyles.includes(reference), `The itch cinematic CSS does not select ${reference}.`);
+  const preload = itchGatePreloads.find((link) => link.href.endsWith(`/${asset.name}`));
+  assert.ok(preload, `${asset.name} is not adaptively preloaded.`);
+  assert.equal(preload.fetchPriority, "high", `${asset.name} preload is not prioritized.`);
+  assert.ok(preload.media, `${asset.name} preload must be selected by media conditions.`);
+  assert.equal(preload.href, new URL(reference, new URL("cosmic-gate.css", itchGameHref)).href, `${asset.name} preload and CSS request must share one itch cache key.`);
+}
+for (const asset of HOME_COSMOS_ASSETS) {
+  const reference = `./${asset.path}`;
+  assert.ok(epicHomeStyles.includes(reference), `The itch home CSS does not select ${reference}.`);
+  const preload = itchHomePreloads.find((link) => link.href.endsWith(`/${asset.name}`));
+  assert.ok(preload, `${asset.name} is not adaptively preloaded.`);
+  assert.equal(preload.fetchPriority, "high", `${asset.name} preload is not prioritized.`);
+  assert.ok(preload.media, `${asset.name} preload must be selected by media conditions.`);
+  assert.equal(preload.href, new URL(reference, new URL("epic-home.css", itchGameHref)).href, `${asset.name} preload and CSS request must share one itch cache key.`);
+}
+assert.match(epicHomeStyles, /var\(--home-cosmos-art\)/, "The itch home art must use its own responsive selection.");
+assert.doesNotMatch(epicHomeStyles, /var\(--cosmic-gate-art\)/, "The itch home art must remain separate from the Cosmic Gate.");
+assert.doesNotMatch(`${html}\n${cosmicGateStyles}\n${epicHomeStyles}`, /cosmic-gate-v1[.]webp/, "The itch package still references the blurry v1 Cosmic Gate art.");
+assert.ok((html.match(/\bdata-update-entry(?:=|\s|>)/gi) || []).length >= 22, "The itch build must ship the complete Dev Log.");
 const latestUpdate = html.match(/<li\b(?=[^>]*\bis-latest\b)[^>]*>[\s\S]*?<\/li>/i)?.[0] || "";
 assert.match(latestUpdate, new RegExp(`VERSION ${releaseVersionPattern}`, "i"), "The itch build must identify the package version as its latest update.");
-assert.match(latestUpdate, /main Play button/i, "The itch build must describe the one-action opening.");
-assert.match(latestUpdate, /Twelve permanent Route Ranks/i, "The itch build must describe rank progression.");
-assert.match(latestUpdate, /Six board skies/i, "The itch build must describe evolving rank art.");
-assert.match(latestUpdate, /do not enter shared leaderboards/i, "The itch build must state the adaptive fairness boundary.");
+assert.match(html, /Shape Your Constellation[\s\S]*eight complete kits[\s\S]*Pixel Frontier[\s\S]*Bubble Reef[\s\S]*Stellar Vanguard/i, "The itch update history must describe all eight complete cosmetic collections.");
+assert.match(html, /Locked looks can be previewed[\s\S]*responsive pack art now loads on demand/i, "The itch update history must describe preview, accessibility, and lazy-loading behavior.");
+assert.match(html, /Your Ideas Can Reach Us[\s\S]*free, anonymous feedback receiver/i, "The itch build must retain anonymous combination feedback.");
+assert.match(html, /saved locally first[\s\S]*offline retry queue/i, "The itch build must retain durable feedback delivery.");
+assert.match(html, /Golden 50[\s\S]*three-to-seven-combination routes/i, "The itch build must retain the curated opening targets update.");
+assert.match(html, /contextual, spoiler-safe constellation card[\s\S]*target and seed/i, "The itch build must retain contextual exact-challenge cards.");
+assert.match(html, /first ten completed games[\s\S]*advanced ranks, competition, mastery, and economy/i, "The itch build must retain the protected first-ten flow.");
+assert.match(html, /50 short thoughts/i, "The itch build must retain the complete gate quote collection update.");
+assert.match(html, /Pause and Escape stay immediate/i, "The itch build must preserve immediate game controls.");
 assert.match(html, /Pages and itch are deterministic local practice without live rankings, accounts, or AI/i);
 assert.doesNotMatch(html, /rel="canonical"|property="og:url"/i, "The portable itch package must not claim the Pages URL as canonical.");
 assert.doesNotMatch(html, /fonts[.]googleapis[.]com|fonts[.]gstatic[.]com/);
-for (const forbiddenPath of ['href="/manifest', 'href="/styles', 'href="/simple-ui', 'href="/icon', 'src="/app']) {
+for (const forbiddenPath of ['href="/manifest', 'href="/styles', 'href="/simple-ui', 'href="/cosmic-gate', 'href="/epic-home', 'href="/cosmetics', 'href="/cosmos-circuit', 'href="/icon', 'src="/cosmetic-preload-bootstrap', 'src="/hero-recipes', 'src="/app']) {
   assert.ok(!html.includes(forbiddenPath), `Root-absolute asset path remains in itch HTML: ${forbiddenPath}`);
 }
 
@@ -107,6 +324,8 @@ const worker = files.get("service-worker.js").toString("utf8");
 assert.match(worker, /CACHE_PREFIX/);
 assert.match(worker, /art\/celestial-atlas-bg-v1[.]webp/);
 assert.match(worker, new RegExp(`simple-ui[.]css[?]v=${releaseVersionPattern}`));
+assert.match(worker, new RegExp(`cosmic-gate[.]css[?]v=${releaseVersionPattern}`));
+assert.match(worker, new RegExp(`epic-home[.]css[?]v=${releaseVersionPattern}`));
 assert.match(worker, new RegExp(`home-menu[.]mjs[?]v=${releaseVersionPattern}`));
 assert.match(worker, new RegExp(`route-distance[.]mjs[?]v=${releaseVersionPattern}`));
 assert.match(worker, new RegExp(`run-iq[.]mjs[?]v=${releaseVersionPattern}`));
@@ -117,12 +336,68 @@ assert.match(worker, new RegExp(`route-remixes[.]mjs[?]v=${releaseVersionPattern
 assert.match(worker, new RegExp(`shuffled-start[.]mjs[?]v=${releaseVersionPattern}`));
 assert.match(worker, new RegExp(`rank-board-art[.]mjs[?]v=${releaseVersionPattern}`));
 assert.match(worker, new RegExp(`rank-board-art-runtime[.]mjs[?]v=${releaseVersionPattern}`));
+assert.match(worker, new RegExp(`cosmic-interludes[.]mjs[?]v=${releaseVersionPattern}`));
+assert.match(worker, new RegExp(`cosmic-interlude-runtime[.]mjs[?]v=${releaseVersionPattern}`));
+assert.match(worker, new RegExp(`cosmic-interlude[.]css[?]v=${releaseVersionPattern}`));
+assert.match(worker, new RegExp(`cosmic-quotes[.]mjs[?]v=${releaseVersionPattern}`));
+assert.match(worker, new RegExp(`hero-recipes[.]mjs[?]v=${releaseVersionPattern}`));
+assert.match(worker, new RegExp(`cosmetic-preload-bootstrap[.]js[?]v=${releaseVersionPattern}`));
+assert.match(worker, new RegExp(`cosmetic-canvas[.]mjs[?]v=${releaseVersionPattern}`));
+assert.match(worker, new RegExp(`cosmetic-catalog[.]mjs[?]v=${releaseVersionPattern}`));
+assert.match(worker, new RegExp(`cosmetics-observatory[.]mjs[?]v=${releaseVersionPattern}`));
+assert.match(worker, new RegExp(`cosmetics-observatory[.]css[?]v=${releaseVersionPattern}`));
+assert.match(worker, new RegExp(`cosmetic-world-preview[.]mjs[?]v=${releaseVersionPattern}`));
+assert.match(worker, new RegExp(`cosmetic-world-preview[.]css[?]v=${releaseVersionPattern}`));
+assert.match(worker, new RegExp(`cosmetics[.]css[?]v=${releaseVersionPattern}`));
+assert.match(worker, new RegExp(`cosmos-circuit-runtime[.]mjs[?]v=${releaseVersionPattern}`));
+assert.match(worker, new RegExp(`cosmos-circuit[.]mjs[?]v=${releaseVersionPattern}`));
+assert.match(worker, new RegExp(`cosmos-circuit-copy[.]mjs[?]v=${releaseVersionPattern}`));
+assert.match(worker, new RegExp(`circuit-live-ops[.]mjs[?]v=${releaseVersionPattern}`));
+assert.match(worker, new RegExp(`cosmos-circuit[.]css[?]v=${releaseVersionPattern}`));
+assert.match(worker, new RegExp(`star-path[.]mjs[?]v=${releaseVersionPattern}`));
+for (const file of SCRAMBLE_LAZY_FILES) {
+  assert.match(
+    worker,
+    new RegExp(`${file.replaceAll(".", "[.]")}[?]v=${releaseVersionPattern}`),
+    `${file} must be available through the itch worker's exact lazy-file allowlist.`
+  );
+}
+assertCosmeticPacksAreLazy(worker);
+assert.match(worker, new RegExp(`account-profile[.]mjs[?]v=${releaseVersionPattern}`));
+assert.match(worker, new RegExp(`first-game-experience[.]mjs[?]v=${releaseVersionPattern}`));
 assert.match(worker, /[.]\/art\/ranks\//);
+assert.match(worker, /[.]\/art\/transitions\//);
+assert.match(worker, /[.]\/art\/home\//);
 assert.doesNotMatch(worker, /const SHELL = [^;]+tier-0[1-6]-/);
+const workerShell = worker.match(/const SHELL = ([^;]+);/)?.[1] || "";
+const workerLazyFiles = worker.match(/const LAZY_FILES = new Set\(([^;]+)\);/)?.[1] || "";
+for (const file of SCRAMBLE_LAZY_FILES) {
+  assert.match(workerLazyFiles, new RegExp(file.replaceAll(".", "[.]")), `${file} is missing from the itch lazy-file cache boundary.`);
+}
+assert.match(workerLazyFiles, /cosmic-interlude[.]css/, "Cosmic Interlude CSS is missing from the itch lazy-file cache boundary.");
+assert.match(workerLazyFiles, /cosmetic-world-preview[.]mjs/, "The immersive cosmetic preview runtime is missing from the itch lazy-file cache boundary.");
+assert.match(workerLazyFiles, /cosmetic-world-preview[.]css/, "The immersive cosmetic preview CSS is missing from the itch lazy-file cache boundary.");
+assert.doesNotMatch(workerShell, /cosmic-interlude[.]css/, "Cosmic Interlude CSS must not block the itch install shell.");
+assert.doesNotMatch(workerShell, /cosmetic-world-preview[.](?:mjs|css)/, "The immersive cosmetic preview must not block the itch install shell.");
+assert.doesNotMatch(workerShell, /(?:scramble(?:-(?:runtime|arena))?|forge-clash)[.](?:mjs|css)/, "Scramble must not block the itch install shell.");
+assert.match(workerShell, /victory-handoff[.]mjs/, "The core victory handoff policy must be available offline with app.js.");
+assert.doesNotMatch(workerShell, /art\/transitions\//, "Responsive Cosmic Gate art must stay out of the itch install shell.");
+assert.doesNotMatch(workerShell, /art\/home\//, "Responsive Home Cosmos art must stay out of the itch install shell.");
+assert.doesNotMatch(workerShell, /audio\//, "Soundtracks and SFX banks must stay out of the itch install shell.");
+assert.doesNotMatch(workerShell, /story\//, "Combination Story must stay out of the itch install shell.");
+assert.doesNotMatch(workerShell, /cinematic\//, "The first-open cinematic must stay out of the itch install shell.");
+assert.match(worker, /[.]\/audio\//, "Audio packs must be runtime-cached after playback activation.");
+assert.match(worker, /const LAZY_PREFIXES = [^;]*[.]\/story\//, "Combination Story must be runtime-cached only after activation.");
+assert.match(worker, /const LAZY_PREFIXES = [^;]*[.]\/cinematic\//, "The first-open cinematic must be runtime-cached only after activation.");
+assert.match(worker, /headers[.]has\("range"\)/, "Range media requests must bypass Cache API writes.");
 assert.match(worker, /key[.]startsWith\(CACHE_PREFIX\)/);
 assert.match(worker, /response[.]ok/);
+assert.match(worker, /url[.]origin !== self[.]location[.]origin/, "Cross-origin duel requests must bypass the itch worker.");
+if (expectedDuelApiUrl) {
+  assert.ok(!worker.includes(expectedDuelApiUrl), "The public duel API must be configured in HTML, never cached into the worker.");
+}
 assert.match(worker, new RegExp(`CACHE_PREFIX[}]${releaseVersionPattern}`));
-for (const module of ["second-orbit", "explore-sandbox", "signature-routes", "living-atlas", "constellation-voyages", "recipe-insight", "community-results", "cosmic-events", "combination-report-delivery", "adaptive-difficulty", "remix-progression", "remix-readiness", "route-remixes", "shuffled-start", "rank-board-art", "rank-board-art-runtime"]) {
+for (const module of ["audio-runtime", "second-orbit", "explore-sandbox", "signature-routes", "living-atlas", "constellation-voyages", "recipe-insight", "community-results", "cosmic-events", "combination-report-delivery", "adaptive-difficulty", "remix-progression", "remix-readiness", "route-remixes", "shuffled-start", "rank-board-art", "rank-board-art-runtime", "cosmic-interludes", "cosmic-interlude-runtime", "cosmic-quotes", "hero-recipes"]) {
   assert.match(worker, new RegExp(`${module}[.]mjs[?]v=${releaseVersionPattern}`));
 }
 assert.doesNotMatch(worker, /keys[.]filter\(\(key\) => key !== CACHE\)/);
@@ -135,12 +410,16 @@ assert.equal(releaseManifest.platform, "itch.io-html5");
 assert.equal(releaseManifest.runtime, "local-practice");
 assert.equal(releaseManifest.entrypoint, "index.html");
 assert.deepEqual(releaseManifest.productBoundary, {
+  soloPlay: "local-offline",
+  soloProgressLocalOnly: true,
+  liveDuels: "online-only",
+  duelRatingServerBacked: true,
+  duelApiConfigured: Boolean(expectedDuelApiUrl),
   liveAi: false,
   scoreUpload: false,
   payments: false,
   rewardedAds: false,
-  crossDeviceAccount: false,
-  localProgressOnly: true
+  crossDeviceAccount: false
 });
 
 const expectedRuntimePaths = [...files.keys()]
@@ -162,4 +441,4 @@ for (const [index, path] of expectedChecksumPaths.entries()) {
 }
 
 console.log(`itch package verified: ${artifactName}`);
-console.log(`${entries.length} files · local practice only · deterministic ZIP · SHA-256 ${sha256(archive)}`);
+console.log(`${entries.length} files · local/offline solo · online-only live duels · deterministic ZIP · SHA-256 ${sha256(archive)}`);

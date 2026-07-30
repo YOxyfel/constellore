@@ -3,8 +3,12 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 const app = await readFile(new URL("../public/app.js", import.meta.url), "utf8");
+const audioRuntime = await readFile(new URL("../public/audio-runtime.mjs", import.meta.url), "utf8");
+const homeMenuView = await readFile(new URL("../public/home-menu-view.mjs", import.meta.url), "utf8");
 const styles = await readFile(new URL("../public/styles.css", import.meta.url), "utf8");
 const simpleStyles = await readFile(new URL("../public/simple-ui.css", import.meta.url), "utf8");
+const cosmeticStyles = await readFile(new URL("../public/cosmetics.css", import.meta.url), "utf8");
+const stardustStoreRuntime = await readFile(new URL("../public/stardust-store-runtime.mjs", import.meta.url), "utf8");
 const page = await readFile(new URL("../public/index.html", import.meta.url), "utf8");
 const releaseVersion = JSON.parse(await readFile(new URL("../package.json", import.meta.url), "utf8")).version;
 
@@ -63,6 +67,57 @@ test("mobile training reserves playable board space in portrait and short landsc
   assert.match(styles, /[.]nav-icon\s*\{\s*width:\s*44px;\s*height:\s*44px/);
 });
 
+test("inventory placement cannot fall into a bottom vertical-list seam", () => {
+  const bottomLayout = styles.match(/@media \(max-width: 700px\), \(max-width: 900px\) and \(orientation: portrait\) \{([\s\S]*?)\n\}/)?.[1] || "";
+  assert.match(bottomLayout, /[.]game-layout\s*\{[^}]*display:\s*flex[^}]*flex-direction:\s*column/);
+  assert.match(bottomLayout, /[.]inventory\s*\{[^}]*max-height:\s*198px[^}]*overflow:\s*hidden/);
+  assert.match(bottomLayout, /[.]word-list\s*\{[^}]*display:\s*flex[^}]*overflow-x:\s*auto[^}]*overflow-y:\s*hidden[^}]*scroll-snap-type:\s*x proximity/);
+  assert.match(bottomLayout, /[.]inventory-word\s*\{[^}]*flex:\s*0 0 auto[^}]*width:\s*auto[^}]*scroll-snap-align:\s*start/);
+
+  const sideLayout = styles.match(/@media \(max-width: 700px\) and \(max-height: 500px\) and \(min-width: 520px\) \{([\s\S]*?)\n\}/)?.[1] || "";
+  assert.match(sideLayout, /[.]game-layout\s*\{[^}]*display:\s*grid[^}]*grid-template-columns:\s*minmax\(0,1fr\) minmax\(176px,28vw\)/);
+  assert.match(sideLayout, /[.]inventory\s*\{[^}]*max-height:\s*none/);
+  assert.match(sideLayout, /[.]word-list\s*\{[^}]*display:\s*block[^}]*overflow-x:\s*hidden[^}]*overflow-y:\s*auto/);
+  assert.match(sideLayout, /[.]inventory-word\s*\{[^}]*width:\s*100%[^}]*flex-direction:\s*row/);
+
+  const trayDrag = app.slice(app.indexOf("function startTrayPointerDrag"), app.indexOf("function addNode", app.indexOf("function startTrayPointerDrag")));
+  assert.match(trayDrag, /const compactSideRail = matchMedia\("\(max-width: 700px\) and \(max-height: 500px\) and \(min-width: 520px\)"\)[.]matches/);
+  assert.match(trayDrag, /matchMedia\("\(max-width: 700px\), \(max-width: 900px\) and \(orientation: portrait\)"\)[.]matches/);
+  assert.match(trayDrag, /mobileTray\s*\?\s*dy < -8[\s\S]*:\s*dx < -8/);
+});
+
+test("first-game inventory guidance has a paint gutter, staggered motion, and unclipped contained light", () => {
+  const tutorialRule = simpleStyles.match(/[.]simple-ui [.]inventory-word[.]tutorial-hot\s*\{([^}]+)\}/)?.[1] || "";
+  const cosmeticTutorialRule = cosmeticStyles.match(/body[.]simple-ui [.]inventory-word[.]tutorial-hot\s*\{([^}]+)\}/)?.[1] || "";
+  assert.match(tutorialRule, /opacity:\s*1/);
+  assert.match(tutorialRule, /overflow:\s*visible/);
+  assert.match(tutorialRule, /border:\s*1px solid/);
+  assert.match(tutorialRule, /border-left:\s*3px solid/);
+  assert.match(tutorialRule, /border-radius:\s*12px/);
+  assert.match(tutorialRule, /background:\s*[\s\S]*radial-gradient[\s\S]*linear-gradient/);
+  assert.match(tutorialRule, /box-shadow:\s*[\s\S]*inset/);
+  assert.doesNotMatch(tutorialRule, /\n\s*0 8px 18px/);
+  assert.match(tutorialRule, /animation:\s*inventory-tutorial-arrive/);
+  assert.match(styles, /[.]word-list\s*\{[^}]*padding:\s*12px 10px 15px 8px/);
+  assert.match(styles, /[.]word-list > [.]inventory-word \+ [.]inventory-word\s*\{[^}]*margin-top:\s*6px/);
+  assert.match(simpleStyles, /[.]inventory-word[.]tutorial-hot ~ [.]inventory-word[.]tutorial-hot\s*\{[^}]*--tutorial-delay:\s*120ms/);
+  const arrivalFrames = simpleStyles.match(/@keyframes inventory-tutorial-arrive\s*\{([\s\S]*?)\n\}/)?.[1] || "";
+  assert.match(arrivalFrames, /translate3d\(0,\s*4px,\s*0\)/);
+  assert.match(arrivalFrames, /translate3d\(0,\s*-1px,\s*0\)/);
+  assert.doesNotMatch(arrivalFrames, /(?:blur|translate3d\((?!0,))/);
+  const highlightRule = simpleStyles.match(/[.]simple-ui [.]inventory-word[.]tutorial-hot::before\s*\{([^}]+)\}/)?.[1] || "";
+  assert.match(highlightRule, /inset:\s*1px/);
+  assert.match(highlightRule, /opacity:\s*[.]2/);
+  assert.doesNotMatch(highlightRule, /(?:translateX|animation:)/);
+  assert.match(simpleStyles, /@media \(prefers-reduced-motion: reduce\)\s*\{[\s\S]*[.]inventory-word[.]tutorial-hot\s*\{[^}]*animation:\s*none !important/);
+  assert.match(simpleStyles, /[.]simple-ui [.]inventory-word:focus-visible\s*\{[^}]*outline-offset:\s*3px/);
+  assert.match(cosmeticTutorialRule, /box-shadow:\s*[\s\S]*inset/);
+  assert.doesNotMatch(cosmeticTutorialRule, /var\(--cosmetic-word-shadow\)/);
+  assert.doesNotMatch(cosmeticTutorialRule, /0 0 38px/);
+  assert.match(cosmeticStyles, /body[.]simple-ui [.]inventory-word[.]tutorial-hot:focus-visible\s*\{[^}]*outline:\s*2px solid[^}]*outline-offset:\s*3px/);
+  assert.doesNotMatch(styles, /[.]board-word[.]tutorial-hot,\s*[.]inventory-word[.]tutorial-hot\s*\{/, "inventory guidance must not inherit the legacy external-glow animation");
+});
+
 test("tap chains are discoverable, cancellable, and work from the inventory", () => {
   assert.match(page, /id="tapChainStatus"/);
   assert.match(page, /id="cancelTapChain"/);
@@ -74,7 +129,10 @@ test("tap chains are discoverable, cancellable, and work from the inventory", ()
 });
 
 test("Undo, Redo, Tidy, and Clear stay in a visible quick board toolbar", () => {
+  const topHud = page.match(/<div class="board-top-hud"[\s\S]*?<\/div>\s*<div class="board-guide"/)?.[0] || "";
   const tools = page.match(/<nav\b(?=[^>]*\bid="boardQuickTools")[^>]*>[\s\S]*?<\/nav>/i)?.[0] || "";
+  assert.match(topHud, /id="boardQuickTools"/);
+  assert.match(topHud, /id="runMilestone"/);
   assert.match(tools, /class="board-quick-tools"/);
   assert.doesNotMatch(tools.match(/<nav\b[^>]*>/i)?.[0] || "", /\bhidden\b/i);
   for (const [id, label] of [["undoBoardAction", "Undo"], ["redoBoardAction", "Redo"], ["tidyBoard", "Tidy"], ["resetBoard", "Clear"]]) {
@@ -95,6 +153,10 @@ test("Undo, Redo, Tidy, and Clear stay in a visible quick board toolbar", () => 
   assert.match(app, /const packed = packOrbit\(/);
   assert.match(app, /commitBoardEdit\(before, "tidy words"\)/);
   assert.match(app, /Orbit tidied · score unchanged/);
+  assert.match(styles, /[.]board-top-hud\s*\{[^}]*position:\s*absolute[^}]*display:\s*grid[^}]*justify-items:\s*center/);
+  assert.match(simpleStyles, /[.]simple-ui [.]board-quick-tools\s*\{[^}]*position:\s*relative[^}]*width:\s*min\(356px, 100%\)/);
+  assert.match(simpleStyles, /[.]simple-ui [.]run-milestone\s*\{[^}]*width:\s*min\(580px, 100%\)[^}]*min-width:\s*0/);
+  assert.doesNotMatch(simpleStyles, /calc\(100% - 400px\)/, "the board HUD must not depend on a guessed inventory-width offset");
 });
 
 test("inventory search and interrupted-run restore are wired into lifecycle persistence", () => {
@@ -102,7 +164,8 @@ test("inventory search and interrupted-run restore are wired into lifecycle pers
   assert.match(app, /orderInventory\(state[.]words/);
   assert.match(app, /function buildActiveRunSnapshot\(/);
   assert.match(app, /fetchJson\("\/api\/run\/resume"/);
-  assert.match(app, /window[.]addEventListener\("pagehide", flushRunSave\)/);
+  assert.match(app, /window[.]addEventListener\("pagehide", (?:flushRunSave|\(\) => \{\s*flushRunSave\(\);)/);
+  assert.match(app, /window[.]addEventListener\("pageshow", \(\) => gameAudio[.]setSuspended\(document[.]hidden\)\)/);
   assert.match(app, /clearActiveRunSnapshot\(\)/);
 });
 
@@ -131,12 +194,13 @@ test("Star Compass preserves its visible Open penalty on an ambiguous network re
   const localCommit = app.indexOf("profile.senseWallet = preview.wallet", senseStart);
   const request = app.indexOf('await fetchJson("/api/run/sense"', senseStart);
   assert.ok(localCommit > senseStart && localCommit < request, "the charge and Open score penalty commit before the request");
-  assert.match(app.slice(senseStart, app.indexOf("function buySenseCharge", senseStart)), /confirmedBeforeForfeit/);
-  assert.match(app.slice(senseStart, app.indexOf("function buySenseCharge", senseStart)), /visible Open penalty remains and the Compass charge stays spent/);
-  assert.match(app.slice(senseStart, app.indexOf("function buySenseCharge", senseStart)), /state[.]orbitGeneration !== orbitGeneration/);
-  assert.match(app.slice(senseStart, app.indexOf("function buySenseCharge", senseStart)), /const refund = grantSenseCharges\(profile[.]senseWallet, 1\)/);
-  assert.match(app.slice(senseStart, app.indexOf("function buySenseCharge", senseStart)), /if \(!els[.]senseDialog[.]open\) showToast/);
-  assert.match(app, /[$]\("#buySense"\)[.]disabled = state[.]powerups[.]busy/);
+  const senseFlow = app.slice(senseStart, app.indexOf("function buyStardustSupply", senseStart));
+  assert.match(senseFlow, /confirmedBeforeForfeit/);
+  assert.match(senseFlow, /visible Open penalty remains and the Compass charge stays spent/);
+  assert.match(senseFlow, /state[.]orbitGeneration !== orbitGeneration/);
+  assert.match(senseFlow, /const refund = grantSenseCharges\(profile[.]senseWallet, 1\)/);
+  assert.match(senseFlow, /if \(!els[.]senseDialog[.]open\) showToast/);
+  assert.match(stardustStoreRuntime, /legacyCompassButton[.]disabled = busy \|\| !compassQuote[.]quoted/);
 });
 
 test("Help presents three plain choices with their exact scoring effects", () => {
@@ -160,6 +224,23 @@ test("Help presents three plain choices with their exact scoring effects", () =>
   assert.match(simpleStyles, /@media \(max-width:\s*520px\)[\s\S]*[.]sense-modal/);
 });
 
+test("the latest hint remains visible as a compact active-level objective", () => {
+  const topHud = page.match(/<div class="board-top-hud"[\s\S]*?<\/div>\s*<div class="board-guide"/)?.[0] || "";
+  assert.match(topHud, /id="hintObjective"[^>]+aria-labelledby="hintObjectiveLabel"[^>]+hidden/);
+  assert.match(topHud, /id="hintObjectiveLabel">CURRENT HINT</);
+  assert.match(topHud, /id="hintObjectiveText"/);
+  assert.match(app, /function sanitizeHintObjective\([\s\S]*slice\(0, 240\)/);
+  assert.match(app, /function renderHintObjective\([\s\S]*state[.]powerups[?][.]currentTip[\s\S]*!state[.]finished[\s\S]*els[.]hintObjective[.]hidden = !active/);
+  assert.match(app, /if \(tip[.]available\)[\s\S]*state[.]powerups[.]currentTip = sanitizeHintObjective\(tip[.]text\)/);
+  assert.match(app, /currentTip: sanitizeHintObjective\(state[.]powerups[.]currentTip\)/, "the current hint must survive interrupted-run restore");
+  assert.match(app, /state[.]powerups[.]currentTip = sanitizeHintObjective\(progress[.]currentTip \?\? matchingSnapshot[.]currentTip\)/);
+  assert.match(app, /state[.]powerups = \{ tipsUsed: 0, tipIds: \[\], currentTip: ""/, "a new challenge clears the old objective");
+  assert.match(app, /state[.]finished = true;\s*renderHintObjective\(\)/, "a finished challenge hides the active objective");
+  assert.match(app, /const candidates = \[[^\]]*els[.]hintObjective/, "word placement must avoid the objective");
+  assert.match(styles, /[.]hint-objective\s*\{[^}]*width:\s*min\(580px, 100%\)[^}]*max-height:[^}]*overflow:\s*auto/);
+  assert.match(simpleStyles, /[.]cosmos-board[.]reveal-active :is\([\s\S]*[.]hint-objective/);
+});
+
 test("the board shows one Help action while advanced shortcuts stay hidden and safe", () => {
   const hudStart = page.indexOf('<div class="game-hud">');
   const tools = page.slice(hudStart, page.indexOf("</header>", hudStart));
@@ -177,7 +258,8 @@ test("the board shows one Help action while advanced shortcuts stay hidden and s
   assert.match(app, /function activateOpenPowerupShortcut\(kind, action\)[\s\S]*activeArmedPowerup\(\) === kind[\s\S]*keeps [^`]+ score in Open/);
   assert.match(app, /if \(!els[.]senseDialog[.]open\) showAlchemy\(`HINT/);
   assert.match(app, /function openPowerupShop\(\)[\s\S]*scrollIntoView[\s\S]*focus\(\{ preventScroll: true \}\)/);
-  assert.match(app, /function buySenseCharge\(\)[\s\S]*saveProfile\(\{ fields: \["progression"\] \}\);[\s\S]*renderProfile\(\)/);
+  assert.match(app, /onProfileChange: \(\) => \{[\s\S]*saveProfile\(\{ fields: \["progression"\] \}\);[\s\S]*renderProfile\(\)/);
+  assert.match(stardustStoreRuntime, /async function purchase\(itemId\)[\s\S]*applyStardustPurchase\(before, itemId, 1\)[\s\S]*await onProfileChange/);
   assert.match(app, /wordGiftShortcut[.]addEventListener\("click", useWordGiftShortcut\)/);
   assert.match(app, /senseShortcut[.]addEventListener\("click", useSenseShortcut\)/);
   assert.match(simpleStyles, /[.]game-hud #senseButton\s*\{[^}]*min-height:\s*50px/);
@@ -281,28 +363,34 @@ test("every modal has an explicit accessible name and a full-size close target",
   assert.match(styles, /[.]modal-close\s*\{[^}]*width:\s*44px;[^}]*height:\s*44px/);
 });
 
-test("the home screen explains the loop, presents one next action, and groups every deeper choice", () => {
+test("the home screen explains the loop, presents one next action, and reveals rank-gated game catalogs", () => {
   assert.match(page, /<button\b(?=[^>]*id="primaryOrbitButton")(?=[^>]*class="[^"]*primary-orbit-button)/);
   assert.equal((page.match(/\bid="primaryOrbitButton"/g) || []).length, 1);
   assert.match(page, /id="primaryOrbitSecondary"/);
-  assert.match(page, /Combine two words to make a new word[.] Keep going until you make the target[.]/);
+  assert.match(page, /Combine two ideas to discover something new[.] Keep going until you create the target word[.]/);
   assert.match(page, /aria-label="Example: Earth plus Water makes Mud"/);
-  assert.match(page, /<details\b(?=[^>]*id="modePicker")(?=[^>]*data-progressive="secondary")/);
-  assert.match(page, /<details\b(?=[^>]*id="adventuresHub")(?=[^>]*data-progressive="adventure")/);
+  assert.match(page, /class="home-vfx" aria-hidden="true"/);
+  assert.match(page, /id="startTitle"[\s\S]*Make worlds[\s\S]*out of words[.]/);
+  assert.match(page, /hero-recipes[.]mjs[?]v=/);
+  assert.match(page, /<section\b(?=[^>]*id="modePicker")(?=[^>]*class="[^"]*home-catalog)(?=[^>]*data-progressive="secondary")/);
+  assert.match(page, /<section\b(?=[^>]*id="adventuresHub")(?=[^>]*class="[^"]*home-catalog)(?=[^>]*data-progressive="adventure")/);
+  assert.doesNotMatch(page, /<details\b[^>]*id="(?:modePicker|exploreHub|adventuresHub)"/);
   assert.match(page, /id="hubMenuButton"[^>]+aria-controls="hubMenuDialog"/);
   assert.match(page, /id="hubMenuDialog"[^>]+aria-labelledby="hubMenuTitle"/);
   assert.match(page, /data-progressive="progress"/);
   assert.match(app, /createHomeMenuState/);
   assert.match(app, /function homeMenuState\(\)/);
   assert.match(app, /function syncProgressiveDisclosure\(\)/);
-  assert.match(app, /classList[.]toggle\("first-session", !menu[.]onboardingComplete\)/);
-  assert.match(app, /classList[.]toggle\("progress-ready", menu[.]progressReady\)/);
-  assert.match(app, /classList[.]toggle\("adventures-ready", menu[.]adventuresReady\)/);
-  assert.match(app, /classList[.]toggle\("training-needed", !training[.]completed\)/);
+  assert.match(homeMenuView, /classList[.]toggle\("first-session", !menu[.]onboardingComplete\)/);
+  assert.match(homeMenuView, /classList[.]toggle\(`\$\{state\}-ready`, menu\[`\$\{state\}Ready`\]\)/);
+  assert.match(homeMenuView, /classList[.]toggle\("training-needed", !trainingCompleted\)/);
   assert.match(app, /primaryOrbitButton["']\)[.]addEventListener\("click", beginPrimaryOrbit\)/);
   assert.match(app, /primaryOrbitSecondary["']\)[.]addEventListener\("click", beginPrimarySecondary\)/);
   assert.match(styles, /body[.]first-session \[data-progressive="secondary"\]/);
   assert.match(styles, /body:not\([.]adventures-ready\) \[data-progressive="adventure"\]/);
+  assert.match(styles, /body[.]simple-ui:is\([.]choices-ready, [.]explore-ready, [.]adventures-ready\) #startScreen [.]start-content\s*\{\s*justify-content:\s*flex-start/);
+  assert.match(styles, /[.]home-catalog\s*\{[^}]*width:\s*100%[^}]*margin-top:\s*16px[^}]*overflow:\s*hidden/);
+  assert.match(styles, /@media \(min-width:\s*901px\)[\s\S]*body[.]simple-ui #startScreen [.]explore-grid\s*\{[^}]*grid-template-columns:\s*repeat\(2,\s*minmax\(0,1fr\)\)/);
   assert.match(styles, /[.]primary-orbit-button\s*\{[^}]*min-height:\s*60px/);
 });
 
@@ -310,13 +398,19 @@ test("menus keep readable cards and separate next, replay, and main-menu actions
   const hubDialog = page.match(/<dialog\b(?=[^>]*id="hubMenuDialog")[\s\S]*?<\/dialog>/)?.[0] || "";
   const resultDialog = page.match(/<dialog\b(?=[^>]*id="resultDialog")[\s\S]*?<\/dialog>/)?.[0] || "";
   assert.match(hubDialog, /id="hubMenuTitle">Menu</);
+  assert.match(hubDialog, /id="openObservatory"[\s\S]*id="hubMenuSettingsTitle">Settings and data/);
+  assert.match(hubDialog, /profile-preferences[\s\S]*profile-data/);
   assert.match(simpleStyles, /[.]simple-ui [.]hub-menu-grid > [.]hub-menu-action\s*\{[^}]*display:\s*grid[^}]*grid-template-columns:\s*42px minmax\(0,\s*1fr\) 18px/);
   assert.match(simpleStyles, /@media \(max-width:\s*760px\)[\s\S]*[.]simple-ui [.]hub-menu-grid\s*\{[^}]*grid-template-columns:\s*1fr/);
   for (const id of ["resultRetry", "resultReplay", "resultPrimary"]) assert.match(resultDialog, new RegExp(`id="${id}"`));
-  assert.match(resultDialog, /id="resultNextOptions"[\s\S]*Next challenge starts with[\s\S]*data-start-style="auto"/);
-  assert.match(app, /async function replayFinishedChallenge\([\s\S]*fetchJson\("\/api\/run\/replay"[\s\S]*runId:\s*state[.]run[.]id[\s\S]*startWithGame\(payload[.]game, payload[.]run\)/);
+  assert.doesNotMatch(resultDialog, /resultNextOptions|Next challenge starts with|data-start-style|Same 4|New mix/);
+  assert.match(app, /function nextStartStyleDecision\([\s\S]*preference:\s*"auto"/);
+  assert.match(app, /startStyle:\s*"auto"/);
+  assert.doesNotMatch(app, /startStylePreference|chooseStartStyle|syncStartStyleControls|data-start-style/);
+  assert.doesNotMatch(simpleStyles, /start-style-control|start-style-options/);
+  assert.match(app, /async function replayFinishedChallenge\([\s\S]*const sourceRun = state[.]run[\s\S]*fetchJson\("\/api\/run\/replay"[\s\S]*runId:\s*sourceRun[.]id[\s\S]*isReplayResponseCurrent\([\s\S]*startWithGame\(payload[.]game, payload[.]run,\s*\{\s*enterThroughGate:\s*true\s*\}\)/);
   assert.match(app, /resultReplay["']\)[.]addEventListener\("click", replayFinishedChallenge\)/);
-  assert.match(app, /async function submitRankedScore\([\s\S]*resultCanReplayTarget = adaptiveSeriesEligible\(\)[\s\S]*els[.]resultReplay[.]hidden = !resultCanReplayTarget[\s\S]*resultNextOptions/);
+  assert.match(app, /async function submitRankedScore\([\s\S]*resultCanReplayTarget = adaptiveSeriesEligible\(\)[\s\S]*els[.]resultReplay[.]hidden = !resultCanReplayTarget/);
   assert.match(simpleStyles, /@media \(max-height:\s*520px\) and \(min-width:\s*521px\)[\s\S]*[.]result-actions\s*\{[^}]*grid-template-columns:\s*repeat\(auto-fit,\s*minmax\(170px,\s*1fr\)\)/);
 });
 
@@ -328,10 +422,13 @@ test("seeing or skipping training never unlocks the full home shell by itself", 
   assert.doesNotMatch(page, /id="firstOrbitDialog"/, "first use should not be blocked by a redundant welcome dialog");
 });
 
-test("opening alternative modes never hijacks the viewport or keyboard focus", () => {
+test("opening the Gold game catalog is gated, reduced-motion aware, and keyboard focused", () => {
   const source = app.slice(app.indexOf("function openModePicker()"), app.indexOf("async function beginPrimarySecondary()"));
-  assert.match(source, /picker[.]open = true/);
-  assert.doesNotMatch(source, /scrollIntoView|scrollTo|[.]focus\(/);
+  assert.match(source, /homeMenuState\(\)[.]choicesReady/);
+  assert.match(source, /prefers-reduced-motion: reduce/);
+  assert.match(source, /picker[.]scrollIntoView/);
+  assert.match(source, /[.]focus\(\{ preventScroll: true \}\)/);
+  assert.doesNotMatch(source, /picker[.]open = true/);
 });
 
 test("relaxed Reach suppresses the race ghost and leaderboards retain exact challenge identity", () => {
@@ -342,7 +439,7 @@ test("relaxed Reach suppresses the race ghost and leaderboards retain exact chal
 });
 
 test("local diagnostics are bounded aggregates and players can export or reset their data", () => {
-  const tracking = app.slice(app.indexOf("function track("), app.indexOf("let feedbackAudioContext"));
+  const tracking = app.slice(app.indexOf("function track("), app.indexOf("function primeFeedbackAudio"));
   const localTracking = tracking.slice(0, tracking.indexOf("const body"));
   const staticTracking = localTracking.slice(localTracking.indexOf("if (isStaticBeta)"));
   assert.match(tracking, /if \(isStaticBeta\)/);
@@ -363,28 +460,40 @@ test("returning home preserves the post-win recovery decision without leaking it
 });
 
 test("Dev Logs exposes the complete accessible, readable, responsive update history", () => {
-  const button = page.match(/<button\b(?=[^>]*\bid="updatesButton")[^>]*>/i)?.[0] || "";
+  const button = page.match(/<button\b(?=[^>]*\bid="updatesButton")[^>]*>[\s\S]*?<\/button>/i)?.[0] || "";
   assert.ok(button, "the updates trigger is present");
   assert.match(button, /\baria-haspopup="dialog"/i);
   assert.match(button, /\baria-controls="updatesDialog"/i);
+  assert.ok(
+    button.includes(`What's new in ${releaseVersion.split(".").slice(0, 2).join(".")}`),
+    "the updates trigger names the current major/minor release"
+  );
 
   const dialog = page.match(/<dialog\b(?=[^>]*\bid="updatesDialog")[^>]*>[\s\S]*?<\/dialog>/i)?.[0] || "";
   assert.ok(dialog, "the updates dialog is present");
   assert.match(dialog.match(/<dialog\b[^>]*>/i)?.[0] || "", /\baria-labelledby="updatesTitle"/i);
   assert.match(dialog, /id="updatesTitle"/i);
   assert.match(dialog, /data-close="updatesDialog"/i);
-  assert.equal((dialog.match(/\bdata-update-entry(?:=|\s|>)/gi) || []).length, 10, "the 3.3 log retains all ten updates");
-  for (const label of ["Release", "Ctrl", "Shift", "Route Signals", "Living Atlas", "Signature Constellations", "Path Becomes the Game", "Clearer Play, Better Answers", "A Journey That Learns How You Play", "One Play, a Growing Universe"]) assert.match(dialog, new RegExp(`\\b${label}\\b`, "i"));
-  assert.match(dialog, /10 UPDATES/i);
+  assert.equal((dialog.match(/\bdata-update-entry(?:=|\s|>)/gi) || []).length, 23, "the update log retains all twenty-three updates");
+  for (const label of ["Release", "Ctrl", "Shift", "Route Signals", "Living Atlas", "Signature Constellations", "Path Becomes the Game", "Clearer Play, Better Answers", "A Journey That Learns How You Play", "One Play, a Growing Universe", "The Cosmic Gate Opens", "Results Stay With You", "The Cosmos Comes Into Focus", "A New Sky Between Worlds", "Little Games Between Worlds", "A Thought Between Worlds", "One Tap to the Stars", "A Gentle First Light", "A Clearer Finish", "First Paths, Shared Skies", "Your Ideas Can Reach Us", "Shape Your Constellation", "Constellation Scramble"]) assert.match(dialog, new RegExp(`\\b${label}\\b`, "i"));
+  assert.match(dialog, /23 UPDATES/i);
   assert.equal((dialog.match(/\bis-latest\b/gi) || []).length, 1, "the log has exactly one latest entry");
   assert.equal((dialog.match(/>LATEST</gi) || []).length, 1, "the log has exactly one latest badge");
   const latest = dialog.match(/<li\b(?=[^>]*\bis-latest\b)[^>]*>[\s\S]*?<\/li>/i)?.[0] || "";
   assert.ok(latest, "the log identifies its latest entry");
   assert.ok(latest.toUpperCase().includes(`VERSION ${releaseVersion.toUpperCase()}`));
-  assert.match(latest, /main Play button/i);
-  assert.match(latest, /Twelve permanent Route Ranks/i);
-  assert.match(latest, /Six board skies/i);
-  assert.match(latest, /do not enter shared leaderboards/i);
+  assert.match(latest, /Constellation Scramble[\s\S]*Live 1v1 has arrived[\s\S]*three-second countdown/i);
+  assert.match(latest, /private matches never affect rating[\s\S]*separate seasonal Duel Rating/i);
+  assert.match(latest, /Phones keep your own board primary[\s\S]*rival ticker[\s\S]*full rival-board toggle/i);
+  assert.match(latest, /Pages and itch remain fully local and offline for solo play[\s\S]*Only Scramble uses the live service/i);
+  assert.match(dialog, /Shape Your Constellation[\s\S]*eight complete kits[\s\S]*Pixel Frontier[\s\S]*Bubble Reef[\s\S]*Stellar Vanguard[\s\S]*Eclipse Sovereign/i);
+  assert.match(dialog, /Locked looks can be previewed[\s\S]*responsive pack art now loads on demand/i);
+  assert.match(dialog, /Your Ideas Can Reach Us[\s\S]*free, anonymous feedback receiver/i);
+  assert.match(dialog, /saved locally first[\s\S]*offline retry queue/i);
+  assert.match(dialog, /Golden 50[\s\S]*three-to-seven-combination routes/i);
+  assert.match(dialog, /contextual, spoiler-safe constellation card[\s\S]*target and seed/i);
+  assert.match(dialog, /first ten completed games[\s\S]*advanced ranks, competition, mastery, and economy/i);
+  assert.match(dialog, /One Tap to the Stars/i, "the 3.4.6 title remains in history");
   assert.match(dialog, /Pages and itch are deterministic local practice without live rankings, accounts, or AI/i);
   assert.match(dialog, /Beta progress may reset/i);
 
@@ -399,29 +508,54 @@ test("Dev Logs exposes the complete accessible, readable, responsive update hist
   assert.match(styles, /@media\s*\(max-width:\s*700px\)[\s\S]*[.]updates-(?:button|modal|trigger)/, "updates UI has a mobile-specific layout rule");
 });
 
-test("mode selection opens an accessible mission briefing before creating a run", () => {
-  assert.match(page, /id="missionBriefingDialog"[^>]+aria-labelledby="missionBriefingTitle"/);
+test("the in-game objective prompt has one plain instruction and one action", () => {
+  const dialog = page.match(/<dialog\b(?=[^>]*id="missionBriefingDialog")[^>]*>[\s\S]*?<\/dialog>/i)?.[0] || "";
+  assert.ok(dialog, "the objective prompt exists");
+  assert.match(dialog, /aria-labelledby="missionBriefingTitle"/);
+  assert.match(dialog, /aria-describedby="missionBriefingRule"/);
+  assert.doesNotMatch(dialog.match(/<dialog\b[^>]*>/i)?.[0] || "", /missionBriefingScoreDetail/);
+
+  const dataStart = dialog.indexOf('<div class="mission-briefing-data"');
+  const actionsStart = dialog.indexOf('<div class="mission-actions">');
+  assert.ok(dataStart > 0 && actionsStart > dataStart, "legacy data is kept outside the visible prompt");
+  const visiblePrompt = dialog.slice(0, dataStart);
+  const hiddenData = dialog.slice(dataStart, actionsStart);
+  const actions = dialog.slice(actionsStart);
+
+  assert.match(visiblePrompt, /<h2 id="missionBriefingTitle">Make <strong id="missionBriefingTarget">/);
+  assert.match(visiblePrompt, /<p class="mission-win-rule" id="missionBriefingRule">/);
+  assert.match(visiblePrompt, /id="missionAdaptiveNote" hidden>Difficult/);
+  assert.doesNotMatch(visiblePrompt, /missionBriefing(?:Clue|Start|Starters|Reward|Score|Law|Limit)|missionRemix|mission-details/);
+
+  assert.match(hiddenData, /class="mission-briefing-data" hidden aria-hidden="true"/);
   for (const id of [
-    "missionBriefingTarget", "missionBriefingRule", "missionBriefingReward", "missionBriefingScore",
-    "missionBriefingLaw", "missionBriefingStatus", "beginMission", "cancelMission"
-  ]) assert.match(page, new RegExp(`id="${id}"`));
-  assert.match(app, /pendingMission:\s*null/);
-  assert.match(app, /function openMissionBriefing\(/);
-  assert.match(app, /function presentMissionBriefing\(\)[\s\S]*[$]\("#recoveryDialog"\)[.]open[\s\S]*showModal\(\)/);
-  assert.match(app, /async function confirmMissionBriefing\(/);
-  assert.match(app, /fetchJson\("\/api\/run\/preview"/);
-  assert.match(app, /request: \{ [.]\.\.request, previewToken: preview[.]previewToken \}/);
-  assert.match(app, /error[.]code === "mission_stale"[\s\S]*refreshMissionPreview\(pending\)/);
-  assert.match(app, /confirmMissionBriefing\(\)[\s\S]*createRun\(pending[.]request\)[\s\S]*startWithGame\(started[.]game, started[.]run, \{ context: pending[.]context \}\)/);
-  assert.match(app, /beginCustomTarget[\s\S]*requestMissionPreview\(request\)[\s\S]*openMissionBriefing\(preview[.]game, preview[.]request/);
-  assert.match(app, /skipBriefing:\s*true/);
-  assert.match(app, /acknowledgeRecoveryKit\(\)[\s\S]*state[.]pendingMission[\s\S]*presentMissionBriefing/);
-  assert.match(page, /id="primaryOrbitDescription"[^>]*>Your first target is Wall[.] We will show you how to play[.][\s\S]*id="primaryOrbitMeta">Wall/);
-  assert.match(styles, /[.]mission-briefing-modal\[open\]\s*\{[^}]*display:\s*flex[^}]*overflow:\s*hidden/);
-  assert.match(styles, /[.]mission-scroll\s*\{[^}]*overflow-y:\s*auto/);
-  assert.match(styles, /[.]mission-target-lockup h2\s*\{[^}]*overflow-wrap:\s*anywhere/);
-  assert.match(styles, /[.]mission-status:empty\s*\{[^}]*display:\s*none/);
-  assert.match(app, /missionBriefingDialog[.]scrollTop = 0/);
+    "missionBriefingClue", "missionBriefingStart", "missionBriefingStarters",
+    "missionBriefingReward", "missionBriefingScore", "missionBriefingLaw",
+    "missionBriefingLimit", "missionRemixSummary"
+  ]) assert.match(hiddenData, new RegExp(`id="${id}"`));
+  assert.doesNotMatch(dialog, /<details\b/i);
+
+  assert.match(actions, /id="missionBriefingStatus"[^>]+aria-live="polite"/);
+  assert.match(actions, /<button class="primary-action" id="beginMission" type="button"><span>Start<\/span>/);
+  assert.match(actions, /<button id="cancelMission" type="button" hidden tabindex="-1">Back<\/button>/);
+  assert.equal((actions.match(/<button\b/g) || []).length, 2, "only Start and its hidden compatibility exit exist");
+
+  assert.match(page, /id="primaryOrbitDescription"[^>]*>Earth \+ Water[.] One move[.] You can’t get lost[.][\s\S]*id="primaryOrbitMeta">Mud · 1 combination/);
+  const missionLayout = simpleStyles.match(/[.]simple-ui [.]mission-briefing-modal\s*\{[^}]*\}/)?.[0] || "";
+  assert.match(missionLayout, /position:\s*fixed/);
+  assert.match(missionLayout, /inset:\s*auto/);
+  assert.match(missionLayout, /top:\s*50%/);
+  assert.match(missionLayout, /left:\s*50%/);
+  assert.match(missionLayout, /height:\s*fit-content/);
+  assert.match(missionLayout, /margin:\s*0/);
+  assert.match(missionLayout, /transform:\s*translate\(-50%,\s*-50%\)/);
+  assert.doesNotMatch(missionLayout, /inset:\s*0/);
+  assert.match(missionLayout, /width:\s*min\(470px,[^}]*max-height:[^}]*border-radius:\s*16px/);
+  assert.match(simpleStyles, /[.]mission-briefing-modal\[open\]\s*\{[^}]*display:\s*flex[^}]*overflow:\s*hidden/);
+  assert.match(simpleStyles, /[.]mission-scroll\s*\{[^}]*flex:\s*0 1 auto[^}]*overflow-y:\s*auto/);
+  assert.match(simpleStyles, /[.]mission-target-lockup h2\s*\{[^}]*overflow-wrap:\s*anywhere/);
+  assert.match(simpleStyles, /[.]mission-briefing-data\[hidden\],[\s\S]*#cancelMission\[hidden\]\s*\{[^}]*display:\s*none !important/);
+  assert.match(simpleStyles, /[.]mission-status:empty\s*\{[^}]*display:\s*none/);
 });
 
 test("Rival Ghost requests are cancelled and stale responses cannot start races", () => {
@@ -432,8 +566,9 @@ test("Rival Ghost requests are cancelled and stale responses cannot start races"
 });
 
 test("all haptics pass through the feedback preference policy", () => {
-  assert.equal((app.match(/navigator[.]vibrate/g) || []).length, 2, "one capability check and one centralized vibration call should remain");
-  assert.doesNotMatch(app, /navigator[.]vibrate\(\[10, 18, 10\]\)/);
+  assert.equal((app.match(/navigator[.]vibrate/g) || []).length, 0, "app interactions must delegate vibration to the audio runtime");
+  assert.equal((audioRuntime.match(/navigator[?][.]vibrate|navigator[.]vibrate/g) || []).length, 2, "one capability check and one centralized vibration call should remain");
+  assert.doesNotMatch(`${app}\n${audioRuntime}`, /navigator[.]vibrate\(\[10, 18, 10\]\)/);
 });
 
 test("Ctrl hover fusion is wired to board words and lifecycle cleanup", () => {
@@ -483,6 +618,8 @@ test("automatic placement and Tidy avoid visible board HUD overlays", () => {
   assert.match(app, /packOrbitAroundOverlays\(measured, packBounds, visibleBoardOverlayRectangles\(boardRect\)\)/);
   assert.match(app, /concat\(visibleBoardOverlayRectangles\(rect\)\)/);
   assert.match(app, /findOpenSpawn\(preferred, item, \[[.][.][.]blockers, [.][.][.]placed\]/);
+  assert.match(app, /function moveBoardNodeOutsideOverlays\(/);
+  assert.match(app, /if \(moved && !resolution[?][.]selected\) moveBoardNodeOutsideOverlays\(/, "manual drops must also stay clear of visible HUD panels");
 });
 
 test("Shift hover removal and distance-spaced drag copies work from board and inventory", () => {
@@ -535,17 +672,17 @@ test("Shift hover removal and distance-spaced drag copies work from board and in
 
 test("board notices and interactive prompts share one collision-free bottom lane", () => {
   const hud = page.match(/<div class="board-bottom-hud"[\s\S]*?<\/div>\s*<section class="reveal-controller"/)?.[0] || "";
-  for (const id of ["tapChainStatus", "boardUndo", "recipeFeedback", "alchemyNote"]) assert.match(hud, new RegExp(`id="${id}"`));
+  for (const id of ["tapChainStatus", "boardUndo", "recipeFeedback", "expectedPairFeedback", "alchemyNote"]) assert.match(hud, new RegExp(`id="${id}"`));
   assert.match(hud, /id="alchemyNote"[^>]+aria-hidden="true"/);
   assert.match(page, /id="boardAnnouncement"[^>]+role="status"[^>]+aria-live="polite"[^>]+aria-atomic="true"/);
-  assert.match(styles, /[.]board-bottom-hud\s*\{[^}]*position:\s*absolute[^}]*display:\s*flex[^}]*flex-direction:\s*column/);
+  assert.match(styles, /[.]board-bottom-hud\s*\{[^}]*position:\s*absolute[^}]*inset:\s*auto 18px max\(18px, env\(safe-area-inset-bottom\)\)[^}]*max-height:\s*calc\(100% - 132px\)[^}]*display:\s*flex[^}]*flex-direction:\s*column[^}]*overflow:\s*auto/);
   for (const selector of [".tap-chain-status, .board-undo", ".alchemy-note", ".recipe-feedback"]) {
     const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     const rule = styles.match(new RegExp(`${escaped}\\s*\\{([^}]+)\\}`))?.[1] || "";
     assert.doesNotMatch(rule, /\bbottom\s*:/, `${selector} must be positioned by the shared lane`);
   }
   const masteryStart = app.indexOf("function recordMasteryStep");
-  const masteryEnd = app.indexOf("const cosmeticClassNames", masteryStart);
+  const masteryEnd = app.indexOf("function founderCosmeticsOwned", masteryStart);
   assert.doesNotMatch(app.slice(masteryStart, masteryEnd), /showToast\(/, "mastery should return a follow-up notice instead of opening a second toast");
   assert.match(app, /showAlchemy\(result[.]twisted[\s\S]*queueAlchemyNotice\(mastery[.]notice/);
   assert.match(app, /queueAlchemyNotice\(mastery[.]notice, false, false, \{ key: `mastery:[^`]+`, retain: true/);
@@ -553,8 +690,16 @@ test("board notices and interactive prompts share one collision-free bottom lane
   assert.match(app, /activeBoardNotice[?][.]retain[\s\S]*enqueueBoardNotice\(activeBoardNotice\)/);
   assert.match(app, /resultMasteryCard[.]hidden = !won \|\| !state[.]resultMasteryNotice/);
   assert.match(styles, /[.]alchemy-note\s*\{[^}]*display:\s*none/);
+  assert.match(styles, /[.]alchemy-note\s*\{[^}]*width:\s*max-content[^}]*overflow-wrap:\s*anywhere[^}]*text-align:\s*center/);
   assert.match(styles, /[.]alchemy-note[.]show\s*\{[^}]*display:\s*block/);
   assert.match(styles, /[.]cosmos-board:has\([.]board-undo:not\(\[hidden\]\)\) [.]board-guide/);
   assert.doesNotMatch(app, /document[.]querySelector\("[.]board-bottom-hud"\)/, "collision avoidance must use visible HUD children, not the full-width wrapper");
   assert.match(app, /function showToast\([\s\S]*boardCanOwnNotice[\s\S]*showAlchemy\(message\)/);
+  const clearSource = app.slice(app.indexOf("function clearBoardWithUndo"), app.indexOf("function undoBoardClear"));
+  assert.doesNotMatch(clearSource, /showAlchemy\(/, "the clear Undo control must not be duplicated by a second visible notice");
+  assert.match(clearSource, /announceBoardMessage\("Board cleared[.] Use Undo/);
+  const tapSource = app.slice(app.indexOf("async function selectNodeForTap"), app.indexOf("function placeFromTray"));
+  assert.doesNotMatch(tapSource, /showAlchemy\(`[$]\{[^}]+[}] (?:armed|remains armed)/, "the tap-chain control must own its visible status");
+  const expectedPairSource = app.slice(app.indexOf("function offerExpectedPairFeedback"), app.indexOf("async function submitExpectedPairFeedback"));
+  assert.match(expectedPairSource, /clearBoardNotices\(\)/, "the expected-pair form must replace the transient error instead of stacking over it");
 });

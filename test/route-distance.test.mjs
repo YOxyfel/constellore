@@ -41,6 +41,29 @@ test("alternate authored routes can become the new closest route without exposin
   assert.ok(closer.percent > initial.percent);
 });
 
+test("cyclic alternatives cannot poison a later valid dependency plan", async () => {
+  const cyclicAlternatives = [
+    { a: "Alpha", b: "Xray", word: "Goal" },
+    { a: "Aardvark", b: "Xray", word: "Alpha" },
+    { a: "Seed", b: "Seed", word: "Alpha" },
+    { a: "Alpha", b: "Seed", word: "Xray" }
+  ];
+  assert.equal(authoredMovesRemaining({
+    recipes: cyclicAlternatives,
+    available: ["Aardvark", "Seed"],
+    target: "Goal"
+  }), 3);
+
+  const { authoredRecipeCatalog, solutionRoute } = await import("../server.mjs");
+  const factoryRoute = solutionRoute("Factory");
+  assert.equal(factoryRoute.length, 3);
+  assert.equal(authoredMovesRemaining({
+    recipes: authoredRecipeCatalog(),
+    available: starters,
+    target: "Factory"
+  }), factoryRoute.length);
+});
+
 test("already owning the target completes the meter and malformed values stay bounded", () => {
   assert.deepEqual(sanitizeAuthoredRouteProgress(null), {
     total: 0,

@@ -1,4 +1,4 @@
-import { sanitizeRouteSignature } from "./signature-routes.mjs?v=3.3.0-beta.1";
+import { sanitizeRouteSignature } from "./signature-routes.mjs?v=5.0.0-beta.1";
 
 const MAX_COMMUNITY_ENTRIES = 500;
 

@@ -1,0 +1,245 @@
+/* -------------------------------------------------------------------------- */
+/* In-world cosmetic preview                                                  */
+/* -------------------------------------------------------------------------- */
+
+body.cosmetic-world-preview-active {
+  overflow: hidden;
+}
+
+.cosmetic-world-preview {
+  position: fixed;
+  inset: auto auto max(16px, env(safe-area-inset-bottom)) 50%;
+  width: min(920px, calc(100vw - 28px));
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  overflow: visible;
+  transform: translateX(-50%);
+  border: 0;
+  color: #f7fbff;
+  background: transparent;
+}
+
+.cosmetic-world-preview::backdrop {
+  background: rgba(1, 4, 11, .12);
+}
+
+.cosmetic-world-preview__bar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 14px;
+  padding: 12px;
+  border: 1px solid color-mix(in srgb, var(--cosmetic-ui-accent) 46%, rgba(255, 255, 255, .2));
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at 0 0, color-mix(in srgb, var(--cosmetic-ui-accent-2) 15%, transparent), transparent 42%),
+    rgba(5, 12, 22, .94);
+  box-shadow:
+    0 22px 70px rgba(0, 0, 0, .58),
+    0 0 34px color-mix(in srgb, var(--cosmetic-ui-accent-2) 12%, transparent);
+  backdrop-filter: blur(18px);
+}
+
+.cosmetic-world-preview__copy {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.cosmetic-world-preview__copy strong,
+.cosmetic-world-preview__copy small,
+.cosmetic-world-preview__kicker {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cosmetic-world-preview__kicker {
+  color: var(--cosmetic-ui-accent);
+  font: 600 10px "DM Mono", monospace;
+  letter-spacing: .1em;
+}
+
+.cosmetic-world-preview__copy strong {
+  font-size: 17px;
+  font-weight: 600;
+}
+
+.cosmetic-world-preview__copy small {
+  color: #b9c6d2;
+  font-size: 13px;
+}
+
+.cosmetic-world-preview__surfaces {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid rgba(255, 255, 255, .13);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, .035);
+}
+
+.cosmetic-world-preview__surfaces[hidden] {
+  display: none;
+}
+
+.cosmetic-world-preview__surfaces button,
+.cosmetic-world-preview__exit {
+  min-width: 44px;
+  min-height: 44px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  color: #dbe4ec;
+  background: transparent;
+  cursor: pointer;
+  font: 600 13px "DM Mono", monospace;
+}
+
+.cosmetic-world-preview__surfaces button[aria-selected="true"] {
+  border-color: color-mix(in srgb, var(--cosmetic-ui-accent) 54%, transparent);
+  color: #fff;
+  background: color-mix(in srgb, var(--cosmetic-ui-accent) 16%, rgba(255, 255, 255, .045));
+}
+
+.cosmetic-world-preview__exit {
+  padding: 0 18px;
+  border-color: color-mix(in srgb, var(--cosmetic-ui-accent) 62%, transparent);
+  color: #071217;
+  background: linear-gradient(
+    105deg,
+    var(--cosmetic-ui-accent),
+    color-mix(in srgb, var(--cosmetic-ui-accent-2) 68%, var(--cosmetic-ui-accent))
+  );
+  box-shadow: 0 10px 28px color-mix(in srgb, var(--cosmetic-ui-accent) 18%, transparent);
+}
+
+.cosmetic-world-preview :is(button, [tabindex]):focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--cosmetic-ui-accent-2) 70%, white);
+  outline-offset: 3px;
+}
+
+body.cosmetic-world-preview-active[data-cosmetic-preview-surface="board"] #gameScreen .game-nav,
+body.cosmetic-world-preview-active[data-cosmetic-preview-surface="board"] #gameScreen .inventory,
+body.cosmetic-world-preview-active[data-cosmetic-preview-surface="board"] #gameScreen :is(
+  .board-guide,
+  .board-top-hud,
+  .board-bottom-hud,
+  .first-orbit-guide,
+  .combination-story,
+  .rival-ghost,
+  .ghost-preview,
+  .reveal-equation,
+  .reveal-controller,
+  .drop-pair-preview
+) {
+  display: none !important;
+}
+
+body.cosmetic-world-preview-active[data-cosmetic-preview-surface="board"] #gameScreen .game-layout {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+body.cosmetic-world-preview-active[data-cosmetic-preview-surface="menu"] #startScreen > :not(#hubMenuDialog) {
+  visibility: hidden !important;
+}
+
+body.cosmetic-world-preview-active[data-cosmetic-preview-board="sample"] #boardItems {
+  visibility: hidden;
+}
+
+.cosmetic-world-preview__board-sample {
+  position: absolute;
+  inset: 0;
+  z-index: 8;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.cosmetic-world-preview__board-sample .board-word {
+  --x: 0px;
+  --y: 0px;
+  left: var(--preview-x);
+  top: var(--preview-y);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  cursor: default;
+}
+
+.cosmetic-world-preview__sample-trail {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  opacity: calc(.35 + (var(--cosmetic-trail-enabled) * .65));
+  filter: drop-shadow(0 0 var(--cosmetic-trail-glow) var(--cosmetic-trail-drag-color));
+}
+
+.cosmetic-world-preview__sample-trail path {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.cosmetic-world-preview__sample-trail .is-glow {
+  stroke: var(--cosmetic-trail-drag-secondary);
+  stroke-width: calc(var(--cosmetic-trail-drag-width) * 3.2);
+  opacity: .2;
+}
+
+.cosmetic-world-preview__sample-trail .is-core {
+  stroke: var(--cosmetic-trail-drag-color);
+  stroke-width: var(--cosmetic-trail-drag-width);
+  stroke-dasharray: 7 5;
+  animation: cosmetic-world-preview-trail 1.8s linear infinite;
+}
+
+@keyframes cosmetic-world-preview-trail {
+  to { stroke-dashoffset: -24; }
+}
+
+@media (max-width: 720px) {
+  .cosmetic-world-preview {
+    inset: auto 10px max(10px, env(safe-area-inset-bottom));
+    width: auto;
+    transform: none;
+  }
+
+  .cosmetic-world-preview__bar {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 9px;
+    padding: 9px;
+    border-radius: 15px;
+  }
+
+  .cosmetic-world-preview__surfaces {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    order: 3;
+  }
+
+  .cosmetic-world-preview__surfaces[hidden] {
+    display: none;
+  }
+
+  .cosmetic-world-preview__surfaces button {
+    padding: 0 7px;
+  }
+
+  .cosmetic-world-preview__exit {
+    padding: 0 13px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cosmetic-world-preview__sample-trail .is-core {
+    animation: none;
+  }
+}

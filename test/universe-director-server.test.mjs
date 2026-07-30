@@ -62,9 +62,9 @@ test("online games validate and expose deterministic non-spoiler universe contex
     "x-constellore-token": registration.payload.playerToken
   };
 
-  const rankedPreview = await request("/api/run/preview", { method: "POST", body: { mode: "quick" } });
+  const rankedPreview = await request("/api/run/preview", { method: "POST", body: { mode: "weekly" } });
   assert.equal(rankedPreview.response.status, 200);
-  assert.equal("run" in rankedPreview.payload, false, "a briefing preview must not create or expose a timed run");
+  assert.equal("run" in rankedPreview.payload, false, "a briefing preview must not create or expose a live run");
   assert.equal(rankedPreview.payload.game.ranked, true);
   assert.equal(rankedPreview.payload.game.scoreEligible, true);
   assert.equal(typeof rankedPreview.payload.previewToken, "string");
@@ -75,7 +75,8 @@ test("online games validate and expose deterministic non-spoiler universe contex
   for (const field of ["mode", "target", "timeLimit", "moveLimit", "reward", "law"]) {
     assert.deepEqual(ranked.payload.game[field], rankedPreview.payload.game[field], `${field} must not change between briefing and run start`);
   }
-  assert.ok(ranked.payload.run.deadlineAt, "the timed deadline is created only with the authoritative run");
+  assert.equal(ranked.payload.run.deadlineAt, null);
+  assert.ok(ranked.payload.game.moveLimit, "the shared Weekly challenge keeps its fixed move limit");
   assert.deepEqual(ranked.payload.game.universe, selectUniverse(ranked.payload.game.seed));
   assert.deepEqual(Object.keys(ranked.payload.game.universeManifest).sort(), MANIFEST_KEYS);
   assert.equal(ranked.payload.game.universeManifest.validated, true);

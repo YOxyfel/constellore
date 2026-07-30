@@ -139,7 +139,7 @@ test("the authenticated Quick Tip endpoint is exact, idempotent, and leaves rank
     "x-constellore-player": registration.payload.player.id,
     "x-constellore-token": registration.payload.playerToken
   };
-  const started = await request("/api/run/start", { body: { mode: "quick" } });
+  const started = await request("/api/run/start", { body: { mode: "daily" } });
   const credentials = { runId: started.payload.run.id, runToken: started.payload.run.token };
 
   const unauthenticated = await request("/api/run/tip", { body: { ...credentials, tipIndex: 0 }, authenticated: false });
@@ -184,7 +184,7 @@ test("local Pages Quick Tips mirror the safe contract and restore only the used 
   const directory = await mkdtemp(join(tmpdir(), "constellore-local-tips-"));
   context.after(() => rm(directory, { recursive: true, force: true }));
   await writeLocalWorldModule(join(directory, "local-world.mjs"));
-  for (const file of ["local-beta.mjs", "cosmic-twists.mjs", "engagement-features.mjs", "universe-director.mjs", "recipe-feedback.mjs", "adaptive-difficulty.mjs", "remix-progression.mjs", "remix-readiness.mjs", "route-remixes.mjs", "shuffled-start.mjs"]) {
+  for (const file of ["local-beta.mjs", "cosmic-twists.mjs", "engagement-features.mjs", "universe-director.mjs", "recipe-feedback.mjs", "adaptive-difficulty.mjs", "remix-progression.mjs", "remix-readiness.mjs", "path-guard.mjs", "route-remixes.mjs", "shuffled-start.mjs"]) {
     await copyFile(new URL(`../public/${file}`, import.meta.url), join(directory, file));
   }
   const moduleUrl = pathToFileURL(join(directory, "local-beta.mjs")).href;

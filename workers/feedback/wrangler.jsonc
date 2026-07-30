@@ -1,0 +1,29 @@
+{
+  "$schema": "https://raw.githubusercontent.com/cloudflare/workers-sdk/main/packages/wrangler/config-schema.json",
+  "name": "constellore-feedback",
+  "main": "src/index.mjs",
+  "compatibility_date": "2026-07-26",
+  "workers_dev": true,
+  "observability": {
+    "enabled": true
+  },
+  "vars": {
+    "ALLOWED_ORIGINS": "https://yoxyfel.github.io",
+    "RETENTION_DAYS": "180"
+  },
+  "triggers": {
+    "crons": [
+      "17 3 * * *"
+    ]
+  },
+  "ratelimits": [
+    {
+      "name": "REPORT_RATE_LIMITER",
+      "namespace_id": "3501",
+      "simple": {
+        "limit": 6,
+        "period": 60
+      }
+    }
+  ]
+}

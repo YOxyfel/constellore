@@ -5,11 +5,15 @@ node_modules/
 coverage/
 playwright-report/
 test-results/
+/tmp/
 *.log
 data/
 .agents/
 .codex/
+.codex-remote-attachments/
 .cache/
+.wrangler/
+workers/feedback/tmp/
 .vscode/
 .idea/
 dist-pages/
@@ -19,5 +23,7 @@ legal/
 LAUNCH.md
 .DS_Store
 Thumbs.db
+__pycache__/
+*.py[cod]
 *.tmp
 *.bak

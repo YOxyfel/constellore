@@ -4,11 +4,11 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#071923">
-  <meta name="description" content="Constellore is a free word-combination game with a clear goal: combine ideas, discover new words, and build a route to the target.">
+  <meta name="description" content="Constellore is a free word-combination game: build a route to the target alone or race a live rival on an open board.">
   <meta name="robots" content="index, follow, max-image-preview:large">
   <meta property="og:type" content="website">
   <meta property="og:title" content="Constellore — make the target word">
-  <meta property="og:description" content="Combine words, reach checked and reachable targets, earn permanent ranks, and watch your cosmic board evolve. Play free in your browser.">
+  <meta property="og:description" content="Combine words, reach checked targets, and race a live rival while every pairing is visible. Play free in your browser.">
   <meta property="og:site_name" content="Constellore">
   <meta property="og:locale" content="en_US">
   <meta property="og:image" content="https://yoxyfel.github.io/constellore/social-card-v3.jpg">
@@ -18,12 +18,12 @@
   <meta property="og:image:alt" content="Constellore, a cosmic word-combination puzzle about reaching a target word.">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Constellore — make the target word">
-  <meta name="twitter:description" content="Combine ideas, discover new words, and build a route to the target as the cosmic board evolves.">
+  <meta name="twitter:description" content="Build a route to the target alone or race a live rival on an open board.">
   <meta name="twitter:image" content="https://yoxyfel.github.io/constellore/social-card-v3.jpg">
   <title>Constellore — make the target word</title>
   <link rel="icon" href="icon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="website.css?v=3.3.0-beta.1">
-  <script src="website.js?v=3.3.0-beta.1" defer></script>
+  <link rel="stylesheet" href="website.css?v=5.0.0-beta.1">
+  <script src="website.js?v=5.0.0-beta.1" defer></script>
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -31,10 +31,10 @@
     "name": "Constellore",
     "url": "https://yoxyfel.github.io/constellore/",
     "image": "https://yoxyfel.github.io/constellore/social-card-v3.jpg",
-    "description": "A free cosmic word-combination puzzle where players discover new concepts and build a reachable path to a target word.",
+    "description": "A free cosmic word-combination puzzle where players build a reachable path to a target alone or in a live open-board race.",
     "applicationCategory": "GameApplication",
     "operatingSystem": "Any modern web browser",
-    "playMode": "SinglePlayer",
+    "playMode": ["SinglePlayer", "MultiPlayer"],
     "genre": ["Puzzle", "Word game"],
     "isAccessibleForFree": true,
     "author": { "@type": "Organization", "name": "Oxyfel Games" },
@@ -46,8 +46,8 @@
   data-beta-url="/play/"
   data-itch-url=""
   data-repository-url="https://github.com/YOxyfel/constellore"
-  data-build-version="3.3.0-beta.1"
-  data-build-id="3.3.0-beta.1+source"
+  data-build-version="5.0.0-beta.1"
+  data-build-id="5.0.0-beta.1+source"
 >
   <a class="skip-link" href="#main">Skip to the game</a>
 
@@ -64,9 +64,9 @@
       <div class="hero-copy reveal">
         <p class="label">Free browser game</p>
         <h1 id="heroTitle">Make the word.</h1>
-        <p class="hero-lede">Every game gives you one word to find. Start with a few useful words, combine two to make something new, and keep building until you make the target word. As you improve, the routes, rules, and sky grow with you.</p>
+        <p class="hero-lede">Every game gives you one word to find. Start with a few useful words, combine two to make something new, and keep building until you make the target word. Play at your pace, or race a live rival while both routes stay visible.</p>
         <a class="button hero-button" href="/play/">Play free</a>
-        <p class="small-note">No account needed. Practice progress stays on this device.</p>
+        <p class="small-note">No email or password. Solo progress stays on this device and works offline. Live Scramble duels use the configured online service.</p>
       </div>
 
       <div class="hero-example reveal" data-delay="1" aria-hidden="true">
@@ -156,11 +156,11 @@
         </article>
         <article>
           <h3>Checked answers</h3>
-          <p>Explore 3,199 tested combinations. Every target has a real path.</p>
+          <p>Your first 50 destinations are hand-tuned. All 500 targets have a real path.</p>
         </article>
         <article>
-          <h3>Fits your pace</h3>
-          <p>One Play button adjusts the target and starting words. Earn permanent ranks, new route rules, promotion games, and ever-richer cosmic board skies.</p>
+          <h3>Made to share</h3>
+          <p>Send a spoiler-free path card, or invite a friend to a live open-board race where every pairing can be learned and stolen manually.</p>
         </article>
       </div>
     </section>
@@ -170,7 +170,7 @@
         <div class="play-copy">
           <p class="label">Ready?</p>
           <h2 id="playTitle">Play Constellore</h2>
-          <p>Play the full beta with a mouse, keyboard, or touch screen.</p>
+          <p>Play solo or live 1v1 with a mouse, keyboard, or touch screen.</p>
         </div>
 
         <button class="button play-now-button" id="posterPlayButton" type="button">Play free</button>
@@ -203,7 +203,7 @@
       <a href="support.html">Help</a>
       <a href="https://github.com/YOxyfel/constellore" target="_blank" rel="noopener noreferrer">GitHub</a>
     </nav>
-    <p>© 2026 Oxyfel Games · Beta <b id="siteBuildVersion">3.3.0-beta.1</b></p>
+    <p>© 2026 Oxyfel Games · Beta <b id="siteBuildVersion">5.0.0-beta.1</b></p>
   </footer>
 </body>
 </html>

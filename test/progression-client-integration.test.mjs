@@ -15,16 +15,13 @@ function sourceBetween(source, start, end) {
   return source.slice(from, to);
 }
 
-test("the client sends and records the complete adaptive v2 cadence", () => {
+test("online difficulty requests leave progression internals to the backend", () => {
   const request = sourceBetween(app, "function adaptiveRequestFor", "function recordAdaptiveOutcome");
-  for (const field of [
-    "adaptiveVersion: adaptive.version",
-    "adaptiveCompletedChallenges: adaptive.completedChallenges",
-    "adaptiveMajorChallengePending: adaptive.majorChallengePending",
-    "adaptiveMajorChallengeBaseLevel: adaptive.majorChallengeBaseLevel"
-  ]) {
-    assert.ok(request.includes(field), `missing adaptive request field: ${field}`);
-  }
+  const onlineReturn = request.indexOf("if (!isStaticBeta) return publicRequest");
+  const internalCadence = request.indexOf("adaptiveVersion: adaptive.version");
+  assert.ok(onlineReturn > 0 && internalCadence > onlineReturn);
+  assert.match(request.slice(0, onlineReturn), /adaptiveTarget/);
+  assert.doesNotMatch(request.slice(0, onlineReturn), /failureStreak|adaptiveCompletedChallenges|adaptiveMajorChallenge/);
 
   const outcome = sourceBetween(app, "function recordAdaptiveOutcome", "function loadProfile");
   assert.ok(outcome.includes('flawless: outcome === "completed" && flawless === true'));
@@ -33,14 +30,17 @@ test("the client sends and records the complete adaptive v2 cadence", () => {
   assert.ok(outcome.includes("baseLevel: state.game.adaptiveLevel"));
 });
 
-test("Surge protection is explained before play and after a missed Surge", () => {
+test("the player sees only a plain Difficult tag, never the adaptive formula", () => {
   const briefing = sourceBetween(app, "function openMissionBriefing", "function cancelMissionBriefing");
-  assert.match(briefing, /Surge: one much harder game/);
-  assert.match(briefing, /your normal level stays safe/i);
-  assert.match(briefing, /perfect 200 Run IQ win keeps the harder level/);
-  assert.ok(briefing.includes('classList.toggle("is-surge"'));
-  assert.match(app, /surgeWasActive[\s\S]*?"Back to normal"/);
-  assert.match(simpleUi, /\.mission-adaptive-note\.is-surge/);
+  assert.match(briefing, /game[.]difficultyTag === "Difficult"/);
+  assert.match(briefing, /difficultChallenge \? "Difficult" : ""/);
+  assert.doesNotMatch(briefing, /Surge|three games|normal level|easier/);
+  assert.doesNotMatch(app, /Try easier challenge|Back to normal|an easier start after/);
+  assert.doesNotMatch(page, /Every three completed challenges|Every tenth completion|one unfinished challenge lowers/i);
+  assert.match(simpleUi, /\.mission-adaptive-note\.is-difficult/);
+  assert.match(page, /id="difficultyPill"[^>]*hidden>Difficult</);
+  assert.match(app, /els[.]difficultyPill[.]hidden = game[.]difficultyTag !== "Difficult"/);
+  assert.match(simpleUi, /\.difficulty-pill\[hidden\]/);
 });
 
 test("only an unassisted, errorless 200-IQ Surge can become the new base", () => {

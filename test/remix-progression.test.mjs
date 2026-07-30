@@ -3,6 +3,7 @@ import test from "node:test";
 
 import {
   REMIX_FAMILIES,
+  REMIX_LATE_RANK_MILESTONES,
   REMIX_MASTERY_THRESHOLDS,
   REMIX_PROGRESSION_VERSION,
   REMIX_RANK_COUNT,
@@ -49,7 +50,7 @@ test("the progression has twelve permanent ranks with the requested early curve"
   );
   assert.deepEqual(
     REMIX_RANKS.map((rank) => rank.masteryPoints),
-    [0, 50, 200, 550, 1_100, 1_900, 3_000, 4_500, 6_500, 9_000, 12_500, 17_000]
+    [0, 50, 200, 550, 1_100, 1_900, 3_000, 4_200, 5_600, 7_100, 8_800, 10_600]
   );
   assert.deepEqual(
     REMIX_MASTERY_THRESHOLDS,
@@ -93,16 +94,16 @@ test("rank milestones use completed challenges and clamp untrusted values", () =
   assert.equal(remixRankFromCompletedChallenges(999_999).id, "cosmic");
 });
 
-test("mastery thresholds are deliberately long and clamp untrusted values", () => {
+test("mastery thresholds keep the early curve and smooth the upper-rank grind", () => {
   assert.equal(remixRankFromMasteryPoints(-500).id, "bronze");
   assert.equal(remixRankFromMasteryPoints(49).id, "bronze");
   assert.equal(remixRankFromMasteryPoints(50).id, "silver");
   assert.equal(remixRankFromMasteryPoints(199).id, "silver");
   assert.equal(remixRankFromMasteryPoints(200).id, "gold");
-  assert.equal(remixRankFromMasteryPoints(16_999).id, "legend");
-  assert.equal(remixRankFromMasteryPoints(17_000).id, "cosmic");
+  assert.equal(remixRankFromMasteryPoints(10_599).id, "legend");
+  assert.equal(remixRankFromMasteryPoints(10_600).id, "cosmic");
   assert.equal(remixRankFromMasteryPoints(Number.POSITIVE_INFINITY).id, "bronze");
-  assert.equal(masteryRequiredForRank("master"), 4_500);
+  assert.equal(masteryRequiredForRank("master"), 4_200);
 });
 
 test("explicit rank lookup accepts plain names, IDs, and one-based numbers", () => {
@@ -160,7 +161,7 @@ test("legacy completion progress preserves its old permanent rank on migration",
     currentWinStreak: 2
   });
   assert.equal(migrated.rankId, "master");
-  assert.equal(migrated.masteryPoints, 4_500);
+  assert.equal(migrated.masteryPoints, 4_200);
   assert.equal(migrated.completedChallenges, 85);
   assert.equal(migrated.failedChallenges, 4);
 
@@ -208,9 +209,26 @@ test("rank presentation stays short and gives the next milestone", () => {
     id: "emerald",
     name: "Emerald",
     masteryPoints: 1_100,
-    completedChallenges: 25
+    completedChallenges: 25,
+    milestone: "Unlock Master Route challenges.",
+    milestoneType: "family-unlock"
   });
   assert.equal(getRemixRankPresentation("cosmic").nextRank, null);
+  assert.equal(getRemixRankPresentation("cosmic").milestoneType, "capstone");
+  assert.deepEqual(
+    REMIX_LATE_RANK_MILESTONES.map(({ id, masteryPoints, milestoneType }) => ({
+      id,
+      masteryPoints,
+      milestoneType
+    })),
+    [
+      { id: "master", masteryPoints: 4_200, milestoneType: "family-unlock" },
+      { id: "grandmaster", masteryPoints: 5_600, milestoneType: "difficulty" },
+      { id: "mythic", masteryPoints: 7_100, milestoneType: "difficulty" },
+      { id: "legend", masteryPoints: 8_800, milestoneType: "mastery" },
+      { id: "cosmic", masteryPoints: 10_600, milestoneType: "capstone" }
+    ]
+  );
   assert.ok(diamond.summary.length < 60);
 });
 

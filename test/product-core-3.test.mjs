@@ -10,6 +10,7 @@ const page = await readFile(new URL("../public/index.html", import.meta.url), "u
 const styles = await readFile(new URL("../public/styles.css", import.meta.url), "utf8");
 const simpleStyles = await readFile(new URL("../public/simple-ui.css", import.meta.url), "utf8");
 const reportDelivery = await readFile(new URL("../public/combination-report-delivery.mjs", import.meta.url), "utf8");
+const sessionResume = await readFile(new URL("../public/session-resume.mjs", import.meta.url), "utf8");
 
 test("3.0 uses explicit Pure, Open, Practice, and Study mission divisions", () => {
   assert.equal(missionDivision({ mode: "quick", ranked: true }).id, "pure");
@@ -37,14 +38,14 @@ test("route progress is bounded, non-spoiling, and recognizes the destination", 
 
 test("the home and board expose one plain core loop and one Help action", () => {
   assert.match(page, /id="primaryOrbitButton"/);
-  assert.match(page, /id="modePicker"[\s\S]*Choose game[\s\S]*Relaxed[\s\S]*Timed[\s\S]*Limited moves/);
+  assert.match(page, /id="modePicker"[\s\S]*Choose a game[\s\S]*Relaxed[\s\S]*Timed[\s\S]*Limited moves/);
   assert.match(page, /id="exploreHub"[\s\S]*Today.s word[\s\S]*FREE PLAY[\s\S]*Choose a word/);
   assert.match(page, /id="senseButton"[\s\S]*<b>Help<\/b>/);
   assert.match(page, /class="run-division-pill practice simple-hidden" id="runDivisionPill"/);
   assert.match(page, /class="run-milestone" id="runMilestone"[\s\S]*id="routeProgressTrail"/);
   assert.match(simpleStyles, /:is\([.]rival-ghost, [.]ghost-preview\)\s*\{[^}]*display:\s*none !important/);
   assert.match(simpleStyles, /[.]simple-ui [.]run-milestone\s*\{[^}]*width:[^}]*padding:/);
-  assert.match(page, /id="resultRouteTrail"/);
+  assert.match(page, /id="resultRouteSummary"/);
   assert.match(page, /id="resultDetails"/);
 });
 
@@ -61,12 +62,29 @@ test("drag rendering reuses board nodes and caches collision geometry", () => {
   assert.match(app, /state[.]trails[.]splice\(0, state[.]trails[.]length - MAX_TRANSIENT_TRAILS\)/);
 });
 
-test("launch intents preserve challenge precedence and always use the mission briefing", () => {
+test("launch intents preserve challenge precedence and use gated post-load objectives", () => {
   assert.match(app, /async function handleLaunchIntent\(params\)/);
   assert.match(app, /mode === "daily"[\s\S]*await beginMode\("daily"\)/);
   assert.match(app, /mode === "explore" \|\| mode === "creator"/);
-  assert.match(app, /if \(!restored && challengeRequested\)[\s\S]*else if \(!restored\) await handleLaunchIntent\(params\)/);
-  assert.match(app, /function beginMode\([\s\S]*requestMissionPreview\(request\)[\s\S]*openMissionBriefing/);
+  const startup = app.slice(app.indexOf("const startupParams"), app.indexOf("const ctrlHover"));
+  const boot = app.slice(app.indexOf("async function boot()"), app.indexOf("boot().catch"));
+  assert.match(app, /import \{[^}]*selectStartupResumeSnapshot[^}]*\} from "[.]\/session-resume[.]mjs[?]v=/);
+  assert.match(sessionResume, /export function snapshotMatchesLaunchIntent\([\s\S]*snapshot[.]game[.]target[\s\S]*sharedChallenge[.]target[\s\S]*snapshot[.]game[.]seed[\s\S]*sharedChallenge[.]seed/);
+  assert.match(sessionResume, /const expectedMode = modeIntent === "creator" \? "explore" : modeIntent/);
+  assert.match(sessionResume, /export function selectStartupResumeSnapshot\([\s\S]*reload[\s\S]*\(!sharedChallenge && !modeIntent\)[\s\S]*snapshotMatchesLaunchIntent\(snapshot, sharedChallenge, modeIntent\)/);
+  assert.match(startup, /const startupResumeSnapshot = selectStartupResumeSnapshot\(\{\s*snapshot: readActiveRunSnapshot\(\),\s*sharedChallenge: startupSharedChallenge,\s*modeIntent: startupModeIntent\s*\}\)/);
+  assert.ok(
+    startup.indexOf("const startupResumeSnapshot")
+      < startup.indexOf('await import("./cinematic/first-open-cinematic.mjs?v='),
+    "same/matching active-run URLs must be resolved before cinematic playback"
+  );
+  assert.match(boot, /const sharedChallenge = parseConstelloreChallengeUrl\(params, todayKey\)/);
+  assert.match(boot, /const savedRun = startupResumeSnapshot/);
+  assert.match(boot, /const restored = firstGameStarted\s*\?\s*false\s*:\s*await restoreInterruptedRun\(savedRun\)/);
+  assert.match(boot, /const launchMenuHandoff = launchCinematicOutcome[.]menuHandoff === true/);
+  assert.match(boot, /else if \(!restored && !firstGameStarted && sharedChallenge\)[\s\S]*void beginMode\(mode,[\s\S]*const launchHandled = await handleLaunchIntent\(params\)[\s\S]*!launchHandled && !launchMenuHandoff && firstGameRequired\(profile\)/);
+  assert.match(app, /function beginMode\([\s\S]*enterPreparedMission/);
+  assert.match(app, /function enterPreparedMission\([\s\S]*ready:[\s\S]*openMissionBriefing/);
 });
 
 test("diagnostics are opt-in, bounded, resettable, and same-origin", () => {

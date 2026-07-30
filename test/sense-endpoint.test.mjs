@@ -84,7 +84,7 @@ test("the authenticated Sense endpoint exposes only discovered descriptors and k
     "x-constellore-player": registration.payload.player.id,
     "x-constellore-token": registration.payload.playerToken
   };
-  const started = await request("/api/run/start", { body: { mode: "quick" } });
+  const started = await request("/api/run/start", { body: { mode: "daily" } });
   assert.equal(started.response.status, 201);
   assert.equal(started.payload.run.ranked, true);
 
@@ -137,13 +137,13 @@ test("the authenticated Sense endpoint exposes only discovered descriptors and k
 
   // Ranked integrity permits one active attempt per player. Start the pure
   // comparison only after the assisted run has been finalized.
-  const parallel = await request("/api/run/start", { body: { mode: "quick" } });
+  const parallel = await request("/api/run/start", { body: { mode: "weekly", stage: 0 } });
   assert.equal(parallel.response.status, 201);
   const parallelSubmit = await completeAndSubmit(parallel.payload);
   assert.equal(parallelSubmit.response.status, 201);
   assert.equal(parallelSubmit.payload.placement.entry.division, "pure");
 
-  const replay = await request("/api/run/start", { body: { mode: "quick" } });
+  const replay = await request("/api/run/start", { body: { mode: "weekly", stage: 1 } });
   assert.equal(replay.payload.run.ranked, true);
   assert.equal(replay.payload.run.scoringDisabled, false);
   assert.equal(replay.payload.run.assist, "none");
@@ -161,6 +161,7 @@ test("local practice Sense has the same non-spoiling, permanently assisted contr
   await copyFile(new URL("../public/adaptive-difficulty.mjs", import.meta.url), join(directory, "adaptive-difficulty.mjs"));
   await copyFile(new URL("../public/remix-progression.mjs", import.meta.url), join(directory, "remix-progression.mjs"));
   await copyFile(new URL("../public/remix-readiness.mjs", import.meta.url), join(directory, "remix-readiness.mjs"));
+  await copyFile(new URL("../public/path-guard.mjs", import.meta.url), join(directory, "path-guard.mjs"));
   await copyFile(new URL("../public/route-remixes.mjs", import.meta.url), join(directory, "route-remixes.mjs"));
   await copyFile(new URL("../public/shuffled-start.mjs", import.meta.url), join(directory, "shuffled-start.mjs"));
   const { localRequest } = await import(`${pathToFileURL(join(directory, "local-beta.mjs")).href}?test=${Date.now()}`);

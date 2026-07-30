@@ -3,6 +3,7 @@ import test from "node:test";
 
 import {
   routeRankChangeMessage,
+  routeRankProgressPresentation,
   sanitizeRouteOutcomeHashes,
   sanitizeRouteRankSummary,
   sanitizeStartStylePreference
@@ -43,4 +44,42 @@ test("rank-up messages celebrate a newly unlocked sky without overpromising ever
   const gold = sanitizeRouteRankSummary({ rank: "gold" });
   assert.match(routeRankChangeMessage(bronze, silver), /Promotion complete/);
   assert.match(routeRankChangeMessage(silver, gold), /board unlocked/);
+});
+
+test("profile rank presentation distinguishes mastery from an active promotion series", () => {
+  const fresh = routeRankProgressPresentation({ rank: "bronze" });
+  assert.equal(fresh.progress, 0);
+  assert.match(fresh.status, /50 mastery to Silver/);
+
+  const mastery = routeRankProgressPresentation({
+    rank: "bronze",
+    mastery: {
+      points: 20,
+      pointsIntoRank: 20,
+      pointsRequired: 50,
+      pointsRemaining: 30,
+      fraction: .4
+    },
+    promotion: { targetRank: "silver" }
+  });
+  assert.equal(mastery.name, "Bronze");
+  assert.equal(mastery.progress, 40);
+  assert.match(mastery.status, /30 mastery to Silver/);
+  assert.match(mastery.nextUnlock, /Free play/);
+
+  const promotion = routeRankProgressPresentation({
+    rank: "bronze",
+    mastery: { fraction: 1 },
+    promotion: {
+      active: true,
+      targetRank: "silver",
+      attemptsCompleted: 1,
+      attemptsTotal: 3,
+      wins: 1,
+      winsRequired: 2
+    }
+  });
+  assert.equal(promotion.progress, 33);
+  assert.match(promotion.status, /1 of 2 wins/);
+  assert.match(promotion.detail, /1 of 3 promotion games/);
 });

@@ -1,53 +1,51 @@
-import { createCtrlHoverController } from "./ctrl-hover.mjs?v=3.3.0-beta.1";
-import { createShiftBoardController } from "./shift-board.mjs?v=3.3.0-beta.1";
-import { findOpenSpawn, orderInventory, packOrbit, pickMagneticTarget } from "./frictionless.mjs?v=3.3.0-beta.1";
-import { buildMasteryCollections, lifetimeMasteryProgress, recordRecipeDiscovery, sanitizeRecipeMasteryState, summarizeMasteryCollections } from "./recipe-mastery.mjs?v=3.3.0-beta.1";
-import { QUICK_TIP_LIMIT, assistancePolicy, buildGhost, combineAssistance, feedbackCuePolicy, ghostSnapshot, ghostTrailPreviewState, grantSenseCharges, lifetimeProgression, reconcileCloudProgression, refillSenseWallet, sanitizeFeedbackPreferences, sanitizeSenseWallet, spendSenseCharge, weeklyRatingPresentation } from "./engagement-features.mjs?v=3.3.0-beta.1";
-import { firstOrbitProgress, firstOrbitWrongPairMessage, resolveFirstOrbitCombination, sanitizeFirstOrbitState } from "./first-orbit.mjs?v=3.3.0-beta.1";
-import { secondOrbitProgress, sanitizeSecondOrbitState } from "./second-orbit.mjs?v=3.3.0-beta.1";
-import { exploreGame, mergeExploreInventory, sanitizeExploreInventory } from "./explore-sandbox.mjs?v=3.3.0-beta.1";
-import { buildConstellationCard, constellationCardFilename, constellationCardShareText, renderConstellationCardSvg } from "./constellation-card.mjs?v=3.3.0-beta.1";
-import { COSMETIC_CATALOG, cosmeticClasses, cosmeticOptions, earnedBadges, progressionAuraClass, sanitizeCosmeticLoadout, transformFeedbackAudio } from "./cosmetic-economy.mjs?v=3.3.0-beta.1";
-import { createRecipeFeedbackRequest, recipeFingerprint, sanitizeRecipeRating } from "./recipe-feedback.mjs?v=3.3.0-beta.1";
-import { selectUniverse } from "./universe-director.mjs?v=3.3.0-beta.1";
-import { listPendingScoreRecords, removePendingScoreRecord, savePendingScoreRecord } from "./pending-scores.mjs?v=3.3.0-beta.1";
-import { buildMissionBriefing } from "./mission-briefing.mjs?v=3.3.0-beta.1";
-import { advanceVoyageProgress, constellationVoyage, constellationVoyageCatalog, currentVoyageStage, sanitizeVoyageProgress, voyageProgress } from "./constellation-voyages.mjs?v=3.3.0-beta.1";
-import { annotateCosmicEventResult, cosmicEventCollectionProgress, cosmicEventTargets, currentCosmicEvent } from "./cosmic-events.mjs?v=3.3.0-beta.1";
-import { explainRecipeNearMiss, explainSuccessfulRecipe } from "./recipe-insight.mjs?v=3.3.0-beta.1";
-import { buildLivingAtlas, buildRouteProgress } from "./living-atlas.mjs?v=3.3.0-beta.1";
-import { sanitizeAuthoredRouteProgress } from "./route-distance.mjs?v=3.3.0-beta.1";
-import { buildCommunityResults } from "./community-results.mjs?v=3.3.0-beta.1";
-import { comparePersonalBest, createRouteSignature, gradeSignatureRoute, sanitizeRouteSignature } from "./signature-routes.mjs?v=3.3.0-beta.1";
-import { createHomeMenuState } from "./home-menu.mjs?v=3.3.0-beta.1";
-import { createRunIqState, rewardRunIq, runIqApplies, runIqPairKey, runIqRouteContext, sanitizeRunIqState, softenRunIq } from "./run-iq.mjs?v=3.3.0-beta.1";
-import {
-  adaptiveModePolicy,
-  applyAdaptiveChallengeOutcome,
-  createAdaptiveDifficultyState,
-  rememberAdaptiveTarget,
-  sanitizeAdaptiveDifficultyState
-} from "./adaptive-difficulty.mjs?v=3.3.0-beta.1";
-import {
-  createRemixProgressionState,
-  getPromotionEligibility,
-  getRemixMasteryProgress,
-  getRemixRankPresentation,
-  recordRemixProgressionOutcome,
-  recordRemixPromotionTrialOutcome,
-  sanitizeRemixProgressionState,
-  startRemixPromotionTrial
-} from "./remix-progression.mjs?v=3.3.0-beta.1";
-import {
-  createRemixReadinessState,
-  getAdaptiveRemixIntensity,
-  recordRemixReadinessOutcome,
-  sanitizeRemixReadinessState
-} from "./remix-readiness.mjs?v=3.3.0-beta.1";
-import { selectStartStyle } from "./shuffled-start.mjs?v=3.3.0-beta.1";
-import { createRankBoardArtRuntime } from "./rank-board-art-runtime.mjs?v=3.3.0-beta.1";
-import { routeRankChangeMessage, sanitizeRouteOutcomeHashes, sanitizeRouteRankSummary, sanitizeStartStylePreference } from "./route-rank-client.mjs?v=3.3.0-beta.1";
-import { createCombinationReportDelivery, sanitizeCombinationSuggestion, validateCombinationReportEndpoint } from "./combination-report-delivery.mjs?v=3.3.0-beta.1";
+import { createCtrlHoverController } from "./ctrl-hover.mjs?v=5.0.0-beta.1";
+import { resetAccountProfile } from "./account-profile.mjs?v=5.0.0-beta.1";
+import { createShiftBoardController } from "./shift-board.mjs?v=5.0.0-beta.1";
+import { findOpenSpawn, orderInventory, packOrbit, pickMagneticTarget } from "./frictionless.mjs?v=5.0.0-beta.1";
+import { buildMasteryCollections, lifetimeMasteryProgress, recordRecipeDiscovery, sanitizeRecipeMasteryState, summarizeMasteryCollections } from "./recipe-mastery.mjs?v=5.0.0-beta.1";
+import { QUICK_TIP_LIMIT, assistancePolicy, buildGhost, combineAssistance, ghostSnapshot, ghostTrailPreviewState, grantSenseCharges, lifetimeProgression, reconcileCloudProgression, refillSenseWallet, sanitizeFeedbackPreferences, sanitizeSenseWallet, spendSenseCharge, weeklyRatingPresentation } from "./engagement-features.mjs?v=5.0.0-beta.1";
+import { createFirstOrbitGame, firstOrbitProgress, firstOrbitWrongPairMessage, resolveFirstOrbitCombination, sanitizeFirstOrbitState } from "./first-orbit.mjs?v=5.0.0-beta.1";
+import { firstGameLaunchIntent, firstGameRequired } from "./first-game-experience.mjs?v=5.0.0-beta.1";
+import { createSecondOrbitGame, secondOrbitProgress, sanitizeSecondOrbitState } from "./second-orbit.mjs?v=5.0.0-beta.1";
+import { exploreGame, mergeExploreInventory, sanitizeExploreInventory } from "./explore-sandbox.mjs?v=5.0.0-beta.1";
+import { parseConstelloreChallengeUrl } from "./constellation-card.mjs?v=5.0.0-beta.1";
+import { createShareCardController } from "./share-card-runtime.mjs?v=5.0.0-beta.1";
+import { ALL_COSMETIC_BODY_CLASSES, COSMETIC_ITEMS, DEFAULT_COSMETIC_LOADOUT, collectionForCosmeticLoadout, cosmeticById, cosmeticClasses, earnedBadges, migrateCosmeticLoadout, progressionAuraClass, sanitizeCosmeticLoadout } from "./cosmetic-economy.mjs?v=5.0.0-beta.1";
+import { createAudioRuntime } from "./audio-runtime.mjs?v=5.0.0-beta.1";
+import { createFeedbackPreferencesUi } from "./feedback-preferences-ui.mjs?v=5.0.0-beta.1";
+import { beginCosmeticDragTrail as resetCosmeticDragTrail, measuredNodeAnchor, queueCosmeticFusionBurst as appendCosmeticFusionBurst, recordCosmeticDragTrail as appendCosmeticDragTrail, startCosmosCanvas } from "./cosmetic-canvas.mjs?v=5.0.0-beta.1";
+import { createRecipeFeedbackRequest, recipeFingerprint, sanitizeRecipeRating } from "./recipe-feedback.mjs?v=5.0.0-beta.1";
+import { selectUniverse } from "./universe-director.mjs?v=5.0.0-beta.1";
+import { clearGameStorage, createRevisionedStorageCoordinator, listPendingScoreRecords, removePendingScoreRecord, revisionMetadata, safeBrowserStorage, savePendingScoreRecord } from "./pending-scores.mjs?v=5.0.0-beta.1";
+import { buildMissionBriefing } from "./mission-briefing.mjs?v=5.0.0-beta.1";
+import { advanceVoyageProgress, constellationVoyage, constellationVoyageCatalog, currentVoyageStage, sanitizeVoyageProgress, voyageProgress } from "./constellation-voyages.mjs?v=5.0.0-beta.1";
+import { annotateCosmicEventResult, cosmicEventCollectionProgress, cosmicEventTargets, currentCosmicEvent } from "./cosmic-events.mjs?v=5.0.0-beta.1";
+import { explainRecipeNearMiss, explainSuccessfulRecipe } from "./recipe-insight.mjs?v=5.0.0-beta.1";
+import { buildLivingAtlas, buildRouteProgress } from "./living-atlas.mjs?v=5.0.0-beta.1";
+import { sanitizeAuthoredRouteProgress } from "./route-distance.mjs?v=5.0.0-beta.1";
+import { PATH_GUARD_VERSION, pathGuardEligibility, pathGuardPairKey } from "./path-guard.mjs?v=5.0.0-beta.1";
+import { buildCommunityResults } from "./community-results.mjs?v=5.0.0-beta.1";
+import { comparePersonalBest, createRouteSignature, gradeSignatureRoute, sanitizeRouteSignature } from "./signature-routes.mjs?v=5.0.0-beta.1";
+import { createHomeMenuState, HOME_MENU_ADVANCED_WINS } from "./home-menu.mjs?v=5.0.0-beta.1";
+import { renderProfileRankView, syncHomeMenuView } from "./home-menu-view.mjs?v=5.0.0-beta.1";
+import { createRunIqState, rewardRunIq, runIqApplies, runIqPairKey, runIqRouteContext, sanitizeRunIqState, softenRunIq } from "./run-iq.mjs?v=5.0.0-beta.1";
+import { adaptiveModePolicy, applyAdaptiveChallengeOutcome, createAdaptiveDifficultyState, rememberAdaptiveTarget, sanitizeAdaptiveDifficultyState } from "./adaptive-difficulty.mjs?v=5.0.0-beta.1";
+import { createRemixProgressionState, getPromotionEligibility, getRemixMasteryProgress, getRemixRankPresentation, recordRemixProgressionOutcome, recordRemixPromotionTrialOutcome, sanitizeRemixProgressionState, startRemixPromotionTrial } from "./remix-progression.mjs?v=5.0.0-beta.1";
+import { createRemixReadinessState, getAdaptiveRemixIntensity, recordRemixReadinessOutcome, sanitizeRemixReadinessState } from "./remix-readiness.mjs?v=5.0.0-beta.1";
+import { selectStartStyle } from "./shuffled-start.mjs?v=5.0.0-beta.1";
+import { createRankBoardArtRuntime } from "./rank-board-art-runtime.mjs?v=5.0.0-beta.1";
+import { routeRankChangeMessage, sanitizeRouteOutcomeHashes, sanitizeRouteRankSummary } from "./route-rank-client.mjs?v=5.0.0-beta.1";
+import { createDefaultProfile } from "./default-profile.mjs?v=5.0.0-beta.1";
+import { MASTERY_CATALOG } from "./mastery-catalog.mjs?v=5.0.0-beta.1";
+import { createInitialAppState } from "./initial-app-state.mjs?v=5.0.0-beta.1";
+import { createCombinationReportDelivery, sanitizeCombinationSuggestion, validateCombinationReportEndpoint } from "./combination-report-delivery.mjs?v=5.0.0-beta.1";
+import { buildRevealTree, revealWordKey } from "./reveal-tree.mjs?v=5.0.0-beta.1";
+import { createCosmicGate } from "./cosmic-gate.mjs?v=5.0.0-beta.1";
+import { victoryHandoffHoldMs } from "./victory-handoff.mjs?v=5.0.0-beta.1";
+import { activatedRunClock, enterPreparedRun, isPermanentActivationFailure, isReplayResponseCurrent, shouldRestoreObjective } from "./run-entry.mjs?v=5.0.0-beta.1";
+import { CLIENT_ONLY_RESUME_MODES, activeRunSnapshotIsValid, clientOnlyRestorePayload, createClientRunPersistence, markLaunchCinematicSessionPlayed, selectStartupResumeSnapshot } from "./session-resume.mjs?v=5.0.0-beta.1";
+import "./cosmic-interlude-runtime.mjs?v=5.0.0-beta.1";
+import { drawRevealGraph, renderRevealController, renderRevealPresentation, revealBatchAnnouncement, revealBatchKeys, revealCameraForBatch, revealStageGeometry } from "./reveal-presentation.mjs?v=5.0.0-beta.1";
 
 const starterEmoji = { Earth: "🌍", Water: "💧", Fire: "🔥", Air: "💨" };
 const starterCategory = { Earth: "nature", Water: "force", Fire: "force", Air: "force" };
@@ -56,192 +54,214 @@ const PROFILE_KEY = isStaticBeta ? "constellore-local-profile-v1" : "constellore
 const LEGACY_PROFILE_KEYS = isStaticBeta ? [] : ["wordforge-profile-v3", "wordforge-profile-v2"];
 const todayKey = new Date().toISOString().slice(0, 10);
 const sessionId = globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+const PROFILE_SAVE_META_KEY = "__localSave";
 const MAX_BOARD_NODES = 180;
 const MAX_SHIFT_COPIES_PER_DRAG = 24;
 const MAX_BOARD_HISTORY = 30;
+const MAX_PATH_GUARD_PAIRS = 128;
 const LOCAL_ANALYTICS_KEY = "constellore-local-event-counts-v1";
 const LOCAL_RECIPE_FEEDBACK_KEY = "constellore-local-recipe-feedback-v1";
 const LOCAL_EXPECTED_PAIRS_KEY = "constellore-local-expected-pairs-v1";
 const LOCAL_EXPECTED_PAIR_OUTBOX_KEY = "constellore-local-expected-pair-outbox-v1";
+const FIRST_OPEN_CINEMATIC_KEY = "constellore-first-open-cinematic-v1";
 const ANALYTICS_COHORT_KEY = "constellore-analytics-cohort-v1";
 const ANALYTICS_PREFERENCE_KEY = "constellore-analytics-preference-v1";
 const PENDING_RECOVERY_KIT_KEY = "constellore-pending-recovery-kit-v1";
+const COSMOS_CIRCUIT_SAVE_KEY = "constellore-cosmos-circuit-v1";
+const DUEL_IDENTITY_KEY = "constellore-duel-identity-v1";
+const DUEL_ACTIVE_MATCH_KEY = "constellore-scramble-active-v1";
+const DUEL_API_BASE = configuredDuelApiBase(document.body.dataset.duelApi);
 const ADAPTIVE_DIFFICULTY_KEY = isStaticBeta ? "constellore-local-adaptive-difficulty-v1" : "constellore-adaptive-difficulty-v1";
 const VOYAGE_REWARD = 35;
 const EVENT_COLLECTION_REWARD = 60;
 const MAX_TRANSIENT_TRAILS = 120;
 const FEEDBACK_API_URL = validateCombinationReportEndpoint(document.body.dataset.feedbackApi);
 const COMMERCE_LAUNCH_READY = document.body.dataset.commerce === "enabled";
-const ANALYTICS_DIMENSIONS = new Set(["mode", "division", "source", "result", "completed", "installed", "replay", "free", "status", "scope", "location", "phase", "ranked", "reward", "success"]);
+const ANALYTICS_DIMENSIONS = new Set([
+  "mode", "division", "source", "result", "completed", "installed", "replay",
+  "free", "status", "scope", "location", "phase", "ranked", "reward", "success",
+  "milestone", "kind", "track", "tier", "practiceBoost"
+]);
 
-const MASTERY_CATALOG = [
-  ["Earth", "Water", "Mud", "🟤", "nature"], ["Air", "Water", "Mist", "🌫️", "nature"],
-  ["Earth", "Fire", "Lava", "🌋", "nature"], ["Lava", "Water", "Stone", "🪨", "nature"],
-  ["Air", "Steam", "Cloud", "☁️", "nature"], ["Cloud", "Water", "Rain", "🌧️", "nature"],
-  ["Stone", "Stone", "Mountain", "⛰️", "nature"], ["Snow", "Water", "Ice", "🧊", "nature"],
-  ["Water", "Water", "Ocean", "🌊", "nature"], ["Sand", "Sand", "Desert", "🏜️", "nature"],
-  ["Earth", "Energy", "Life", "🌱", "life"], ["Earth", "Life", "Plant", "🌿", "life"],
-  ["Plant", "Water", "Tree", "🌳", "life"], ["Air", "Life", "Bird", "🐦", "life"],
-  ["Life", "Water", "Fish", "🐟", "life"], ["Tree", "Tree", "Forest", "🌲", "life"],
-  ["Field", "Plant", "Garden", "🪴", "life"], ["Earth", "Species", "Animal", "🐾", "life"],
-  ["Mud", "Fire", "Brick", "🧱", "structure"], ["Brick", "Brick", "Wall", "🧱", "structure"],
-  ["Wall", "Wall", "House", "🏠", "structure"], ["House", "House", "Village", "🏘️", "structure"],
-  ["Village", "Village", "City", "🏙️", "structure"], ["Fire", "Stone", "Metal", "🔩", "structure"],
-  ["Energy", "Metal", "Machine", "⚙️", "structure"], ["Clay", "Fire", "Pottery", "🏺", "structure"],
-  ["Fire", "Water", "Steam", "♨️", "force"], ["Air", "Energy", "Light", "✨", "force"],
-  ["Cloud", "Energy", "Storm", "⛈️", "force"], ["Energy", "Storm", "Lightning", "🌩️", "force"],
-  ["Fire", "Fire", "Inferno", "🔥", "force"], ["Air", "Air", "Wind", "🌬️", "force"],
-  ["Energy", "Energy", "Power", "🔋", "force"], ["Light", "Light", "Laser", "🔦", "force"],
-  ["Air", "Light", "Sky", "🌌", "celestial"], ["Light", "Sky", "Star", "⭐", "celestial"],
-  ["Glass", "Sky", "Telescope", "🔭", "celestial"], ["Machine", "Sky", "Rocket", "🚀", "celestial"],
-  ["Fire", "Light", "Sun", "☀️", "celestial"], ["Sky", "Sky", "Space", "🌌", "celestial"],
-  ["Star", "Star", "Galaxy", "🌌", "celestial"], ["Sky", "Star", "Constellation", "✨", "celestial"]
-].map(([a, b, word, emoji, category]) => ({ a, b, word, emoji, category }));
-
-const defaultProfile = {
-  version: 7,
-  playerId: "",
-  playerToken: "",
-  cloudProfileVersion: 0,
-  cloudPending: false,
-  cloudPendingFields: [],
-  callsign: "",
-  credits: 0,
-  vault: [],
-  stardust: 0,
-  wins: 0,
-  discovered: ["Earth", "Water", "Fire", "Air"],
-  dailyStreak: 0,
-  lastDailyDate: "",
-  dailyCompleted: "",
-  streakShields: 1,
-  freeWishUsed: false,
-  wishAvailable: true,
-  dailyWishUsedDate: "",
-  premium: false,
-  theme: "void",
-  cosmetics: { theme: "void", board: "starlit", trail: "classic", sound: "cosmic" },
-  recipeMastery: { version: 1, recipes: [] },
-  masteryCelebrated: [],
-  senseWallet: { version: 1, charges: 0, lastRefillDate: "", earned: 0, spent: 0 },
-  senseFounderBonusDate: "",
-  feedbackPreferences: { sound: true, haptics: true },
-  rivalGhostEnabled: true,
-  firstOrbit: { seen: false, completed: false },
-  secondOrbit: { seen: false, completed: false },
-  exploreWords: [],
-  weekly: { key: "", stage: 0, complete: false },
+const defaultProfile = createDefaultProfile({
+  cosmeticLoadout: DEFAULT_COSMETIC_LOADOUT,
   voyageProgress: sanitizeVoyageProgress({}),
-  selectedVoyageId: "first-cities",
-  eventProgress: { weekKey: "", eventId: "", words: [], rewarded: false },
-  signatureBests: [],
-  rewardedRunIds: [],
   routeProgression: createRemixProgressionState(),
-  remixReadiness: createRemixReadinessState(),
-  routeOutcomeHashes: [],
-  routeRank: null,
-  lastRouteOutcome: "",
-  startStylePreference: "auto"
-};
+  remixReadiness: createRemixReadinessState()
+});
 
-const state = {
-  game: null,
-  mode: null,
-  words: [],
-  nodes: [],
-  history: [],
-  trails: [],
-  moves: 0,
-  newDiscoveries: 0,
-  nextId: 1,
-  topZ: 10,
-  orbitGeneration: 0,
-  busyPairs: new Set(),
-  selectedNodeId: null,
-  inventoryQuery: "",
-  inventoryClock: 0,
-  inventoryRecency: new Map(),
-  inventoryFocusWord: "",
-  inventoryVisibleCount: 0,
-  timerId: null,
-  remainingSeconds: 0,
-  startedAt: 0,
-  finishedElapsedSeconds: 0,
-  finished: false,
-  startingRun: false,
-  pendingMission: null,
-  wished: false,
-  bendItem: null,
-  rewardedWish: false,
-  cosmosFrame: null,
-  stars: [],
-  resultAction: null,
-  resultMasteryNotice: "",
-  shareGame: null,
-  shareCard: null,
-  installPrompt: null,
-  run: null,
-  pause: { active: false, confirmAction: "" },
-  assist: "none",
-  scoringDisabled: false,
-  scoreMultiplier: 1,
+const state = createInitialAppState({
   adaptiveDifficulty: readAdaptiveDifficulty(),
-  adaptiveNotice: null,
-  adaptiveOutcomeRecorded: false,
-  routeRankNotice: null,
-  remixProgress: null,
   runIq: createRunIqState(),
-  routeProgress: sanitizeAuthoredRouteProgress(null),
-  reveal: {
-    active: false,
-    paused: false,
-    speed: 1,
-    skip: false,
-    pending: false,
-    revealed: false,
-    replayAvailable: false,
-    replayUsed: false,
-    replaying: false,
-    phase: "idle",
-    generation: 0,
-    route: [],
-    completed: 0,
-    layout: null,
-    visual: null,
-    wake: null
-  },
-  market: null,
-  marketView: "market",
-  marketTimer: null,
-  marketClockOffset: 0,
-  selectedMarketItem: null,
-  leaderboardScope: "daily",
-  leaderboardDivision: "pure",
-  sense: { words: [], timer: null, active: false },
-  powerups: { tipsUsed: 0, tipIds: [], giftUsed: false, giftUnavailable: false, giftItem: null, busy: false },
-  expectedPair: { a: "", b: "", key: "", submitted: false, localSaved: false, timer: null },
-  expectedPairReports: new Set(),
-  recipeFeedback: { move: 0, step: null, timer: null, pendingTimer: null, submitted: false },
-  scoreSubmission: { runId: "", activeSaved: false, pendingSaved: false, inFlight: false, exitAction: null, exitLabel: "" },
-  recoveryKit: null,
-  cloudReady: false,
-  cloudSyncing: false,
-  cloudDirty: false,
-  cloudGeneration: 0,
-  cloudController: null,
-  cloudRevision: 0,
-  ghost: { enabled: true, model: null, timerId: null, lastRelation: "", started: false, requestGeneration: 0, requestController: null, nextRival: null, estimatedSteps: 0 },
-  journeyContext: null,
-  journeyView: "voyage",
-  signature: null,
-  community: null,
-  eventRewardGranted: 0,
-  cosmicEvent: null,
-  eventServerTime: ""
-};
+  routeProgress: sanitizeAuthoredRouteProgress(null)
+});
 
 let profile = loadProfile();
-let config = { billingEnabled: false, checkoutUrl: "", testStoreEnabled: false, creditPacks: [], rewardedAdsEnabled: false, founderPrice: "€6.99", aiEnabled: false };
+let profileSaveBaseline = structuredClone(profile);
+const profilePersistence = createRevisionedStorageCoordinator({
+  key: PROFILE_KEY,
+  channelName: "constellore-profile-v1",
+  writer: sessionId,
+  metadataKey: PROFILE_SAVE_META_KEY,
+  normalize: normalizeStoredProfile,
+  getCurrent: () => profile,
+  onExternal(incoming) {
+    if (!incoming) return;
+    profile = incoming;
+    profileSaveBaseline = structuredClone(incoming);
+    renderProfile();
+  }
+});
+
+const gameAudio = createAudioRuntime({
+  getPreferences: () => profile.feedbackPreferences,
+  getSoundTheme: () => profile.cosmetics?.soundTheme
+});
+gameAudio.setScene("silent");
+let secondarySurfaceLoaderPromise = null;
+let cosmeticsObservatoryHostPromise = null;
+let cosmeticsObservatoryHost = null;
+let stardustStorePromise = null;
+let stardustStoreRuntime = null;
+let scramblePromise = null;
+let scrambleRuntime = null;
+let scrambleHostEpochKey = "";
+let duelIdentity = readDuelIdentity();
+let duelIdentityPromise = null;
+let playerIdentityPromise = null;
+
+function loadSecondarySurfaceModule() {
+  if (!secondarySurfaceLoaderPromise) {
+    secondarySurfaceLoaderPromise = import("./secondary-surface-loader.mjs?v=5.0.0-beta.1")
+      .catch((error) => {
+        secondarySurfaceLoaderPromise = null;
+        throw error;
+      });
+  }
+  return secondarySurfaceLoaderPromise;
+}
+
+function ensureStardustStore() {
+  if (stardustStoreRuntime) return Promise.resolve(stardustStoreRuntime);
+  if (!stardustStorePromise) {
+    stardustStorePromise = Promise.all([
+      loadSecondarySurfaceModule().then((module) => module.loadOptionalStylesheet("stardust-store.css?v=5.0.0-beta.1")),
+      import("./stardust-store-runtime.mjs?v=5.0.0-beta.1")
+    ])
+      .then(([, module]) => {
+        if (typeof module.createStardustStoreRuntime !== "function") {
+          throw new Error("Stardust supplies could not be initialized.");
+        }
+        stardustStoreRuntime = module.createStardustStoreRuntime({
+          documentRef: document,
+          getProfile: () => profile,
+          isPowerupBusy: () => state.powerups.busy,
+          onProfileChange: () => {
+            saveProfile({ fields: ["progression"] });
+            renderProfile();
+          },
+          playFeedback,
+          showToast,
+          track
+        });
+        return stardustStoreRuntime;
+      })
+      .catch((error) => {
+        stardustStorePromise = null;
+        throw error;
+      });
+  }
+  return stardustStorePromise;
+}
+
+function ensureScramble() {
+  if (scrambleRuntime) return Promise.resolve(scrambleRuntime);
+  if (!scramblePromise) {
+    scramblePromise = loadSecondarySurfaceModule()
+      .then((module) => module.createLazyScramble({
+        documentRef: document,
+        windowRef: window,
+        available: duelFeatureAvailable(),
+        request: requestDuelApi,
+        callsign: () => duelIdentity?.callsign || profile.callsign || "STARGAZER",
+        soloWins: () => profile.wins,
+        onBeginMatch: hydrateScrambleMatch,
+        onChapterChange: hydrateScrambleMatch,
+        onMatchLive: () => {
+          if (state.mode === "scramble") {
+            state.pause.active = false;
+            els.gameScreen.classList.remove("orbit-paused");
+          }
+        },
+        onFinished: finishScrambleMatch,
+        onHome: () => returnHome({ skipForfeit: true }),
+        onConnectionChange: (status) => {
+          if (status === "reconnecting") showToast("Reconnecting to your rival\u2026", { scope: "global" });
+        },
+        playFeedback,
+        track
+      }))
+      .then((runtime) => {
+        if (!runtime || typeof runtime.open !== "function" || typeof runtime.submitAction !== "function") {
+          throw new Error("Constellation Scramble could not be initialized.");
+        }
+        scrambleRuntime = runtime;
+        return runtime;
+      })
+      .catch((error) => {
+        scramblePromise = null;
+        throw error;
+      });
+  }
+  return scramblePromise;
+}
+
+async function openScramble({ trigger = document.activeElement, invite = "" } = {}) {
+  if (!homeMenuState().onboardingComplete) {
+    showToast("Finish the two short opening constellations before entering a live 1v1.", { scope: "global" });
+    return false;
+  }
+  if (!duelFeatureAvailable()) {
+    showToast("Live 1v1 is unavailable in this build.", { scope: "global" });
+    return false;
+  }
+  closeHubMenu();
+  try {
+    const runtime = await ensureScramble();
+    runtime.setRankedUnlocked(scrambleRankedUnlocked());
+    await runtime.open({ opener: trigger, invite, ranked: scrambleRankedUnlocked() });
+    track("scramble_lobby_opened", { ranked: scrambleRankedUnlocked(), source: invite ? "invite" : "home" });
+    return true;
+  } catch (error) {
+    showSecondarySurfaceFailure(error, "Constellation Scramble could not be opened.");
+    return false;
+  }
+}
+
+function showSecondarySurfaceFailure(error, fallback) {
+  showToast(error?.message || fallback, { scope: "global" });
+}
+const feedbackPreferencesUi = createFeedbackPreferencesUi({
+  get: () => profile.feedbackPreferences,
+  set: (value) => { profile.feedbackPreferences = value; },
+  save: () => saveProfile({ fields: ["settings"] }),
+  audio: gameAudio,
+  track
+});
+const cosmeticClassNames = [...ALL_COSMETIC_BODY_CLASSES];
+const fullCosmeticPreviewOwnership = Object.freeze({
+  supporter: true,
+  itemIds: COSMETIC_ITEMS.map((item) => item.id)
+});
+applyCosmeticLoadout();
+const networkInformation = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+const syncReducedDataPreference = () => {
+  document.body.dataset.saveData = String(Boolean(networkInformation?.saveData));
+  gameAudio.setPreferences();
+};
+syncReducedDataPreference();
+networkInformation?.addEventListener?.("change", syncReducedDataPreference);
+let config = { billingEnabled: false, checkoutUrl: "", testStoreEnabled: false, creditPacks: [], rewardedAdsEnabled: false, founderPrice: "€6.99", aiEnabled: false, cloudProfileEnabled: false };
 let localRuntimePromise;
 let activeTrayDragCleanup = null;
 let activeTrayShiftSource = null;
@@ -259,6 +279,12 @@ let boardGeometryVersion = 0;
 let runIqFeedbackTimer = null;
 let routeProgressFeedbackTimer = null;
 let rankBoardArtRuntime = null;
+let developerConsolePromise = null;
+let combinationStoryPromise = null;
+let combinationStoryView = null;
+let combinationStoryRevision = 0;
+let goldenPairRuntimePromise = null;
+let goldenPairRuntime = null;
 let analyticsPreference = readAnalyticsPreference();
 let analyticsCohortId = readAnalyticsCohort();
 const pendingScoreRetryPromises = new Map();
@@ -277,17 +303,17 @@ const billingAdapter = () => globalThis.constelloreBilling || globalThis.wordfor
 const adsAdapter = () => globalThis.constelloreAds || globalThis.wordforgeAds;
 const els = {
   startScreen: $("#startScreen"), gameScreen: $("#gameScreen"), targetMessage: $("#targetMessage"),
-  board: $("#board"), boardItems: $("#boardItems"), boardGuide: $("#boardGuide"), cosmosCanvas: $("#cosmosCanvas"),
+  board: $("#board"), boardItems: $("#boardItems"), boardGuide: $("#boardGuide"), cosmosCanvas: $("#cosmosCanvas"), combinationStory: $("#combinationStory"),
   tidyBoard: $("#tidyBoard"), resetBoard: $("#resetBoard"), undoBoardAction: $("#undoBoardAction"), redoBoardAction: $("#redoBoardAction"), dropPairPreview: $("#dropPairPreview"),
   tapChainStatus: $("#tapChainStatus"), tapChainText: $("#tapChainText"), boardUndo: $("#boardUndo"),
   alchemyNote: $("#alchemyNote"), boardAnnouncement: $("#boardAnnouncement"), wordList: $("#wordList"), collectionCount: $("#collectionCount"),
   expectedPairFeedback: $("#expectedPairFeedback"), expectedPairForm: $("#expectedPairForm"), expectedPairButton: $("#expectedPairButton"),
   expectedPairResult: $("#expectedPairResult"), expectedPairDelivery: $("#expectedPairDelivery"),
   inventorySearch: $("#inventorySearch"), inventorySearchClear: $("#inventorySearchClear"), inventorySearchStatus: $("#inventorySearchStatus"),
-  modeName: $("#modeName"), targetWord: $("#targetWord"), remixPill: $("#remixPill"), universePill: $("#universePill"), lawPill: $("#lawPill"), movesValue: $("#movesValue"),
+  modeName: $("#modeName"), targetWord: $("#targetWord"), difficultyPill: $("#difficultyPill"), remixPill: $("#remixPill"), universePill: $("#universePill"), lawPill: $("#lawPill"), movesValue: $("#movesValue"),
   timerHud: $("#timerHud"), timerValue: $("#timerValue"), pathCount: $("#pathCount"),
   runIqHud: $("#runIqHud"), runIqValue: $("#runIqValue"), runIqDelta: $("#runIqDelta"), runIqStreak: $("#runIqStreak"), runIqBar: $("#runIqBar"), runIqStatus: $("#runIqStatus"),
-  runMilestone: $("#runMilestone"), milestoneText: $("#milestoneText"), milestoneBar: $("#milestoneBar"), wishState: $("#wishState"),
+  runMilestone: $("#runMilestone"), milestoneText: $("#milestoneText"), milestoneBar: $("#milestoneBar"), hintObjective: $("#hintObjective"), hintObjectiveText: $("#hintObjectiveText"), wishState: $("#wishState"),
   senseButton: $("#senseButton"), senseHudCount: $("#senseHudCount"), senseDialog: $("#senseDialog"),
   quickTipShortcut: $("#quickTipShortcut"), quickTipShortcutCount: $("#quickTipShortcutCount"),
   wordGiftShortcut: $("#wordGiftShortcut"), wordGiftShortcutCount: $("#wordGiftShortcutCount"),
@@ -300,7 +326,8 @@ const els = {
   paywallDialog: $("#paywallDialog"), wishDialog: $("#wishDialog"), atlasDialog: $("#atlasDialog"),
   missionBriefingDialog: $("#missionBriefingDialog"), missionAdaptiveNote: $("#missionAdaptiveNote"), pauseDialog: $("#pauseDialog"), journeyDialog: $("#journeyDialog"),
   profileDialog: $("#profileDialog"), shareDialog: $("#shareDialog"), resultDialog: $("#resultDialog"),
-  updatesDialog: $("#updatesDialog"),
+  developerLoginDialog: $("#developerLoginDialog"), developerDialog: $("#developerDialog"), developerVfxDialog: $("#developerVfxDialog"),
+  updatesDialog: $("#updatesDialog"), hubMenuDialog: $("#hubMenuDialog"),
   exchangeDialog: $("#exchangeDialog"), marketBuyDialog: $("#marketBuyDialog"), leaderboardDialog: $("#leaderboardDialog"),
   revealDialog: $("#revealDialog"), revealController: $("#revealController"), revealPathButton: $("#revealPathButton"),
   revealStepText: $("#revealStepText"), revealPause: $("#revealPause"), revealSpeed: $("#revealSpeed"),
@@ -319,9 +346,150 @@ const els = {
   atlasMap: $("#atlasMap"), atlasGraph: $("#atlasGraph"), atlasGraphEdges: $("#atlasGraphEdges"), atlasGraphNodes: $("#atlasGraphNodes"), atlasGraphSummary: $("#atlasGraphSummary"),
   signatureResultCard: $("#signatureResultCard"), communityResultCard: $("#communityResultCard"), communityResultStats: $("#communityResultStats"),
   firstOrbitGuide: $("#firstOrbitGuide"), recipeFeedback: $("#recipeFeedback"),
-  routeProgressTrail: $("#routeProgressTrail"), resultRouteTrail: $("#resultRouteTrail"),
+  routeProgressTrail: $("#routeProgressTrail"),
   toast: $("#toast"), connectionBadge: $("#connectionBadge")
 };
+
+const cosmicGateRoot = $("#cosmicGate");
+const cosmicGate = createCosmicGate({
+  root: cosmicGateRoot,
+  onTransition: (cue) => playFeedback(cue),
+  surfaces: [els.startScreen, els.gameScreen]
+});
+// The inline display guard prevents the gate from flashing before CSS loads.
+// Once the controller owns it, `hidden` and the controller's phases take over.
+cosmicGateRoot?.style.removeProperty("display");
+const shareCards = createShareCardController({
+  state,
+  getTodayKey: () => todayKey,
+  stopTimer,
+  showToast,
+  track,
+  fetchJson,
+  closeHubMenu,
+  getCosmeticCardStyle: () => collectionForCosmeticLoadout(profile.cosmetics)?.slug || "custom"
+});
+shareCards.bind();
+
+function cosmeticWorldPreviewActive() {
+  return cosmeticsObservatoryHost?.isPreviewActive?.() === true;
+}
+
+function ensureCosmeticsObservatoryHost() {
+  if (cosmeticsObservatoryHost) return Promise.resolve(cosmeticsObservatoryHost);
+  if (!cosmeticsObservatoryHostPromise) {
+    cosmeticsObservatoryHostPromise = loadSecondarySurfaceModule()
+      .then((module) => module.createLazyCosmeticsObservatoryHost({
+        state, cosmicGate, gameAudio, getProfile: () => profile, ensurePlayer, fetchJson, authHeaders,
+        applyServerPlayer, applyCosmeticLoadout, cosmeticOwnershipOptions, legacyThemeForLoadout,
+        saveProfile, sanitizeCosmeticEffects, track, openPremium, resumeTimerIfNeeded, startCosmos,
+        stopTimer, closeHubMenu
+      }))
+      .then((host) => {
+        if (!host || typeof host.open !== "function") {
+          throw new Error("Cosmetics Observatory could not be initialized.");
+        }
+        cosmeticsObservatoryHost = host;
+        return host;
+      })
+      .catch((error) => {
+        cosmeticsObservatoryHostPromise = null;
+        throw error;
+      });
+  }
+  return cosmeticsObservatoryHostPromise;
+}
+
+async function openCosmeticsObservatory(options = {}) {
+  try {
+    const host = await ensureCosmeticsObservatoryHost();
+    await host.open(options);
+  } catch (error) {
+    showSecondarySurfaceFailure(error, "Cosmetics Observatory could not be opened.");
+  }
+}
+
+let launchCinematicOutcome = {
+  played: false,
+  handled: false,
+  menuHandoff: false,
+  playbackRate: 0
+};
+let launchMenuAudioStarted = false;
+function releaseLaunchBlackout() {
+  cosmicGate.skipIntro();
+}
+function handoffLaunchMenu() {
+  if (!launchMenuAudioStarted) {
+    launchMenuAudioStarted = true;
+    gameAudio.setScene("home");
+    gameAudio.prime();
+  }
+  releaseLaunchBlackout();
+}
+function startupScrambleInvite(locationRef = location) {
+  try {
+    const url = new URL(locationRef.href);
+    const hash = new URLSearchParams(url.hash.replace(/^#/, ""));
+    const token = String(hash.get("scramble") || hash.get("duel") || url.searchParams.get("scramble") || url.searchParams.get("duel") || "").trim();
+    return /^[a-z0-9][a-z0-9._~-]{7,159}$/i.test(token) ? token : "";
+  } catch {
+    return "";
+  }
+}
+function hasRememberedScrambleMatch() {
+  try {
+    const saved = JSON.parse(sessionStorage.getItem(DUEL_ACTIVE_MATCH_KEY) || "null");
+    return typeof saved?.id === "string" && saved.id.length > 0 && saved.id.length <= 96;
+  } catch {
+    return false;
+  }
+}
+const startupParams = new URLSearchParams(location.search);
+const startupSharedChallenge = parseConstelloreChallengeUrl(startupParams, todayKey);
+const startupModeIntent = firstGameLaunchIntent(startupParams.get("mode"));
+const startupScrambleInviteCode = startupScrambleInvite();
+const startupScrambleResume = hasRememberedScrambleMatch();
+const startupLaunchIntent = Boolean(startupScrambleInviteCode || startupScrambleResume || startupSharedChallenge || startupModeIntent);
+const startupResumeSnapshot = selectStartupResumeSnapshot({
+  snapshot: readActiveRunSnapshot(),
+  sharedChallenge: startupSharedChallenge,
+  modeIntent: startupModeIntent
+});
+const startupScramblePreemptsResume = Boolean(startupScrambleInviteCode || startupScrambleResume);
+if (!startupResumeSnapshot) {
+  if (!startupScramblePreemptsResume) {
+    try {
+      const { createFirstOpenCinematic } = await import("./cinematic/first-open-cinematic.mjs?v=5.0.0-beta.1");
+      launchCinematicOutcome = await createFirstOpenCinematic({
+        storageKey: FIRST_OPEN_CINEMATIC_KEY,
+        onPlaybackIntent: () => gameAudio.prime({ startMusic: false }),
+        onHandoff: handoffLaunchMenu
+      }).playLaunch();
+    } catch { /* A failed optional film opens the menu without reviving the retired launch gate. */ }
+    handoffLaunchMenu();
+  } else {
+    markLaunchCinematicSessionPlayed();
+    launchCinematicOutcome = {
+      played: false,
+      handled: true,
+      reason: "live-duel",
+      menuHandoff: false,
+      playbackRate: 0
+    };
+    handoffLaunchMenu();
+  }
+} else {
+  markLaunchCinematicSessionPlayed();
+  launchCinematicOutcome = {
+    played: false,
+    handled: true,
+    reason: "active-run",
+    menuHandoff: false,
+    playbackRate: 0
+  };
+  if (startupScrambleInviteCode || startupScrambleResume) handoffLaunchMenu();
+}
 
 const ctrlHover = createCtrlHoverController({
   getNode: getCtrlHoverNode,
@@ -407,7 +575,7 @@ function ensureAnalyticsCohort() {
   if (analyticsCohortId) return analyticsCohortId;
   const random = globalThis.crypto?.randomUUID?.() || `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 14)}`;
   analyticsCohortId = `cohort-${random}`.slice(0, 80);
-  try { localStorage.setItem(ANALYTICS_COHORT_KEY, analyticsCohortId); } catch { /* Optional diagnostics must work without storage. */ }
+  try { localStorage.setItem(ANALYTICS_COHORT_KEY, analyticsCohortId); } catch {}
   return analyticsCohortId;
 }
 
@@ -422,7 +590,7 @@ function readAdaptiveDifficulty() {
 function saveAdaptiveDifficulty() {
   try {
     localStorage.setItem(ADAPTIVE_DIFFICULTY_KEY, JSON.stringify(sanitizeAdaptiveDifficultyState(state.adaptiveDifficulty)));
-  } catch { /* Adaptive play still works for this session when storage is unavailable. */ }
+  } catch {}
 }
 
 function localRouteRankSummary() {
@@ -477,6 +645,88 @@ function currentRouteRank() {
     }));
 }
 
+function pathGuardContextFor(game = state.game, run = state.run) {
+  const mode = String(game?.mode || "").trim().toLowerCase();
+  const currentGame = game === state.game;
+  const assist = currentGame ? state.assist : run?.assist || "none";
+  const scoringDisabled = currentGame
+    ? Boolean(state.scoringDisabled)
+    : Boolean(run?.scoreEligible === false || game?.scoreEligible === false);
+  return {
+    rankId: game?.remixes?.rank?.id || "",
+    mode,
+    target: game?.target || "",
+    assist,
+    scoringDisabled,
+    scoreEligible: !scoringDisabled,
+    finished: currentGame ? Boolean(state.finished) : false,
+    ranked: Boolean(run?.ranked),
+    practiceReplay: game?.practiceReplay === true,
+    remixes: game?.remixes || null,
+    promotion: game?.promotion || null,
+    tutorial: ["training", "second-orbit"].includes(mode),
+    multiplayer: mode === "scramble",
+    competitive: Boolean(run?.ranked || ["daily", "weekly", "challenge", "scramble"].includes(mode)),
+    wished: currentGame && Boolean(state.wished),
+    powerups: currentGame ? state.powerups : null,
+    reveal: currentGame ? state.reveal : null
+  };
+}
+
+function pathGuardActiveFor(game = state.game, run = state.run) {
+  const mode = String(game?.mode || "").trim().toLowerCase();
+  if (
+    !game
+    || game.adaptive !== true
+    || game.practiceReplay === true
+    || run?.ranked === true
+    || mode !== "reach"
+    || Math.max(
+      Array.isArray(game.remixes?.rules) ? game.remixes.rules.length : 0,
+      Math.trunc(Number(game.remixes?.activeCount) || 0)
+    ) > 0
+  ) return false;
+  return pathGuardEligibility(pathGuardContextFor(game, run)).active;
+}
+
+function sanitizeRememberedPathGuardPairs(value) {
+  const pairs = new Set();
+  if (!Array.isArray(value)) return pairs;
+  for (const candidate of value.slice(-MAX_PATH_GUARD_PAIRS)) {
+    if (typeof candidate !== "string" || candidate.length > 180) continue;
+    try {
+      const parsed = JSON.parse(candidate);
+      if (!Array.isArray(parsed) || parsed.length !== 2) continue;
+      const normalized = pathGuardPairKey(parsed[0], parsed[1]);
+      if (normalized && normalized === candidate) pairs.add(normalized);
+    } catch { /* Invalid saved guidance is ignored. */ }
+  }
+  return pairs;
+}
+
+function rememberPathGuardPair(a, b) {
+  const pairKey = pathGuardPairKey(a, b);
+  if (!pairKey) return { pairKey: "", remembered: false };
+  const remembered = state.pathGuard.blockedPairs.has(pairKey);
+  if (!remembered) {
+    state.pathGuard.blockedPairs.add(pairKey);
+    while (state.pathGuard.blockedPairs.size > MAX_PATH_GUARD_PAIRS) {
+      state.pathGuard.blockedPairs.delete(state.pathGuard.blockedPairs.values().next().value);
+    }
+    scheduleRunSave();
+  }
+  return { pairKey, remembered };
+}
+
+function pathGuardPairWasRemembered(a, b) {
+  const pairKey = pathGuardPairKey(a, b);
+  return Boolean(
+    pathGuardActiveFor()
+    && pairKey
+    && state.pathGuard.blockedPairs.has(pairKey)
+  );
+}
+
 function syncRankBoardArt() {
   const routeRank = currentRouteRank();
   const rankId = routeRank?.rank?.id || "bronze";
@@ -500,7 +750,9 @@ function applyRouteRank(candidate, { announce = false } = {}) {
   if (!next) return null;
   const previous = sanitizeRouteRankSummary(profile.routeRank);
   profile.routeRank = next;
-  state.adaptiveDifficulty = sanitizeAdaptiveDifficultyState(next.adaptiveDifficulty);
+  if (isStaticBeta || Object.hasOwn(candidate, "adaptiveDifficulty")) {
+    state.adaptiveDifficulty = sanitizeAdaptiveDifficultyState(candidate.adaptiveDifficulty);
+  }
   const message = routeRankChangeMessage(previous, next);
   if (announce && message) {
     state.routeRankNotice = { message, rankUp: Boolean(previous && previous.rank.id !== next.rank.id) };
@@ -509,9 +761,9 @@ function applyRouteRank(candidate, { announce = false } = {}) {
       els.resultAdaptiveNote.textContent = message;
       els.resultAdaptiveNote.classList.toggle("is-surge-perfect", state.routeRankNotice.rankUp);
     }
+    if (state.routeRankNotice.rankUp && els.resultDialog?.open) gameAudio.queueProgression("rankPromotion", 120);
   }
-  try { localStorage.setItem(PROFILE_KEY, JSON.stringify(profile)); } catch { /* Rank still remains active for this session. */ }
-  renderProfile();
+  saveProfile({ cloud: false });
   return next;
 }
 
@@ -529,7 +781,7 @@ function nextStartStyleDecision() {
   const routeRank = currentRouteRank();
   const adaptive = sanitizeAdaptiveDifficultyState(routeRank?.adaptiveDifficulty || state.adaptiveDifficulty);
   return selectStartStyle({
-    preference: sanitizeStartStylePreference(profile.startStylePreference),
+    preference: "auto",
     rank: routeRank?.rank?.id || "bronze",
     challengeIndex: adaptive.completedChallenges,
     failureRecovery: adaptive.failureStreak > 0 || ["failed", "forfeit", "reveal"].includes(profile.lastRouteOutcome),
@@ -540,61 +792,15 @@ function nextStartStyleDecision() {
 
 function startStyleSummary(decision = nextStartStyleDecision()) {
   if (decision.style === "shuffled") return "A new mix of useful words";
-  return decision.reason === "failure_recovery"
-    ? "Earth, Water, Fire, and Air · an easier start after the last game"
-    : "Earth, Water, Fire, and Air";
+  return "Earth, Water, Fire, and Air";
 }
 
-function syncStartStyleControls() {
-  let preference = sanitizeStartStylePreference(profile.startStylePreference);
-  profile.startStylePreference = preference;
+function syncStartStylePreview() {
   const decision = nextStartStyleDecision();
-  const bronzeLocked = decision.rank?.id === "bronze";
-  if (bronzeLocked && preference === "shuffled") {
-    preference = "auto";
-    profile.startStylePreference = preference;
-  }
-  const accessibleLabels = {
-    auto: "Auto: let the game choose the best starting words",
-    classic: "Same four: always start with Earth, Water, Fire, and Air",
-    shuffled: bronzeLocked
-      ? "New mix: unlocks after Bronze"
-      : "New mix: start with different useful words"
-  };
-  for (const button of $$("[data-start-style]")) {
-    const selected = button.dataset.startStyle === preference;
-    button.setAttribute("aria-checked", String(selected));
-    button.setAttribute("aria-label", accessibleLabels[button.dataset.startStyle]);
-    button.classList.toggle("active", selected);
-    button.disabled = button.dataset.startStyle === "shuffled" && bronzeLocked;
-    button.tabIndex = selected ? 0 : -1;
-    button.title = accessibleLabels[button.dataset.startStyle];
-  }
-  const summary = $("#startStyleSummary");
-  if (summary) {
-    const next = `Next challenge: ${startStyleSummary(decision)}.`;
-    summary.textContent = bronzeLocked
-      ? `${next} New mixes unlock after Bronze.`
-      : next;
-  }
   const preview = $("#primaryOrbitMeta");
   if (preview && primaryOrbitState().action !== "training") {
     preview.textContent = `${currentRouteRank().rank.name} · ${startStyleSummary(decision)}`;
   }
-}
-
-function chooseStartStyle(style) {
-  const requested = sanitizeStartStylePreference(style);
-  const decision = nextStartStyleDecision();
-  if (requested === "shuffled" && decision.rank?.id === "bronze") {
-    showToast("New mixes unlock after Bronze. Auto will add them when you are ready.");
-    return false;
-  }
-  profile.startStylePreference = requested;
-  saveProfile({ cloud: false });
-  syncStartStyleControls();
-  track("start_style_selected", { style: requested });
-  return true;
 }
 
 function recordLocalRouteRankOutcome(outcome, { flawless = false } = {}) {
@@ -672,8 +878,17 @@ function adaptiveRequestFor(mode, options = {}) {
   if (!policy.eligible) return {};
   if (isStaticBeta) ensureLocalPromotion();
   const adaptive = sanitizeAdaptiveDifficultyState(state.adaptiveDifficulty);
-  return {
+  const publicRequest = {
     adaptive: true,
+    adaptiveTarget: String(options.adaptiveTarget || ""),
+    ...(options.avoidTarget || state.recoveryTarget
+      ? { avoidTarget: String(options.avoidTarget || state.recoveryTarget).slice(0, 80) }
+      : {}),
+    startStyle: "auto"
+  };
+  if (!isStaticBeta) return publicRequest;
+  return {
+    ...publicRequest,
     adaptiveVersion: adaptive.version,
     adaptiveLevel: adaptive.level,
     failureStreak: adaptive.failureStreak,
@@ -681,13 +896,9 @@ function adaptiveRequestFor(mode, options = {}) {
     adaptiveMajorChallengePending: adaptive.majorChallengePending,
     adaptiveMajorChallengeBaseLevel: adaptive.majorChallengeBaseLevel,
     recentTargets: adaptive.recentTargets,
-    adaptiveTarget: String(options.adaptiveTarget || ""),
-    startStyle: sanitizeStartStylePreference(profile.startStylePreference),
-    ...(isStaticBeta ? {
-      routeProgression: sanitizeRemixProgressionState(profile.routeProgression),
-      remixReadiness: sanitizeRemixReadinessState(profile.remixReadiness),
-      lastRouteOutcome: profile.lastRouteOutcome
-    } : {})
+    routeProgression: sanitizeRemixProgressionState(profile.routeProgression),
+    remixReadiness: sanitizeRemixReadinessState(profile.remixReadiness),
+    lastRouteOutcome: profile.lastRouteOutcome
   };
 }
 
@@ -705,7 +916,8 @@ function recordAdaptiveOutcome(outcome, { flawless = false } = {}) {
     surgeBaseLevel: state.game.adaptiveSurgeBaseLevel
       ?? state.game.surgeBaseLevel
       ?? state.game.adaptiveLevel,
-    baseLevel: state.game.adaptiveLevel
+    baseLevel: state.game.adaptiveLevel,
+    challengeLevel: state.game.challengeLevel
   });
   if (result.outcome === "ignored") return null;
   state.adaptiveDifficulty = result.state;
@@ -719,15 +931,26 @@ function recordAdaptiveOutcome(outcome, { flawless = false } = {}) {
   return result;
 }
 
-function loadProfile() {
-  try {
-    const legacyProfile = LEGACY_PROFILE_KEYS.map((key) => localStorage.getItem(key)).find(Boolean);
-    const stored = JSON.parse(localStorage.getItem(PROFILE_KEY) || legacyProfile || "null");
-    if (!stored || typeof stored !== "object") return structuredClone(defaultProfile);
+function normalizeStoredProfile(stored) {
+  if (!stored || typeof stored !== "object" || Array.isArray(stored)) return structuredClone(defaultProfile);
+  const cosmeticOwnership = sanitizeCosmeticOwnership(stored.cosmeticOwnership);
+    const cosmeticAccess = {
+      supporter: Boolean(stored.premium) || cosmeticOwnership.supporter || isStaticBeta,
+      founder: Boolean(stored.premium) || isStaticBeta,
+      itemIds: cosmeticOwnership.items,
+      collectionIds: cosmeticOwnership.collections,
+      earnedIds: cosmeticOwnership.earned,
+      progress: {
+        wins: stored.wins,
+        discoveries: stored.discovered,
+        weekly: stored.weekly
+      }
+    };
     return {
       ...structuredClone(defaultProfile),
       ...stored,
-      version: 7,
+      version: 8,
+      [PROFILE_SAVE_META_KEY]: revisionMetadata(stored[PROFILE_SAVE_META_KEY]),
       vault: Array.isArray(stored.vault) ? stored.vault : [],
       discovered: Array.isArray(stored.discovered) ? [...new Set([...defaultProfile.discovered, ...stored.discovered])].slice(0, 1000) : [...defaultProfile.discovered],
       recipeMastery: sanitizeRecipeMasteryState(stored.recipeMastery),
@@ -738,7 +961,9 @@ function loadProfile() {
       firstOrbit: sanitizeFirstOrbitState(stored.firstOrbit),
       secondOrbit: sanitizeSecondOrbitState(stored.secondOrbit),
       exploreWords: sanitizeExploreInventory(stored.exploreWords, stored.discovered),
-      cosmetics: sanitizeCosmeticLoadout(stored.cosmetics || { theme: stored.theme }, { founder: Boolean(stored.premium) || isStaticBeta }),
+      cosmetics: sanitizeCosmeticLoadout(stored.cosmetics || { theme: stored.theme }, cosmeticAccess),
+      cosmeticEffects: sanitizeCosmeticEffects(stored.cosmeticEffects),
+      cosmeticOwnership,
       cloudProfileVersion: Math.max(0, Math.floor(Number(stored.cloudProfileVersion) || 0)),
       cloudPending: Boolean(stored.cloudPending),
       cloudPendingFields: Array.isArray(stored.cloudPendingFields)
@@ -756,23 +981,32 @@ function loadProfile() {
       routeRank: sanitizeRouteRankSummary(stored.routeRank),
       lastRouteOutcome: ["completed", "failed", "forfeit", "reveal"].includes(stored.lastRouteOutcome)
         ? stored.lastRouteOutcome
-        : "",
-      startStylePreference: sanitizeStartStylePreference(stored.startStylePreference)
+        : ""
     };
+}
+
+function loadProfile() {
+  try {
+    const storage = safeBrowserStorage();
+    const legacyProfile = LEGACY_PROFILE_KEYS.map((key) => storage?.getItem(key)).find(Boolean);
+    return normalizeStoredProfile(JSON.parse(storage?.getItem(PROFILE_KEY) || legacyProfile || "null"));
   } catch {
     return structuredClone(defaultProfile);
   }
 }
 
 function saveProfile({ cloud = true, fields = ["all"] } = {}) {
-  if (cloud && !isStaticBeta) {
+  const cloudGameplaySync = cloud && !isStaticBeta && config.cloudProfileEnabled === true;
+  if (cloudGameplaySync) {
     profile.cloudPending = true;
     const pending = Array.isArray(profile.cloudPendingFields) ? profile.cloudPendingFields : [];
     profile.cloudPendingFields = [...new Set([...pending, ...fields])].slice(0, 8);
   }
-  try { localStorage.setItem(PROFILE_KEY, JSON.stringify(profile)); } catch { /* Private mode can disable storage. */ }
+  const saved = profilePersistence.save(profile, profileSaveBaseline);
+  profile = saved.record;
+  profileSaveBaseline = saved.baseline;
   renderProfile();
-  if (cloud) scheduleCloudProfileSync();
+  if (cloudGameplaySync) scheduleCloudProfileSync();
 }
 
 function rankFor() {
@@ -804,6 +1038,7 @@ function homeMenuState() {
     firstOrbit: sanitizeFirstOrbitState(profile.firstOrbit),
     secondOrbit: sanitizeSecondOrbitState(profile.secondOrbit),
     wins: profile.wins,
+    routeRank: currentRouteRank(),
     dailyCompleted: profile.dailyCompleted,
     todayKey
   });
@@ -817,28 +1052,16 @@ function syncProgressiveDisclosure() {
   const training = sanitizeFirstOrbitState(profile.firstOrbit);
   const bridge = sanitizeSecondOrbitState(profile.secondOrbit);
   const menu = homeMenuState();
-  document.body.dataset.homeStage = menu.stage;
-  document.body.classList.toggle("first-session", !menu.onboardingComplete);
-  document.body.classList.toggle("training-needed", !training.completed);
-  document.body.classList.toggle("second-orbit-needed", training.completed && !bridge.completed && profile.wins === 0);
-  document.body.classList.toggle("progress-ready", menu.progressReady);
-  document.body.classList.toggle("adventures-ready", menu.adventuresReady);
-  document.body.classList.toggle("advanced-ready", menu.advancedReady);
-  const primary = menu.primary;
-  $("#primaryOrbitKicker").textContent = primary.kicker;
-  $("#primaryOrbitTitle").textContent = primary.title;
-  $("#primaryOrbitDescription").textContent = primary.description;
-  $("#primaryOrbitButton span").textContent = primary.label;
-  $("#primaryOrbitMeta").textContent = primary.action === "training"
-    ? primary.meta
-    : `${currentRouteRank().rank.name} · ${startStyleSummary()}`;
-  $("#primaryOrbitButton").dataset.action = primary.action;
-  const secondary = $("#primaryOrbitSecondary");
-  secondary.textContent = primary.secondaryLabel;
-  secondary.dataset.action = primary.secondaryAction;
-  for (const card of $$('[data-home-mode]')) {
-    card.hidden = card.dataset.homeMode === primary.action || (card.dataset.homeMode === "daily" && profile.dailyCompleted === todayKey);
-  }
+  syncHomeMenuView({
+    menu,
+    trainingCompleted: training.completed,
+    secondOrbitCompleted: bridge.completed,
+    wins: profile.wins,
+    routeRank: currentRouteRank(),
+    startStyle: startStyleSummary(),
+    dailyCompleted: profile.dailyCompleted,
+    todayKey
+  });
 }
 
 function announceModeScreenViewed() {
@@ -937,8 +1160,6 @@ async function claimCurrentCosmicEventReward(event = state.cosmicEvent) {
     });
     return applyAuthoritativeEventPayload(claimed, { allowReward: true });
   } finally {
-    // The claim and its cloud currency credit are one server transaction. Even
-    // if the success response is lost, a profile refresh recovers the balance.
     scheduleCloudProfileSync({ changed: false, delay: 250 });
   }
 }
@@ -1059,6 +1280,10 @@ function renderJourneyHub(view = state.journeyView) {
 
 function openJourneyHub(view = "voyage") {
   if (state.startingRun) return showToast("The next orbit is still being mapped.");
+  if (!homeMenuState().adventuresReady) {
+    showToast("Adventures unlock at Gold Route Rank after 10 completed games.");
+    return;
+  }
   stopTimer();
   renderJourneyHub(view);
   if (!els.journeyDialog.open) els.journeyDialog.showModal();
@@ -1238,51 +1463,157 @@ function recordMasteryStep(step) {
   if (newlyCompleted) {
     track("mastery_completed", { collection: newlyCompleted.id });
   }
-  setTimeout(() => playFeedback("mastery", { analytics: true }), 180);
+  if (!newlyCompleted || !step.routeCompleted) {
+    setTimeout(() => playFeedback(newlyCompleted ? "collectionUnlock" : "mastery", { analytics: true, word: award.recipe.word, category: award.recipe.category }), 180);
+  }
   return { ...award, newlyCompleted, notice };
 }
 
-const cosmeticClassNames = COSMETIC_CATALOG.map((item) => `${item.kind}-${item.id}`);
-
 function founderCosmeticsOwned() {
-  return Boolean(profile.premium || isStaticBeta);
+  return Boolean(profile.premium || profile.cosmeticOwnership?.supporter || isStaticBeta);
 }
 
-function applyCosmeticLoadout() {
-  profile.cosmetics = sanitizeCosmeticLoadout(profile.cosmetics || { theme: profile.theme }, { founder: founderCosmeticsOwned() });
-  profile.theme = profile.cosmetics.theme;
+function sanitizeCosmeticOwnership(raw) {
+  const source = raw && typeof raw === "object" && !Array.isArray(raw) ? raw : {};
+  const ids = (value) => [...new Set((Array.isArray(value) ? value : []).map(String).filter(Boolean))].slice(0, 256);
+  return {
+    supporter: Boolean(source.supporter),
+    collections: ids(source.collections),
+    items: ids(source.items),
+    earned: ids(source.earned)
+  };
+}
+
+function cosmeticOwnershipOptions() {
+  const remote = sanitizeCosmeticOwnership(profile.cosmeticOwnership);
+  const routeRank = currentRouteRank()?.rank;
+  const localEarnedProgress = isStaticBeta
+    ? {
+        wins: profile.wins,
+        discoveries: profile.discovered.filter((word) => !["earth", "water", "fire", "air"].includes(inventoryKey(word))),
+        weekly: profile.weekly,
+        routeRank
+      }
+    : { routeRank };
+  return {
+    supporter: founderCosmeticsOwned(),
+    founder: founderCosmeticsOwned(),
+    itemIds: remote.items,
+    collectionIds: remote.collections,
+    earnedIds: remote.earned,
+    progress: localEarnedProgress
+  };
+}
+
+function sanitizeCosmeticEffects(value) {
+  return ["full", "reduced", "off"].includes(value) ? value : "full";
+}
+
+function legacyThemeForLoadout(loadout) {
+  const uiFinish = cosmeticById(loadout?.uiFinish, "uiFinish");
+  if (uiFinish?.collectionId?.endsWith(".aurora-archive")) return "aurora";
+  if (uiFinish?.collectionId?.endsWith(".solar-foundry")) return "solar";
+  return "void";
+}
+
+function applyCosmeticLoadout(candidate = profile.cosmetics, { preview = false } = {}) {
+  const ownership = preview ? fullCosmeticPreviewOwnership : cosmeticOwnershipOptions();
+  const loadout = preview
+    ? migrateCosmeticLoadout(candidate)
+    : sanitizeCosmeticLoadout(candidate || { theme: profile.theme }, ownership);
+  if (!preview) {
+    profile.cosmetics = loadout;
+    profile.theme = legacyThemeForLoadout(loadout);
+  }
   document.body.classList.remove(...cosmeticClassNames);
-  document.body.classList.add(...cosmeticClasses(profile.cosmetics, { founder: founderCosmeticsOwned() }));
-  document.body.dataset.theme = profile.cosmetics.theme;
+  document.body.classList.add(...cosmeticClasses(loadout, ownership));
+  const collection = collectionForCosmeticLoadout(loadout);
+  document.body.dataset.cosmeticCollection = collection?.slug || "custom";
+  document.body.dataset.cosmeticEffects = sanitizeCosmeticEffects(profile.cosmeticEffects);
+  document.body.dataset.theme = legacyThemeForLoadout(loadout);
+  if (preview && loadout.soundTheme !== profile.cosmetics?.soundTheme) {
+    gameAudio.setTheme(loadout.soundTheme, { preview: true });
+  } else if (preview) {
+    gameAudio.endPreview();
+  } else {
+    gameAudio.setTheme(loadout.soundTheme);
+  }
+  return loadout;
+}
+
+function applyVisibleCosmeticLoadout() {
+  const previewLoadout = cosmeticsObservatoryHost?.getPreviewLoadout?.();
+  return previewLoadout
+    ? applyCosmeticLoadout(previewLoadout, { preview: true })
+    : applyCosmeticLoadout();
 }
 
 function renderCosmeticLoadout() {
   const container = $("#cosmeticLoadout");
   if (!container) return;
-  const groups = [
-    ["board", "Blackboard"],
-    ["trail", "Constellation trail"],
-    ["sound", "Sound pack"]
-  ];
-  container.replaceChildren(...groups.map(([kind, label]) => {
-    const section = document.createElement("section");
-    section.className = "cosmetic-group";
-    const heading = document.createElement("strong");
-    heading.textContent = label;
-    const options = document.createElement("div");
-    options.replaceChildren(...cosmeticOptions(kind, { founder: founderCosmeticsOwned() }).map((item) => {
-      const button = document.createElement("button");
-      const active = profile.cosmetics[kind] === item.id;
-      button.type = "button";
-      button.className = active ? "active" : "";
-      button.setAttribute("aria-pressed", String(active));
-      button.innerHTML = `<span>${escapeHtml(item.label)}</span><small>${active ? "ACTIVE" : item.owned ? "OWNED" : "PASS"}</small>`;
-      button.addEventListener("click", () => chooseCosmetic(kind, item.id, item.owned));
-      return button;
-    }));
-    section.append(heading, options);
-    return section;
-  }));
+  const collection = collectionForCosmeticLoadout(profile.cosmetics);
+  container.textContent = collection ? `${collection.label} equipped` : "Custom collection equipped";
+}
+
+function sanitizeHintObjective(value) {
+  return String(value || "").trim().replace(/\s+/g, " ").slice(0, 240);
+}
+
+function renderHintObjective() {
+  const text = sanitizeHintObjective(state.powerups?.currentTip);
+  const active = Boolean(text && state.game && state.run && !state.finished && !state.startingRun && !state.reveal.active && !state.reveal.pending);
+  els.hintObjective.hidden = !active;
+  els.hintObjectiveText.textContent = text;
+}
+
+function resetCombinationStory() {
+  combinationStoryRevision += 1;
+  combinationStoryView?.reset();
+  els.combinationStory.hidden = true;
+}
+
+function prepareGoldenPairAnimations() {
+  goldenPairRuntimePromise ||= import("./story/golden-fusions/golden-pair-runtime.mjs?v=5.0.0-beta.1")
+    .then(({ createGoldenPairRuntime }) => createGoldenPairRuntime({
+      board: els.board,
+      reducedMotion: () => matchMedia("(prefers-reduced-motion: reduce)").matches || document.body.dataset.cosmeticEffects === "reduced"
+    }))
+    .then((runtime) => (goldenPairRuntime = runtime))
+    .catch((error) => {
+      console.warn("Golden Pair animation could not load.", error);
+      return null;
+    });
+  return goldenPairRuntimePromise;
+}
+
+function resetGoldenPairAnimations() {
+  goldenPairRuntime?.cancel();
+}
+
+async function playGoldenPairAnimation(a, b, result) {
+  if (document.body.dataset.cosmeticEffects === "off") return false;
+  const generation = state.orbitGeneration;
+  const runtime = await prepareGoldenPairAnimations();
+  if (!runtime || generation !== state.orbitGeneration || !state.game || els.resultDialog.open) return false;
+  return runtime.play({ a, b, result })?.played === true;
+}
+
+function renderCombinationStory(failedAttempt = null) {
+  if (!state.game || (!state.history.length && !failedAttempt)) return resetCombinationStory();
+  const revision = ++combinationStoryRevision;
+  const orbitGeneration = state.orbitGeneration;
+  combinationStoryPromise ||= import("./story/combination-story-runtime.mjs?v=5.0.0-beta.1")
+    .then(({ createCombinationStoryRuntime }) => createCombinationStoryRuntime({ root: els.combinationStory }))
+    .catch((error) => {
+      console.warn("Combination story could not load.", error);
+      return null;
+    });
+  void combinationStoryPromise.then((view) => {
+    if (!view || revision !== combinationStoryRevision || orbitGeneration !== state.orbitGeneration || !state.game) return;
+    combinationStoryView = view;
+    view.render({ target: state.game.target, history: state.history, failedAttempt });
+    els.combinationStory.hidden = false;
+  });
 }
 
 function renderPowerups() {
@@ -1340,6 +1671,7 @@ function renderPowerups() {
   els.senseButton.setAttribute("aria-label", standaloneMode
     ? `${state.mode === "explore" ? "Help is not needed in free play" : "This lesson includes its own hint"}`
     : `Open help; ${tipsRemaining} hint${tipsRemaining === 1 ? "" : "s"} left`);
+  renderHintObjective();
 }
 
 function activeArmedPowerup() {
@@ -1380,7 +1712,7 @@ function activateOpenPowerupShortcut(kind, action) {
   const label = kind === "gift" ? "Word Gift" : "Star Compass";
   const policy = assistancePolicy(kind);
   showAlchemy(`TAP AGAIN · ${label} keeps ${Math.round(policy.scoreMultiplier * 100)}% score in Open.`);
-  playFeedback("place");
+  playFeedback("uiSelect");
 }
 
 function resetPowerupControlLabels() {
@@ -1389,11 +1721,41 @@ function resetPowerupControlLabels() {
   if (senseLabel) senseLabel.textContent = "Use extra hint";
 }
 
+let profileRankSurface;
+
+async function prepareProfileRankSurface() {
+  try {
+    profileRankSurface ||= await import("./profile-rank-surface.mjs?v=5.0.0-beta.1");
+    profileRankSurface.mountProfileRankSurface();
+  } catch {
+    profileRankSurface = null;
+  }
+}
+
+function showStardustStoreFailure(error, fallback) {
+  const status = $("#stardustStoreStatus");
+  if (status) {
+    status.textContent = "Stardust supplies are temporarily unavailable.";
+    status.classList.add("error");
+  }
+  showSecondarySurfaceFailure(error, fallback);
+}
+
+function renderStardustStore() {
+  if (stardustStoreRuntime) {
+    stardustStoreRuntime.render();
+    return;
+  }
+  $("#buyStarCompass").disabled = true;
+  $("#buyStreakShield").disabled = true;
+}
+
 function renderProfile() {
   setupWeeklyState();
   setupDailyState();
   setupJourneyState();
   const rank = rankFor();
+  const routeRank = currentRouteRank();
   const lifetimeMastery = lifetimeMasteryProgress(profile.recipeMastery);
   const weeklyRating = weeklyRatingPresentation({
     stage: profile.weekly.stage,
@@ -1409,7 +1771,9 @@ function renderProfile() {
     dailyStreak: profile.dailyStreak,
     weekly: profile.weekly
   };
-  applyCosmeticLoadout();
+  applyVisibleCosmeticLoadout();
+  $(".profile-label").textContent = routeRank.rank.name;
+  $("#profileButton").setAttribute("aria-label", `Open your ${routeRank.rank.name} Route Rank and progress`);
   $("#profileLevel").textContent = rank.level;
   $("#profileDust").textContent = profile.stardust;
   $("#universeRank").textContent = rank.name;
@@ -1434,6 +1798,7 @@ function renderProfile() {
   $("#profileWords").textContent = profile.discovered.length;
   $("#profileWins").textContent = profile.wins;
   $("#profileStreak").textContent = profile.dailyStreak;
+  renderProfileRankView(routeRank);
   $("#profileShield").textContent = profile.streakShields;
   $("#profileCallsign").textContent = profile.callsign || "Offline Stargazer";
   const badges = earnedBadges(badgeProgress);
@@ -1453,8 +1818,14 @@ function renderProfile() {
   if (cloudGroup) cloudGroup.hidden = isStaticBeta;
   if (!isStaticBeta) {
     $("#cloudPlayerId").textContent = profile.playerId || "Creating…";
-    if (!state.cloudReady && !state.cloudSyncing) setCloudStatus(profile.playerId ? "Preparing cloud profile…" : "Connecting…");
-    $("#syncCloudProfile").disabled = !profile.playerId || state.cloudSyncing;
+    if (config.cloudProfileEnabled === true && !state.cloudReady && !state.cloudSyncing) {
+      setCloudStatus(profile.playerId ? "Preparing cloud profile…" : "Connecting…");
+    } else if (config.cloudProfileEnabled !== true) {
+      setCloudStatus("Gameplay stays on this device");
+    }
+    const syncButton = $("#syncCloudProfile");
+    syncButton.hidden = config.cloudProfileEnabled !== true;
+    syncButton.disabled = config.cloudProfileEnabled !== true || !profile.playerId || state.cloudSyncing;
     $("#restoreOwnership").disabled = !profile.playerId;
     $("#rotateRecoveryKit").disabled = !profile.playerId;
     $("#rotateRecoveryKit").textContent = state.recoveryKit?.code ? "View unsaved recovery kit" : "Create new recovery kit";
@@ -1478,46 +1849,59 @@ function renderProfile() {
   els.senseHudCount.textContent = `${tipsRemaining}`;
   $("#senseEarnNote").textContent = "One charge returns each UTC day for every player.";
   els.senseButton.setAttribute("aria-label", `Open help; ${tipsRemaining} hint${tipsRemaining === 1 ? "" : "s"} left`);
-  $("#buySense").disabled = state.powerups.busy || profile.stardust < 90 || senseCount >= 9;
+  renderStardustStore();
   renderPowerups();
-  const feedbackPreferences = sanitizeFeedbackPreferences(profile.feedbackPreferences);
-  profile.feedbackPreferences = feedbackPreferences;
-  for (const [id, enabled] of [["soundPreference", feedbackPreferences.sound], ["hapticPreference", feedbackPreferences.haptics]]) {
-    const button = document.getElementById(id);
-    button.setAttribute("aria-pressed", String(enabled));
-    button.querySelector("small").textContent = enabled ? "ON" : "OFF";
-  }
-  $("#feedbackToggle").setAttribute("aria-pressed", String(feedbackPreferences.sound));
-  $("#feedbackToggle").setAttribute("aria-label", feedbackPreferences.sound ? "Mute sound effects" : "Enable sound effects");
-  $("#feedbackToggle span").textContent = feedbackPreferences.sound ? "♪" : "×";
+  feedbackPreferencesUi.render();
   els.rivalGhost.setAttribute("aria-pressed", String(profile.rivalGhostEnabled));
   els.rivalGhost.setAttribute("aria-label", profile.rivalGhostEnabled ? "Hide Rival Ghost pace" : "Show Rival Ghost pace");
   $("#marketBalance").textContent = profile.credits;
   $("#vaultCount").textContent = profile.vault.length;
-  $$('button[data-theme]').forEach((button) => {
-    const active = button.dataset.theme === profile.cosmetics.theme;
-    button.classList.toggle("active", active);
-    button.setAttribute("aria-pressed", String(active));
-    const item = COSMETIC_CATALOG.find((entry) => entry.kind === "theme" && entry.id === button.dataset.theme);
-    button.querySelector("small").textContent = active ? "ACTIVE" : item?.entitlement === "free" || founderCosmeticsOwned() ? "OWNED" : "PASS";
-  });
   renderCosmeticLoadout();
   renderMastery();
   syncProgressiveDisclosure();
-  syncStartStyleControls();
+  syncStartStylePreview();
   syncRankBoardArt();
   updateWishButton();
+  syncScrambleEntryState();
+}
+
+function syncScrambleEntryState() {
+  const available = duelFeatureAvailable();
+  const ranked = scrambleRankedUnlocked();
+  const homeButton = $("#scrambleHomeButton");
+  const menuButton = $("#scrambleMenuButton");
+  if (homeButton) homeButton.disabled = !available;
+  if (menuButton) menuButton.disabled = !available;
+  const status = !available
+    ? "Live 1v1 is unavailable in this build"
+    : ranked
+      ? "Private invites and public ranked matchmaking"
+      : "Private invites \u00b7 ranked unlocks after one scored solo win";
+  if ($("#scrambleHomeStatus")) $("#scrambleHomeStatus").textContent = status;
+  if ($("#scrambleMenuStatus")) $("#scrambleMenuStatus").textContent = status;
+  scrambleRuntime?.setRankedUnlocked(ranked);
+}
+
+function duelFeatureAvailable() {
+  return Boolean(DUEL_API_BASE) && config.duels?.enabled !== false;
+}
+
+function scrambleRankedUnlocked() {
+  return profile.wins > 0 && config.duels?.publicMatchmakingEnabled !== false;
 }
 
 function applyServerPlayer(player) {
   if (!player) return false;
   if (profile.playerId && player.id && profile.playerId !== player.id) return false;
-  const founderActivated = Boolean(player.founderPass) && !profile.premium;
+  const serverCosmeticOwnership = sanitizeCosmeticOwnership(player.cosmeticOwnership);
+  const supporterActive = Boolean(player.founderPass || player.supporter || serverCosmeticOwnership.supporter);
+  const founderActivated = supporterActive && !profile.premium;
   profile.playerId = player.id || profile.playerId;
   profile.callsign = player.callsign || profile.callsign;
   profile.credits = Number(player.credits) || 0;
   profile.vault = Array.isArray(player.vault) ? player.vault : [];
-  profile.premium = Boolean(player.founderPass);
+  profile.premium = supporterActive;
+  profile.cosmeticOwnership = serverCosmeticOwnership;
   profile.freeWishUsed = Boolean(player.freeWishUsed);
   profile.wishAvailable = player.wishAvailable !== false;
   profile.dailyWishUsedDate = player.dailyWishUsedDate || "";
@@ -1536,6 +1920,169 @@ function authHeaders(extra = {}) {
       "X-Constellore-Token": profile.playerToken
     } : {})
   };
+}
+
+function configuredDuelApiBase(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  try {
+    const url = new URL(raw, location.href);
+    const localHttp = url.protocol === "http:" && ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname);
+    if (url.protocol !== "https:" && !localHttp && url.origin !== location.origin) return "";
+    url.hash = "";
+    url.search = "";
+    url.pathname = url.pathname.replace(/\/+$/, "");
+    return url.href.replace(/\/$/, "");
+  } catch {
+    return "";
+  }
+}
+
+function sanitizeDuelIdentity(value) {
+  const source = value && typeof value === "object" && !Array.isArray(value) ? value : {};
+  const playerId = String(source.playerId || source.id || "").trim().slice(0, 96);
+  // Signed cs3 session tokens currently exceed 256 characters. Keep a finite
+  // ceiling without truncating a valid credential into an inevitable 401.
+  const playerToken = String(source.playerToken || source.token || "").trim().slice(0, 1_024);
+  const callsign = String(source.callsign || source.player?.callsign || "").trim().slice(0, 32);
+  if (!/^[a-z0-9][a-z0-9._~-]{5,95}$/i.test(playerId) || playerToken.length < 8) return null;
+  return { playerId, playerToken, callsign: callsign || "STARGAZER" };
+}
+
+function readDuelIdentity() {
+  try {
+    return sanitizeDuelIdentity(JSON.parse(localStorage.getItem(DUEL_IDENTITY_KEY) || "null"));
+  } catch {
+    return null;
+  }
+}
+
+function saveDuelIdentity(identity) {
+  duelIdentity = sanitizeDuelIdentity(identity);
+  try {
+    if (duelIdentity) localStorage.setItem(DUEL_IDENTITY_KEY, JSON.stringify(duelIdentity));
+    else localStorage.removeItem(DUEL_IDENTITY_KEY);
+  } catch { /* The live identity remains available for this tab. */ }
+  return duelIdentity;
+}
+
+function duelPlayerUrl(suffix = "") {
+  const url = new URL(DUEL_API_BASE);
+  url.pathname = `${url.pathname.replace(/\/duels\/?$/, "")}/player${suffix}`.replace(/\/{2,}/g, "/");
+  return url.href;
+}
+
+async function parseDuelResponse(response) {
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const error = new Error(result.error || "The live constellation did not answer.");
+    error.code = result.code || "duel_request_error";
+    error.status = response.status;
+    error.payload = result;
+    throw error;
+  }
+  return result;
+}
+
+async function ensureDuelIdentity({ forceRegistration = false } = {}) {
+  if (!DUEL_API_BASE) {
+    const error = new Error("Live 1v1 is not configured in this build.");
+    error.code = "online_required";
+    throw error;
+  }
+  if (duelIdentityPromise) return duelIdentityPromise;
+  duelIdentityPromise = (async () => {
+    // The hosted runtime and Duel API share an account service. Coalesce with
+    // the normal boot registration so an immediate lobby click cannot create
+    // two competing anonymous identities. Hybrid static builds deliberately
+    // keep their local solo identity separate from the hosted Duel identity.
+    if (!isStaticBeta && (!profile.playerId || !profile.playerToken || playerIdentityPromise)) {
+      await ensurePlayer();
+    }
+    const profileIdentity = sanitizeDuelIdentity({
+      playerId: profile.playerId,
+      playerToken: profile.playerToken,
+      callsign: profile.callsign
+    });
+    const candidate = forceRegistration ? null : duelIdentity || profileIdentity;
+    if (candidate) {
+      try {
+        const response = await fetch(duelPlayerUrl(), {
+          headers: {
+            "X-Constellore-Player": candidate.playerId,
+            "X-Constellore-Token": candidate.playerToken
+          }
+        });
+        if (response.ok) {
+          const result = await response.json().catch(() => ({}));
+          return saveDuelIdentity({
+            ...candidate,
+            callsign: result.player?.callsign || candidate.callsign
+          });
+        }
+        if (![401, 404].includes(response.status)) await parseDuelResponse(response);
+      } catch (error) {
+        if (![401, 404].includes(error.status)) throw error;
+      }
+    }
+    const registration = await parseDuelResponse(await fetch(duelPlayerUrl("/register"), { method: "POST" }));
+    const identity = saveDuelIdentity({
+      playerId: registration.player?.id,
+      playerToken: registration.playerToken,
+      callsign: registration.player?.callsign
+    });
+    if (!identity) throw new Error("The live player identity was incomplete.");
+    return identity;
+  })().finally(() => {
+    duelIdentityPromise = null;
+  });
+  return duelIdentityPromise;
+}
+
+async function requestDuelApi(suffix, options = {}, retryAuth = true) {
+  const route = String(suffix || "");
+  if (!route.startsWith("/") || route.startsWith("//") || /(?:^|\/)\.\.(?:\/|$)/.test(route)) {
+    throw new Error("Invalid live match route.");
+  }
+  const identity = await ensureDuelIdentity();
+  const controller = new AbortController();
+  const upstreamSignal = options.signal;
+  const abortFromUpstream = () => controller.abort();
+  if (upstreamSignal?.aborted) controller.abort();
+  else upstreamSignal?.addEventListener?.("abort", abortFromUpstream, { once: true });
+  const timer = options.stream ? null : setTimeout(() => controller.abort(), 20_000);
+  const headers = {
+    ...(options.body != null ? { "Content-Type": "application/json" } : {}),
+    ...(options.stream ? { Accept: "text/event-stream" } : {}),
+    ...(options.headers || {}),
+    "X-Constellore-Player": identity.playerId,
+    "X-Constellore-Token": identity.playerToken
+  };
+  try {
+    const response = await fetch(`${DUEL_API_BASE}${route}`, {
+      method: options.method || "GET",
+      headers,
+      body: options.body == null ? undefined : JSON.stringify(options.body),
+      signal: controller.signal
+    });
+    if (response.status === 401 && retryAuth) {
+      saveDuelIdentity(null);
+      await ensureDuelIdentity({ forceRegistration: true });
+      return requestDuelApi(route, options, false);
+    }
+    if (!response.ok) return parseDuelResponse(response);
+    if (options.stream) return response;
+    return response.json().catch(() => ({}));
+  } catch (error) {
+    if (error.name === "AbortError") {
+      const aborted = new DOMException("Live match request aborted.", "AbortError");
+      throw aborted;
+    }
+    throw error;
+  } finally {
+    if (timer) clearTimeout(timer);
+    upstreamSignal?.removeEventListener?.("abort", abortFromUpstream);
+  }
 }
 
 function normalizePendingRecoveryKit(value) {
@@ -1566,6 +2113,15 @@ function restorePendingRecoveryKit(playerId) {
 }
 
 async function ensurePlayer() {
+  if (playerIdentityPromise) return playerIdentityPromise;
+  playerIdentityPromise = ensurePlayerNow().finally(() => {
+    playerIdentityPromise = null;
+  });
+  return playerIdentityPromise;
+}
+
+async function ensurePlayerNow() {
+  const anonymous = !profile.playerId && !profile.playerToken;
   if (!state.recoveryKit && profile.playerId) state.recoveryKit = restorePendingRecoveryKit(profile.playerId);
   if (profile.playerId && profile.playerToken) {
     try {
@@ -1573,14 +2129,16 @@ async function ensurePlayer() {
       applyServerPlayer(player);
       return player;
     } catch (error) {
-      // Network and server failures must never strand a valid anonymous
-      // identity. Replace credentials only when the server explicitly rejects
-      // them; otherwise keep the account intact and let boot surface offline.
       if (![401, 404].includes(error.status)) throw error;
     }
   }
   const registration = await fetchJson("/api/player/register", { method: "POST" });
-  resetProfileForAccount({ playerId: registration.player.id, playerToken: registration.playerToken });
+  resetProfileForAccount({
+    playerId: registration.player.id,
+    playerToken: registration.playerToken,
+    preserveFirstOrbit: anonymous,
+    preserveLocalProgress: anonymous
+  });
   applyServerPlayer(registration.player);
   if (registration.recoveryCode) {
     rememberPendingRecoveryKit({
@@ -1594,10 +2152,10 @@ async function ensurePlayer() {
 }
 
 function cloudProfileSnapshot() {
-  const cosmetics = sanitizeCosmeticLoadout(profile.cosmetics || { theme: profile.theme }, { founder: founderCosmeticsOwned() });
+  const cosmetics = sanitizeCosmeticLoadout(profile.cosmetics || { theme: profile.theme }, cosmeticOwnershipOptions());
   const safeDate = (value) => /^\d{4}-\d{2}-\d{2}$/.test(String(value || "")) ? String(value) : "";
   return {
-    theme: cosmetics.theme,
+    theme: legacyThemeForLoadout(cosmetics),
     cosmetics,
     firstOrbit: sanitizeFirstOrbitState(profile.firstOrbit),
     rivalGhostEnabled: profile.rivalGhostEnabled !== false,
@@ -1624,26 +2182,7 @@ function cloudProfileSnapshot() {
   };
 }
 
-function resetProfileForAccount({ playerId = profile.playerId, playerToken = profile.playerToken, preserveServer = false } = {}) {
-  const serverState = preserveServer ? {
-    callsign: profile.callsign,
-    credits: profile.credits,
-    vault: [...profile.vault],
-    premium: profile.premium,
-    freeWishUsed: profile.freeWishUsed,
-    wishAvailable: profile.wishAvailable,
-    dailyWishUsedDate: profile.dailyWishUsedDate,
-    streakShields: profile.streakShields,
-    senseWallet: sanitizeSenseWallet(profile.senseWallet),
-    senseFounderBonusDate: profile.senseFounderBonusDate
-  } : {};
-  profile = {
-    ...structuredClone(defaultProfile),
-    ...serverState,
-    playerId: String(playerId || ""),
-    playerToken: String(playerToken || "")
-  };
-}
+function resetProfileForAccount(options={}) { profile=resetAccountProfile(defaultProfile, profile, options); }
 
 function mergeCloudProfile(remote, { replace = false, preferLocalSettings = false, preferLocalProgression = false, preferLocalJourneys = false, preferLocalSignatures = false } = {}) {
   if (!remote || typeof remote !== "object" || Array.isArray(remote)) return;
@@ -1681,8 +2220,8 @@ function mergeCloudProfile(remote, { replace = false, preferLocalSettings = fals
       : { key: remote.weekly.key, stage: Math.max(Number(local.stage) || 0, Number(remote.weekly.stage) || 0), complete: Boolean(local.complete || remote.weekly.complete) };
   }
   if ((remote.cosmetics || remote.theme) && (replace || !preferLocalSettings)) {
-    profile.cosmetics = sanitizeCosmeticLoadout(remote.cosmetics || { theme: remote.theme }, { founder: founderCosmeticsOwned() });
-    profile.theme = profile.cosmetics.theme;
+    profile.cosmetics = sanitizeCosmeticLoadout(remote.cosmetics || { theme: remote.theme }, cosmeticOwnershipOptions());
+    profile.theme = legacyThemeForLoadout(profile.cosmetics);
   }
   if (remote.journeys && typeof remote.journeys === "object" && !Array.isArray(remote.journeys)) {
     const localVoyages = sanitizeVoyageProgress(profile.voyageProgress);
@@ -1695,8 +2234,6 @@ function mergeCloudProfile(remote, { replace = false, preferLocalSettings = fals
     if (replace || !preferLocalJourneys) profile.selectedVoyageId = sanitizeSelectedVoyage(remote.journeys.selectedVoyageId);
     const incomingEvent = sanitizeEventProgress(remote.journeys.eventProgress);
     const localEvent = sanitizeEventProgress(profile.eventProgress);
-    // Once the event endpoint has supplied server truth, a lagging cloud
-    // snapshot must not replace it during boot, recovery, or claim retry.
     profile.eventProgress = !isStaticBeta && state.cosmicEvent
       ? sanitizeEventProgressForEvent(localEvent, state.cosmicEvent)
       : replace ? incomingEvent : sanitizeEventProgress({
@@ -1714,9 +2251,6 @@ function mergeCloudProfile(remote, { replace = false, preferLocalSettings = fals
         const previous = byScope.get(signature.scopeKey);
         byScope.set(signature.scopeKey, previous ? comparePersonalBest(signature, previous).best : signature);
       }
-      // `byScope` already contains the best candidate across local pending and
-      // cloud-verified entries. Prepending the local list here would let the
-      // first-wins sanitizer replace a higher remote score with a lower draft.
       profile.signatureBests = sanitizeSignatureBests([...byScope.values()]);
     }
   }
@@ -1730,7 +2264,10 @@ function setCloudStatus(message, error = false) {
 }
 
 async function syncCloudProfile({ manual = false, replaceRemote = false } = {}) {
-  if (isStaticBeta || !profile.playerId || !profile.playerToken) return null;
+  if (isStaticBeta || config.cloudProfileEnabled !== true || !profile.playerId || !profile.playerToken) {
+    if (manual) showToast("Gameplay progress stays on this device. Cloud profile saving is off.");
+    return null;
+  }
   if (state.cloudSyncing) {
     state.cloudDirty = true;
     return null;
@@ -1817,7 +2354,10 @@ async function syncCloudProfile({ manual = false, replaceRemote = false } = {}) 
       state.cloudController = null;
       state.cloudSyncing = false;
       const syncButton = $("#syncCloudProfile");
-      if (syncButton) syncButton.disabled = !profile.playerId;
+      if (syncButton) {
+        syncButton.hidden = config.cloudProfileEnabled !== true;
+        syncButton.disabled = config.cloudProfileEnabled !== true || !profile.playerId;
+      }
       if (!failed && state.cloudDirty && state.cloudReady) {
         clearTimeout(cloudSyncTimer);
         cloudSyncTimer = setTimeout(() => { void syncCloudProfile(); }, 250);
@@ -1828,7 +2368,7 @@ async function syncCloudProfile({ manual = false, replaceRemote = false } = {}) 
 }
 
 function scheduleCloudProfileSync({ changed = true, delay = 1800 } = {}) {
-  if (isStaticBeta || !profile.playerId || !profile.playerToken) return;
+  if (isStaticBeta || config.cloudProfileEnabled !== true || !profile.playerId || !profile.playerToken) return;
   if (changed) state.cloudRevision += 1;
   state.cloudDirty = true;
   if (!state.cloudReady || state.cloudSyncing) return;
@@ -1871,9 +2411,15 @@ async function restoreOwnership({ silent = false } = {}) {
 async function initializeCloudServices() {
   if (isStaticBeta) return;
   await restoreOwnership({ silent: true });
-  const synced = await syncCloudProfile();
+  const synced = config.cloudProfileEnabled === true ? await syncCloudProfile() : null;
   state.cloudReady = true;
   if (synced) setCloudStatus("Cloud profile ready");
+  else if (config.cloudProfileEnabled !== true) {
+    profile.cloudPending = false;
+    profile.cloudPendingFields = [];
+    saveProfile({ cloud: false });
+    setCloudStatus("Gameplay progress stays on this device");
+  }
   if (synced && state.cloudDirty) scheduleCloudProfileSync({ changed: false, delay: 250 });
 }
 
@@ -1881,7 +2427,9 @@ function handleOnline() {
   updateConnection();
   if (isStaticBeta) void expectedPairDelivery.flush();
   if (!isStaticBeta && profile.playerId && profile.playerToken) void refreshCosmicEventState();
-  if (!isStaticBeta && state.cloudReady && profile.playerId && profile.playerToken) scheduleCloudProfileSync({ changed: false, delay: 250 });
+  if (!isStaticBeta && config.cloudProfileEnabled === true && state.cloudReady && profile.playerId && profile.playerToken) {
+    scheduleCloudProfileSync({ changed: false, delay: 250 });
+  }
   if (!isStaticBeta && profile.playerId && profile.playerToken) void retryPendingScoreUploads().then(announcePendingScoreRecovery);
 }
 
@@ -1960,18 +2508,21 @@ async function recoverAccount(event) {
     clearTimeout(cloudSyncTimer);
     state.cloudReady = false;
     resetProfileForAccount({ playerId: result.player.id, playerToken: result.playerToken });
+    state.runPersistence = null;
     clearActiveRunSnapshot();
     applyServerPlayer(result.player);
     rememberPendingRecoveryKit({ playerId: result.player.id, code: result.recoveryCode, version: result.recoveryVersion });
     await restoreOwnership({ silent: true });
-    await syncCloudProfile({ replaceRemote: true });
+    if (config.cloudProfileEnabled === true) await syncCloudProfile({ replaceRemote: true });
     // Cloud restoration may contain an older event snapshot. Apply server event
     // truth last so account recovery cannot roll progress or reward state back.
     await refreshCosmicEventState();
     const dailySense = refillDailySense();
     if (dailySense.refilled) saveProfile({ cloud: false });
     state.cloudReady = true;
-    if (state.cloudDirty) scheduleCloudProfileSync({ changed: false, delay: 250 });
+    if (config.cloudProfileEnabled === true && state.cloudDirty) {
+      scheduleCloudProfileSync({ changed: false, delay: 250 });
+    }
     announcePendingScoreRecovery(await retryPendingScoreUploads());
     message.textContent = "";
     $("#recoverCodeInput").value = "";
@@ -2006,11 +2557,12 @@ async function loadConfig() {
   }
   renderCreditPacks();
   $("#rewardWish").hidden = !(COMMERCE_LAUNCH_READY && config.rewardedAdsEnabled && adsAdapter()?.showRewarded);
+  renderProfile();
 }
 
 async function fetchJson(url, options = {}, timeout = 20000) {
   if (isStaticBeta) {
-    localRuntimePromise ||= import("./local-beta.mjs?v=3.3.0-beta.1");
+    localRuntimePromise ||= import("./local-beta.mjs?v=5.0.0-beta.1");
     const runtime = await localRuntimePromise;
     return runtime.localRequest(url, options);
   }
@@ -2116,66 +2668,16 @@ function track(name, properties = {}) {
   } catch { /* Analytics must never interrupt play. */ }
 }
 
-let feedbackAudioContext = null;
-
 function primeFeedbackAudio() {
-  const preferences = sanitizeFeedbackPreferences(profile.feedbackPreferences);
-  if (!preferences.sound) return null;
-  const AudioContextClass = globalThis.AudioContext || globalThis.webkitAudioContext;
-  if (!AudioContextClass) return null;
-  try {
-    feedbackAudioContext ||= new AudioContextClass();
-    if (feedbackAudioContext.state === "suspended") feedbackAudioContext.resume().catch(() => {});
-    return feedbackAudioContext;
-  } catch {
-    return null;
-  }
+  return gameAudio.prime();
 }
 
-function playFeedback(cue, { analytics = false } = {}) {
-  const context = primeFeedbackAudio();
-  const policy = feedbackCuePolicy(cue, profile.feedbackPreferences, {
-    audioAvailable: Boolean(context),
-    hapticsAvailable: typeof navigator.vibrate === "function",
-    documentHidden: document.hidden,
-    reducedMotion: matchMedia("(prefers-reduced-motion: reduce)").matches
-  });
-  const audio = transformFeedbackAudio(policy.audio, profile.cosmetics?.sound || "cosmic");
-  if (audio && context) {
-    const start = context.currentTime + .005;
-    const slice = Math.max(.025, audio.duration / 1000 / audio.tones.length);
-    audio.tones.forEach((frequency, index) => {
-      const oscillator = context.createOscillator();
-      const gain = context.createGain();
-      const at = start + slice * index;
-      oscillator.type = audio.wave;
-      oscillator.frequency.setValueAtTime(frequency, at);
-      gain.gain.setValueAtTime(.0001, at);
-      gain.gain.exponentialRampToValueAtTime(audio.gain, at + Math.min(.018, slice / 3));
-      gain.gain.exponentialRampToValueAtTime(.0001, at + slice);
-      oscillator.connect(gain).connect(context.destination);
-      oscillator.start(at);
-      oscillator.stop(at + slice + .01);
-    });
-  }
-  if (policy.haptic) {
-    try { navigator.vibrate(policy.haptic); } catch { /* Haptics are optional. */ }
-  }
-  if (analytics && (audio || policy.haptic)) {
-    const kind = cue === "reject" ? "rejection" : cue === "twist" ? "twist" : cue === "target" ? "target" : cue === "mastery" ? "discovery" : cue === "place" || cue === "sense" || cue === "ghostPass" ? "ui" : "fusion";
+function playFeedback(cue, { analytics = false, soundTheme = profile.cosmetics?.soundTheme, ...options } = {}) {
+  const played = gameAudio.playFeedback(cue, { ...options, soundTheme });
+  if (analytics && (played.audio || played.haptic)) {
+    const kind = ({ reject: "rejection", twist: "twist", target: "target", mastery: "discovery", collectionUnlock: "discovery", place: "ui", uiSelect: "ui", sense: "ui", ghostPass: "ui" })[cue] || "fusion";
     track("fusion_feedback_played", { kind });
   }
-}
-
-function toggleFeedbackPreference(kind) {
-  const preferences = sanitizeFeedbackPreferences(profile.feedbackPreferences);
-  if (kind === "sound") preferences.sound = !preferences.sound;
-  if (kind === "haptics") preferences.haptics = !preferences.haptics;
-  profile.feedbackPreferences = preferences;
-  saveProfile({ fields: ["settings"] });
-  track(kind === "sound" ? "audio_toggled" : "haptic_toggled", { enabled: preferences[kind] });
-  if (kind === "sound" && preferences.sound) playFeedback("place");
-  else if (kind === "haptics" && preferences.haptics) playFeedback("place");
 }
 
 function firstOrbitActive() {
@@ -2210,7 +2712,7 @@ function syncFirstOrbitGuide() {
   $("#orbitLessonLabel").innerHTML = second
     ? '<i aria-hidden="true">◇</i> PRACTICE'
     : '<i aria-hidden="true">&#10022;</i> LEARN TO PLAY';
-  $("#skipFirstOrbit").textContent = second ? "Leave" : "Skip";
+  $("#skipFirstOrbit").textContent = second ? "Leave" : "Exit";
   $("#firstOrbitStep").textContent = `${progress.index + 1} of ${progress.total}`;
   $("#firstOrbitGuideTitle").textContent = step.title;
   $("#firstOrbitInstruction").textContent = step.instruction;
@@ -2240,118 +2742,78 @@ function rememberFirstOrbitSeen() {
   saveProfile({ fields: ["firstOrbit"] });
 }
 
-function firstOrbitGame() {
-  return {
-    mode: "training",
-    modeName: "First Orbit · Training",
-    target: "Wall",
-    emoji: "🧱",
-    starters: ["Earth", "Water", "Fire", "Air"],
-    seed: 101,
-    tier: 1,
-    timeLimit: null,
-    moveLimit: null,
-    law: null,
-    aiEnabled: false,
-    universe: selectUniverse(101),
-    scoreEligible: false,
-    rewardEligible: false,
-    ranked: false,
-    training: true
-  };
-}
-
-function secondOrbitGame() {
-  return {
-    mode: "second-orbit",
-    modeName: "Second Orbit · Lesson",
-    target: "Mountain",
-    emoji: "⛰️",
-    starters: ["Earth", "Water", "Fire", "Air"],
-    seed: 202,
-    tier: 1,
-    timeLimit: null,
-    moveLimit: null,
-    law: null,
-    aiEnabled: false,
-    universe: selectUniverse(202),
-    scoreEligible: false,
-    rewardEligible: false,
-    leaderboardEligible: false,
-    ranked: false,
-    training: true
-  };
-}
-
-function startFirstOrbit() {
+async function startFirstOrbit({ enterThroughGate = true } = {}) {
   if (state.startingRun) return;
+  state.startingRun = true;
   rememberFirstOrbitSeen();
   if (els.profileDialog.open) els.profileDialog.close();
+  closeHubMenu();
   const startedAt = new Date().toISOString();
   track("first_orbit_started", { replay: Boolean(profile.firstOrbit.completed) });
-  startWithGame(firstOrbitGame(), {
-    id: `training-${sessionId}-${Date.now()}`,
-    token: "local-training",
-    ranked: false,
-    localOnly: true,
-    startedAt,
-    deadlineAt: null,
-    assist: "training",
-    assisted: true,
-    scoreEligible: false,
-    rewardEligible: false,
-    leaderboardEligible: false
-  });
-  syncFirstOrbitGuide();
-  requestAnimationFrame(() => els.wordList.querySelector(".inventory-word.tutorial-hot")?.focus({ preventScroll: true }));
+  try {
+    await startWithGame(createFirstOrbitGame(selectUniverse(101)), {
+      id: `training-${sessionId}-${Date.now()}`,
+      token: "local-training",
+      ranked: false,
+      localOnly: true,
+      startedAt,
+      deadlineAt: null,
+      assist: "training",
+      assisted: true,
+      scoreEligible: false,
+      rewardEligible: false,
+      leaderboardEligible: false
+    }, { enterThroughGate });
+    syncFirstOrbitGuide();
+    if (!enterThroughGate) {
+      requestAnimationFrame(() => {
+        els.wordList.querySelector(".inventory-word.tutorial-hot")?.focus({ preventScroll: true });
+      });
+    }
+  } finally {
+    state.startingRun = false;
+  }
 }
 
-function startSecondOrbit() {
+async function startSecondOrbit({ enterThroughGate = true } = {}) {
   if (state.startingRun || (!profile.firstOrbit.completed && profile.wins === 0)) return;
+  state.startingRun = true;
   profile.secondOrbit = { ...sanitizeSecondOrbitState(profile.secondOrbit), seen: true };
   saveProfile({ cloud: false });
   if (els.profileDialog.open) els.profileDialog.close();
+  closeHubMenu();
   track("second_orbit_started", { replay: Boolean(profile.secondOrbit.completed) });
-  startWithGame(secondOrbitGame(), null);
-  syncFirstOrbitGuide();
-  requestAnimationFrame(() => els.wordList.querySelector(".inventory-word.tutorial-hot")?.focus({ preventScroll: true }));
+  try {
+    await startWithGame(createSecondOrbitGame(selectUniverse(202)), null, { enterThroughGate });
+    syncFirstOrbitGuide();
+  } finally {
+    state.startingRun = false;
+  }
 }
 
-function openFirstOrbitBriefing(trigger = null) {
-  openMissionBriefing(firstOrbitGame(), { mode: "training", training: true }, trigger);
-  if (state.pendingMission) state.pendingMission.training = true;
-}
-
-function openSecondOrbitBriefing(trigger = null) {
-  openMissionBriefing(secondOrbitGame(), { mode: "second-orbit", localLesson: true }, trigger);
-  if (state.pendingMission) state.pendingMission.secondOrbit = true;
-}
-
-function startExplore() {
+async function startExplore({ enterThroughGate = true } = {}) {
   if (state.startingRun) return;
+  state.startingRun = true;
   const game = exploreGame(Math.floor(Math.random() * 1_000_000));
   game.universe = selectUniverse(game.seed);
   track("explore_started", { discoveries: profile.discovered.length });
-  startWithGame(game, null);
-}
-
-function openExploreBriefing(trigger = null) {
-  const game = exploreGame(Math.floor(Math.random() * 1_000_000));
-  game.universe = selectUniverse(game.seed);
-  openMissionBriefing(game, { mode: "explore", localSandbox: true }, trigger);
-  if (state.pendingMission) state.pendingMission.explore = true;
+  try {
+    await startWithGame(game, null, { enterThroughGate });
+  } finally {
+    state.startingRun = false;
+  }
 }
 
 function skipFirstOrbit() {
   if (secondOrbitActive()) {
     returnHome();
-    showToast("Second Orbit paused · replay it anytime from your profile.");
+    showToast("Second Orbit paused · replay it anytime from Menu → Settings.");
     return;
   }
   if (!firstOrbitActive()) return;
   rememberFirstOrbitSeen();
   returnHome();
-  showToast("Training skipped · replay it anytime from your profile.");
+  showToast("Your first game is still waiting · it will open again next time.");
 }
 
 function presentMissionBriefing() {
@@ -2394,7 +2856,14 @@ function openMissionBriefing(game, request, trigger = null, context = null) {
     : journeyContext?.kind === "voyage"
       ? "This target is part of your story."
       : "";
-  state.pendingMission = { game, request: { ...request }, trigger, context: journeyContext, returnToModes: !els.gameScreen.hidden };
+  state.pendingMission = {
+    game,
+    runId: state.run?.id || "",
+    request: { ...request },
+    trigger,
+    context: journeyContext,
+    postLoad: true
+  };
   $("#missionBriefingMode").textContent = journeyKindLabel || briefing.modeLabel;
   $("#missionBriefingEmoji").textContent = briefing.emoji;
   $("#missionBriefingTarget").textContent = briefing.target;
@@ -2419,15 +2888,25 @@ function openMissionBriefing(game, request, trigger = null, context = null) {
   missionIqRule.hidden = !runIqApplies(briefing.mode, briefing.target, {
     scoreEligible: game.scoreEligible !== false
   });
-  els.missionAdaptiveNote.hidden = game.adaptive !== true;
-  els.missionAdaptiveNote.classList.toggle("is-surge", game.adaptiveSurge === true || game.surge === true);
-  els.missionAdaptiveNote.textContent = game.adaptive === true
-    ? game.promotion?.active
-      ? `Promotion ${game.promotion.attempt} of ${game.promotion.attemptsTotal}. Win ${game.promotion.winsRequired} games to reach ${game.promotion.targetRank?.name || "the next rank"}.`
-      : game.adaptiveSurge === true || game.surge === true
-      ? "Surge: one much harder game. Miss it and your normal level stays safe. A perfect 200 Run IQ win keeps the harder level."
-      : game.adaptiveMessage || "Matched to you. Win three games to move up; stop one early and the next game gets easier."
-    : "";
+  const difficultChallenge = game.difficultyTag === "Difficult";
+  const pathGuardActive = pathGuardActiveFor(game, state.run);
+  els.missionAdaptiveNote.hidden = !difficultChallenge && !pathGuardActive;
+  els.missionAdaptiveNote.classList.toggle("is-difficult", difficultChallenge);
+  els.missionAdaptiveNote.classList.toggle("path-guard-note", pathGuardActive);
+  els.missionAdaptiveNote.textContent = [
+    difficultChallenge ? "Difficult" : "",
+    pathGuardActive ? "Path Guard on" : ""
+  ].filter(Boolean).join(" · ");
+  els.missionAdaptiveNote.setAttribute(
+    "aria-label",
+    [
+      difficultChallenge ? "This is a difficult challenge." : "",
+      pathGuardActive ? "Path Guard locks route-diverging pairings without using a move." : ""
+    ].filter(Boolean).join(" ")
+  );
+  els.missionAdaptiveNote.title = pathGuardActive
+    ? "Route-diverging pairings are locked without using a move."
+    : difficultChallenge ? "This is a difficult challenge." : "";
   renderMissionRemixes(game);
   $("#missionBriefingInteraction").textContent = briefing.interactionRule;
   $("#missionBriefingModeRule").textContent = briefing.modeRule;
@@ -2445,7 +2924,7 @@ function openMissionBriefing(game, request, trigger = null, context = null) {
   status.classList.remove("error");
   $("#beginMission").disabled = false;
   $("#cancelMission").disabled = false;
-  $("#beginMission span").textContent = "Play";
+  $("#beginMission span").textContent = "Start";
   els.missionBriefingDialog.scrollTop = 0;
   $("#missionBriefingScroll").scrollTop = 0;
   presentMissionBriefing();
@@ -2453,12 +2932,7 @@ function openMissionBriefing(game, request, trigger = null, context = null) {
 
 function cancelMissionBriefing() {
   if (state.startingRun || !state.pendingMission) return;
-  const pending = state.pendingMission;
-  state.pendingMission = null;
-  if (els.missionBriefingDialog.open) els.missionBriefingDialog.close("cancel");
-  track("mission_briefing_dismissed", { mode: pending.game.mode, target: pending.game.target });
-  if (pending.returnToModes) returnHome();
-  else requestAnimationFrame(() => pending.trigger?.focus?.({ preventScroll: true }));
+  requestAnimationFrame(() => $("#beginMission").focus({ preventScroll: true }));
 }
 
 async function createRun(request) {
@@ -2470,115 +2944,104 @@ async function createRun(request) {
   });
 }
 
-async function requestMissionPreview(request) {
-  if (!profile.playerId || !profile.playerToken) await ensurePlayer();
-  const preview = await fetchJson("/api/run/preview", {
-    method: "POST",
-    headers: authHeaders({ "Content-Type": "application/json" }),
-    body: JSON.stringify(request)
-  });
-  applyServerPlayer(preview.player);
-  return {
-    game: preview.game,
-    request: { ...request, previewToken: preview.previewToken }
-  };
-}
-
-async function rebuildCustomMission(request) {
-  const game = await fetchJson("/api/custom-target", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ target: request.target })
-  }, 45000);
-  return {
-    mode: "reach",
-    seed: game.seed,
-    target: game.target,
-    custom: true
-  };
-}
-
-async function refreshMissionPreview(pending) {
-  const request = { ...pending.request };
-  delete request.previewToken;
-  try {
-    return await requestMissionPreview(request);
-  } catch (error) {
-    if (!request.custom || error.code !== "target_unavailable") throw error;
-    return requestMissionPreview(await rebuildCustomMission(request));
+async function activateTimedRun(run) {
+  if (!run?.activationPending) return run;
+  let failure = null;
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      const activated = await fetchJson("/api/run/activate", {
+        method: "POST",
+        headers: authHeaders({ "Content-Type": "application/json" }),
+        body: JSON.stringify({ runId: run.id, runToken: run.token })
+      });
+      applyServerPlayer(activated.player);
+      return activated.run;
+    } catch (error) {
+      failure = error;
+      if (attempt === 0) await wait(150);
+    }
   }
+  throw failure || new Error("This orbit could not begin.");
 }
 
 async function confirmMissionBriefing() {
   const pending = state.pendingMission;
   if (!pending || state.startingRun) return;
-  if (pending.training) {
-    state.pendingMission = null;
-    if (els.missionBriefingDialog.open) els.missionBriefingDialog.close("start");
-    startFirstOrbit();
-    return;
-  }
-  if (pending.secondOrbit) {
-    state.pendingMission = null;
-    if (els.missionBriefingDialog.open) els.missionBriefingDialog.close("start");
-    startSecondOrbit();
-    return;
-  }
-  if (pending.explore) {
-    state.pendingMission = null;
-    if (els.missionBriefingDialog.open) els.missionBriefingDialog.close("start");
-    startExplore();
-    return;
-  }
   const begin = $("#beginMission");
-  const cancel = $("#cancelMission");
   const status = $("#missionBriefingStatus");
   state.startingRun = true;
   begin.disabled = true;
-  cancel.disabled = true;
-  begin.querySelector("span").textContent = "Loading…";
+  begin.querySelector("span").textContent = "Starting…";
   status.classList.remove("error");
-  status.textContent = "Starting your game…";
+  status.textContent = "";
+  let recoverToHome = false;
   try {
-    if (!profile.playerId || !profile.playerToken) await ensurePlayer();
-    const started = await createRun(pending.request);
-    applyServerPlayer(started.player);
+    if (state.game !== pending.game || (pending.runId && state.run?.id !== pending.runId)) {
+      throw new Error("This game is no longer active.");
+    }
+    if (state.run?.activationPending) state.run = await activateTimedRun(state.run);
+    const clock = activatedRunClock(state.run, state.game);
+    state.startedAt = clock.startedAt;
+    state.remainingSeconds = clock.remainingSeconds;
     state.pendingMission = null;
     if (els.missionBriefingDialog.open) els.missionBriefingDialog.close("start");
-    startWithGame(started.game, started.run, { context: pending.context });
+    playFeedback("runStart");
+    updateHud();
+    scheduleRunSave();
+    if (competitiveGhostEligible()) void startRivalGhost();
+    if (state.game.timeLimit && !state.finished) startTimer();
+    track("run_started", { mode: state.game.mode, target: state.game.target, stage: state.game.stage ?? null, aiEnabled: state.game.aiEnabled });
+    requestAnimationFrame(() => els.wordList.querySelector(".inventory-word.tutorial-hot, .inventory-word")?.focus({ preventScroll: true }));
   } catch (error) {
-    if (error.code === "mission_stale") {
-      try {
-        status.classList.remove("error");
-        status.textContent = "The target changed. Loading the new one…";
-        begin.querySelector("span").textContent = "Loading…";
-        const refreshed = await refreshMissionPreview(pending);
-        openMissionBriefing(refreshed.game, refreshed.request, pending.trigger, pending.context);
-        $("#missionBriefingStatus").textContent = "The new target is ready.";
-        return;
-      } catch (refreshError) {
-        error = refreshError;
-      }
+    if (isPermanentActivationFailure(error)) {
+      recoverToHome = true;
+      state.pendingMission = null;
+      clearActiveRunSnapshot();
+      status.classList.add("error");
+      status.textContent = "That game is no longer available.";
+    } else {
+      status.classList.add("error");
+      status.textContent = error.message || "This game could not start. Try again.";
+      begin.disabled = false;
+      begin.querySelector("span").textContent = "Try again";
     }
-    status.classList.add("error");
-    status.textContent = error.message;
-    begin.disabled = false;
-    cancel.disabled = false;
-    begin.querySelector("span").textContent = "Try again";
   } finally {
     state.startingRun = false;
-    if (state.game) { updateHud(); updateBoardTools(); }
+    if (recoverToHome) {
+      returnHome({ skipForfeit: true });
+      showToast("That game expired. Choose Play to start a fresh one.", { scope: "global" });
+    } else if (state.game) {
+      updateHud();
+      updateBoardTools();
+    }
   }
 }
 
 async function beginMode(mode, options = {}) {
   if (state.startingRun) return;
+  const menu = homeMenuState();
+  if (mode === "daily" && !menu.dailyReady) {
+    showToast("Today’s Word unlocks after your first scored Bronze win.", { scope: "global" });
+    return;
+  }
+  if (["quick", "moves"].includes(mode) && currentRouteRank().rank.number < 3) {
+    showToast("Timed and limited-move games unlock at Gold.");
+    return;
+  }
+  if (mode === "explore" && !menu.exploreReady) {
+    showToast("Free play unlocks at Silver Route Rank after three completed games.");
+    return;
+  }
+  if (mode === "weekly" && !menu.adventuresReady) {
+    showToast("Adventures unlock at Gold Route Rank after 10 completed games.");
+    return;
+  }
   if (mode === "second-orbit") {
-    openSecondOrbitBriefing(options.trigger || document.querySelector('[data-mode="second-orbit"]'));
+    await startSecondOrbit({ enterThroughGate: true });
     return;
   }
   if (mode === "explore") {
-    openExploreBriefing(options.trigger || document.querySelector('[data-mode="explore"]'));
+    await startExplore({ enterThroughGate: true });
     return;
   }
   if (mode === "daily" && profile.dailyCompleted === todayKey) return;
@@ -2592,22 +3055,15 @@ async function beginMode(mode, options = {}) {
   if (button) button.disabled = true;
   if (label) label.textContent = "Loading…";
   try {
-    const seed = options.seed ?? (mode === "daily" ? Math.floor(Date.now() / 86_400_000) : mode === "weekly" ? currentWeekSeed() : Math.floor(Math.random() * 1_000_000));
-    const request = {
+    if (state.forfeitPromise) await state.forfeitPromise;
+    await enterPreparedMission(() => ({
       mode,
-      seed,
+      seed: options.seed ?? (mode === "daily" ? Math.floor(Date.now() / 86_400_000) : mode === "weekly" ? currentWeekSeed() : Math.floor(Math.random() * 1_000_000)),
       target: options.target || "",
       stage: mode === "weekly" ? profile.weekly.stage : undefined,
       ...adaptiveRequestFor(mode, options)
-    };
-    if (options.skipBriefing) {
-      const started = await createRun(request);
-      applyServerPlayer(started.player);
-      startWithGame(started.game, started.run, { context: options.context });
-    } else {
-      const preview = await requestMissionPreview(request);
-      openMissionBriefing(preview.game, preview.request, trigger, options.context);
-    }
+    }), { context: options.context, trigger });
+    state.recoveryTarget = "";
   } catch (error) {
     showToast(error.message);
   } finally {
@@ -2621,21 +3077,25 @@ async function beginMode(mode, options = {}) {
 async function beginCustomTarget(event) {
   event.preventDefault();
   if (state.startingRun) return;
+  if (!homeMenuState().exploreReady) {
+    showToast("Custom targets unlock with Free play at Silver Route Rank.");
+    return;
+  }
   const input = $("#customTarget");
   const target = input.value.trim();
   if (!target) return;
   const submit = event.currentTarget.querySelector("button");
   state.startingRun = true;
   submit.disabled = true;
-  els.targetMessage.textContent = "Building a guaranteed route…";
+  els.targetMessage.textContent = "Opening your game…";
   try {
-    const game = await fetchJson("/api/custom-target", {
-      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ target })
-    }, 45000);
-    const request = { mode: "reach", seed: game.seed, target: game.target, custom: true };
-    const preview = await requestMissionPreview(request);
+    await enterPreparedMission(async () => {
+      const game = await fetchJson("/api/custom-target", {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ target })
+      }, 45000);
+      return { mode: "reach", seed: game.seed, target: game.target, custom: true };
+    }, { trigger: submit });
     els.targetMessage.textContent = "";
-    openMissionBriefing(preview.game, preview.request, submit);
   } catch (error) {
     els.targetMessage.textContent = error.message;
   } finally {
@@ -2656,8 +3116,20 @@ function snapshotItem(item) {
   };
 }
 
+function activeRunPersistence() {
+  if (state.run?.id && state.run?.token) return state.run;
+  if (!state.game || !CLIENT_ONLY_RESUME_MODES.has(state.mode)) return null;
+  state.runPersistence ||= createClientRunPersistence({
+    game: state.game,
+    mode: state.mode,
+    startedAt: state.startedAt
+  });
+  return state.runPersistence;
+}
+
 function buildActiveRunSnapshot({ completed = false } = {}) {
-  if (!state.game || !state.run || state.mode === "training" || (state.finished && !completed) || state.reveal.active || state.reveal.pending) return null;
+  const persistenceRun = activeRunPersistence();
+  if (!state.game || state.mode === "scramble" || !persistenceRun || (state.finished && !completed) || state.reveal.active || state.reveal.pending) return null;
   const boardRect = els.board.getBoundingClientRect();
   const width = Math.max(1, boardRect.width);
   const height = Math.max(1, boardRect.height);
@@ -2668,13 +3140,18 @@ function buildActiveRunSnapshot({ completed = false } = {}) {
     game: structuredClone(state.game),
     journeyContext: state.journeyContext ? structuredClone(state.journeyContext) : null,
     run: {
-      id: state.run.id,
-      token: state.run.token,
-      startedAt: state.run.startedAt,
-      deadlineAt: state.run.deadlineAt,
+      id: persistenceRun.id,
+      token: persistenceRun.token,
+      startedAt: persistenceRun.startedAt,
+      deadlineAt: persistenceRun.deadlineAt,
+      activationPending: Boolean(persistenceRun.activationPending),
       assist: state.assist,
-      scoreEligible: state.run.scoreEligible !== false && !state.scoringDisabled,
-      scoreMultiplier: state.scoreMultiplier
+      scoreEligible: persistenceRun.scoreEligible !== false && !state.scoringDisabled,
+      scoreMultiplier: state.scoreMultiplier,
+      ranked: Boolean(persistenceRun.ranked),
+      localOnly: Boolean(persistenceRun.localOnly),
+      clientOnly: CLIENT_ONLY_RESUME_MODES.has(state.mode),
+      hasRuntimeRun: Boolean(state.run?.id && state.run?.token)
     },
     progress: {
       moves: state.moves,
@@ -2687,12 +3164,14 @@ function buildActiveRunSnapshot({ completed = false } = {}) {
       bendItem: snapshotItem(bendItem),
       tipsUsed: clamp(Number(state.powerups.tipsUsed) || 0, 0, QUICK_TIP_LIMIT),
       tipIds: state.powerups.tipIds.slice(0, QUICK_TIP_LIMIT),
+      currentTip: sanitizeHintObjective(state.powerups.currentTip),
       giftUsed: Boolean(state.powerups.giftUsed),
       giftUnavailable: Boolean(state.powerups.giftUnavailable),
       giftItem: snapshotItem(state.powerups.giftItem),
       assist: state.assist,
       scoringDisabled: state.scoringDisabled,
       scoreMultiplier: state.scoreMultiplier,
+      pathGuardBlockedPairs: [...state.pathGuard.blockedPairs].slice(-MAX_PATH_GUARD_PAIRS),
       runIq: sanitizeRunIqState(state.runIq)
     },
     visuals: {
@@ -2732,7 +3211,9 @@ function saveCompletedRunSnapshot() {
   clearTimeout(runSaveTimer);
   runSaveTimer = null;
   const snapshot = buildActiveRunSnapshot({ completed: true });
-  if (!snapshot) return { activeSaved: false, pendingSaved: false };
+  if (!snapshot || snapshot.run.clientOnly === true || snapshot.run.ranked !== true) {
+    return { activeSaved: false, pendingSaved: false };
+  }
   // The compact, per-run credential is the critical durable copy. Write it
   // before the larger visual snapshot so a nearly-full store preserves score
   // recovery even when it cannot preserve the whole board.
@@ -2745,7 +3226,7 @@ function saveCompletedRunSnapshot() {
 
 function scheduleRunSave() {
   clearTimeout(runSaveTimer);
-  if (!state.game || !state.run || state.mode === "training" || state.finished || state.reveal.active || state.reveal.pending) return;
+  if (!state.game || state.mode === "scramble" || !activeRunPersistence() || state.finished || state.reveal.active || state.reveal.pending) return;
   runSaveTimer = setTimeout(flushRunSave, 180);
 }
 
@@ -2775,7 +3256,14 @@ function readPendingScores() {
 }
 
 function rememberPendingScore(snapshot) {
-  if (isStaticBeta || !profile.playerId || !snapshot?.run?.id || !snapshot?.run?.token) return false;
+  if (
+    isStaticBeta
+    || snapshot?.run?.clientOnly === true
+    || snapshot?.run?.ranked !== true
+    || !profile.playerId
+    || !snapshot?.run?.id
+    || !snapshot?.run?.token
+  ) return false;
   return savePendingScoreRecord(localStorage, {
     version: 1,
     savedAt: snapshot.savedAt,
@@ -2866,8 +3354,7 @@ function announcePendingScoreRecovery({ uploaded = 0, discarded = 0 } = {}) {
 function readActiveRunSnapshot() {
   try {
     const snapshot = JSON.parse(localStorage.getItem(ACTIVE_RUN_KEY) || "null");
-    const savedAt = Date.parse(snapshot?.savedAt);
-    if (snapshot?.version !== 1 || !snapshot?.run?.id || !snapshot?.run?.token || !snapshot?.game || !Number.isFinite(savedAt) || Date.now() - savedAt > 7 * 86400000) {
+    if (!activeRunSnapshotIsValid(snapshot)) {
       if (snapshot) clearActiveRunSnapshot();
       return null;
     }
@@ -2876,6 +3363,19 @@ function readActiveRunSnapshot() {
     clearActiveRunSnapshot();
     return null;
   }
+}
+
+async function enterPreparedMission(prepare, { context = null, trigger = null } = {}) {
+  return enterPreparedRun({
+    gate: cosmicGate,
+    prepare,
+    create: createRun,
+    commit: (started) => {
+      applyServerPlayer(started.player);
+      startWithGameNow(started.game, started.run, { context, deferTimer: true });
+    },
+    ready: (started, request) => openMissionBriefing(started.game, request, trigger, context)
+  });
 }
 
 function decorateRestoredHistory(rawHistory, extraKnownWords = []) {
@@ -2946,7 +3446,7 @@ function reconcileRestoredMastery(history) {
   for (const step of Array.isArray(history) ? history : []) {
     const result = recordRecipeDiscovery(mastery, {
       ...step,
-      runId: state.run?.id || sessionId,
+      runId: state.runPersistence?.id || state.run?.id || sessionId,
       assisted: step.progressionEligible !== true,
       revealed: Boolean(step.revealed)
     });
@@ -2988,7 +3488,18 @@ function hydrateRestoredRun(payload, snapshot) {
   state.wished = Boolean(progress.usedBend || progress.usedWish || progress.wished);
   state.bendItem = snapshotItem(progress.bendItem);
   state.assist = payload.run?.assist || progress.assist || "none";
-  const matchingSnapshot = snapshot?.run?.id === payload.run?.id ? snapshot.progress || {} : {};
+  const persistenceRun = state.runPersistence || state.run || payload.run;
+  const snapshotMatchesRun = Boolean(
+    snapshot?.run?.id
+    && persistenceRun?.id
+    && snapshot.run.id === persistenceRun.id
+  );
+  const matchingSnapshot = snapshotMatchesRun ? snapshot.progress || {} : {};
+  state.pathGuard.active = pathGuardActiveFor(payload.game, state.run);
+  state.pathGuard.rankId = String(payload.game?.remixes?.rank?.id || "");
+  state.pathGuard.blockedPairs = state.pathGuard.active
+    ? sanitizeRememberedPathGuardPairs(matchingSnapshot.pathGuardBlockedPairs)
+    : new Set();
   const authoritativeHistoryKeys = state.history.map((step) => `${inventoryKey(step.a)}+${inventoryKey(step.b)}=>${inventoryKey(step.word)}`);
   const snapshotHistoryKeys = (Array.isArray(matchingSnapshot.history) ? matchingSnapshot.history : [])
     .map((step) => `${inventoryKey(step?.a)}+${inventoryKey(step?.b)}=>${inventoryKey(step?.word)}`);
@@ -3012,6 +3523,7 @@ function hydrateRestoredRun(payload, snapshot) {
     );
   state.powerups.tipsUsed = clamp(Number(progress.tipsUsed ?? matchingSnapshot.tipsUsed) || 0, 0, QUICK_TIP_LIMIT);
   state.powerups.tipIds = Array.isArray(matchingSnapshot.tipIds) ? [...new Set(matchingSnapshot.tipIds.map((value) => String(value || "").slice(0, 60)).filter(Boolean))].slice(0, QUICK_TIP_LIMIT) : [];
+  state.powerups.currentTip = sanitizeHintObjective(progress.currentTip ?? matchingSnapshot.currentTip);
   state.powerups.giftUsed = Boolean(progress.giftUsed || matchingSnapshot.giftUsed || state.assist === "gift");
   state.powerups.giftUnavailable = !state.powerups.giftUsed && Boolean(matchingSnapshot.giftUnavailable);
   state.powerups.giftItem = snapshotItem(progress.giftItem) || snapshotItem(matchingSnapshot.giftItem);
@@ -3034,7 +3546,7 @@ function hydrateRestoredRun(payload, snapshot) {
   state.nextId = 1;
   state.topZ = 10;
   resetBoardHistory();
-  if (snapshot?.run?.id === payload.run?.id && Array.isArray(snapshot?.visuals?.nodes)) {
+  if (snapshotMatchesRun && Array.isArray(snapshot?.visuals?.nodes)) {
     for (const savedNode of snapshot.visuals.nodes.slice(0, MAX_BOARD_NODES)) {
       const item = byWord.get(inventoryKey(savedNode?.word));
       if (!item) continue;
@@ -3060,31 +3572,67 @@ function hydrateRestoredRun(payload, snapshot) {
   renderAtlas();
   updateHud();
   updateMilestone(Boolean(progress.completed));
+  renderCombinationStory();
+  syncFirstOrbitGuide();
   scheduleRunSave();
 }
 
 async function restoreInterruptedRun(snapshot) {
+  if (startupScramblePreemptsResume) return false;
   if (!snapshot) return false;
   try {
+    if (snapshot.run.clientOnly === true) {
+      const payload = clientOnlyRestorePayload(snapshot);
+      if (!payload) {
+        clearActiveRunSnapshot();
+        return false;
+      }
+      startWithGame(payload.game, payload.run, {
+        restored: true,
+        context: null,
+        deferTimer: false,
+        persistenceRun: payload.persistenceRun
+      });
+      hydrateRestoredRun(payload, snapshot);
+      showToast(`Restored your ${payload.game.mode === "explore" ? "free exploration" : "lesson"}.`);
+      track("run_restored", {
+        mode: payload.game.mode,
+        target: payload.game.target,
+        moves: state.moves,
+        source: "client"
+      });
+      return true;
+    }
+    const pendingActivation = snapshot.run.activationPending === true;
     const payload = await fetchJson("/api/run/resume", {
       method: "POST",
       headers: authHeaders({ "Content-Type": "application/json" }),
       body: JSON.stringify(isStaticBeta
-        ? { runId: snapshot.run.id, runToken: snapshot.run.token, snapshot }
-        : { runId: snapshot.run.id, runToken: snapshot.run.token })
+        ? { runId: snapshot.run.id, runToken: snapshot.run.token, snapshot, deferActivation: pendingActivation }
+        : { runId: snapshot.run.id, runToken: snapshot.run.token, deferActivation: pendingActivation })
     });
     applyServerPlayer(payload.player);
+    const restoreObjective = shouldRestoreObjective(snapshot, payload.run);
     const restoredEvent = applyAuthoritativeEventPayload(payload);
-    startWithGame(payload.game, payload.run, { restored: true, context: snapshot.journeyContext });
+    startWithGame(payload.game, payload.run, {
+      restored: true,
+      context: snapshot.journeyContext,
+      deferTimer: restoreObjective
+    });
     hydrateRestoredRun(payload, snapshot);
     if (restoredEvent?.reward?.claimable) {
       try { await claimCurrentCosmicEventReward(restoredEvent.event); }
       catch { /* Reconnect refresh retries the server-side idempotent claim. */ }
     }
-    showToast(`Restored your path to ${payload.game.target}.`);
+    if (restoreObjective) {
+      openMissionBriefing(payload.game, { mode: payload.game.mode }, null, snapshot.journeyContext);
+      showToast(`Your game is ready. Start when you are ready.`);
+    } else {
+      showToast(`Restored your path to ${payload.game.target}.`);
+    }
     track("run_restored", { mode: payload.game.mode, target: payload.game.target, moves: state.moves });
     if (payload.progress?.completed) requestAnimationFrame(() => finishGame(true, "", { skipSubmit: Boolean(payload.progress.submitted) }));
-    else if (payload.run?.deadlineAt && Date.parse(payload.run.deadlineAt) <= Date.now()) requestAnimationFrame(() => finishGame(false, "Time is up."));
+    else if (!restoreObjective && payload.run?.deadlineAt && Date.parse(payload.run.deadlineAt) <= Date.now()) requestAnimationFrame(() => finishGame(false, "Time is up."));
     return true;
   } catch (error) {
     if (["invalid_run", "run_expired", "run_missing", "resume_mismatch", "resume_invalid"].includes(error.code) || [401, 404, 409, 410, 422].includes(error.status)) clearActiveRunSnapshot();
@@ -3114,7 +3662,93 @@ function reusableExploreInventory() {
   return sanitizeExploreInventory(profile.exploreWords, described);
 }
 
-function startWithGame(game, run, { restored = false, context = null } = {}) {
+function startWithGame(game, run, {
+  restored = false,
+  context = null,
+  enterThroughGate = false,
+  deferTimer = false,
+  persistenceRun = null
+} = {}) {
+  const shouldEnterThroughGate = Boolean(enterThroughGate && !restored);
+  if (!shouldEnterThroughGate) {
+    if (persistenceRun) {
+      startWithGameNow(game, run, { restored, context, deferTimer, persistenceRun });
+    } else {
+      startWithGameNow(game, run, { restored, context, deferTimer });
+    }
+    return Promise.resolve(false);
+  }
+  const label = game.mode === "explore"
+    ? "The board is ready."
+    : `Find ${game.target}.`;
+  return cosmicGate.enterBoard(
+    () => startWithGameNow(game, run, {
+      restored,
+      context,
+      deferTimer: true,
+      persistenceRun
+    }),
+    {
+      label,
+      afterOpen: () => openMissionBriefing(game, { mode: game.mode }, null, context)
+    }
+  );
+}
+
+function hydrateScrambleMatch(projection) {
+  if (!projection?.epochKey || !projection.game?.id || !projection.game?.target) {
+    showToast("The live match snapshot was incomplete.", { scope: "global" });
+    return false;
+  }
+  if (
+    projection.epochKey === scrambleHostEpochKey
+    && state.mode === "scramble"
+    && state.game?.id === projection.game.id
+  ) return true;
+  scrambleHostEpochKey = projection.epochKey;
+  projection.game.universe = selectUniverse(projection.game.seed);
+  startWithGameNow(projection.game, projection.run, {
+    context: { kind: "scramble", matchId: projection.game.id },
+    deferTimer: true
+  });
+  state.words = structuredClone(projection.board.words);
+  state.history = structuredClone(projection.board.history);
+  state.moves = projection.board.moves;
+  state.newDiscoveries = projection.board.newDiscoveries;
+  state.scoringDisabled = true;
+  state.scoreMultiplier = 0;
+  renderInventory();
+  renderBoard();
+  updateHud();
+  clearActiveRunSnapshot();
+  requestAnimationFrame(() => els.wordList.querySelector(".inventory-word")?.focus({ preventScroll: true }));
+  return true;
+}
+
+function finishScrambleMatch() {
+  if (state.mode !== "scramble" || !state.game) return;
+  cancelActiveTrayDrag();
+  cancelActiveBoardDrag();
+  cancelActivePointerGestures();
+  cancelTapChain();
+  ctrlHover.reset({ abandonPending: true });
+  shiftBoard.reset();
+  state.finished = true;
+  state.pause.active = false;
+  state.finishedElapsedSeconds = Math.max(1, Math.round((Date.now() - state.startedAt) / 1_000));
+  stopTimer();
+  clearActiveRunSnapshot();
+  els.gameScreen.classList.remove("orbit-paused");
+  els.gameScreen.classList.add("scramble-finished");
+  gameAudio.setScene("result");
+}
+
+function startWithGameNow(game, run, {
+  restored = false,
+  context = null,
+  deferTimer = false,
+  persistenceRun = null
+} = {}) {
   game.universe ||= selectUniverse(game.seed);
   cancelActiveTrayDrag();
   cancelActiveBoardDrag();
@@ -3131,6 +3765,9 @@ function startWithGame(game, run, { restored = false, context = null } = {}) {
     .forEach((dialog) => { if (dialog?.open) dialog.close(); });
   state.game = game;
   state.run = run;
+  state.runPersistence = persistenceRun;
+  state.focusMode = homeMenuState().focusMode;
+  if (game.mode === "scramble") state.focusMode = false;
   state.adaptiveOutcomeRecorded = false;
   state.adaptiveNotice = null;
   state.routeRankNotice = null;
@@ -3169,8 +3806,12 @@ function startWithGame(game, run, { restored = false, context = null } = {}) {
       });
   state.nodes = [];
   state.history = [];
+  resetCombinationStory();
+  resetGoldenPairAnimations();
   resetBoardHistory();
   state.trails = [];
+  state.dragTrailSamples = [];
+  state.fusionBursts = [];
   state.moves = 0;
   state.newDiscoveries = 0;
   state.nextId = 1;
@@ -3186,13 +3827,24 @@ function startWithGame(game, run, { restored = false, context = null } = {}) {
   state.wished = false;
   state.bendItem = null;
   state.rewardedWish = false;
-  state.powerups = { tipsUsed: 0, tipIds: [], giftUsed: false, giftUnavailable: false, giftItem: null, busy: false };
+  state.powerups = { tipsUsed: 0, tipIds: [], currentTip: "", giftUsed: false, giftUnavailable: false, giftItem: null, busy: false };
+  state.pathGuard = {
+    version: PATH_GUARD_VERSION,
+    active: pathGuardActiveFor(game, run),
+    rankId: String(game.remixes?.rank?.id || ""),
+    blockedPairs: new Set()
+  };
   state.expectedPairReports = new Set();
   clearArmedPowerup({ render: false });
   resetPowerupControlLabels();
-  state.startedAt = run?.startedAt ? Date.parse(run.startedAt) : Date.now();
+  state.startedAt = run?.startedAt
+    ? Date.parse(run.startedAt)
+    : persistenceRun?.startedAt
+      ? Date.parse(persistenceRun.startedAt)
+      : Date.now();
   state.finishedElapsedSeconds = 0;
   state.remainingSeconds = run?.deadlineAt ? Math.max(0, Math.ceil((Date.parse(run.deadlineAt) - Date.now()) / 1000)) : game.timeLimit || 0;
+  state.timerWarningPlayed = false;
   state.resultAction = null;
   state.resultMasteryNotice = "";
   clearGlobalToast();
@@ -3200,15 +3852,22 @@ function startWithGame(game, run, { restored = false, context = null } = {}) {
   els.board.classList.remove("reveal-complete");
   els.startScreen.hidden = true;
   els.gameScreen.hidden = false;
+  gameAudio.setIntensity(0);
+  gameAudio.setScene("run");
   els.gameScreen.classList.toggle("training-orbit", game.mode === "training");
   els.gameScreen.classList.toggle("second-orbit", game.mode === "second-orbit");
   els.gameScreen.classList.toggle("explore-orbit", game.mode === "explore");
-  els.gameScreen.classList.toggle("first-ranked-orbit", !["training", "second-orbit", "explore"].includes(game.mode) && profile.wins === 0);
+  els.gameScreen.classList.toggle("scramble-orbit", game.mode === "scramble");
+  els.gameScreen.classList.toggle("focus-orbit", state.focusMode);
+  els.gameScreen.classList.toggle("first-ranked-orbit", !["training", "second-orbit", "explore", "scramble"].includes(game.mode) && profile.wins === 0);
   els.gameScreen.classList.remove("orbit-paused");
   els.board.scrollTop = 0;
   els.board.scrollLeft = 0;
   els.modeName.textContent = missionModeLabel(game);
+  $("#objectiveVerb").textContent = String(game.objectiveVerb || "Make");
   els.targetWord.textContent = game.mode === "explore" ? "Anything" : game.target;
+  els.difficultyPill.hidden = game.difficultyTag !== "Difficult";
+  els.difficultyPill.textContent = game.difficultyTag === "Difficult" ? "Difficult" : "";
   els.universePill.hidden = ["training", "second-orbit"].includes(game.mode);
   els.universePill.textContent = ["training", "second-orbit"].includes(game.mode) ? "" : `${game.universe.icon} ${game.universe.name} · ${game.universe.season.name}`;
   els.universePill.title = ["training", "second-orbit"].includes(game.mode) ? "" : `${game.universe.law.name}: ${game.universe.law.description}`;
@@ -3235,20 +3894,26 @@ function startWithGame(game, run, { restored = false, context = null } = {}) {
   syncRankBoardArt();
   syncFirstOrbitGuide();
   requestAnimationFrame(startCosmos);
-  if (competitiveGhostEligible()) void startRivalGhost();
+  void prepareGoldenPairAnimations();
+  if (!deferTimer && competitiveGhostEligible()) void startRivalGhost();
   requestAnimationFrame(() => {
     els.wordList.scrollTop = 0;
     els.wordList.scrollLeft = 0;
   });
-  if (game.timeLimit) startTimer();
-  scheduleRunSave();
-  if (!restored) track("run_started", { mode: game.mode, target: game.target, stage: game.stage ?? null, aiEnabled: game.aiEnabled });
+  if (game.timeLimit && !deferTimer) startTimer();
+  if (game.mode === "scramble") clearActiveRunSnapshot();
+  else scheduleRunSave();
+  if (!restored && !deferTimer) {
+    playFeedback("runStart");
+    track("run_started", { mode: game.mode, target: game.target, stage: game.stage ?? null, aiEnabled: game.aiEnabled });
+  }
 }
 
 function pauseMenuAvailable() {
   const openDialog = document.querySelector("dialog[open]");
   return Boolean(
     state.game
+    && !cosmeticWorldPreviewActive()
     && !els.gameScreen.hidden
     && !state.finished
     && !state.startingRun
@@ -3256,6 +3921,7 @@ function pauseMenuAvailable() {
     && !state.reveal.pending
     && !state.busyPairs.size
     && !state.powerups.busy
+    && !cosmicGate.isActive()
     && !openDialog
   );
 }
@@ -3268,23 +3934,20 @@ function resetPauseConfirmation({ focus = false } = {}) {
   $("#pauseExit").classList.remove("is-confirming");
   $("#pauseRestart span").textContent = "Restart";
   $("#pauseExit").textContent = "Quit game";
-  if (focus && previousAction) $(previousAction === "restart" ? "#pauseRestart" : "#pauseExit").focus();
+  if (focus && previousAction === "restart") $("#pauseRestart").focus();
 }
 
-function confirmPauseAction(action) {
-  if (state.pause.confirmAction === action) return true;
-  state.pause.confirmAction = action;
-  const restart = action === "restart";
+function confirmPauseRestart() {
+  if (state.pause.confirmAction === "restart") return true;
+  state.pause.confirmAction = "restart";
   const ranked = Boolean(state.run?.ranked && !state.scoringDisabled);
   $("#pauseConfirmation").hidden = false;
-  $("#pauseConfirmationTitle").textContent = restart ? "Restart this game?" : "Quit this game?";
-  $("#pauseConfirmationText").textContent = restart
-    ? `${ranked ? "This starts a new attempt. " : ""}Your progress in this game will be lost.`
-    : `${ranked ? "This game will not post a score. " : ""}Your progress in this game will be lost.`;
-  $("#pauseRestart").classList.toggle("is-confirming", restart);
-  $("#pauseExit").classList.toggle("is-confirming", !restart);
-  $("#pauseRestart span").textContent = restart ? "Yes, restart" : "Restart";
-  $("#pauseExit").textContent = restart ? "Quit game" : "Yes, quit";
+  $("#pauseConfirmationTitle").textContent = "Restart this game?";
+  $("#pauseConfirmationText").textContent = `${ranked ? "This starts a new attempt. " : ""}Your progress in this game will be lost.`;
+  $("#pauseRestart").classList.add("is-confirming");
+  $("#pauseExit").classList.remove("is-confirming");
+  $("#pauseRestart span").textContent = "Yes, restart";
+  $("#pauseExit").textContent = "Quit game";
   return false;
 }
 
@@ -3308,6 +3971,9 @@ function populatePauseMenu() {
 }
 
 function openPauseMenu() {
+  if (state.mode === "scramble" && scrambleRuntime?.isActive()) {
+    return scrambleRuntime.requestForfeitConfirmation();
+  }
   if (!pauseMenuAvailable()) {
     if (state.busyPairs.size || state.powerups.busy) showToast("Wait for the words to finish combining.");
     return false;
@@ -3326,10 +3992,14 @@ function openPauseMenu() {
   resetPauseConfirmation();
   populatePauseMenu();
   els.gameScreen.classList.add("orbit-paused");
+  gameAudio.setScene("paused");
   renderInventory();
   renderBoard();
-  els.pauseDialog.showModal();
-  requestAnimationFrame(() => $("#resumePausedRun")?.focus({ preventScroll: true }));
+  void cosmicGate.presentDialog(els.pauseDialog, {
+    kind: "pause",
+    label: `Paused · Make ${state.game?.target || "the target"}`,
+    focus: "#resumePausedRun"
+  });
   track("run_menu_opened", { mode: state.mode, moves: state.moves });
   return true;
 }
@@ -3341,6 +4011,7 @@ function finishPauseClose() {
   pauseCloseRestoreFocus = true;
   resetPauseConfirmation();
   els.gameScreen.classList.remove("orbit-paused");
+  gameAudio.setScene(state.finished ? "result" : els.gameScreen.hidden ? "home" : "run");
   if (state.game && !state.finished) {
     renderInventory();
     renderBoard();
@@ -3349,12 +4020,15 @@ function finishPauseClose() {
   if (restoreFocus && state.game && !state.finished) requestAnimationFrame(() => $("#pauseRunButton")?.focus({ preventScroll: true }));
 }
 
-function closePauseMenu() {
+async function closePauseMenu({ immediate = false, resume = true } = {}) {
   if (!state.pause.active && !els.pauseDialog.open) return;
-  if (els.pauseDialog.open) els.pauseDialog.close();
+  if (els.pauseDialog.open) {
+    await cosmicGate.dismissDialog(els.pauseDialog, { immediate });
+    if (resume) setTimeout(resumeTimerIfNeeded, 0);
+  }
   else {
     finishPauseClose();
-    setTimeout(resumeTimerIfNeeded, 0);
+    if (resume) setTimeout(resumeTimerIfNeeded, 0);
   }
 }
 
@@ -3367,7 +4041,7 @@ function handlePauseShortcut(event) {
   if (target === els.inventorySearch) target.blur();
   if (els.pauseDialog.open) {
     event.preventDefault();
-    els.pauseDialog.close();
+    void closePauseMenu();
     return;
   }
   if (state.selectedNodeId != null) return;
@@ -3377,6 +4051,7 @@ function handlePauseShortcut(event) {
 }
 
 async function submitRunForfeit(run = state.run, game = state.game, { announce = false } = {}) {
+  if (adaptiveRunEligible(game)) state.recoveryTarget = String(game.target || "");
   if (!run?.id || !run?.token || !game || run.forfeitSubmitted || !adaptiveRunEligible(game)) return null;
   run.forfeitSubmitted = true;
   if (isStaticBeta) {
@@ -3416,14 +4091,31 @@ async function submitRunForfeit(run = state.run, game = state.game, { announce =
   }
 }
 
+function queueRunForfeit(...args) {
+  return state.forfeitPromise = submitRunForfeit(...args);
+}
+
+function quitActiveGame() {
+  const priorRun = state.run;
+  const priorGame = state.game;
+  pauseCloseRestoreFocus = false;
+  void queueRunForfeit(priorRun, priorGame, { announce: true });
+  returnHome({ skipForfeit: true });
+}
+
 function returnHome({ skipForfeit = false } = {}) {
   if (state.startingRun) return showToast("The next orbit is still being mapped.");
+  if (state.mode === "scramble" && scrambleRuntime?.isActive() && !skipForfeit) {
+    scrambleRuntime.requestForfeitConfirmation();
+    return;
+  }
   if (pendingScoreBlocksExit()) {
     if (!els.resultDialog.open) els.resultDialog.showModal();
     showToast("Upload or queue this score before starting another orbit.");
     return;
   }
-  if (state.game && !state.finished && !skipForfeit) void submitRunForfeit(state.run, state.game);
+  const hadActiveRun = Boolean(state.game);
+  if (state.game && !state.finished && !skipForfeit) void queueRunForfeit(state.run, state.game);
   const showRecoveryAfterExit = Boolean(state.finished && state.recoveryKit?.code && profile.wins > 0);
   pauseCloseRestoreFocus = false;
   cancelActiveTrayDrag();
@@ -3433,6 +4125,8 @@ function returnHome({ skipForfeit = false } = {}) {
   ctrlHover.reset({ abandonPending: true });
   shiftBoard.reset();
   state.orbitGeneration += 1;
+  resetCombinationStory();
+  resetGoldenPairAnimations();
   if (state.game && !state.finished && state.history.length) track("run_failed", { mode: state.mode, reason: "abandoned", moves: state.moves });
   stopTimer();
   resetRevealPlayback();
@@ -3445,6 +4139,7 @@ function returnHome({ skipForfeit = false } = {}) {
   state.cosmosFrame = null;
   state.game = null;
   state.run = null;
+  state.runPersistence = null;
   state.pause = { active: false, confirmAction: "" };
   state.journeyContext = null;
   state.signature = null;
@@ -3455,10 +4150,14 @@ function returnHome({ skipForfeit = false } = {}) {
   resetBoardHistory();
   resetPowerupControlLabels();
   clearActiveRunSnapshot();
-  els.gameScreen.classList.remove("training-orbit", "second-orbit", "explore-orbit", "first-ranked-orbit", "orbit-paused");
+  els.gameScreen.classList.remove("training-orbit", "second-orbit", "explore-orbit", "scramble-orbit", "scramble-finished", "first-ranked-orbit", "orbit-paused");
+  document.body.classList.remove("scramble-active", "scramble-counting-down", "scramble-view-rival");
+  scrambleRuntime?.deactivate();
   els.firstOrbitGuide.hidden = true;
   els.gameScreen.hidden = true;
   els.startScreen.hidden = false;
+  gameAudio.setScene("home");
+  if (hadActiveRun) playFeedback("homeReturn");
   [els.missionBriefingDialog, els.pauseDialog, els.journeyDialog, els.resultDialog, els.atlasDialog, els.senseDialog, els.shareDialog, els.wishDialog, els.paywallDialog, els.exchangeDialog, els.marketBuyDialog, els.leaderboardDialog, els.revealDialog].forEach((dialog) => { if (dialog?.open) dialog.close(); });
   renderProfile();
   if (!isStaticBeta && profile.playerId && profile.playerToken) void refreshCosmicEventState();
@@ -3476,7 +4175,7 @@ async function beginPrimaryOrbit() {
   const action = primaryOrbitState().action;
   button.disabled = true;
   try {
-    if (action === "training") openFirstOrbitBriefing(button);
+    if (action === "training") await startFirstOrbit({ enterThroughGate: true });
     else await beginMode(action, { trigger: button });
   } finally {
     button.disabled = false;
@@ -3486,8 +4185,14 @@ async function beginPrimaryOrbit() {
 
 function openModePicker() {
   const picker = $("#modePicker");
-  if (!picker || picker.closest("[hidden]")) return;
-  picker.open = true;
+  if (!picker || picker.closest("[hidden]") || !homeMenuState().choicesReady) return;
+  picker.scrollIntoView({
+    behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+    block: "start"
+  });
+  requestAnimationFrame(() => {
+    picker.querySelector('[data-home-mode]:not([hidden]) button')?.focus({ preventScroll: true });
+  });
 }
 
 async function beginPrimarySecondary() {
@@ -3495,7 +4200,7 @@ async function beginPrimarySecondary() {
   const button = $("#primaryOrbitSecondary");
   const action = primaryOrbitState().secondaryAction;
   if (action === "modes") return openModePicker();
-  if (action === "training") return openFirstOrbitBriefing(button);
+  if (action === "training") return startFirstOrbit({ enterThroughGate: true });
   if (action === "reach") {
     rememberFirstOrbitSeen();
     syncProgressiveDisclosure();
@@ -3505,12 +4210,64 @@ async function beginPrimarySecondary() {
 
 function openHubMenu() {
   const dialog = $("#hubMenuDialog");
+  renderProfile();
+  dialog.querySelectorAll(".menu-disclosure[open]").forEach((section) => { section.open = false; });
   if (!dialog.open) dialog.showModal();
 }
 
 function closeHubMenu() {
   const dialog = $("#hubMenuDialog");
   if (dialog?.open) dialog.close();
+}
+
+function loadDeveloperConsole() {
+  if (!isStaticBeta) return Promise.resolve(null);
+  if (!developerConsolePromise) {
+    developerConsolePromise = import("./developer-console-runtime.mjs?v=5.0.0-beta.1")
+      .then(({ createDeveloperConsoleController }) => createDeveloperConsoleController({
+        isStaticBeta,
+        stopTimer,
+        closeHubMenu,
+        showToast,
+        getState: () => state,
+        getProfile: () => profile,
+        currentRouteRank,
+        homeMenuState,
+        applyRouteRank,
+        localRouteRankSummary,
+        saveAdaptiveDifficulty,
+        saveProfile,
+        currentWeekKey,
+        stableHash,
+        returnHome,
+        startFirstOrbit,
+        startSecondOrbit,
+        beginMode,
+        populateShare: shareCards.populateShare,
+        cosmicGate,
+        downloadJson,
+        getTodayKey: () => todayKey,
+        cancelExpectedPairDelivery: () => expectedPairDelivery.cancel(),
+        clearActiveRunSnapshot,
+        reload: () => location.reload()
+      }))
+      .catch((error) => {
+        developerConsolePromise = null;
+        showToast(error?.message || "Developer tools could not load.", { scope: "global" });
+        return null;
+      });
+  }
+  return developerConsolePromise;
+}
+
+function openDeveloperAccess() {
+  void loadDeveloperConsole().then((controller) => controller?.open());
+}
+
+function handleDeveloperShortcut(event) {
+  if (!isStaticBeta || !event.ctrlKey || !event.shiftKey || event.altKey || event.metaKey || event.key.toLowerCase() !== "d") return;
+  event.preventDefault();
+  void loadDeveloperConsole().then((controller) => controller?.toggle());
 }
 
 function pendingScoreBlocksExit() {
@@ -3523,6 +4280,42 @@ function pendingScoreBlocksExit() {
   );
 }
 
+async function enterCosmicInterlude(event) {
+  const start = event.detail?.start;
+  if (typeof start !== "function") return;
+  if (state.startingRun || pendingScoreBlocksExit()) {
+    showToast("Wait for this result to finish saving.");
+    return;
+  }
+  event.preventDefault();
+  state.startingRun = true;
+  let started = false;
+  const begin = () => {
+    if (started) return;
+    started = true;
+    start();
+  };
+  try {
+    const entered = await cosmicGate.enterBoard(
+      () => {
+        if (els.resultDialog.open) els.resultDialog.close();
+      },
+      {
+        label: event.detail?.type === "star-trail"
+          ? "A star trail is ready."
+          : "A constellation puzzle is ready.",
+        afterOpen: begin
+      }
+    );
+    if (!entered) begin();
+  } catch {
+    if (els.resultDialog.open) els.resultDialog.close();
+    begin();
+  } finally {
+    state.startingRun = false;
+  }
+}
+
 async function retryGame() {
   if (!state.game || state.startingRun) return;
   if (pendingScoreBlocksExit()) {
@@ -3532,32 +4325,26 @@ async function retryGame() {
   const mode = state.game.mode;
   track("run_retried", { mode, target: state.game.target });
   if (mode === "training") {
-    startFirstOrbit();
+    await startFirstOrbit();
     return;
   }
   if (mode === "second-orbit") {
-    startSecondOrbit();
+    await startSecondOrbit();
     return;
   }
   if (mode === "explore") {
-    startExplore();
+    await startExplore();
     return;
   }
   const adaptive = adaptiveSeriesEligible();
   const wasFinished = state.finished;
   const options = adaptive
-    ? wasFinished
-      ? { trigger: els.resultRetry }
-      : { seed: state.game.seed, adaptiveTarget: state.game.target, skipBriefing: true }
-    : { seed: state.game.seed, target: ["reach", "challenge"].includes(mode) ? state.game.target : undefined, context: state.journeyContext, skipBriefing: true };
+    ? { trigger: wasFinished ? els.resultRetry : null, avoidTarget: state.recoveryTarget }
+    : { seed: state.game.seed, target: ["reach", "challenge"].includes(mode) ? state.game.target : undefined, context: state.journeyContext };
   const resultActions = [els.resultPrimary, els.resultRetry, els.resultReplay, $("#resultLeaderboard"), els.resultShare, $("#resultReveal")];
   resultActions.forEach((control) => { control.disabled = true; });
-  if (adaptive && wasFinished && els.resultDialog.open) els.resultDialog.close();
   try {
     await beginMode(mode, options);
-    if (adaptive && wasFinished && state.finished && !state.pendingMission && !els.resultDialog.open) {
-      els.resultDialog.showModal();
-    }
   }
   finally {
     resultActions.forEach((control) => { control.disabled = false; });
@@ -3570,24 +4357,36 @@ async function replayFinishedChallenge() {
     showToast("Upload or queue this score before starting another game.");
     return;
   }
+  const sourceRun = state.run;
+  const sourceGeneration = state.orbitGeneration;
   const replay = { mode: state.game.mode, target: state.game.target };
   track("run_replayed", replay);
   const controls = [els.resultPrimary, els.resultRetry, els.resultReplay, $("#resultLeaderboard"), els.resultShare, $("#resultReveal")];
+  state.startingRun = true;
   controls.forEach((control) => { control.disabled = true; });
-  if (els.resultDialog.open) els.resultDialog.close();
   try {
     const payload = await fetchJson("/api/run/replay", {
       method: "POST",
       headers: authHeaders({ "Content-Type": "application/json" }),
-      body: JSON.stringify({ runId: state.run.id, runToken: state.run.token })
+      body: JSON.stringify({ runId: sourceRun.id, runToken: sourceRun.token, deferActivation: true })
     });
+    if (!isReplayResponseCurrent({
+      sourceRunId: sourceRun.id,
+      sourceGeneration,
+      currentRunId: state.run?.id,
+      currentGeneration: state.orbitGeneration,
+      finished: state.finished
+    })) {
+      void submitRunForfeit(payload.run, payload.game);
+      return;
+    }
     applyServerPlayer(payload.player);
-    startWithGame(payload.game, payload.run);
+    await startWithGame(payload.game, payload.run, { enterThroughGate: true });
     showToast(`Restarted ${payload.game.target} with the same opening and rules. Practice replay: no rank or rewards.`);
   } catch (error) {
     showToast(error.message || "That challenge could not be restarted.");
-    if (state.finished && !els.resultDialog.open) els.resultDialog.showModal();
   } finally {
+    state.startingRun = false;
     controls.forEach((control) => { control.disabled = false; });
   }
 }
@@ -3601,6 +4400,10 @@ function startTimer() {
       : Math.max(0, Math.ceil((state.startedAt + Number(state.game?.timeLimit || 0) * 1000 - Date.now()) / 1000));
     els.timerValue.textContent = formatTime(Math.max(0, state.remainingSeconds));
     els.timerValue.classList.toggle("urgent", state.remainingSeconds <= 15);
+    if (state.remainingSeconds > 0 && state.remainingSeconds <= 15 && !state.timerWarningPlayed) {
+      state.timerWarningPlayed = true;
+      playFeedback("timerWarning");
+    }
     if (state.remainingSeconds <= 0) finishGame(false, "Time is up.");
   };
   tick();
@@ -3659,28 +4462,24 @@ function resetLocalDiagnostics() {
   showToast("Local report reset.", { scope: "global" });
 }
 
-function exportLocalPractice() {
+async function exportLocalPractice() {
   const snapshot = structuredClone(profile);
   delete snapshot.playerToken;
   delete snapshot.cloudPending;
   delete snapshot.cloudPendingFields;
-  downloadJson(`constellore-local-save-${todayKey}.json`, { version: 1, exportedAt: new Date().toISOString(), profile: snapshot });
+  downloadJson(`constellore-local-save-${todayKey}.json`, {
+    version: 2,
+    exportedAt: new Date().toISOString(),
+    profile: snapshot,
+    cosmosCircuit: null
+  });
 }
 
 function resetLocalPractice() {
   if (!window.confirm("Reset every local discovery, badge, score, and setting on this device? This cannot be undone.")) return;
   expectedPairDelivery.cancel();
-  try {
-    localStorage.removeItem(PROFILE_KEY);
-    localStorage.removeItem(ACTIVE_RUN_KEY);
-    localStorage.removeItem(LOCAL_ANALYTICS_KEY);
-    localStorage.removeItem(LOCAL_RECIPE_FEEDBACK_KEY);
-    localStorage.removeItem(LOCAL_EXPECTED_PAIRS_KEY);
-    localStorage.removeItem(LOCAL_EXPECTED_PAIR_OUTBOX_KEY);
-    localStorage.removeItem(ANALYTICS_COHORT_KEY);
-    localStorage.removeItem(ANALYTICS_PREFERENCE_KEY);
-    localStorage.removeItem(PENDING_RECOVERY_KIT_KEY);
-  } catch { /* Reload still restores safe defaults when storage is blocked. */ }
+  clearGameStorage(safeBrowserStorage());
+  clearGameStorage(safeBrowserStorage(globalThis, "sessionStorage"));
   location.reload();
 }
 
@@ -3705,6 +4504,7 @@ async function deletePlayerData() {
       localStorage.removeItem(PROFILE_KEY);
       localStorage.removeItem(ACTIVE_RUN_KEY);
       localStorage.removeItem(PENDING_RECOVERY_KIT_KEY);
+      localStorage.removeItem(COSMOS_CIRCUIT_SAVE_KEY);
     } catch { /* The reload below still clears in-memory ownership. */ }
     location.reload();
   } catch (error) { showToast(error.message || "This account could not be deleted.", { scope: "global" }); }
@@ -3716,6 +4516,9 @@ function updateStudyHud() {
   const exploring = state.game.mode === "explore";
   const study = !training && !exploring && state.scoringDisabled;
   const partial = !training && !exploring && !study && state.scoreMultiplier < 1;
+  const pathGuardActive = pathGuardActiveFor();
+  state.pathGuard.active = pathGuardActive;
+  state.pathGuard.rankId = String(state.game.remixes?.rank?.id || "");
   const divisionId = exploring ? "practice" : training || study ? "study" : partial ? "open" : state.run?.ranked && !isStaticBeta ? "pure" : "practice";
   const divisionLabels = { pure: "PURE", open: `OPEN · ${Math.round(state.scoreMultiplier * 100)}%`, practice: "PRACTICE", study: "STUDY · 0 SCORE" };
   const divisionPill = $("#runDivisionPill");
@@ -3730,6 +4533,7 @@ function updateStudyHud() {
         : "Unranked practice route";
   els.lawPill.classList.toggle("study-status", study);
   els.lawPill.classList.toggle("partial-status", partial);
+  els.lawPill.classList.toggle("path-guard-status", pathGuardActive);
   els.universePill.hidden = training || study;
   if (training) {
     els.lawPill.hidden = false;
@@ -3743,9 +4547,23 @@ function updateStudyHud() {
   } else if (partial) {
     els.lawPill.hidden = false;
     els.lawPill.textContent = `◇ OPEN · ${Math.round(state.scoreMultiplier * 100)}% SCORE`;
+  } else if (pathGuardActive) {
+    els.lawPill.hidden = false;
+    els.lawPill.textContent = "◇ PATH GUARD · ON";
   } else {
     els.lawPill.hidden = !state.game.law;
     els.lawPill.textContent = state.game.law ? `${state.game.law.name}: ${state.game.law.description}` : "";
+  }
+  els.lawPill.title = pathGuardActive
+    ? "Bronze and Silver Path Guard locks route-diverging pairings without using a move."
+    : state.game.law ? `${state.game.law.name}: ${state.game.law.description}` : "";
+  if (pathGuardActive) {
+    els.lawPill.setAttribute(
+      "aria-label",
+      "Path Guard on. Route-diverging pairings are locked without using a move."
+    );
+  } else {
+    els.lawPill.removeAttribute("aria-label");
   }
 }
 
@@ -3765,7 +4583,7 @@ function runIqActive() {
 function renderRunIq({ announce = "" } = {}) {
   if (!els.runIqHud) return;
   const active = runIqActive();
-  els.runIqHud.hidden = !active;
+  els.runIqHud.hidden = !active || state.focusMode;
   if (!active) return;
   const score = sanitizeRunIqState(state.runIq);
   const percent = Math.round(score.value / 2);
@@ -3870,16 +4688,12 @@ function renderResultRemixes(won, revealed) {
     els.resultRemixNote.textContent = "";
     return;
   }
-  const rank = getRemixRankPresentation({
-    completedChallenges: state.adaptiveDifficulty.completedChallenges
-  });
+  const routeRank = currentRouteRank();
+  const rank = routeRank.rank || getRemixRankPresentation(remixes.rank?.id || "bronze");
   const rules = Array.isArray(remixes.rules) ? remixes.rules : [];
   const progressItems = Array.isArray(state.remixProgress?.items) ? state.remixProgress.items : [];
   const byFamily = new Map(progressItems.map((item) => [item.family, item]));
   const complete = rules.filter((rule) => byFamily.get(rule.family)?.complete === true).length;
-  const winsToNext = rank.nextRank
-    ? Math.max(0, rank.nextRank.completedChallenges - state.adaptiveDifficulty.completedChallenges)
-    : 0;
   const rankChanged = Boolean(
     won
     && !revealed
@@ -3889,9 +4703,13 @@ function renderResultRemixes(won, revealed) {
   const ruleSummary = rules.length
     ? `${complete}/${rules.length} route rules complete`
     : "Classic route complete";
-  const nextSummary = rank.nextRank
-    ? `${winsToNext} more ${winsToNext === 1 ? "win" : "wins"} to ${rank.nextRank.name}`
-    : "Highest Route Rank";
+  const nextSummary = routeRank.promotion?.active
+    ? `${routeRank.promotion.wins}/${routeRank.promotion.winsRequired} promotion wins`
+    : rank.nextRank
+      ? routeRank.mastery.pointsRemaining > 0
+        ? `${routeRank.mastery.pointsRemaining} mastery to promotion`
+        : "Promotion ready"
+      : "Highest Route Rank";
   els.resultRemixNote.textContent = rankChanged
     ? `${rank.name} Route Rank unlocked! ${rank.remixRange} now available.`
     : won && !revealed
@@ -3969,6 +4787,7 @@ function updateMilestone(won = false) {
   if (!state.game) return;
   if (state.mode === "explore") {
     const combinations = state.history.length;
+    gameAudio.setIntensity(Math.min(.35, combinations * .04));
     els.milestoneBar.style.width = `${Math.min(100, combinations * 8)}%`;
     els.milestoneText.textContent = combinations
       ? `${combinations} recipe${combinations === 1 ? "" : "s"} added to this sandbox`
@@ -3981,6 +4800,7 @@ function updateMilestone(won = false) {
   const model = buildRouteProgress({ history: state.history, target: state.game.target, limit: window.innerWidth <= 700 ? 4 : 6 });
   const progress = sanitizeAuthoredRouteProgress(state.routeProgress, state.game.routeLength);
   const reached = Boolean(won || model.targetReached);
+  gameAudio.setIntensity(reached ? 1 : progress.percent / 100);
   els.milestoneBar.style.width = `${reached ? 100 : progress.percent}%`;
   els.milestoneText.textContent = reached
     ? `${state.game.target} reached`
@@ -4008,7 +4828,6 @@ function renderResultRoute() {
   const model = buildRouteProgress({ history: state.history, target: state.game.target, limit: 7 });
   $("#resultRouteTitle").textContent = model.targetReached ? `Your route to ${state.game.target}` : `Your orbit toward ${state.game.target}`;
   $("#resultRouteSummary").textContent = `${model.combinations} recipe${model.combinations === 1 ? "" : "s"} · ${state.newDiscoveries} new discover${state.newDiscoveries === 1 ? "y" : "ies"}`;
-  renderRouteStarStrip(els.resultRouteTrail, model);
 }
 
 function clearSenseGlow() {
@@ -4037,7 +4856,7 @@ function openPowerups() {
   els.quickTipMessage.classList.remove("error");
   els.quickTipMessage.textContent = state.powerups.tipsUsed >= QUICK_TIP_LIMIT
     ? "You have used all three hints."
-    : "";
+    : state.powerups.currentTip;
   els.wordGiftMessage.classList.remove("error");
   els.wordGiftMessage.textContent = state.powerups.giftUsed
     ? `${state.powerups.giftItem?.word || "A helpful word"} was added. You keep half your points.`
@@ -4051,6 +4870,9 @@ function openPowerups() {
   renderProfile();
   els.senseDialog.scrollTop = 0;
   els.senseDialog.showModal();
+  void ensureStardustStore()
+    .then(() => renderStardustStore())
+    .catch((error) => showStardustStoreFailure(error, "Stardust supplies could not be opened."));
   track("sense_opened", { mode: state.mode, surface: "help" });
 }
 
@@ -4093,12 +4915,13 @@ async function useQuickTip() {
       const tipId = `hint-${state.powerups.tipsUsed}`;
       if (!state.powerups.tipIds.includes(tipId)) state.powerups.tipIds.push(tipId);
       state.powerups.tipIds = state.powerups.tipIds.slice(-QUICK_TIP_LIMIT);
+      state.powerups.currentTip = sanitizeHintObjective(tip.text);
     }
     els.quickTipMessage.textContent = tip.text;
     scheduleRunSave();
     if (!els.senseDialog.open) showAlchemy(`HINT · ${tip.text}`);
     if (tip.available) {
-      playFeedback("place");
+      playFeedback("sense");
       track("quick_tip_used", { mode: state.mode, tipIndex, remaining: tip.remaining, scoreSafe: tip.scoreSafe === true });
     }
   } catch (error) {
@@ -4131,8 +4954,6 @@ async function useWordGift() {
   label.textContent = "Adding a word…";
   els.wordGiftMessage.classList.remove("error");
   els.wordGiftMessage.textContent = "Finding a helpful word…";
-  // Commit the declared Open penalty before requesting the bridge, so a lost
-  // response can never leave a Pure-looking score.
   const pendingPolicy = combineAssistance(priorAssist, "gift");
   state.assist = pendingPolicy.id;
   state.scoringDisabled = Boolean(priorScoringDisabled || pendingPolicy.study);
@@ -4230,8 +5051,6 @@ async function useConstellationSense() {
   renderPowerups();
   label.textContent = "Listening to the cosmos…";
   $("#senseMessage").textContent = "";
-  // Commit the declared Open penalty before requesting the signal, so a lost
-  // success response can never leave a Pure-looking score.
   profile.senseWallet = preview.wallet;
   const pendingPolicy = combineAssistance(priorAssist, "sense");
   state.assist = pendingPolicy.id;
@@ -4310,25 +5129,10 @@ async function useConstellationSense() {
   }
 }
 
-function buySenseCharge() {
-  if (state.powerups.busy) return;
-  const wallet = sanitizeSenseWallet(profile.senseWallet);
-  track("sense_purchase_started", { cost: 90, chargesBefore: wallet.charges });
-  if (wallet.charges >= 9) {
-    $("#senseMessage").textContent = "Your Star Compass reserve is already full.";
-    return;
-  }
-  if (profile.stardust < 90) {
-    $("#senseMessage").textContent = `You need ${90 - profile.stardust} more Stardust.`;
-    return;
-  }
-  profile.stardust -= 90;
-  profile.senseWallet = grantSenseCharges(wallet, 1).wallet;
-  saveProfile({ fields: ["progression"] });
-  renderProfile();
-  $("#senseMessage").textContent = "One Star Compass charge joined your reserve.";
-  playFeedback("place");
-  track("sense_purchased", { cost: 90, chargesBefore: wallet.charges, chargesAfter: profile.senseWallet.charges });
+function buyStardustSupply(itemId) {
+  void ensureStardustStore()
+    .then((runtime) => runtime.purchase(itemId))
+    .catch((error) => showStardustStoreFailure(error, "That Stardust supply could not be purchased."));
 }
 
 function ghostStepEstimate() {
@@ -4382,7 +5186,13 @@ function hideGhostPreview() {
 }
 
 function competitiveGhostEligible() {
-  return Boolean(profile.wins >= 3 && state.game && !["training", "second-orbit", "explore", "reach"].includes(state.mode) && !state.scoringDisabled);
+  return Boolean(
+    profile.wins >= HOME_MENU_ADVANCED_WINS
+    && !state.focusMode
+    && state.game
+    && !["training", "second-orbit", "explore", "reach"].includes(state.mode)
+    && !state.scoringDisabled
+  );
 }
 
 function renderGhostPreview(projectedProgress, estimated) {
@@ -4689,6 +5499,7 @@ function syncSelectedNodeState() {
   els.tapChainStatus.hidden = !selected;
   els.board.classList.toggle("tap-chain-active", Boolean(selected));
   if (selected) els.tapChainText.textContent = `${selected.item.word} armed · tap another word`;
+  else clearBoardAnnouncement("tap-chain");
 }
 
 function cancelTapChain({ announce = false } = {}) {
@@ -4703,6 +5514,7 @@ function dismissClearUndo() {
   clearTimeout(boardUndoTimer);
   boardUndoTimer = null;
   if (els.boardUndo) els.boardUndo.hidden = true;
+  clearBoardAnnouncement("board-clear");
 }
 
 function boardHistorySnapshot() {
@@ -4813,6 +5625,8 @@ function clearBoardWithUndo() {
   ctrlHover.reset();
   shiftBoard.reset();
   cancelTapChain();
+  resetExpectedPairFeedback();
+  clearBoardNotices();
   dismissClearUndo();
   const before = boardHistorySnapshot();
   state.nodes = [];
@@ -4821,7 +5635,7 @@ function clearBoardWithUndo() {
   els.boardUndo.hidden = false;
   boardUndoTimer = setTimeout(dismissClearUndo, 6000);
   scheduleRunSave();
-  showAlchemy("Board cleared. Use Undo to restore it. Your discoveries remain.");
+  announceBoardMessage("Board cleared. Use Undo to restore it. Your discoveries remain.", "board-clear");
 }
 
 function undoBoardClear() {
@@ -4844,7 +5658,7 @@ function rectanglesOverlap(leftValue, rightValue, gap = 0) {
 }
 
 function visibleBoardOverlayRectangles(boardRect = els.board.getBoundingClientRect()) {
-  const candidates = [els.rivalGhost, els.ghostPreview, document.querySelector(".board-quick-tools"), document.querySelector(".run-milestone"), els.tapChainStatus, els.boardUndo, els.recipeFeedback, els.expectedPairFeedback, els.alchemyNote, els.firstOrbitGuide];
+  const candidates = [els.rivalGhost, els.ghostPreview, document.querySelector(".board-quick-tools"), document.querySelector(".run-milestone"), els.hintObjective, els.tapChainStatus, els.boardUndo, els.recipeFeedback, els.expectedPairFeedback, els.alchemyNote, els.firstOrbitGuide];
   return candidates.map((element) => {
     if (!element || element.hidden) return null;
     if (element === els.alchemyNote && !element.classList.contains("show")) return null;
@@ -4856,6 +5670,35 @@ function visibleBoardOverlayRectangles(boardRect = els.board.getBoundingClientRe
     const bottom = clamp(bounds.bottom - boardRect.top, 0, boardRect.height);
     return right > left && bottom > top ? { left, top, width: right - left, height: bottom - top } : null;
   }).filter(Boolean);
+}
+
+function moveBoardNodeOutsideOverlays(node, element, boardRect, size) {
+  const width = Math.max(1, Number(size?.width) || element?.offsetWidth || 1);
+  const height = Math.max(1, Number(size?.height) || element?.offsetHeight || 1);
+  const overlays = visibleBoardOverlayRectangles(boardRect);
+  const current = { left: node.x, top: node.y, width, height };
+  if (!overlays.some((overlay) => rectanglesOverlap(current, overlay, 6))) return false;
+  const occupied = [...els.boardItems.querySelectorAll(".board-word")]
+    .filter((candidate) => candidate !== element)
+    .map((candidate) => {
+      const bounds = candidate.getBoundingClientRect();
+      return { left: bounds.left - boardRect.left, top: bounds.top - boardRect.top, width: bounds.width, height: bounds.height };
+    });
+  const open = findOpenSpawn(
+    { x: node.x, y: node.y },
+    { width, height },
+    [...occupied, ...overlays],
+    { left: 5, top: 5, width: Math.max(1, boardRect.width - 10), height: Math.max(1, boardRect.height - 10) },
+    { gap: 8, step: 12 }
+  );
+  if (!open) return false;
+  const relocated = { left: open.x, top: open.y, width, height };
+  if ([...occupied, ...overlays].some((blocker) => rectanglesOverlap(relocated, blocker, 6))) return false;
+  node.x = open.x;
+  node.y = open.y;
+  element.style.setProperty("--x", `${node.x}px`);
+  element.style.setProperty("--y", `${node.y}px`);
+  return true;
 }
 
 function packOrbitAroundOverlays(items, bounds, blockers) {
@@ -4942,6 +5785,10 @@ function boardNodesOverlap(gap = 2) {
 
 function constrainBoardNodes() {
   if (!state.game || els.gameScreen.hidden) return;
+  if (state.reveal.revealed) {
+    refreshRevealLayoutForViewport();
+    return;
+  }
   const boardRect = els.board.getBoundingClientRect();
   for (const node of state.nodes) {
     const element = els.boardItems.querySelector(`[data-id="${node.id}"]`);
@@ -5161,6 +6008,19 @@ function syncBoardNodeElement(button, node, isNew = false) {
   button.dataset.word = inventoryKey(node.item);
   button.dataset.category = visualWordCategory(node.item.category);
   button.dataset.source = visualWordToken(node.item.source);
+  if (node.revealKey) {
+    button.dataset.revealKey = node.revealKey;
+    button.dataset.revealWave = String(node.revealWave ?? 0);
+    button.style.setProperty("--reveal-node-width", `${Number(node.revealWidth) || 132}px`);
+    button.style.setProperty("--reveal-node-height", `${Number(node.revealHeight) || 42}px`);
+    button.title = node.item.word;
+  } else {
+    delete button.dataset.revealKey;
+    delete button.dataset.revealWave;
+    button.style.removeProperty("--reveal-node-width");
+    button.style.removeProperty("--reveal-node-height");
+    button.removeAttribute("title");
+  }
   button.style.setProperty("--x", `${node.x}px`);
   button.style.setProperty("--y", `${node.y}px`);
   button.style.zIndex = node.z;
@@ -5171,7 +6031,7 @@ function syncBoardNodeElement(button, node, isNew = false) {
     ? `${node.item.word}, revealed constellation word. Not playable.`
     : unavailable
       ? `${node.item.word}. Unavailable while this orbit is locked.`
-      : `${node.item.word}${node.item.source === "gift" ? ", Word Gift bridge" : node.item.source === "twist" || node.cosmicTwist ? ", Cosmic Twist discovery" : ""}. Drag onto another word to combine. Hold Shift while hovering to remove; grab it first and then hold Shift while dragging to copy.`);
+      : `${node.item.word}${node.item.source === "gift" ? ", Word Gift bridge" : node.item.source === "twist" || node.cosmicTwist ? ", Cosmic Twist discovery" : ""}. Press to arm, then press another word to combine. You can also drag it onto another word. Hold Shift while hovering to remove; grab it first and then hold Shift while dragging to copy.`);
   button.setAttribute("aria-pressed", String(state.selectedNodeId === node.id));
   const renderKey = `${node.item.emoji}␟${node.item.word}`;
   if (button.dataset.renderedWord !== renderKey) {
@@ -5201,10 +6061,11 @@ function createBoardNode(node, isNew) {
 async function selectNodeForTap(node) {
   if (state.finished || state.pause.active || state.reveal.active || state.reveal.pending || ctrlHover.snapshot().active || shiftBoard.snapshot().held) return;
   resetRecipeFeedback();
+  resetExpectedPairFeedback();
   if (!state.selectedNodeId) {
     state.selectedNodeId = node.id;
     syncSelectedNodeState();
-    showAlchemy(`${node.item.word} armed · tap another word.`);
+    announceBoardMessage(`${node.item.word} armed. Tap another word.`, "tap-chain");
     return;
   }
   if (state.selectedNodeId === node.id) {
@@ -5216,32 +6077,45 @@ async function selectNodeForTap(node) {
   syncSelectedNodeState();
   if (!first) return void selectNodeForTap(node);
   const outcome = await combineNodes(first, node);
-  if (!outcome && getCtrlHoverNode(node.id)) {
+  if ((!outcome || outcome.wrongPath) && getCtrlHoverNode(node.id)) {
     state.selectedNodeId = node.id;
     syncSelectedNodeState();
-    showAlchemy(`${node.item.word} remains armed · try another word.`);
+    els.tapChainText.textContent = `${node.item.word} still armed · try another word`;
+    announceBoardMessage(
+      outcome?.wrongPath
+        ? `${outcome.message} ${node.item.word} remains armed; choose another word.`
+        : `${node.item.word} remains armed. Try another word.`,
+      outcome?.wrongPath ? "board-notice" : "tap-chain"
+    );
   }
 }
 
 async function activateTrayItem(item) {
   if (state.pause.active) return;
   resetRecipeFeedback();
+  resetExpectedPairFeedback();
   const selected = state.nodes.find((node) => node.id === state.selectedNodeId);
   if (!selected) {
     const placed = placeFromTray(item);
     if (!placed) return null;
     state.selectedNodeId = placed.id;
     syncSelectedNodeState();
-    showAlchemy(`${placed.item.word} armed · tap another word.`);
+    announceBoardMessage(`${placed.item.word} armed. Tap another word.`, "tap-chain");
     return placed;
   }
   state.selectedNodeId = null;
   syncSelectedNodeState();
   const outcome = await combineTrayWithTarget(item, selected);
-  if (!outcome && getCtrlHoverNode(selected.id)) {
+  if ((!outcome || outcome.wrongPath) && getCtrlHoverNode(selected.id)) {
     state.selectedNodeId = selected.id;
     syncSelectedNodeState();
-    showAlchemy(`${selected.item.word} remains armed · try another word.`);
+    els.tapChainText.textContent = `${selected.item.word} still armed · try another word`;
+    announceBoardMessage(
+      outcome?.wrongPath
+        ? `${outcome.message} ${selected.item.word} remains armed; choose another word.`
+        : `${selected.item.word} remains armed. Try another word.`,
+      outcome?.wrongPath ? "board-notice" : "tap-chain"
+    );
   }
   return outcome;
 }
@@ -5276,7 +6150,7 @@ function placeFromTray(item, point, placement = {}) {
   renderInventory();
   const node = addNode(item, x, y, measuredSize ? { size: measuredSize, inset: 5 } : {});
   commitBoardEdit(before, `place ${item.word}`);
-  playFeedback("place");
+  playFeedback("place", { category: item.category, word: item.word, source: item.source });
   return node;
 }
 
@@ -5512,12 +6386,15 @@ function startTrayPointerDrag(event, item, element, suppressClick) {
     const dy = lastPoint.y - startY;
     if (Math.hypot(dx, dy) > 8) moved = true;
     if (!dragging) {
-      const mobileTray = matchMedia("(max-width: 700px)").matches;
+      const compactSideRail = matchMedia("(max-width: 700px) and (max-height: 500px) and (min-width: 520px)").matches;
+      const mobileTray = !compactSideRail
+        && matchMedia("(max-width: 700px), (max-width: 900px) and (orientation: portrait)").matches;
       const headingTowardBoard = mobileTray
         ? dy < -8 && Math.abs(dy) > Math.abs(dx) * .65
         : dx < -8 && Math.abs(dx) > Math.abs(dy) * .65;
       if (!moved || !headingTowardBoard) return;
       dragging = true;
+      resetCosmeticDragTrail(state);
       cancelTapChain();
       dismissClearUndo();
       element.classList.add("pointer-dragging");
@@ -5548,6 +6425,7 @@ function startTrayPointerDrag(event, item, element, suppressClick) {
     moveEvent.preventDefault();
     ghost.style.left = `${lastPoint.x}px`;
     ghost.style.top = `${lastPoint.y}px`;
+    appendCosmeticDragTrail(state, moveEvent, els.board);
     updateShiftTrail(lastPoint);
     dropGeometry = refreshDropGeometry(dropGeometry);
     setDropTarget(resolveDropCandidate({ point: lastPoint, pointerType, geometry: dropGeometry }), item, dropGeometry);
@@ -5600,13 +6478,15 @@ function addNode(item, x, y, options = {}) {
   dismissClearUndo();
   const bounds = els.board.getBoundingClientRect();
   const { size, inset: requestedInset, ...nodeOptions } = options;
+  const allowOutOfBounds = nodeOptions.allowOutOfBounds === true;
+  delete nodeOptions.allowOutOfBounds;
   const width = Number(size?.width) > 0 ? Number(size.width) : 155;
   const height = Number(size?.height) > 0 ? Number(size.height) : 54;
   const inset = Number.isFinite(Number(requestedInset)) ? clamp(Number(requestedInset), 0, 20) : 8;
   const node = {
     id: state.nextId++, item,
-    x: clamp(x, inset, Math.max(inset, bounds.width - width - inset)),
-    y: clamp(y, inset, Math.max(inset, bounds.height - height - inset)),
+    x: allowOutOfBounds ? Number(x) || 0 : clamp(x, inset, Math.max(inset, bounds.width - width - inset)),
+    y: allowOutOfBounds ? Number(y) || 0 : clamp(y, inset, Math.max(inset, bounds.height - height - inset)),
     z: ++state.topZ,
     ...nodeOptions
   };
@@ -5666,6 +6546,7 @@ function startNodeDrag(event, node, element) {
     const point = samples.at(-1) || moveEvent;
     if (!moved && Math.hypot(point.clientX - startX, point.clientY - startY) > dragThreshold(pointerType)) {
       moved = true;
+      resetCosmeticDragTrail(state);
       element.classList.add("dragging");
       cancelTapChain();
       dismissClearUndo();
@@ -5675,6 +6556,7 @@ function startNodeDrag(event, node, element) {
     node.y = clamp(point.clientY - boardRect.top - offsetY, 5, boardRect.height - nodeHeight - 5);
     element.style.setProperty("--x", `${node.x}px`);
     element.style.setProperty("--y", `${node.y}px`);
+    appendCosmeticDragTrail(state, moveEvent, els.board);
     shiftBoard.moveDrag({ x: node.x, y: node.y });
     if (highlight && !highlightFrame) {
       highlightFrame = requestAnimationFrame(() => {
@@ -5712,6 +6594,7 @@ function startNodeDrag(event, node, element) {
       height: nodeHeight
     };
     const resolution = moved ? resolveDropCandidate({ point: { x: upEvent.clientX, y: upEvent.clientY }, sourceElement: element, sourceRect, excludeId: node.id, pointerType, geometry: dropGeometry }) : null;
+    if (moved && !resolution?.selected) moveBoardNodeOutsideOverlays(node, element, boardRect, { width: nodeWidth, height: nodeHeight });
     const stampedDuringDrag = Boolean(shiftHistorySnapshot);
     cleanup();
     if (moved && !stampedDuringDrag) commitBoardEdit(boardBeforeDrag, `move ${node.item.word}`);
@@ -5786,15 +6669,69 @@ function moveLimitEndMessage() {
   return masterRoute ? "Master Route limit reached." : "No moves left.";
 }
 
+function pulsePathGuardNodes(...elements) {
+  for (const element of elements) {
+    if (!element) continue;
+    element.classList.remove("combining", "merging", "rejected");
+    element.classList.add("wrong-path");
+    setTimeout(() => element.classList.remove("wrong-path"), 760);
+  }
+}
+
+function showPathGuardFeedback(a, b, { remembered = false, elements = [] } = {}) {
+  pulsePathGuardNodes(...elements);
+  const message = remembered
+    ? "WRONG PATH · PAIR LOCKED · You already checked this connection. Try a different partner; move unchanged."
+    : `WRONG PATH · PAIR LOCKED · ${a} + ${b} does not follow the guided route to ${state.game?.target || "this target"}. Words kept; move unchanged.`;
+  showAlchemy(message, false, false, {
+    tone: "wrong-path",
+    key: `wrong-path:${pathGuardPairKey(a, b)}`,
+    duration: 3900
+  });
+  playFeedback("uiSelect");
+  return message;
+}
+
+function commitGameOutcome() {
+  if (state.finished) return false;
+  state.finished = true;
+  stopTimer();
+  return true;
+}
+
 async function combineNodes(a, b) {
   if (state.finished || state.pause.active || state.reveal.active || state.reveal.pending || state.busyPairs.has(a.id) || state.busyPairs.has(b.id)) return;
+  const scrambleActive = state.mode === "scramble" && scrambleRuntime?.isActive();
+  if (state.mode === "scramble" && (!scrambleActive || scrambleRuntime.isCountingDown())) {
+    showToast(scrambleRuntime?.isCountingDown() ? "Wait for the three-second countdown." : "The live match is reconnecting.", { scope: "global" });
+    return;
+  }
   if (state.game.moveLimit && state.moves >= state.game.moveLimit) return finishGame(false, moveLimitEndMessage());
+  if (!scrambleActive && pathGuardPairWasRemembered(a.item.word, b.item.word)) {
+    const aElement = els.boardItems.querySelector(`[data-id="${a.id}"]`);
+    const bElement = els.boardItems.querySelector(`[data-id="${b.id}"]`);
+    const message = showPathGuardFeedback(a.item.word, b.item.word, {
+      remembered: true,
+      elements: [aElement, bElement]
+    });
+    track("path_guard_remembered", {
+      mode: state.mode,
+      status: "remembered"
+    });
+    return {
+      rejected: true,
+      code: "wrong_path",
+      wrongPath: true,
+      remembered: true,
+      message
+    };
+  }
   resetExpectedPairFeedback();
   dismissClearUndo();
   const orbitGeneration = state.orbitGeneration;
   state.busyPairs.add(a.id);
   state.busyPairs.add(b.id);
-  playFeedback("combineStart");
+  playFeedback("combineStart", { word: `${a.item.word}+${b.item.word}` });
   updateBoardTools();
   const aElement = els.boardItems.querySelector(`[data-id="${a.id}"]`);
   const bElement = els.boardItems.querySelector(`[data-id="${b.id}"]`);
@@ -5810,6 +6747,12 @@ async function combineNodes(a, b) {
       result = resolveFirstOrbitCombination(a.item.word, b.item.word, state.history);
       if (!result) throw new Error(firstOrbitWrongPairMessage(state.history));
       await wait(90);
+    } else if (scrambleActive) {
+      const duelAction = await scrambleRuntime.submitAction({
+        a: a.item.word,
+        b: b.item.word
+      });
+      result = duelAction.result;
     } else {
       result = await fetchJson("/api/combine", {
         method: "POST",
@@ -5829,19 +6772,21 @@ async function combineNodes(a, b) {
         })
       });
     }
-    if (orbitGeneration !== state.orbitGeneration || !state.game) return null;
+    if (orbitGeneration !== state.orbitGeneration || !state.game || (state.finished && !scrambleActive)) return null;
     aElement?.classList.remove("combining");
     bElement?.classList.remove("combining");
     aElement?.classList.add("merging");
     bElement?.classList.add("merging");
     await wait(170);
-    if (orbitGeneration !== state.orbitGeneration || !state.game) return null;
+    if (orbitGeneration !== state.orbitGeneration || !state.game || (state.finished && !scrambleActive)) return null;
     state.moves += 1;
     if (state.moves === 1) track("first_combination", { mode: state.mode, training: learningOrbitActive() });
     let known = state.words.find((item) => item.word.toLowerCase() === result.word.toLowerCase());
     const newToRun = !known;
     const locallyKnown = profile.discovered.some((word) => word.toLowerCase() === result.word.toLowerCase());
-    const newDiscovery = !isStaticBeta && typeof result.newDiscovery === "boolean" ? result.newDiscovery : !locallyKnown;
+    const newDiscovery = scrambleActive
+      ? false
+      : !isStaticBeta && typeof result.newDiscovery === "boolean" ? result.newDiscovery : !locallyKnown;
     if (!known) {
       result.discoveredAt ||= new Date().toISOString();
       state.words.push(result);
@@ -5878,8 +6823,10 @@ async function combineNodes(a, b) {
       state.scoreMultiplier = 0;
       state.run = { ...state.run, scoringDisabled: true, scoreEligible: false, scoreMultiplier: 0 };
     }
-    const eventAnnotation = annotateCosmicEventResult({ event: currentEventState().event, result });
-    const journeyMatch = Boolean(state.journeyContext && inventoryKey(state.journeyContext.target) === inventoryKey(result.word));
+    const eventAnnotation = scrambleActive
+      ? { context: null }
+      : annotateCosmicEventResult({ event: currentEventState().event, result });
+    const journeyMatch = Boolean(!scrambleActive && state.journeyContext && inventoryKey(state.journeyContext.target) === inventoryKey(result.word));
     const insight = !result.twisted ? explainSuccessfulRecipe({
       a: a.item.word,
       b: b.item.word,
@@ -5907,32 +6854,43 @@ async function combineNodes(a, b) {
       context: journeyMatch ? state.journeyContext.kind : eventAnnotation.context?.collectionMatch ? eventAnnotation.context.eventId : "",
       rarity: result.twisted ? 90 : eventAnnotation.context?.collectionMatch ? 55 : 0
     };
-    const won = Boolean(result.completed || (secondOrbitActive() && inventoryKey(result.word) === inventoryKey(state.game.target)));
+    const won = Boolean(!scrambleActive && (result.completed || (secondOrbitActive() && inventoryKey(result.word) === inventoryKey(state.game.target))));
+    const outcomeCommitted = won ? commitGameOutcome() : false;
+    if (won && !outcomeCommitted) return null;
+    const firstCompletion = Boolean(won && firstOrbitActive() && !sanitizeFirstOrbitState(profile.firstOrbit).completed);
+    if (firstCompletion) {
+      profile.firstOrbit = { seen: true, completed: true };
+      saveProfile({ fields: ["firstOrbit"] });
+    }
     const routeRankOutcome = result.routeRankOutcome && typeof result.routeRankOutcome === "object"
       ? result.routeRankOutcome
       : null;
-    if (routeRankOutcome?.routeRank || result.routeRank) {
+    if (!scrambleActive && (routeRankOutcome?.routeRank || result.routeRank)) {
       applyRouteRank(routeRankOutcome?.routeRank || result.routeRank, { announce: won });
     }
-    if (routeRankOutcome?.adaptive?.message) {
+    if (!scrambleActive && routeRankOutcome?.adaptive?.message) {
       state.adaptiveNotice = {
         message: routeRankOutcome.adaptive.message,
         metadata: routeRankOutcome.adaptive.metadata || {}
       };
     }
-    if (routeRankOutcome?.promotion?.message) {
+    if (!scrambleActive && routeRankOutcome?.promotion?.message) {
       state.routeRankNotice = {
         message: routeRankOutcome.promotion.message,
         rankUp: routeRankOutcome.promotion.promoted === true
       };
     }
     const routeProgressBefore = state.routeProgress;
-    acceptRouteProgress(result.routeProgress);
-    if (result.remixProgress) state.remixProgress = result.remixProgress;
-    const iqContext = runIqRouteContext(routeProgressBefore, state.routeProgress, {
-      completed: won,
-      newDiscovery: newToRun
-    });
+    if (!scrambleActive) {
+      acceptRouteProgress(result.routeProgress);
+      if (result.remixProgress) state.remixProgress = result.remixProgress;
+    }
+    const iqContext = scrambleActive
+      ? { relevance: "ignored", routeTotal: 0, stepsAdvanced: 0, completed: false }
+      : runIqRouteContext(routeProgressBefore, state.routeProgress, {
+          completed: won,
+          newDiscovery: newToRun
+        });
     const iqPairKey = runIqSuccessfulPairKey(a.item.word, b.item.word, result.word);
     iqContext.pairKey = iqPairKey;
     historyStep.runIqKey = iqPairKey;
@@ -5942,15 +6900,34 @@ async function combineNodes(a, b) {
     historyStep.routeStepsAdvanced = iqContext.stepsAdvanced;
     historyStep.routeCompleted = iqContext.completed;
     state.history.push(historyStep);
-    changeRunIq("success", a.item.word, b.item.word, iqContext);
-    const mastery = recordMasteryStep(historyStep);
-    state.trails.push({ ax: a.x + 44, ay: a.y + 20, bx: b.x + 44, by: b.y + 20, x: x + 44, y: y + 20 });
-    if (state.trails.length > MAX_TRANSIENT_TRAILS) state.trails.splice(0, state.trails.length - MAX_TRANSIENT_TRAILS);
+    if (!scrambleActive) {
+      renderCombinationStory();
+      changeRunIq("success", a.item.word, b.item.word, iqContext);
+    }
+    const mastery = scrambleActive ? null : recordMasteryStep(historyStep);
+    const aAnchor = measuredNodeAnchor(a, aElement);
+    const bAnchor = measuredNodeAnchor(b, bElement);
     state.nodes = state.nodes.filter((node) => node.id !== a.id && node.id !== b.id);
     aElement?.remove();
     bElement?.remove();
     boardGeometryVersion += 1;
     const resultNode = addNode(known, x, y, { cosmicTwist: Boolean(result.twisted) });
+    const resultElement = els.boardItems.querySelector(`[data-id="${resultNode.id}"]`);
+    const resultAnchor = measuredNodeAnchor(resultNode, resultElement, measureBoardWord(known));
+    state.trails.push({
+      ax: aAnchor.x,
+      ay: aAnchor.y,
+      bx: bAnchor.x,
+      by: bAnchor.y,
+      x: resultAnchor.x,
+      y: resultAnchor.y
+    });
+    if (state.trails.length > MAX_TRANSIENT_TRAILS) state.trails.splice(0, state.trails.length - MAX_TRANSIENT_TRAILS);
+    appendCosmeticFusionBurst(state, resultAnchor.x, resultAnchor.y);
+    const authoredGoldenPair = !result.twisted
+      ? await playGoldenPairAnimation(a.item, b.item, known)
+      : false;
+    const celebrationStartedAt = won ? performance.now() : 0;
     resetBoardHistory();
     const universeLabel = result.universeContext?.label ? ` · ${result.universeContext.label}` : "";
     showAlchemy(result.twisted
@@ -5963,7 +6940,15 @@ async function combineNodes(a, b) {
         maxAge: 10_000
       });
     }
-    const eventDiscovery = learningOrbitActive() || state.mode === "explore" ? null : await recordEventDiscovery(result);
+    let eventDiscovery = null;
+    if (!scrambleActive && !learningOrbitActive() && state.mode !== "explore") {
+      try {
+        eventDiscovery = await recordEventDiscovery(result);
+      } catch (error) {
+        console.warn("Cosmic event progress could not be refreshed.", error);
+      }
+    }
+    if (orbitGeneration !== state.orbitGeneration || !state.game || (state.finished && !outcomeCommitted && !scrambleActive)) return null;
     if (eventDiscovery?.notice) {
       queueAlchemyNotice(eventDiscovery.notice, false, true, { key: `event:${inventoryKey(result.word)}`, retain: true, maxAge: 12_000 });
     }
@@ -5971,24 +6956,49 @@ async function combineNodes(a, b) {
       if (result.completed) state.resultMasteryNotice = mastery.notice;
       else queueAlchemyNotice(mastery.notice, false, false, { key: `mastery:${inventoryKey(mastery.notice)}`, retain: true, maxAge: 10_000 });
     }
-    playFeedback(result.twisted ? "twist" : "success", { analytics: Boolean(result.twisted) });
+    playFeedback(result.twisted ? "twist" : "success", {
+      analytics: Boolean(result.twisted),
+      category: result.category || known.category,
+      word: result.word,
+      source: result.source,
+      newDiscovery
+    });
     updateHud();
-    updateMilestone();
-    renderAtlas();
+    if (!scrambleActive) {
+      updateMilestone();
+      renderAtlas();
+    }
     track("combination_completed", { mode: state.mode, a: a.item.word, b: b.item.word, result: result.word, source: result.source, newDiscovery, twisted: Boolean(result.twisted) });
-    if (!won && !learningOrbitActive() && historyStep.feedbackEligible) offerRecipeFeedback(historyStep, state.moves);
-    if (won) setTimeout(() => finishGame(true), 480);
+    if (!scrambleActive && !won && !learningOrbitActive() && historyStep.feedbackEligible) offerRecipeFeedback(historyStep, state.moves);
+    if (won) finishGame(true, "", {
+      firstCompletion,
+      outcomeCommitted,
+      celebrationStartedAt,
+      authoredGoldenPair
+    });
     else if (state.game.moveLimit && state.moves >= state.game.moveLimit) setTimeout(() => finishGame(false, moveLimitEndMessage()), 350);
     return { node: resultNode, completed: won };
   } catch (error) {
     if (orbitGeneration !== state.orbitGeneration || !state.game) return null;
-    for (const element of [aElement, bElement]) {
-      element?.classList.remove("combining");
-      element?.classList.remove("merging");
-      element?.classList.add("rejected");
-      setTimeout(() => element?.classList.remove("rejected"), 380);
+    const wrongPath = !scrambleActive && error.code === "wrong_path";
+    const memory = wrongPath
+      ? rememberPathGuardPair(a.item.word, b.item.word)
+      : { pairKey: "", remembered: false };
+    const pathGuardMessage = wrongPath
+      ? showPathGuardFeedback(a.item.word, b.item.word, {
+        remembered: memory.remembered,
+        elements: [aElement, bElement]
+      })
+      : "";
+    if (!wrongPath) {
+      for (const element of [aElement, bElement]) {
+        element?.classList.remove("combining");
+        element?.classList.remove("merging");
+        element?.classList.add("rejected");
+        setTimeout(() => element?.classList.remove("rejected"), 380);
+      }
     }
-    const nearMiss = error.code === "combination_missing" ? explainRecipeNearMiss({
+    const nearMiss = !scrambleActive && error.code === "combination_missing" ? explainRecipeNearMiss({
       a: a.item.word,
       b: b.item.word,
       ...(categoryForInsightWord(a.item.word) ? { categoryA: categoryForInsightWord(a.item.word) } : {}),
@@ -5996,14 +7006,33 @@ async function combineNodes(a, b) {
       discovered: state.words,
       recipes: authoredInsightCatalog()
     }) : null;
-    showAlchemy(nearMiss?.text || error.message, true);
-    if (error.code === "combination_missing" && !learningOrbitActive()) {
+    if (!wrongPath) showAlchemy(nearMiss?.text || error.message, true);
+    if (!scrambleActive && (error.code === "combination_missing" || firstOrbitActive())) {
+      renderCombinationStory({ a: a.item.word, b: b.item.word });
+    }
+    if (!scrambleActive && error.code === "combination_missing" && !learningOrbitActive()) {
       changeRunIq("miss", a.item.word, b.item.word);
       scheduleRunSave();
       offerExpectedPairFeedback(a.item.word, b.item.word);
     }
-    playFeedback("reject");
-    track("combination_rejected", { mode: state.mode, a: a.item.word, b: b.item.word });
+    if (wrongPath) {
+      track("path_guard_blocked", {
+        mode: state.mode,
+        status: memory.remembered ? "remembered" : "new"
+      });
+    } else {
+      playFeedback("reject", { word: `${a.item.word}+${b.item.word}` });
+      track("combination_rejected", { mode: state.mode, a: a.item.word, b: b.item.word });
+    }
+    if (wrongPath) {
+      return {
+        rejected: true,
+        code: "wrong_path",
+        wrongPath: true,
+        remembered: memory.remembered,
+        message: pathGuardMessage
+      };
+    }
     return null;
   } finally {
     if (orbitGeneration === state.orbitGeneration) {
@@ -6036,8 +7065,9 @@ function resetExpectedPairFeedback() {
 
 function offerExpectedPairFeedback(a, b) {
   const key = expectedPairKey(a, b);
-  if (!key || state.expectedPairReports.has(key) || !els.expectedPairFeedback) return;
+  if (state.focusMode || !key || state.expectedPairReports.has(key) || !els.expectedPairFeedback) return;
   resetRecipeFeedback();
+  clearBoardNotices();
   state.expectedPair = { a: String(a).slice(0, 48), b: String(b).slice(0, 48), key, submitted: false, localSaved: false, timer: null };
   $("#expectedPairRecipe").textContent = `${state.expectedPair.a} + ${state.expectedPair.b}`;
   els.expectedPairButton.textContent = expectedPairDelivery.submitLabel(isStaticBeta);
@@ -6135,6 +7165,7 @@ function scheduleRecipeFeedbackExpiry(delay = 7600) {
 
 function offerRecipeFeedback(step, move) {
   if (!step?.feedbackEligible || step.twisted || step.revealed || !els.recipeFeedback || !state.run?.id || !state.run?.token || !Number.isInteger(move) || move < 1) return;
+  if (state.focusMode) return;
   resetRecipeFeedback();
   state.recipeFeedback.move = move;
   state.recipeFeedback.step = { a: step.a, b: step.b, word: step.word };
@@ -6220,7 +7251,10 @@ function resetRevealPlayback({ keepConstellation = false } = {}) {
     generation: Number(previous.generation || 0) + 1,
     route: keepConstellation ? previous.route || [] : [],
     completed: keepConstellation ? previous.completed || 0 : 0,
+    completedSteps: keepConstellation ? previous.completedSteps || [] : [],
     layout: keepConstellation ? previous.layout || null : null,
+    cameraY: keepConstellation ? previous.cameraY || 0 : 0,
+    pausedAt: 0,
     visual: null,
     wake: null
   };
@@ -6232,6 +7266,9 @@ function resetRevealPlayback({ keepConstellation = false } = {}) {
   if (els.revealController) els.revealController.hidden = true;
   els.revealController?.classList.remove("is-paused", "is-complete");
   els.board?.classList.remove("reveal-active", "reveal-summoning", "reveal-merging", "reveal-resulting", "reveal-paused");
+  for (const attribute of ["data-reveal-node-count", "data-reveal-edge-count", "data-reveal-active-paths", "data-reveal-completed-paths", "data-reveal-phase", "data-reveal-camera-y", "data-reveal-content-height", "data-reveal-compact"]) {
+    els.board?.removeAttribute(attribute);
+  }
   if (els.revealEquation) {
     els.revealEquation.hidden = true;
     els.revealEquation.dataset.phase = "summon";
@@ -6277,6 +7314,7 @@ async function confirmRevealPath() {
   const label = button.querySelector("span");
   const dismissers = $$('[data-close="revealDialog"]');
   let pendingUiCleared = false;
+  let playbackCommitted = false;
   const clearPendingUi = () => {
     revealState.pending = false;
     button.disabled = false;
@@ -6310,6 +7348,7 @@ async function confirmRevealPath() {
     state.scoringDisabled = true;
     state.scoreMultiplier = 0;
     state.run = { ...state.run, assist: "reveal", ranked: false, scoreEligible: false, scoreMultiplier: 0, leaderboardEligible: false, assisted: true, division: "study" };
+    state.runPersistence = null;
     clearActiveRunSnapshot();
     stopTimer();
     if (mode === "daily") {
@@ -6317,37 +7356,27 @@ async function confirmRevealPath() {
       saveProfile({ fields: ["progression"] });
     }
     const route = Array.isArray(payload.route) ? payload.route : [];
+    playbackCommitted = true;
+    if (els.resultDialog.open) els.resultDialog.close();
     if (els.revealDialog.open) els.revealDialog.close();
     clearPendingUi();
     track("answer_revealed", { mode, target, steps: route.length });
     await playRevealPath(route);
   } catch (error) {
     if (state.reveal === revealState && state.run?.id === runId) showToast(error.message);
+    if (playbackCommitted && state.reveal === revealState && state.run?.id === runId && !els.resultDialog.open) returnHome();
   } finally {
     if (!pendingUiCleared && state.reveal === revealState) clearPendingUi();
   }
 }
 
 function buildRevealLayout(route) {
-  const positions = new Map([
-    ["earth", { x: .12, y: .82 }],
-    ["water", { x: .36, y: .88 }],
-    ["fire", { x: .64, y: .88 }],
-    ["air", { x: .88, y: .82 }]
-  ]);
-  const segments = route.map((step, index) => {
-    const progress = route.length <= 1 ? 1 : index / (route.length - 1);
-    const final = index === route.length - 1;
-    const to = {
-      x: final ? .5 : .2 + (stableHash(step.word) % 600) / 1000,
-      y: .7 - progress * .53
-    };
-    const a = positions.get(String(step.a).toLowerCase()) || { x: .22, y: Math.min(.9, to.y + .18) };
-    const b = positions.get(String(step.b).toLowerCase()) || { x: .78, y: Math.min(.9, to.y + .18) };
-    positions.set(String(step.word).toLowerCase(), to);
-    return { a, b, to };
+  const rect = els.board.getBoundingClientRect();
+  return buildRevealTree(route, {
+    width: rect.width,
+    height: rect.height,
+    compact: rect.width < 760
   });
-  return { segments };
 }
 
 function revealItem(word, fallback = {}) {
@@ -6381,74 +7410,143 @@ function clearRevealStage() {
   renderBoard();
 }
 
-function revealStageGeometry(rect) {
-  const compact = rect.width < 620;
-  const stacked = compact && rect.height >= 560;
-  const centerX = rect.width / 2;
-  const targetX = clamp(centerX - 72, 12, Math.max(12, rect.width - 162));
-  const targetY = clamp(rect.height * (compact ? .52 : .56) - 24, 132, Math.max(132, rect.height - 154));
-  const spread = compact
-    ? Math.min(104, Math.max(72, rect.width * .24))
-    : Math.min(238, Math.max(154, rect.width * .24));
-  const sourceY = stacked
-    ? clamp(targetY + 112, 188, Math.max(188, rect.height - 82))
-    : targetY;
-  const leftX = clamp(targetX - spread, 10, Math.max(10, rect.width - 160));
-  const rightX = clamp(targetX + spread, 10, Math.max(10, rect.width - 160));
-  const center = (x, y) => ({ x: x + 72, y: y + 24 });
-  return {
-    leftX,
-    rightX,
-    sourceY,
-    targetX,
-    targetY,
-    left: center(leftX, sourceY),
-    right: center(rightX, sourceY),
-    target: center(targetX, targetY)
-  };
+function revealTreeNode(key, layout = state.reveal.layout) {
+  return layout?.nodeByKey?.[revealWordKey(key)] || null;
 }
 
-function setRevealPresentation(step, index, phase, geometry = state.reveal.visual?.geometry) {
+function revealBoardNode(key) {
+  const normalized = revealWordKey(key);
+  return state.nodes.find((node) => node.revealKey === normalized) || null;
+}
+
+function syncRevealBoardNode(node) {
+  const element = els.boardItems.querySelector(`[data-id="${CSS.escape(String(node.id))}"]`);
+  if (element) syncBoardNodeElement(element, node);
+}
+
+function applyRevealCamera(cameraY = state.reveal.cameraY) {
+  const layout = state.reveal.layout;
+  if (!layout) return;
+  state.reveal.cameraY = clamp(
+    Number(cameraY) || 0,
+    0,
+    Number(layout.bounds?.maxCameraY) || 0
+  );
+  for (const node of state.nodes.filter((entry) => entry.revealKey)) {
+    const graphNode = revealTreeNode(node.revealKey, layout);
+    if (!graphNode) continue;
+    node.x = graphNode.x;
+    node.y = graphNode.y - state.reveal.cameraY;
+    node.revealWidth = graphNode.width;
+    node.revealHeight = graphNode.height;
+    syncRevealBoardNode(node);
+  }
+  els.board.dataset.revealCameraY = String(Math.round(state.reveal.cameraY));
+  els.board.dataset.revealContentHeight = String(Math.round(layout.bounds?.contentHeight || layout.bounds?.height || 0));
+  els.board.dataset.revealCompact = String(layout.bounds?.compact === true);
+  boardGeometryVersion += 1;
+}
+
+function focusRevealBatch(batch, phase = "result") {
+  applyRevealCamera(revealCameraForBatch(batch, state.reveal.layout, phase));
+}
+
+function refreshRevealLayoutForViewport() {
+  if (!state.reveal.revealed || !state.reveal.route.length) return false;
+  const previousVisual = state.reveal.visual;
+  const layout = buildRevealLayout(state.reveal.route);
+  state.reveal.layout = layout;
+  if (previousVisual) {
+    previousVisual.layout = layout;
+    previousVisual.steps = previousVisual.steps
+      .map((step) => layout.steps.find((candidate) => candidate.index === step.index))
+      .filter(Boolean);
+  }
+  const activeIndices = new Set(previousVisual?.activeStepIndices || []);
+  const batch = layout.batches.find((candidate) =>
+    candidate.steps.some((step) => activeIndices.has(step.index))
+  ) || layout.batches.at(-1);
+  applyRevealCamera(revealCameraForBatch(batch, layout, previousVisual?.phase || "result"));
+  return true;
+}
+
+function setRevealNodeRole(node, role) {
+  if (!node || node.revealRole === role) return node;
+  node.revealRole = role;
+  node.z = ++state.topZ;
+  syncRevealBoardNode(node);
+  return node;
+}
+
+function ensureRevealTreeNode(key, role = "past") {
+  const graphNode = revealTreeNode(key);
+  if (!graphNode) return null;
+  const existing = revealBoardNode(graphNode.key);
+  if (existing) return setRevealNodeRole(existing, role);
+  const item = revealItem(graphNode.word, {
+    emoji: graphNode.emoji,
+    category: graphNode.category
+  });
+  return addNode(item, graphNode.x, graphNode.y - state.reveal.cameraY, {
+    revealRole: role,
+    revealKey: graphNode.key,
+    revealWave: graphNode.depth,
+    revealWidth: graphNode.width,
+    revealHeight: graphNode.height,
+    size: { width: graphNode.width, height: graphNode.height },
+    inset: 2,
+    allowOutOfBounds: true
+  });
+}
+
+function stageRevealBatch(batch, phase) {
+  focusRevealBatch(batch, phase);
+  const { sourceKeys, resultKeys } = revealBatchKeys(batch);
+  for (const node of state.nodes.filter((entry) => entry.revealRole)) setRevealNodeRole(node, "past");
+  for (const key of sourceKeys) ensureRevealTreeNode(key, "source");
+  if (phase === "result" || phase === "complete") {
+    for (const key of resultKeys) {
+      ensureRevealTreeNode(
+        key,
+        key === state.reveal.layout?.targetKey ? "target" : "result"
+      );
+    }
+  }
+}
+
+function materializeRevealTree({ targetBright = true } = {}) {
+  const layout = state.reveal.layout;
+  if (!layout) return;
+  for (const graphNode of layout.nodes) {
+    ensureRevealTreeNode(
+      graphNode.key,
+      targetBright && graphNode.key === layout.targetKey ? "target" : "past"
+    );
+  }
+}
+
+function setRevealPresentation(batch, batchIndex, phase) {
+  const steps = Array.isArray(batch?.steps) ? batch.steps : [];
+  const step = steps[0];
   if (!step || !els.revealEquation) return;
   const total = state.reveal.route.length;
   const left = revealItem(step.a);
   const right = revealItem(step.b);
   const result = revealItem(step.word, { emoji: step.emoji });
-  const resolved = phase === "result" || phase === "complete";
-  const final = index === total - 1;
-  els.revealEquation.hidden = false;
-  els.revealEquation.dataset.phase = phase;
-  els.revealEquationStep.textContent = phase === "complete"
-    ? "Answer complete"
-    : `Combination ${index + 1} of ${total}`;
-  els.revealEquationA.textContent = step.a;
-  els.revealEquationAEmoji.textContent = left.emoji || "✦";
-  els.revealEquationB.textContent = step.b;
-  els.revealEquationBEmoji.textContent = right.emoji || "✦";
-  els.revealEquationAnswer.textContent = resolved ? step.word : "?";
-  els.revealEquationAnswerEmoji.textContent = resolved ? result.emoji || step.emoji || "✦" : "✦";
-  els.revealEquationNote.textContent = phase === "merge"
-    ? "The two words are fusing…"
-    : phase === "result"
-      ? `${step.a} and ${step.b} make ${step.word}.`
-      : phase === "complete"
-        ? `Target found: ${step.word}.`
-        : "Watch these two words combine.";
-  els.revealEquation.setAttribute("aria-label", resolved
-    ? `${phase === "complete" ? "Answer complete" : `Combination ${index + 1} of ${total}`}: ${step.a} plus ${step.b} equals ${step.word}.`
-    : `Combination ${index + 1} of ${total}: ${step.a} plus ${step.b}. Answer not shown yet.`);
-  els.board.classList.remove("reveal-summoning", "reveal-merging", "reveal-resulting");
-  if (phase === "summon") els.board.classList.add("reveal-summoning");
-  if (phase === "merge") els.board.classList.add("reveal-merging");
-  if (phase === "result" || phase === "complete") els.board.classList.add("reveal-resulting");
-  state.reveal.visual = {
+  const completedNow = Math.min(total, state.reveal.completedSteps.length);
+  state.reveal.visual = renderRevealPresentation({
+    batch,
+    batchIndex,
     phase,
-    stepIndex: index,
-    step,
-    geometry,
-    final,
-    startedAt: performance.now()
-  };
+    total,
+    completedNow,
+    target: state.game.target,
+    layout: state.reveal.layout,
+    left,
+    right,
+    result,
+    elements: els
+  });
   if (matchMedia("(prefers-reduced-motion: reduce)").matches) startCosmos();
 }
 
@@ -6467,21 +7565,25 @@ function recordRevealStep(step, result, replay) {
 }
 
 function completeRevealRouteImmediately(route, replay) {
-  for (let index = state.reveal.completed; index < route.length; index += 1) {
+  const completed = new Set(state.reveal.completedSteps);
+  for (let index = 0; index < route.length; index += 1) {
+    if (completed.has(index)) continue;
     const step = route[index];
     const result = addRevealDiscovery(step);
     recordRevealStep(step, result, replay);
   }
   state.reveal.completed = route.length;
-  clearRevealStage();
-  const rect = els.board.getBoundingClientRect();
-  const geometry = revealStageGeometry(rect);
-  const finalStep = route.at(-1);
-  if (finalStep) {
-    const result = addRevealDiscovery(finalStep);
-    addNode(result, geometry.targetX, geometry.targetY, { revealRole: "target" });
-    setRevealPresentation(finalStep, route.length - 1, "complete", geometry);
+  state.reveal.completedSteps = route.map((_, index) => index);
+  materializeRevealTree();
+  const finalBatch = state.reveal.layout?.batches?.at(-1);
+  if (finalBatch) {
+    stageRevealBatch(finalBatch, "complete");
+    materializeRevealTree();
+    setRevealPresentation(finalBatch, finalBatch.index, "complete");
   } else {
+    clearRevealStage();
+    const rect = els.board.getBoundingClientRect();
+    const geometry = revealStageGeometry(rect);
     const target = revealItem(state.game.target, { emoji: state.game.emoji });
     addNode(target, geometry.targetX, geometry.targetY, { revealRole: "target" });
     if (els.revealEquation) els.revealEquation.hidden = true;
@@ -6492,7 +7594,7 @@ function completeRevealRouteImmediately(route, replay) {
     renderAtlas();
   }
   updateRevealController(route.length);
-  playFeedback("success");
+  playFeedback("success", { category: route.at(-1)?.category, word: route.at(-1)?.word });
 }
 
 function wakeRevealPlayback() {
@@ -6522,43 +7624,31 @@ async function revealDelay(milliseconds, generation) {
   return generation === state.reveal.generation && state.reveal.active;
 }
 
-function updateRevealController(stepIndex = state.reveal.completed, step = null, { resolved = false } = {}) {
-  const total = state.reveal.route.length;
-  const complete = !step && stepIndex >= total;
-  const label = complete
-    ? state.reveal.replaying
-      ? "Replay complete · returning to mode selection…"
-      : `Answer complete · ${total} combination${total === 1 ? "" : "s"} shown`
-    : step
-      ? resolved
-        ? `Step ${stepIndex + 1} of ${total}: ${step.a} + ${step.b} = ${step.word}`
-        : `Step ${stepIndex + 1} of ${total}: ${step.a} + ${step.b}`
-      : "Getting the words ready…";
-  const progressSteps = complete ? total : resolved ? stepIndex + 1 : stepIndex;
-  els.revealStepText.textContent = label;
-  els.revealAnnouncement.textContent = label;
-  els.revealProgressBar.style.width = `${total ? Math.min(100, progressSteps / total * 100) : 100}%`;
-  els.revealProgressBar.parentElement?.setAttribute("aria-valuenow", String(total ? Math.round(Math.min(100, progressSteps / total * 100)) : 100));
-  els.revealPause.disabled = complete;
-  els.revealSpeed.disabled = complete;
-  els.revealSkip.hidden = complete;
-  els.revealController.classList.toggle("is-paused", state.reveal.paused && !complete);
-  els.revealController.classList.toggle("is-complete", complete);
+function updateRevealController(completedCount = state.reveal.completedSteps.length, batch = null, { resolved = false } = {}) {
+  renderRevealController({
+    completedCount,
+    batch,
+    resolved,
+    total: state.reveal.route.length,
+    replaying: state.reveal.replaying,
+    paused: state.reveal.paused,
+    elements: els
+  });
 }
 
-function moveRevealNode(node, x, y) {
-  node.x = x;
-  node.y = y;
-  const element = els.boardItems.querySelector(`[data-id="${node.id}"]`);
-  if (!element) return;
-  element.classList.add("guided-drop");
-  element.style.setProperty("--x", `${x}px`);
-  element.style.setProperty("--y", `${y}px`);
+function announceRevealBatchResult(batch) {
+  const message = revealBatchAnnouncement(
+    batch,
+    state.reveal.completedSteps.length,
+    state.reveal.route.length
+  );
+  if (message) els.revealAnnouncement.textContent = message;
 }
 
 async function playRevealPath(route, { replay = false } = {}) {
   const generation = state.reveal.generation + 1;
   const runId = state.run?.id;
+  const layout = buildRevealLayout(route);
   ctrlHover.reset({ abandonPending: true });
   shiftBoard.reset();
   resetRecipeFeedback();
@@ -6581,7 +7671,10 @@ async function playRevealPath(route, { replay = false } = {}) {
     generation,
     route,
     completed: 0,
-    layout: buildRevealLayout(route),
+    completedSteps: [],
+    layout,
+    cameraY: 0,
+    pausedAt: 0,
     visual: null,
     wake: null
   };
@@ -6597,79 +7690,79 @@ async function playRevealPath(route, { replay = false } = {}) {
   renderInventory();
   renderBoard();
   updateHud();
-  updateRevealController(0, route[0]);
+  updateRevealController(0, layout.batches[0] || null);
   startCosmos();
 
   if (!route.length) {
     const target = revealItem(state.game.target, { emoji: state.game.emoji });
     const rect = els.board.getBoundingClientRect();
     const geometry = revealStageGeometry(rect);
-    clearRevealStage();
     addNode(target, geometry.targetX, geometry.targetY, { revealRole: "target" });
   }
 
   let skippedToEnd = false;
   revealSteps:
-  for (let index = 0; index < route.length; index += 1) {
+  for (const batch of layout.batches) {
     if (generation !== state.reveal.generation) return;
     if (state.reveal.skip) {
       completeRevealRouteImmediately(route, replay);
       skippedToEnd = true;
       break;
     }
-    const step = route[index];
-    const rect = els.board.getBoundingClientRect();
-    const geometry = revealStageGeometry(rect);
-    const leftItem = revealItem(step.a);
-    const rightItem = revealItem(step.b);
-    clearRevealStage();
-    const left = addNode(leftItem, geometry.leftX, geometry.sourceY, { revealRole: "source" });
-    const right = addNode(rightItem, geometry.rightX, geometry.sourceY, { revealRole: "source" });
-    setRevealPresentation(step, index, "summon", geometry);
-    updateRevealController(index, step);
-    if (!await revealDelay(720, generation)) return;
+    const completedBefore = state.reveal.completedSteps.length;
+    stageRevealBatch(batch, "summon");
+    setRevealPresentation(batch, batch.index, "summon");
+    updateRevealController(completedBefore, batch);
+    if (!await revealDelay(680, generation)) return;
     if (state.reveal.skip) {
       completeRevealRouteImmediately(route, replay);
       skippedToEnd = true;
       break revealSteps;
     }
-    setRevealPresentation(step, index, "merge", geometry);
-    moveRevealNode(left, geometry.targetX - 22, geometry.targetY + 5);
-    moveRevealNode(right, geometry.targetX + 22, geometry.targetY + 5);
-    if (!await revealDelay(520, generation)) return;
+    setRevealPresentation(batch, batch.index, "merge");
+    const { sourceKeys } = revealBatchKeys(batch);
+    for (const key of sourceKeys) {
+      const source = revealBoardNode(key);
+      const element = source && els.boardItems.querySelector(`[data-id="${CSS.escape(String(source.id))}"]`);
+      element?.classList.add("merging");
+    }
+    if (!await revealDelay(620, generation)) return;
     if (state.reveal.skip) {
       completeRevealRouteImmediately(route, replay);
       skippedToEnd = true;
       break revealSteps;
     }
-    els.boardItems.querySelectorAll(".reveal-source").forEach((element) => element.classList.add("merging"));
-    if (!await revealDelay(260, generation)) return;
+    if (!await revealDelay(180, generation)) return;
     if (state.reveal.skip) {
       completeRevealRouteImmediately(route, replay);
       skippedToEnd = true;
       break revealSteps;
     }
-    const result = addRevealDiscovery(step);
-    clearRevealStage();
-    addNode(result, geometry.targetX, geometry.targetY, { revealRole: index === route.length - 1 ? "target" : "result" });
-    setRevealPresentation(step, index, "result", geometry);
-    recordRevealStep(step, result, replay);
-    state.reveal.completed = index + 1;
+    for (const step of batch.steps) {
+      const result = addRevealDiscovery(step);
+      recordRevealStep(step, result, replay);
+      if (!state.reveal.completedSteps.includes(step.index)) state.reveal.completedSteps.push(step.index);
+    }
+    state.reveal.completed = state.reveal.completedSteps.length;
+    stageRevealBatch(batch, "result");
+    setRevealPresentation(batch, batch.index, "result");
     if (!replay) {
       updateHud();
-      updateMilestone(index === route.length - 1);
+      updateMilestone(state.reveal.completed === route.length);
       renderAtlas();
     }
-    updateRevealController(index, step, { resolved: true });
+    updateRevealController(completedBefore, batch, { resolved: true });
+    announceRevealBatchResult(batch);
     if (matchMedia("(prefers-reduced-motion: reduce)").matches) startCosmos();
-    playFeedback("success");
-    if (!await revealDelay(index === route.length - 1 ? 1350 : 1100, generation)) return;
+    playFeedback("success", { category: batch.steps.at(-1)?.category, word: batch.steps.at(-1)?.word });
+    if (!await revealDelay(state.reveal.completed === route.length ? 1350 : 1050, generation)) return;
   }
 
   if (generation !== state.reveal.generation) return;
   if (route.length && !skippedToEnd) {
-    const finalStep = route.at(-1);
-    setRevealPresentation(finalStep, route.length - 1, "complete", state.reveal.visual?.geometry);
+    const finalBatch = layout.batches.at(-1);
+    materializeRevealTree();
+    setRevealPresentation(finalBatch, finalBatch.index, "complete");
   }
   state.reveal.active = false;
   state.reveal.completed = route.length;
@@ -6702,6 +7795,9 @@ async function replayRevealPathOnce() {
   if (els.resultDialog.open) els.resultDialog.close();
   try {
     await playRevealPath(route, { replay: true });
+  } catch (error) {
+    showToast(error?.message || "The answer replay could not finish.");
+    if (state.reveal === revealState && state.game && !els.resultDialog.open) returnHome();
   } finally {
     resultActions.forEach((control) => { control.disabled = false; });
   }
@@ -6709,7 +7805,18 @@ async function replayRevealPathOnce() {
 
 function toggleRevealPause() {
   if (!state.reveal.active) return;
-  state.reveal.paused = !state.reveal.paused;
+  const now = performance.now();
+  const wasPaused = state.reveal.paused;
+  state.reveal.paused = !wasPaused;
+  if (state.reveal.paused) {
+    state.reveal.pausedAt = now;
+  } else {
+    if (state.reveal.visual && state.reveal.pausedAt) {
+      state.reveal.visual.startedAt = state.reveal.visual.startedAt
+        + Math.max(0, now - state.reveal.pausedAt);
+    }
+    state.reveal.pausedAt = 0;
+  }
   els.revealPause.textContent = state.reveal.paused ? "Resume" : "Pause";
   els.revealPause.setAttribute("aria-pressed", String(state.reveal.paused));
   els.revealController.classList.toggle("is-paused", state.reveal.paused);
@@ -6730,6 +7837,7 @@ function skipRevealAnimation() {
   if (!state.reveal.active) return;
   state.reveal.skip = true;
   state.reveal.paused = false;
+  state.reveal.pausedAt = 0;
   els.revealPause.textContent = "Pause";
   els.revealPause.setAttribute("aria-pressed", "false");
   els.revealController.classList.remove("is-paused");
@@ -6820,28 +7928,8 @@ function renderSignatureResult() {
   $("#signatureResultTitle").textContent = signature.tierLabel;
   $("#signatureResultScore").textContent = signature.scoreEligible ? String(signature.score) : "STUDY";
   $("#signatureResultSummary").textContent = signature.scoreEligible
-    ? `${grade.metrics.uniqueResults} distinct results across ${grade.metrics.categories} idea families.`
-    : "This route can be studied and replayed, but it cannot become a scored personal best.";
-  const metrics = [
-    ["Efficiency", grade.dimensions.efficiency],
-    ["Discovery", grade.dimensions.novelty],
-    ["Originality", grade.dimensions.variety],
-    ["Fair play", grade.dimensions.purity]
-  ];
-  $("#signatureResultMetrics").replaceChildren(...metrics.map(([label, value]) => {
-    const item = document.createElement("span");
-    item.innerHTML = `<small>${escapeHtml(label)}</small><strong>${Number(value)}</strong>`;
-    return item;
-  }));
-  $("#signaturePersonalBest").textContent = result.awaitingVerification
-    ? "Server verification will confirm this Signature and personal best."
-    : !signature.scoreEligible
-    ? "Study signatures are descriptive only."
-    : comparison.reason === "first"
-      ? "First personal signature recorded for this destination."
-      : comparison.improved
-        ? `New personal best · +${Math.max(0, comparison.delta)} signature points.`
-        : `Personal best remains ${comparison.best?.score ?? signature.score}.`;
+    ? `${grade.metrics.uniqueResults} results · ${grade.metrics.categories} ideas${result.awaitingVerification ? " · checking score" : comparison.improved ? " · new best" : ""}`
+    : "Study route · no score";
 }
 
 function adoptVerifiedSignature(raw, { runId = "", updateCurrent = true } = {}) {
@@ -6896,7 +7984,7 @@ function renderCommunityResult(community = null, { loading = false, status = "" 
   const phase = status || (loading ? "uploading" : community ? "verified" : isStaticBeta ? "local" : "verified-empty");
   state.community = phase === "verified" ? community : null;
   const eligible = Boolean(state.finished && state.game && !firstOrbitActive() && !state.scoringDisabled && state.assist !== "reveal");
-  const shouldShow = phase !== "hidden" && eligible && (isStaticBeta || state.run?.ranked);
+  const shouldShow = !isStaticBeta && phase !== "hidden" && eligible && state.run?.ranked;
   els.communityResultCard.hidden = !shouldShow;
   if (!shouldShow) return;
   const race = $("#raceCommunityGhost");
@@ -6904,16 +7992,6 @@ function renderCommunityResult(community = null, { loading = false, status = "" 
     $("#communityResultTitle").textContent = "Mapping verified routes…";
     els.communityResultStats.replaceChildren(communityStat("STATUS", "UPLOADING"));
     $("#communityResultNote").textContent = "Your result stays safe locally while the community sky is checked.";
-    race.hidden = true;
-    return;
-  }
-  if (isStaticBeta) {
-    $("#communityResultTitle").textContent = "Community sky opens in the online release";
-    els.communityResultStats.replaceChildren(
-      communityStat("THIS BUILD", isStaticBeta ? "LOCAL" : "1"),
-      communityStat("YOUR PATH", "ORIGINAL")
-    );
-    $("#communityResultNote").textContent = "Pages and itch practice never invent player counts or upload your route. Verified asynchronous comparisons require the online service.";
     race.hidden = true;
     return;
   }
@@ -6989,8 +8067,78 @@ function continueJourneyFromResult(view) {
   });
 }
 
-function finishGame(won, reason = "", { skipSubmit = false } = {}) {
-  if (state.finished) return;
+function waitForPaints(count = 1) {
+  const total = Math.max(1, Math.floor(Number(count) || 1));
+  if (document.hidden || typeof requestAnimationFrame !== "function") return wait(0);
+  return new Promise((resolve) => {
+    let remaining = total;
+    const paint = () => {
+      remaining -= 1;
+      if (remaining <= 0) resolve();
+      else requestAnimationFrame(paint);
+    };
+    requestAnimationFrame(paint);
+  });
+}
+
+function resultPresentationIsCurrent({ generation, game, runId }, { dialogMayBeOpen = false } = {}) {
+  return Boolean(
+    state.finished
+    && state.orbitGeneration === generation
+    && state.game === game
+    && String(state.run?.id || "") === runId
+    && (dialogMayBeOpen || !els.resultDialog.open)
+  );
+}
+
+async function presentResultAfterCelebration({
+  won,
+  revealed,
+  authoredGoldenPair,
+  celebrationStartedAt,
+  gate,
+  audio
+}) {
+  const snapshot = {
+    generation: state.orbitGeneration,
+    game: state.game,
+    runId: String(state.run?.id || "")
+  };
+  await waitForPaints(2);
+  if (!resultPresentationIsCurrent(snapshot)) return false;
+
+  if (won) {
+    const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const fullHold = victoryHandoffHoldMs({
+      won: true,
+      revealed: revealed === true,
+      authoredGoldenPair: authoredGoldenPair === true,
+      reducedMotion: reduced
+    });
+    const elapsed = celebrationStartedAt > 0
+      ? Math.max(0, performance.now() - celebrationStartedAt)
+      : 0;
+    const remaining = Math.max(0, fullHold - elapsed);
+    if (remaining > 0) await wait(remaining);
+    await waitForPaints(1);
+    if (!resultPresentationIsCurrent(snapshot)) return false;
+  }
+
+  gameAudio.setScene("result");
+  const shown = await cosmicGate.presentDialog(els.resultDialog, gate);
+  if (!shown || !resultPresentationIsCurrent(snapshot, { dialogMayBeOpen: true })) return shown;
+  gameAudio.playResult(audio);
+  return true;
+}
+
+function finishGame(won, reason = "", {
+  skipSubmit = false,
+  firstCompletion = false,
+  outcomeCommitted = false,
+  celebrationStartedAt = 0,
+  authoredGoldenPair = false
+} = {}) {
+  if (state.finished && !outcomeCommitted) return;
   if (els.pauseDialog.open) {
     pauseCloseRestoreFocus = false;
     els.pauseDialog.close();
@@ -7006,17 +8154,19 @@ function finishGame(won, reason = "", { skipSubmit = false } = {}) {
   resetRecipeFeedback();
   clearBoardNotices();
   state.finished = true;
+  renderHintObjective();
   resetBoardHistory();
   syncFirstOrbitGuide();
   stopTimer();
   stopRivalGhost({ completed: won });
-  if (won && !state.reveal.revealed) playFeedback("target", { analytics: true });
-  updateMilestone(won);
-  const elapsed = state.finishedElapsedSeconds || Math.max(1, Math.round((Date.now() - state.startedAt) / 1000));
-  state.finishedElapsedSeconds = elapsed;
   const firstTraining = firstOrbitActive();
   const secondTraining = secondOrbitActive();
   const training = firstTraining || secondTraining;
+  const firstEverCompletion = Boolean(won && firstTraining && (firstCompletion || !sanitizeFirstOrbitState(profile.firstOrbit).completed));
+  if (won && !state.reveal.revealed) playFeedback("target", { analytics: true, category: state.game?.category || "celestial", word: state.game?.target });
+  updateMilestone(won);
+  const elapsed = state.finishedElapsedSeconds || Math.max(1, Math.round((Date.now() - state.startedAt) / 1000));
+  state.finishedElapsedSeconds = elapsed;
   const practiceReplay = state.game?.practiceReplay === true;
   const assisted = Boolean(training || state.scoringDisabled || state.assist === "reveal");
   const partialAssist = !assisted && state.scoreMultiplier < 1;
@@ -7036,18 +8186,22 @@ function finishGame(won, reason = "", { skipSubmit = false } = {}) {
       : /time/i.test(reason)
         ? "timeout"
         : "failed";
+  if (!won && !revealed) playFeedback(adaptiveOutcome === "timeout" ? "timeout" : "failure");
   recordAdaptiveOutcome(adaptiveOutcome, { flawless: flawlessAdaptiveCompletion });
   if (!won && !revealed && !isStaticBeta) {
-    void submitRunForfeit(state.run, state.game, { announce: true });
+    void queueRunForfeit(state.run, state.game, { announce: true });
   }
   buildSignatureResult(won, { training, revealed });
-  const pendingRankedSubmit = Boolean(won && !assisted && !skipSubmit && state.run?.ranked);
+  const pendingRankedSubmit = Boolean(won && !assisted && !skipSubmit && state.run?.ranked)
+    && state.run?.localOnly !== true
+    && state.runPersistence?.clientOnly !== true;
   if (pendingRankedSubmit) {
     const saved = saveCompletedRunSnapshot();
     state.scoreSubmission = { runId: state.run.id, ...saved, inFlight: false, exitAction: null, exitLabel: "" };
   }
   else {
     state.scoreSubmission = { runId: "", activeSaved: false, pendingSaved: false, inFlight: false, exitAction: null, exitLabel: "" };
+    state.runPersistence = null;
     clearActiveRunSnapshot();
   }
   let reward = null;
@@ -7074,7 +8228,10 @@ function finishGame(won, reason = "", { skipSubmit = false } = {}) {
   $("#resultReveal").hidden = won || assisted || !state.run;
   if (won && !assisted && !progressionAlreadyGranted) {
     reward = calculateReward();
-    if (state.mode === "daily") updateDailyStreak();
+    if (state.mode === "daily") {
+      updateDailyStreak();
+      state.resultAction = () => void beginMode("reach");
+    }
     if (state.mode === "weekly") {
       profile.weekly.stage += 1;
       if (profile.weekly.stage >= 3) {
@@ -7083,11 +8240,9 @@ function finishGame(won, reason = "", { skipSubmit = false } = {}) {
         profile.streakShields += 1;
         reward.reward += 150;
         reward.reason += " · expedition complete";
+        state.resultAction = () => void beginMode("reach");
       } else {
-        state.resultAction = () => {
-          els.resultDialog.close();
-          beginMode("weekly");
-        };
+        state.resultAction = () => void beginMode("weekly");
       }
     }
     if (state.journeyContext?.kind === "voyage") {
@@ -7127,19 +8282,23 @@ function finishGame(won, reason = "", { skipSubmit = false } = {}) {
       profile.firstOrbit = { seen: true, completed: true };
       saveProfile({ fields: ["firstOrbit"] });
       track("first_orbit_completed", { moves: state.moves, seconds: elapsed });
-      state.resultAction = () => {
-        if (els.resultDialog.open) els.resultDialog.close();
-        openSecondOrbitBriefing(els.resultPrimary);
-      };
+      state.resultAction = () => void startSecondOrbit({ enterThroughGate: true });
     } else {
       profile.secondOrbit = { seen: true, completed: true };
       saveProfile({ cloud: false });
       track("second_orbit_completed", { moves: state.moves, seconds: elapsed });
-      const nextMode = profile.dailyCompleted === todayKey ? "reach" : "daily";
-      state.resultAction = () => {
-        if (els.resultDialog.open) els.resultDialog.close();
-        void beginMode(nextMode);
-      };
+      if (startupScrambleInviteCode) {
+        state.resultAction = () => {
+          returnHome({ skipForfeit: true });
+          requestAnimationFrame(() => void openScramble({
+            trigger: $("#scrambleHomeButton"),
+            invite: startupScrambleInviteCode
+          }));
+        };
+      } else {
+        const nextMode = homeMenuState().dailyAvailable ? "daily" : "reach";
+        state.resultAction = () => void beginMode(nextMode);
+      }
     }
   } else if (won && revealed) {
     state.resultAction = replayRevealPathOnce;
@@ -7148,7 +8307,7 @@ function finishGame(won, reason = "", { skipSubmit = false } = {}) {
   els.resultKicker.textContent = practiceReplay
     ? "PRACTICE REPLAY - NO RANK OR REWARDS"
     : training && won
-    ? `${firstTraining ? "FIRST" : "SECOND"} ORBIT COMPLETE · TRAINING`
+    ? firstTraining ? "FIRST DISCOVERY · COMPLETE" : "SECOND ORBIT COMPLETE · TRAINING"
     : revealed
     ? "PATH REVEALED · STUDY"
     : won
@@ -7159,32 +8318,32 @@ function finishGame(won, reason = "", { skipSubmit = false } = {}) {
         : "TARGET REACHED"
     : "ORBIT ENDED";
   els.resultTitle.textContent = training && won
-    ? firstTraining ? "You made Wall!" : "You made Mountain!"
+    ? firstTraining ? "Your first discovery: Mud!" : "You made Mountain!"
     : revealed ? `Answer for ${state.game.target}` : won ? `You made ${state.game.target}!` : reason;
   const timeStat = state.game.timeLimit || state.mode === "challenge" ? ` · ${formatTime(elapsed)}` : "";
-  const runIqStat = !revealed && runIqApplies(state.mode, state.game.target, {
+  const runIqStat = !state.focusMode && !revealed && runIqApplies(state.mode, state.game.target, {
     scoreEligible: !state.scoringDisabled,
     study: assisted
   }) ? ` · ${state.runIq.value} Run IQ` : "";
   els.resultStats.textContent = training
-    ? `${state.history.length} combinations · ${formatTime(elapsed)}`
+    ? firstTraining ? `One combination · ${formatTime(elapsed)}` : `${state.history.length} combinations · ${formatTime(elapsed)}`
     : revealed
     ? `${state.reveal.route.length} combinations · No points`
     : `${state.newDiscoveries} words found · ${state.moves} moves${timeStat}${runIqStat}${partialAssist ? ` · ${Math.round(state.scoreMultiplier * 100)}% points` : ""}`;
   const routeResultNotice = state.routeRankNotice?.message
     ? state.routeRankNotice
-    : state.adaptiveNotice;
+    : null;
   els.resultAdaptiveNote.hidden = !routeResultNotice?.message;
   els.resultAdaptiveNote.textContent = routeResultNotice?.message || "";
   els.resultAdaptiveNote.classList.toggle(
     "is-surge-perfect",
-    state.routeRankNotice?.rankUp === true || state.adaptiveNotice?.metadata?.surgePerfected === true
+    state.routeRankNotice?.rankUp === true
   );
   renderResultRemixes(won, revealed);
   els.resultMasteryCard.hidden = !won || !state.resultMasteryNotice;
   els.resultMasteryText.textContent = won ? state.resultMasteryNotice : "";
   renderSignatureResult();
-  const communityUploadExpected = Boolean(won && !assisted && !isStaticBeta && state.run?.ranked && !skipSubmit);
+  const communityUploadExpected = Boolean(pendingRankedSubmit && !isStaticBeta);
   renderCommunityResult(null, {
     loading: communityUploadExpected,
     status: !won ? "hidden" : !communityUploadExpected && !isStaticBeta && state.run?.ranked ? "unavailable" : ""
@@ -7196,24 +8355,22 @@ function finishGame(won, reason = "", { skipSubmit = false } = {}) {
   }
   els.resultPrimary.querySelector("span").textContent = training
     ? firstTraining
-      ? "Continue"
-      : profile.dailyCompleted === todayKey ? "Play relaxed" : "Play today’s word"
+      ? "Next game"
+      : homeMenuState().dailyAvailable ? "Play today’s word" : "Begin Bronze route"
     : revealed ? "Watch answer once"
     : won && state.journeyContext?.kind === "voyage" && voyageProgressAdvanced ? "Continue story"
     : won && state.journeyContext?.kind === "event" ? "View event"
-    : won && state.mode === "weekly" && !profile.weekly.complete ? "Continue"
+    : won && ["daily", "weekly"].includes(state.mode) ? "Play next level"
     : "Main menu";
   const adaptiveSeries = adaptiveSeriesEligible();
+  const easierNext = adaptiveSeries && (!won || revealed);
+  if (easierNext) state.recoveryTarget = state.game.target;
+  els.resultRetry.dataset.interludeWin = won && !assisted && !partialAssist && !progressionAlreadyGranted && adaptiveRunEligible() ? profile.wins : "";
   els.resultRetry.hidden = training || (revealed ? false : (assisted && !practiceReplay) || (won && (state.mode === "daily" || state.mode === "weekly")));
-  els.resultRetry.textContent = revealed
-    ? "Main menu"
-    : adaptiveSeries
-      ? won
-        ? "Next challenge"
-        : state.adaptiveNotice?.metadata?.surgeWasActive
-          ? "Back to normal"
-          : "Try easier challenge"
-      : won ? "Play again" : "Try again";
+  els.resultRetry.textContent = easierNext ? "Try a fresh challenge"
+    : revealed ? "Main menu"
+      : adaptiveSeries ? "Next challenge"
+        : won ? "Play again" : "Try again";
   const resultCanReplayTarget = adaptiveSeries
     && !training
     && !revealed
@@ -7221,22 +8378,41 @@ function finishGame(won, reason = "", { skipSubmit = false } = {}) {
     && !state.journeyContext;
   els.resultReplay.hidden = !resultCanReplayTarget;
   els.resultReplay.textContent = won ? "Restart challenge" : "Try this challenge again";
-  const showNextStartOptions = resultCanReplayTarget && currentRouteRank().rank.id !== "bronze";
-  $("#resultNextOptions").hidden = !showNextStartOptions;
-  if (showNextStartOptions) syncStartStyleControls();
-  els.resultRetry.classList.toggle("primary-action", !els.resultRetry.hidden && !revealed);
-  els.resultRetry.classList.toggle("secondary-action", !els.resultRetry.hidden && revealed);
-  els.resultPrimary.classList.toggle("primary-action", els.resultRetry.hidden || revealed);
+  els.resultRetry.classList.toggle("primary-action", !els.resultRetry.hidden && (!revealed || easierNext));
+  els.resultRetry.classList.toggle("secondary-action", !els.resultRetry.hidden && revealed && !easierNext);
+  els.resultPrimary.classList.toggle("primary-action", els.resultRetry.hidden || (revealed && !easierNext));
   els.resultPrimary.classList.remove("secondary-action");
-  els.resultPrimary.classList.toggle("quiet-action", !els.resultRetry.hidden && !revealed);
-  els.resultShare.hidden = !won || training;
+  els.resultPrimary.classList.toggle("quiet-action", !els.resultRetry.hidden && (!revealed || easierNext));
+  els.resultShare.hidden = !won || training || !homeMenuState().sharingReady;
   const openRun = !assisted && (state.assist !== "none" || state.wished);
   els.resultShare.querySelector("span").textContent = assisted ? "Share Study card" : openRun ? "Share Open card" : "Challenge a friend";
   renderResultRoute();
+  $("#resultDetails").hidden = !sanitizeFeedbackPreferences(profile.feedbackPreferences).resultDetails;
   $("#resultDetails").open = false;
-  els.resultDialog.showModal();
-  requestAnimationFrame(() => els.resultDialog.querySelector(".primary-action:not([hidden]):not(:disabled)")?.focus({ preventScroll: true }));
-  if (won && !assisted && !skipSubmit) submitRankedScore();
+  els.resultDialog.classList.toggle("focus-result", state.focusMode);
+  if (firstEverCompletion) {
+    announceBoardMessage(`First constellation complete. You made ${state.game.target}.`, "first-discovery");
+  }
+  void presentResultAfterCelebration({
+    won,
+    revealed,
+    authoredGoldenPair,
+    celebrationStartedAt,
+    gate: {
+      kind: won ? "victory" : "result",
+      label: won ? `${state.game.target} discovered` : "Game complete",
+      focus: ".primary-action:not([hidden]):not(:disabled)",
+      celebration: firstEverCompletion
+        ? { kind: "first-orbit", word: state.game.target, emoji: state.game.emoji }
+        : null
+    },
+    audio: {
+      reward: (reward?.reward || 0) > 0,
+      unlock: Boolean(state.eventRewardGranted || voyageProgressAdvanced || state.resultMasteryNotice.includes("collection complete")),
+      rankUp: state.routeRankNotice?.rankUp === true
+    }
+  });
+  if (pendingRankedSubmit) submitRankedScore();
   track(won ? "target_reached" : "run_failed", { mode: state.mode, target: state.game.target, moves: state.moves, seconds: elapsed, wished: state.wished, reward: reward?.reward || 0, assisted, revealed, scoreMultiplier: state.scoreMultiplier });
 }
 
@@ -7246,7 +8422,11 @@ async function submitRankedScore() {
     card.hidden = true;
     return;
   }
-  if (!state.run?.ranked) {
+  if (
+    state.run?.ranked !== true
+    || state.run?.localOnly === true
+    || state.runPersistence?.clientOnly === true
+  ) {
     $("#resultDivision").textContent = "PRACTICE ORBIT";
     $("#resultRank").textContent = "UNRANKED";
     $("#resultScore").textContent = "";
@@ -7271,7 +8451,6 @@ async function submitRankedScore() {
     els.resultPrimary.disabled = true;
     els.resultRetry.hidden = true;
     els.resultReplay.hidden = true;
-    $("#resultNextOptions").hidden = true;
   }
   const division = state.assist === "none" ? "pure" : "open";
   state.leaderboardDivision = division;
@@ -7320,9 +8499,6 @@ async function submitRankedScore() {
     const resultCanReplayTarget = adaptiveSeriesEligible() && !state.journeyContext;
     els.resultReplay.hidden = !resultCanReplayTarget;
     els.resultReplay.disabled = false;
-    const showNextStartOptions = resultCanReplayTarget && currentRouteRank().rank.id !== "bronze";
-    $("#resultNextOptions").hidden = !showNextStartOptions;
-    if (showNextStartOptions) syncStartStyleControls();
     state.leaderboardDivision = result.placement.entry.division;
     state.leaderboardScope = submission.mode === "daily" ? "daily" : submission.mode === "weekly" ? "weekly" : "sprint";
     $("#resultDivision").textContent = `${result.placement.entry.division.toUpperCase()} - SERVER VERIFIED`;
@@ -7332,6 +8508,7 @@ async function submitRankedScore() {
     renderCommunityResult(result.placement.community || null);
     track("community_viewed", { source: "community", completedRoutes: result.placement.community?.completedRoutes || 0, topPercent: result.placement.community?.player?.topPercent || 0 });
     const totalCredits = Number(result.creditReward || 0) + Number(result.weeklyBonus || 0);
+    if (totalCredits > 0) gameAudio.queueProgression("reward", 120);
     $("#resultRankMessage").textContent = result.weeklyBonus
       ? `Personal best recorded - +${totalCredits} Star Credits, including the 4-day bonus`
       : result.creditReward
@@ -7751,7 +8928,7 @@ function renderLeaderboard(board) {
 }
 
 function resumeTimerIfNeeded() {
-  if (state.game?.timeLimit && !state.finished && !state.startingRun && !state.pause.active && !state.reveal.active && !state.reveal.pending && !els.gameScreen.hidden && !els.missionBriefingDialog.open && !els.pauseDialog.open && !els.journeyDialog.open && !els.paywallDialog.open && !els.wishDialog.open && !els.atlasDialog.open && !els.senseDialog.open && !els.shareDialog.open && !els.profileDialog.open && !els.exchangeDialog.open && !els.marketBuyDialog.open && !els.leaderboardDialog.open && !els.revealDialog.open && !$("#recoveryDialog").open) startTimer();
+  if (state.game?.timeLimit && !cosmeticWorldPreviewActive() && !state.finished && !state.startingRun && !state.pause.active && !state.reveal.active && !state.reveal.pending && !cosmicGate.isActive() && !els.gameScreen.hidden && !els.missionBriefingDialog.open && !els.pauseDialog.open && !els.journeyDialog.open && !els.paywallDialog.open && !els.wishDialog.open && !els.atlasDialog.open && !els.senseDialog.open && !els.shareDialog.open && !els.profileDialog.open && !els.exchangeDialog.open && !els.marketBuyDialog.open && !els.leaderboardDialog.open && !els.revealDialog.open && !els.developerLoginDialog.open && !els.developerDialog.open && !els.developerVfxDialog.open && !$("#recoveryDialog").open) startTimer();
 }
 
 function renderAtlas() {
@@ -7838,289 +9015,23 @@ function openAtlas(view = "orbit") {
   els.atlasDialog.showModal();
 }
 
-function challengeUrl(game) {
-  const url = new URL(location.origin + location.pathname);
-  url.searchParams.set("challenge", "1");
-  url.searchParams.set("target", game.target);
-  url.searchParams.set("seed", String(game.seed ?? stableHash(game.target)));
-  return url.toString();
-}
-
-function populateShare(game, completed = false) {
-  state.shareGame = game;
-  const isCurrentRun = game === state.game;
-  const study = Boolean(isCurrentRun && state.scoringDisabled);
-  const openRun = Boolean(isCurrentRun && !study && (state.assist !== "none" || state.wished));
-  const challengeEligible = !study && !openRun;
-  const elapsed = isCurrentRun && state.startedAt
-    ? state.finished && state.finishedElapsedSeconds ? state.finishedElapsedSeconds : Math.max(0, Math.round((Date.now() - state.startedAt) / 1000))
-    : 0;
-  state.shareCard = buildConstellationCard({
-    target: game.target,
-    emoji: game.emoji,
-    moves: isCurrentRun ? state.moves : 0,
-    seconds: elapsed,
-    stars: isCurrentRun ? state.history.length : 0,
-    discoveries: isCurrentRun ? state.newDiscoveries : 0,
-    history: isCurrentRun ? state.history : [],
-    universe: game.universe || selectUniverse(game.seed),
-    seed: game.seed,
-    assist: study || openRun ? state.assist : "none",
-    scoringDisabled: isCurrentRun && state.scoringDisabled,
-    wished: isCurrentRun && state.wished,
-    training: game.mode === "training",
-    challengeUrl: challengeEligible ? challengeUrl(game) : ""
-  });
-  $("#shareTarget").textContent = game.target;
-  $("#shareTitle").textContent = study ? "Keep this study constellation." : openRun ? "Keep this Open constellation." : completed ? "Can they find it faster?" : "Invite them into this universe.";
-  $("#shareDescription").textContent = study
-    ? "This card is clearly marked Study and never links to a competitive challenge."
-    : openRun
-      ? "This card declares its Reality Bend as Open and never disguises it as a Pure challenge."
-      : completed ? "Your path is set. Now see how a friend reaches the same word." : "Send the same target and compare your constellations.";
-  $("#shareStats").textContent = `${state.shareCard.universe.name} · ${state.shareCard.division} · ${completed ? `${state.shareCard.moves} moves · ${state.shareCard.stars} stars` : "shared seed"}`;
-  const preview = $("#shareCardPreview");
-  preview.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(renderConstellationCardSvg(state.shareCard))}`;
-  preview.alt = `${state.shareCard.division.toLowerCase()} constellation card for ${state.shareCard.target}`;
-  $("#copyChallenge").hidden = !challengeEligible;
-  $("#shareEyebrow").textContent = study ? "CONSTELLATION CARD · STUDY" : openRun ? "CONSTELLATION CARD · OPEN" : "CONSTELLATION CARD · FRIEND CHALLENGE";
-}
-
-function openShare() {
-  if (!state.game) return;
-  if (state.startingRun) return showToast("The next orbit is still being mapped.");
-  if (state.reveal.active || state.reveal.pending) return showToast("Finish tracing the path before making its card.");
+async function openProfile() {
   stopTimer();
-  populateShare(state.game, state.finished);
-  $("#nativeShare").hidden = !navigator.share;
-  els.shareDialog.showModal();
-  track("share_created", { target: state.game.target, completed: state.finished });
-}
-
-async function createChallengeFromHome() {
-  try {
-    const seed = Math.floor(Math.random() * 1_000_000);
-    const game = await fetchJson(`/api/game?mode=challenge&seed=${seed}`);
-    populateShare(game, false);
-    $("#nativeShare").hidden = !navigator.share;
-    els.shareDialog.showModal();
-    track("share_created", { target: game.target, completed: false });
-  } catch (error) { showToast(error.message); }
-}
-
-async function copyChallenge() {
-  if (!state.shareGame || !state.shareCard?.challengeUrl) return;
-  const url = challengeUrl(state.shareGame);
-  try {
-    await navigator.clipboard.writeText(url);
-    $("#copyChallenge span").textContent = "Challenge link copied";
-    setTimeout(() => { $("#copyChallenge span").textContent = "Copy challenge link"; }, 1600);
-  } catch {
-    window.prompt("Copy this challenge link:", url);
-  }
-}
-
-async function nativeShare() {
-  if (!navigator.share || !state.shareGame || !state.shareCard) return;
-  const svg = renderConstellationCardSvg(state.shareCard);
-  const file = typeof File === "function" ? new File([svg], constellationCardFilename(state.shareCard), { type: "image/svg+xml" }) : null;
-  const payload = {
-    title: `${state.shareCard.target} · Constellore`,
-    text: constellationCardShareText(state.shareCard),
-    ...(state.shareCard.challengeUrl ? { url: state.shareCard.challengeUrl } : {})
-  };
-  if (file && navigator.canShare?.({ files: [file] })) payload.files = [file];
-  try {
-    await navigator.share(payload);
-    track("card_shared", { division: state.shareCard.division, image: Boolean(payload.files) });
-  } catch { /* Share cancellation is expected. */ }
-}
-
-function downloadConstellationCard() {
-  if (!state.shareCard) return;
-  const blob = new Blob([renderConstellationCardSvg(state.shareCard)], { type: "image/svg+xml" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = constellationCardFilename(state.shareCard);
-  document.body.append(link);
-  link.click();
-  link.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 0);
-  track("card_downloaded", { division: state.shareCard.division });
-}
-
-function openProfile() {
-  stopTimer();
+  await prepareProfileRankSurface();
   renderProfile();
   els.profileDialog.querySelectorAll(".profile-disclosure[open]").forEach((section) => { section.open = false; });
   els.profileDialog.showModal();
 }
 
-function chooseTheme(theme) {
-  const item = COSMETIC_CATALOG.find((entry) => entry.kind === "theme" && entry.id === theme);
-  chooseCosmetic("theme", theme, Boolean(item && (item.entitlement === "free" || founderCosmeticsOwned())));
-}
-
-function chooseCosmetic(kind, id, owned = false) {
-  const item = COSMETIC_CATALOG.find((entry) => entry.kind === kind && entry.id === id);
-  if (!item) return;
-  if (!owned && item.entitlement !== "free") {
-    els.profileDialog.close();
-    return openPremium();
-  }
-  profile.cosmetics = sanitizeCosmeticLoadout({ ...profile.cosmetics, [kind]: id }, { founder: founderCosmeticsOwned() });
-  profile.theme = profile.cosmetics.theme;
-  saveProfile({ fields: ["settings"] });
-  if (state.game) startCosmos();
-  if (kind === "sound") playFeedback("place");
-  track("cosmetic_changed", { kind, id });
-}
-
 function startCosmos() {
-  cancelAnimationFrame(state.cosmosFrame);
-  if (els.gameScreen.hidden) return;
-  const canvas = els.cosmosCanvas;
-  const rect = els.board.getBoundingClientRect();
-  const ratio = Math.min(window.devicePixelRatio || 1, 2);
-  canvas.width = Math.max(1, Math.floor(rect.width * ratio));
-  canvas.height = Math.max(1, Math.floor(rect.height * ratio));
-  canvas.style.width = `${rect.width}px`;
-  canvas.style.height = `${rect.height}px`;
-  const count = Math.min(150, Math.max(55, Math.floor(rect.width * rect.height / 7500)));
-  state.stars = Array.from({ length: count }, (_, index) => ({
-    x: seeded(index * 17 + 3) * rect.width,
-    y: seeded(index * 31 + 7) * rect.height,
-    r: .35 + seeded(index * 47 + 11) * 1.25,
-    alpha: .22 + seeded(index * 61 + 13) * .65,
-    phase: seeded(index * 73 + 19) * Math.PI * 2
-  }));
-  const ctx = canvas.getContext("2d");
-  const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const accent = getComputedStyle(document.body).getPropertyValue("--violet").trim() || "#aa8cff";
-  const cyan = getComputedStyle(document.body).getPropertyValue("--cyan").trim() || "#69e6ff";
-  const trailStyle = profile.cosmetics?.trail || "classic";
-  const draw = (time = 0) => {
-    if (els.gameScreen.hidden) return;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.save();
-    ctx.scale(ratio, ratio);
-    for (const star of state.stars) {
-      const pulse = reduced ? 1 : .78 + Math.sin(time * .0007 + star.phase) * .22;
-      ctx.globalAlpha = star.alpha * pulse;
-      ctx.fillStyle = star.r > 1.2 ? accent : "#ffffff";
-      ctx.beginPath();
-      ctx.arc(star.x, star.y, star.r, 0, Math.PI * 2);
-      ctx.fill();
-    }
-    ctx.strokeStyle = trailStyle === "comet" ? cyan : accent;
-    ctx.fillStyle = trailStyle === "prism" ? cyan : accent;
-    ctx.lineWidth = trailStyle === "comet" ? 1.45 : trailStyle === "prism" ? 1.05 : .7;
-    for (let trailIndex = 0; trailIndex < state.trails.length; trailIndex += 1) {
-      const trail = state.trails[trailIndex];
-      if (trailStyle === "prism") ctx.strokeStyle = trailIndex % 2 ? cyan : accent;
-      ctx.globalAlpha = trailStyle === "classic" ? .18 : .3;
-      ctx.beginPath();
-      ctx.moveTo(trail.ax, trail.ay);
-      ctx.lineTo(trail.x, trail.y);
-      ctx.lineTo(trail.bx, trail.by);
-      ctx.stroke();
-      ctx.globalAlpha = trailStyle === "classic" ? .42 : .66;
-      ctx.beginPath();
-      ctx.arc(trail.x, trail.y, 1.5, 0, Math.PI * 2);
-      ctx.fill();
-    }
-    const revealVisual = state.reveal.visual;
-    if (revealVisual?.geometry) {
-      ctx.save();
-      const { left, right, target } = revealVisual.geometry;
-      const now = time || performance.now();
-      const elapsed = Math.max(0, now - revealVisual.startedAt);
-      const phase = revealVisual.phase;
-      const merging = phase === "merge";
-      const resolved = phase === "result" || phase === "complete";
-      const pulse = reduced ? .78 : .68 + Math.sin(now * .006) * .18;
-      ctx.globalCompositeOperation = "lighter";
-
-      const drawFusionStream = (from, color, offset) => {
-        const control = {
-          x: (from.x + target.x) / 2,
-          y: Math.min(from.y, target.y) - Math.min(72, Math.abs(from.x - target.x) * .16 + 24)
-        };
-        const gradient = ctx.createLinearGradient(from.x, from.y, target.x, target.y);
-        gradient.addColorStop(0, "rgba(255,255,255,.18)");
-        gradient.addColorStop(.42, color);
-        gradient.addColorStop(1, cyan);
-        ctx.globalAlpha = merging ? .82 : .24;
-        ctx.strokeStyle = gradient;
-        ctx.lineWidth = merging ? 2.25 : 1.1;
-        ctx.shadowColor = color;
-        ctx.shadowBlur = merging ? 16 : 5;
-        ctx.setLineDash(merging ? [] : [3, 10]);
-        ctx.beginPath();
-        ctx.moveTo(from.x, from.y);
-        ctx.quadraticCurveTo(control.x, control.y, target.x, target.y);
-        ctx.stroke();
-        ctx.setLineDash([]);
-        if (reduced) return;
-        const travel = merging
-          ? Math.min(1, elapsed / Math.max(220, 680 / state.reveal.speed))
-          : (now * .00022 + offset) % 1;
-        const inverse = 1 - travel;
-        const packetX = inverse * inverse * from.x + 2 * inverse * travel * control.x + travel * travel * target.x;
-        const packetY = inverse * inverse * from.y + 2 * inverse * travel * control.y + travel * travel * target.y;
-        ctx.globalAlpha = merging ? .95 : .5;
-        ctx.fillStyle = "#ffffff";
-        ctx.shadowColor = cyan;
-        ctx.shadowBlur = 18;
-        ctx.beginPath();
-        ctx.arc(packetX, packetY, merging ? 3.4 : 2.1, 0, Math.PI * 2);
-        ctx.fill();
-      };
-
-      if (!resolved) {
-        drawFusionStream(left, accent, 0);
-        drawFusionStream(right, cyan, .5);
-        ctx.globalAlpha = merging ? .34 + pulse * .18 : .12;
-        ctx.strokeStyle = cyan;
-        ctx.lineWidth = merging ? 2 : 1;
-        ctx.shadowColor = cyan;
-        ctx.shadowBlur = merging ? 22 : 8;
-        ctx.beginPath();
-        ctx.arc(target.x, target.y, merging ? 18 + pulse * 8 : 10 + pulse * 3, 0, Math.PI * 2);
-        ctx.stroke();
-      } else {
-        const burstProgress = reduced || phase === "complete" ? 1 : Math.min(1, elapsed / 780);
-        const ringRadius = reduced || phase === "complete"
-          ? 38
-          : 22 + ((elapsed * .085) % 64);
-        ctx.globalAlpha = phase === "complete" ? .28 : Math.max(.12, .8 - ringRadius / 105);
-        ctx.strokeStyle = cyan;
-        ctx.lineWidth = 2;
-        ctx.shadowColor = cyan;
-        ctx.shadowBlur = 24;
-        ctx.beginPath();
-        ctx.arc(target.x, target.y, ringRadius, 0, Math.PI * 2);
-        ctx.stroke();
-        ctx.globalAlpha = phase === "complete" ? .13 : .34 * (1 - burstProgress * .5);
-        ctx.strokeStyle = accent;
-        ctx.lineWidth = 1.2;
-        for (let ray = 0; ray < 12; ray += 1) {
-          const angle = ray / 12 * Math.PI * 2;
-          const inner = 30 + burstProgress * 8;
-          const outer = 54 + burstProgress * 42;
-          ctx.beginPath();
-          ctx.moveTo(target.x + Math.cos(angle) * inner, target.y + Math.sin(angle) * inner);
-          ctx.lineTo(target.x + Math.cos(angle) * outer, target.y + Math.sin(angle) * outer);
-          ctx.stroke();
-        }
-      }
-      ctx.restore();
-    }
-    ctx.restore();
-    if (!reduced) state.cosmosFrame = requestAnimationFrame(draw);
-  };
-  draw();
+  startCosmosCanvas({
+    state,
+    gameScreen: els.gameScreen,
+    board: els.board,
+    canvas: els.cosmosCanvas,
+    cosmeticLoadout: cosmeticsObservatoryHost?.getPreviewLoadout?.() || profile.cosmetics,
+    drawRevealGraph
+  });
 }
 
 let boardNoticeTimer = null;
@@ -8159,6 +9070,7 @@ function boardNoticeDescriptor(message, error = false, twist = false, options = 
     text,
     error: Boolean(error),
     twist: Boolean(twist),
+    tone: options.tone === "wrong-path" ? "wrong-path" : "",
     key: String(options.key || (["shift copy", "shift remove", "ctrl fusion"].includes(prefix) ? "gesture" : prefix || "notice")).slice(0, 80),
     duration: clamp(Number(options.duration) || (error ? 2800 : twist ? 3800 : 2300), 900, 8000),
     retain: Boolean(options.retain),
@@ -8204,6 +9116,7 @@ function displayBoardNotice(notice) {
   els.alchemyNote.textContent = notice.text;
   els.alchemyNote.classList.toggle("error", notice.error);
   els.alchemyNote.classList.toggle("twist", notice.twist);
+  els.alchemyNote.classList.toggle("wrong-path", notice.tone === "wrong-path");
   els.alchemyNote.classList.add("show");
   announceBoardMessage(notice.text, "board-notice");
   boardNoticeTimer = setTimeout(() => {
@@ -8247,7 +9160,7 @@ function clearBoardNotices() {
   boardNoticeQueue.length = 0;
   clearBoardAnnouncement("board-notice");
   if (!els.alchemyNote) return;
-  els.alchemyNote.classList.remove("show", "error", "twist");
+  els.alchemyNote.classList.remove("show", "error", "twist", "wrong-path");
   els.alchemyNote.textContent = "";
 }
 
@@ -8264,6 +9177,8 @@ function updateConnection() {
 function configureStaticBetaUi() {
   if (!isStaticBeta) return;
   document.body.classList.add("local-beta");
+  const developerToolsRequested = new URLSearchParams(window.location.search).get("devtools") === "1";
+  $("#developerMenuButton").hidden = !developerToolsRequested;
   const banner = $("#practiceBanner");
   if (banner) banner.hidden = false;
   $("#localDiagnosticsSection").hidden = false;
@@ -8299,14 +9214,15 @@ async function loadBuildIdentity() {
 
 function focusExploreLaunch() {
   const hub = $("#exploreHub");
-  if (!hub) return false;
-  document.body.classList.add("intent-explore");
-  hub.open = true;
+  if (!hub || !homeMenuState().exploreReady) {
+    showToast("Explore unlocks at Silver Route Rank after three completed games.", { scope: "global" });
+    return false;
+  }
   const creator = hub.querySelector(".custom-target-disclosure");
   if (creator) creator.open = true;
   hub.classList.add("launch-intent");
   requestAnimationFrame(() => {
-    hub.querySelector("summary")?.focus({ preventScroll: true });
+    hub.querySelector(".custom-target-disclosure > summary")?.focus({ preventScroll: true });
     hub.scrollIntoView({ behavior: "smooth", block: "center" });
   });
   setTimeout(() => hub.classList.remove("launch-intent"), 2400);
@@ -8316,9 +9232,14 @@ function focusExploreLaunch() {
 async function handleLaunchIntent(params) {
   const mode = String(params.get("mode") || "").toLowerCase();
   if (mode === "daily") {
+    if (!homeMenuState().dailyReady) {
+      showToast("Today’s Word unlocks after your first scored Bronze win.", { scope: "global" });
+      return false;
+    }
     if (profile.dailyCompleted === todayKey) {
-      focusExploreLaunch();
-      showToast("Today’s shared word is complete. Explore another guaranteed route.", { scope: "global" });
+      if (focusExploreLaunch()) {
+        showToast("Today’s shared word is complete. Explore another guaranteed route.", { scope: "global" });
+      }
       return true;
     }
     await beginMode("daily");
@@ -8354,31 +9275,18 @@ function showToast(message, { scope = "auto" } = {}) {
 }
 
 function stableHash(value) { let hash = 2166136261; for (const character of String(value)) { hash ^= character.charCodeAt(0); hash = Math.imul(hash, 16777619); } return hash >>> 0; }
-function seeded(value) { const x = Math.sin(value * 999.91) * 43758.5453; return x - Math.floor(x); }
 function wait(milliseconds) { return new Promise((resolve) => setTimeout(resolve, milliseconds)); }
 function clamp(value, min, max) { return Math.min(Math.max(value, min), max); }
 function escapeHtml(value) { return String(value).replace(/[&<>'"]/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[character]); }
 
 $$('[data-mode]').forEach((button) => button.addEventListener("click", () => beginMode(button.dataset.mode)));
-$("[data-start-style]")?.closest(".start-style-options")?.addEventListener("click", (event) => {
-  const button = event.target.closest("[data-start-style]");
-  if (button && !button.disabled) chooseStartStyle(button.dataset.startStyle);
-});
-$("[data-start-style]")?.closest(".start-style-options")?.addEventListener("keydown", (event) => {
-  if (!["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(event.key)) return;
-  const buttons = $$("[data-start-style]").filter((button) => !button.disabled);
-  const current = event.target.closest("[data-start-style]");
-  const index = buttons.indexOf(current);
-  if (index < 0 || !buttons.length) return;
-  event.preventDefault();
-  const direction = ["ArrowRight", "ArrowDown"].includes(event.key) ? 1 : -1;
-  const next = buttons[(index + direction + buttons.length) % buttons.length];
-  chooseStartStyle(next.dataset.startStyle);
-  next.focus();
-});
 $("#primaryOrbitButton").addEventListener("click", beginPrimaryOrbit);
 $("#primaryOrbitSecondary").addEventListener("click", beginPrimarySecondary);
 $("#hubMenuButton").addEventListener("click", openHubMenu);
+[$("#scrambleHomeButton"), $("#scrambleMenuButton")].forEach((button) => {
+  button?.addEventListener("click", () => void openScramble({ trigger: button }));
+});
+$("#developerMenuButton").addEventListener("click", openDeveloperAccess);
 $("#customTargetForm").addEventListener("submit", beginCustomTarget);
 $("#beginMission").addEventListener("click", confirmMissionBriefing);
 $("#cancelMission").addEventListener("click", cancelMissionBriefing);
@@ -8386,24 +9294,22 @@ $("#pauseRunButton").addEventListener("click", openPauseMenu);
 $("#resumePausedRun").addEventListener("click", closePauseMenu);
 $("#cancelPauseAction").addEventListener("click", () => resetPauseConfirmation({ focus: true }));
 $("#pauseRestart").addEventListener("click", async () => {
-  if (!confirmPauseAction("restart")) return;
+  if (!confirmPauseRestart()) return;
   const priorRun = state.run;
   const priorGame = state.game;
   pauseCloseRestoreFocus = false;
-  closePauseMenu();
-  await submitRunForfeit(priorRun, priorGame, { announce: true });
+  await closePauseMenu({ resume: false });
+  await queueRunForfeit(priorRun, priorGame, { announce: true });
   if (state.mode === "training") startFirstOrbit();
   else void retryGame();
 });
-$("#pauseExit").addEventListener("click", async () => {
-  if (!confirmPauseAction("exit")) return;
-  const priorRun = state.run;
-  const priorGame = state.game;
+$("#pauseRevealPath").addEventListener("click", async () => {
+  if (state.startingRun || state.reveal.pending || state.reveal.active) return;
   pauseCloseRestoreFocus = false;
-  closePauseMenu();
-  await submitRunForfeit(priorRun, priorGame, { announce: true });
-  returnHome({ skipForfeit: true });
+  await closePauseMenu({ resume: false });
+  openRevealPath();
 });
+$("#pauseExit").addEventListener("click", quitActiveGame);
 els.resetBoard.addEventListener("click", () => {
   clearBoardWithUndo();
   if (els.pauseDialog.open) closePauseMenu();
@@ -8438,7 +9344,9 @@ $("#dismissExpectedPair").addEventListener("click", resetExpectedPairFeedback);
 els.useQuickTip.addEventListener("click", useQuickTip);
 els.useWordGift.addEventListener("click", useWordGift);
 $("#useSense").addEventListener("click", useConstellationSense);
-$("#buySense").addEventListener("click", buySenseCharge);
+$("#buySense").addEventListener("click", () => buyStardustSupply("star-compass"));
+$("#buyStarCompass")?.addEventListener("click", () => void buyStardustSupply("star-compass"));
+$("#buyStreakShield")?.addEventListener("click", () => void buyStardustSupply("streak-shield"));
 els.rivalGhost.addEventListener("click", toggleRivalGhost);
 els.board.addEventListener("pointerdown", (event) => {
   if (event.target.closest?.(".board-word, .board-quick-tools, .rival-ghost, .ghost-preview, .tap-chain-status, .board-undo, .reveal-controller, .recipe-feedback, .expected-pair-feedback")) return;
@@ -8463,7 +9371,6 @@ els.inventorySearchClear.addEventListener("click", () => {
 });
 $("#atlasButton").addEventListener("click", () => openAtlas("orbit"));
 $("#resultAtlas").addEventListener("click", () => {
-  if (els.resultDialog.open) els.resultDialog.close();
   openAtlas("orbit");
 });
 $("#viewMastery").addEventListener("click", () => { closeHubMenu(); openAtlas("mastery"); });
@@ -8476,7 +9383,6 @@ $("#masteryAtlasTab").addEventListener("click", () => selectAtlasTab("mastery"))
   selectAtlasTab(next.id === "masteryAtlasTab" ? "mastery" : "orbit");
   next.focus();
 }));
-$("#shareRunButton").addEventListener("click", openShare);
 $("#revealPathButton").addEventListener("click", () => {
   if (els.senseDialog.open) els.senseDialog.close();
   requestAnimationFrame(openRevealPath);
@@ -8486,6 +9392,9 @@ $("#revealPause").addEventListener("click", toggleRevealPause);
 $("#revealSpeed").addEventListener("click", cycleRevealSpeed);
 $("#revealSkip").addEventListener("click", skipRevealAnimation);
 $("#startPremium").addEventListener("click", () => { closeHubMenu(); profile.premium ? openProfile() : openPremium(); });
+[$("#openObservatory"), $("#customizeButton")].forEach((button) => {
+  button?.addEventListener("click", () => void openCosmeticsObservatory({ trigger: button }));
+});
 $("#wishWord").addEventListener("click", openWish);
 $("#checkoutButton").addEventListener("click", checkoutPremium);
 $("#wishForm").addEventListener("submit", makeWish);
@@ -8509,9 +9418,6 @@ $("#confirmRecoverySaved").addEventListener("click", acknowledgeRecoveryKit);
 $("#replayFirstOrbit").addEventListener("click", startFirstOrbit);
 $("#replaySecondOrbit").addEventListener("click", startSecondOrbit);
 $("#skipFirstOrbit").addEventListener("click", skipFirstOrbit);
-$("#feedbackToggle").addEventListener("click", () => toggleFeedbackPreference("sound"));
-$("#soundPreference").addEventListener("click", () => toggleFeedbackPreference("sound"));
-$("#hapticPreference").addEventListener("click", () => toggleFeedbackPreference("haptics"));
 $("#marketButton").addEventListener("click", () => { closeHubMenu(); openExchange("market"); });
 $("#leaderboardButton").addEventListener("click", () => { closeHubMenu(); openLeaderboard(); });
 $("#updatesButton").addEventListener("click", () => {
@@ -8552,37 +9458,24 @@ $("#leaderboardScope").addEventListener("change", (event) => {
   state.leaderboardScope = event.currentTarget.value;
   loadLeaderboard();
 });
-$("#createChallenge").addEventListener("click", () => { closeHubMenu(); createChallengeFromHome(); });
-$("#copyChallenge").addEventListener("click", copyChallenge);
-$("#downloadCard").addEventListener("click", downloadConstellationCard);
-$("#nativeShare").addEventListener("click", nativeShare);
-$("#resultShare").addEventListener("click", () => {
-  if (state.startingRun) return;
-  els.resultDialog.close();
-  openShare();
-});
 $("#resultReveal").addEventListener("click", () => {
   if (state.startingRun) return;
-  els.resultDialog.close();
   openRevealPath();
 });
 $("#resultPrimary").addEventListener("click", () => state.resultAction?.());
-$("#resultRetry").addEventListener("click", () => state.reveal.replayAvailable ? returnHome() : retryGame());
+$("#resultRetry").addEventListener("click", () => state.reveal.replayAvailable && !adaptiveSeriesEligible() ? returnHome() : retryGame());
 $("#resultReplay").addEventListener("click", replayFinishedChallenge);
 $("#raceCommunityGhost").addEventListener("click", () => {
   if (!queueNearbyCommunityRace()) return showToast("That nearby route is no longer available.");
   profile.rivalGhostEnabled = true;
   saveProfile({ fields: ["settings"] });
   track("community_viewed", { source: "community", action: "race" });
-  if (els.resultDialog.open) els.resultDialog.close();
   void retryGame();
 });
 $("#resultLeaderboard").addEventListener("click", () => {
   if (state.startingRun) return;
-  if (els.resultDialog.open) els.resultDialog.close();
   openLeaderboard(state.leaderboardScope, state.leaderboardDivision);
 });
-$$('button[data-theme]').forEach((button) => button.addEventListener("click", () => chooseTheme(button.dataset.theme)));
 els.profileDialog.querySelectorAll(".profile-disclosure").forEach((section) => section.addEventListener("toggle", () => {
   if (!section.open) return;
   els.profileDialog.querySelectorAll(".profile-disclosure[open]").forEach((other) => {
@@ -8591,6 +9484,10 @@ els.profileDialog.querySelectorAll(".profile-disclosure").forEach((section) => s
 }));
 $$('[data-close]').forEach((button) => button.addEventListener("click", () => {
   if (button.dataset.close === "revealDialog" && state.reveal.pending) return;
+  if (button.dataset.close === "resultDialog") {
+    returnHome();
+    return;
+  }
   document.getElementById(button.dataset.close).close();
 }));
 els.missionBriefingDialog.addEventListener("cancel", (event) => {
@@ -8598,7 +9495,11 @@ els.missionBriefingDialog.addEventListener("cancel", (event) => {
   cancelMissionBriefing();
 });
 els.pauseDialog.addEventListener("cancel", (event) => { event.preventDefault(); closePauseMenu(); });
-els.pauseDialog.addEventListener("close", () => { finishPauseClose(); setTimeout(() => resumeTimerIfNeeded(), 0); });
+els.pauseDialog.addEventListener("close", () => {
+  cosmicGate.clearDialog(els.pauseDialog);
+  finishPauseClose();
+  setTimeout(() => resumeTimerIfNeeded(), 0);
+});
 els.revealDialog.addEventListener("cancel", (event) => {
   if (state.reveal.pending) event.preventDefault();
 });
@@ -8611,8 +9512,9 @@ els.resultDialog.addEventListener("cancel", (event) => {
   }
   returnHome();
 });
+els.resultDialog.addEventListener("close", () => cosmicGate.clearDialog(els.resultDialog));
 $("#recoveryDialog").addEventListener("cancel", (event) => event.preventDefault());
-[els.paywallDialog, els.wishDialog, els.atlasDialog, els.senseDialog, els.shareDialog, els.profileDialog, els.journeyDialog, els.marketBuyDialog, els.leaderboardDialog, els.revealDialog, $("#recoveryDialog")].forEach((dialog) => dialog.addEventListener("close", () => setTimeout(resumeTimerIfNeeded, 0)));
+[els.paywallDialog, els.wishDialog, els.atlasDialog, els.senseDialog, els.shareDialog, els.profileDialog, els.journeyDialog, els.marketBuyDialog, els.leaderboardDialog, els.revealDialog, els.developerLoginDialog, els.developerDialog, els.developerVfxDialog, $("#recoveryDialog")].forEach((dialog) => dialog.addEventListener("close", () => setTimeout(resumeTimerIfNeeded, 0)));
 els.exchangeDialog.addEventListener("close", () => {
   clearInterval(state.marketTimer);
   state.marketTimer = null;
@@ -8620,15 +9522,19 @@ els.exchangeDialog.addEventListener("close", () => {
 });
 window.addEventListener("resize", () => {
   if (els.gameScreen.hidden) return;
+  if (cosmeticsObservatoryHost?.resizePreview?.()) return;
   requestAnimationFrame(() => {
-    constrainBoardNodes();
+    if (!refreshRevealLayoutForViewport()) constrainBoardNodes();
     startCosmos();
     if (els.atlasDialog.open) renderAtlas();
   });
 });
 document.addEventListener("pointerdown", primeFeedbackAudio, { once: true, passive: true });
+document.addEventListener("keydown", primeFeedbackAudio, { once: true });
+document.addEventListener("constellore:interlude-enter", enterCosmicInterlude);
 window.addEventListener("pointerdown", rememberPointerPosition, { capture: true, passive: true });
 window.addEventListener("pointermove", rememberPointerPosition, { passive: true });
+window.addEventListener("keydown", handleDeveloperShortcut);
 window.addEventListener("keydown", handlePauseShortcut);
 window.addEventListener("keydown", activateShiftBoard);
 window.addEventListener("keydown", handleBoardHistoryShortcut);
@@ -8645,6 +9551,8 @@ window.addEventListener("blur", releaseCtrlHover);
 window.addEventListener("blur", releaseShiftBoard);
 window.addEventListener("blur", cancelActivePointerGestures);
 window.addEventListener("pagehide", flushRunSave);
+window.addEventListener("pagehide", () => gameAudio.setSuspended(true));
+window.addEventListener("pageshow", () => gameAudio.setSuspended(document.hidden));
 window.addEventListener("beforeunload", (event) => {
   flushRunSave();
   if (pendingScoreBlocksExit() && !state.scoreSubmission.activeSaved) {
@@ -8655,6 +9563,7 @@ window.addEventListener("beforeunload", (event) => {
 window.addEventListener("online", handleOnline);
 window.addEventListener("offline", updateConnection);
 document.addEventListener("visibilitychange", () => {
+  gameAudio.setSuspended(document.hidden);
   if (document.hidden) {
     releaseCtrlHover();
     releaseShiftBoard();
@@ -8680,32 +9589,96 @@ $("#installButton").addEventListener("click", async () => {
 async function boot() {
   configureStaticBetaUi();
   void loadBuildIdentity();
+  const params = new URLSearchParams(location.search);
+  const sharedChallenge = parseConstelloreChallengeUrl(params, todayKey);
+  const scrambleInvite = startupScrambleInviteCode || startupScrambleInvite();
+  const scrambleResume = startupScrambleResume || hasRememberedScrambleMatch();
+  const launchIntent = Boolean(sharedChallenge || firstGameLaunchIntent(params.get("mode")));
+  const scrambleLaunchIntent = Boolean(scrambleInvite || scrambleResume);
+  const launchMenuHandoff = launchCinematicOutcome.menuHandoff === true;
+  const savedRun = startupResumeSnapshot;
   const dailySense = refillDailySense();
   if (dailySense.refilled) saveProfile({ cloud: false });
   else renderProfile();
   if (isStaticBeta) void expectedPairDelivery.flush();
   if (dailySense.granted) track("sense_earned", { source: "daily", reward: dailySense.granted });
   updateConnection();
+  track("app_opened", { installed: matchMedia("(display-mode: standalone)").matches });
+  let firstGameStarted = firstGameRequired(profile) && !launchMenuHandoff && !savedRun && !launchIntent && (!profile.playerId || !profile.playerToken || isStaticBeta) && !scrambleLaunchIntent;
+  if (firstGameStarted) await startFirstOrbit({ enterThroughGate: false });
   await loadConfig();
   try { await ensurePlayer(); }
   catch { showToast("Leaderboard and Word Exchange need a connection."); }
   if (profile.playerId && profile.playerToken) await refreshCosmicEventState();
   if (profile.playerId && profile.playerToken) await initializeCloudServices();
+  let scrambleHandled = false;
+  if ((scrambleInvite || scrambleResume) && homeMenuState().onboardingComplete) {
+    try {
+      const runtime = await ensureScramble();
+      runtime.setRankedUnlocked(scrambleRankedUnlocked());
+      scrambleHandled = scrambleInvite
+        ? await openScramble({ trigger: $("#scrambleHomeButton"), invite: scrambleInvite })
+        : await runtime.resume();
+    } catch (error) {
+      showSecondarySurfaceFailure(error, "Your live match could not reconnect.");
+    }
+  }
   announcePendingScoreRecovery(await retryPendingScoreUploads());
   if ("serviceWorker" in navigator && window.top === window.self) {
-    const serviceWorkerUrl = isStaticBeta ? "./service-worker.js?v=3.3.0-beta.1" : "/play/service-worker.js?v=3.3.0-beta.1";
+    const serviceWorkerUrl = isStaticBeta ? "./service-worker.js?v=5.0.0-beta.1" : "/play/service-worker.js?v=5.0.0-beta.1";
     const serviceWorkerScope = isStaticBeta ? "./" : "/play/";
-    navigator.serviceWorker.register(serviceWorkerUrl, { scope: serviceWorkerScope }).catch(() => {});
+    navigator.serviceWorker.register(serviceWorkerUrl, {
+      scope: serviceWorkerScope,
+      updateViaCache: "none"
+    }).then((registration) => {
+      if (!savedRun && registration.waiting) {
+        let reloading = false;
+        navigator.serviceWorker.addEventListener("controllerchange", () => {
+          if (reloading) return;
+          reloading = true;
+          location.reload();
+        }, { once: true });
+        registration.waiting.postMessage({
+          type: "CONSTELLORE_ACTIVATE_UPDATE",
+          version: "5.0.0-beta.1"
+        });
+      }
+    }).catch(() => {});
   }
-  track("app_opened", { installed: matchMedia("(display-mode: standalone)").matches });
-  announceModeScreenViewed();
-  const params = new URLSearchParams(location.search);
-  const challengeRequested = params.get("challenge") === "1" && params.get("target");
-  const restored = challengeRequested ? false : await restoreInterruptedRun(readActiveRunSnapshot());
-  if (!restored && challengeRequested) {
-    track("challenge_opened", { target: params.get("target") });
-    void beginMode("challenge", { target: params.get("target"), seed: Number(params.get("seed")) || stableHash(params.get("target")) });
-  } else if (!restored) await handleLaunchIntent(params);
+  if (!firstGameStarted && (!firstGameRequired(profile) || savedRun || launchMenuHandoff)) announceModeScreenViewed();
+  const restored = firstGameStarted ? false : await restoreInterruptedRun(savedRun);
+  if (startupResumeSnapshot) {
+    if (restored) releaseLaunchBlackout();
+    else handoffLaunchMenu();
+  }
+  if (!restored && !firstGameStarted && !launchMenuHandoff && !launchIntent && !scrambleLaunchIntent && firstGameRequired(profile)) {
+    await startFirstOrbit({ enterThroughGate: false });
+    firstGameStarted = true;
+  } else if (!restored && !firstGameStarted && sharedChallenge) {
+    if (sharedChallenge.mode === "daily" && !homeMenuState().dailyReady) {
+      showToast("Today’s Word unlocks after your first scored Bronze win.", { scope: "global" });
+      if (firstGameRequired(profile)) {
+        await startFirstOrbit({ enterThroughGate: false });
+        firstGameStarted = true;
+      }
+    } else {
+      const mode = sharedChallenge.mode === "daily" && profile.dailyCompleted !== todayKey
+        ? "daily"
+        : "challenge";
+      track("challenge_opened", { target: sharedChallenge.target, source: sharedChallenge.source });
+      void beginMode(mode, {
+        target: sharedChallenge.target,
+        seed: sharedChallenge.seed,
+        context: sharedChallenge.source === "daily" ? "shared-daily" : "friend-challenge"
+      });
+    }
+  } else if (!restored && !firstGameStarted) {
+    const launchHandled = await handleLaunchIntent(params);
+    if (!launchHandled && !launchMenuHandoff && firstGameRequired(profile)) {
+      await startFirstOrbit({ enterThroughGate: false });
+      firstGameStarted = true;
+    }
+  }
   if (window.parent !== window) window.parent.postMessage({ type: "constellore:ready", localOnly: isStaticBeta }, location.origin);
 }
 

@@ -636,6 +636,7 @@ export function ghostSnapshot(ghost, { elapsedMs = 0, playerProgress = 0, player
 
 export const FEEDBACK_CUES = Object.freeze({
   place: Object.freeze({ wave: "sine", tones: [235], duration: 45, gain: .018, haptic: [7] }),
+  uiSelect: Object.freeze({ wave: "sine", tones: [220], duration: 36, gain: .012, haptic: [5] }),
   combineStart: Object.freeze({ wave: "triangle", tones: [175, 280], duration: 85, gain: .022, haptic: [8] }),
   success: Object.freeze({ wave: "sine", tones: [330, 494], duration: 130, gain: .028, haptic: [14] }),
   reject: Object.freeze({ wave: "square", tones: [145, 118], duration: 95, gain: .018, haptic: [20, 28, 12] }),
@@ -643,7 +644,22 @@ export const FEEDBACK_CUES = Object.freeze({
   target: Object.freeze({ wave: "sine", tones: [262, 392, 523, 784], duration: 300, gain: .038, haptic: [20, 35, 24, 35, 36] }),
   sense: Object.freeze({ wave: "sine", tones: [220, 330, 660], duration: 260, gain: .025, haptic: [9, 42, 15] }),
   mastery: Object.freeze({ wave: "triangle", tones: [392, 523, 659], duration: 210, gain: .03, haptic: [12, 28, 20] }),
-  ghostPass: Object.freeze({ wave: "sine", tones: [280, 420], duration: 120, gain: .02, haptic: [8, 24, 8] })
+  ghostPass: Object.freeze({ wave: "sine", tones: [280, 420], duration: 120, gain: .02, haptic: [8, 24, 8] }),
+  gateClose: Object.freeze({ wave: "triangle", tones: [220, 147], duration: 260, gain: .024, haptic: [10, 24, 16] }),
+  gateOpen: Object.freeze({ wave: "sine", tones: [147, 220, 330], duration: 280, gain: .025, haptic: [10, 24, 18] }),
+  runStart: Object.freeze({ wave: "triangle", tones: [196, 247, 392], duration: 180, gain: .028, haptic: [12, 22, 18] }),
+  resultReveal: Object.freeze({ wave: "sine", tones: [220, 330, 494], duration: 240, gain: .024, haptic: [10, 30, 12] }),
+  homeReturn: Object.freeze({ wave: "sine", tones: [392, 294, 196], duration: 190, gain: .021, haptic: [8] }),
+  timerWarning: Object.freeze({ wave: "square", tones: [784, 784], duration: 150, gain: .018, haptic: [12, 90, 12] }),
+  timeout: Object.freeze({ wave: "triangle", tones: [220, 165, 110], duration: 260, gain: .025, haptic: [25, 35, 35] }),
+  failure: Object.freeze({ wave: "sine", tones: [262, 220, 196], duration: 260, gain: .021, haptic: [18, 30, 18] }),
+  reward: Object.freeze({ wave: "sine", tones: [523, 659, 784], duration: 220, gain: .027, haptic: [10, 18, 14] }),
+  collectionUnlock: Object.freeze({ wave: "sine", tones: [220, 330, 440, 659], duration: 320, gain: .032, haptic: [12, 24, 16, 24, 20] }),
+  rankPromotion: Object.freeze({ wave: "triangle", tones: [196, 294, 392, 523, 659], duration: 360, gain: .036, haptic: [16, 24, 20, 24, 32] }),
+  earth: Object.freeze({ wave: "triangle", tones: [131, 196], duration: 190, gain: .023, haptic: [9] }),
+  water: Object.freeze({ wave: "sine", tones: [196, 294, 440], duration: 220, gain: .021, haptic: [7] }),
+  fire: Object.freeze({ wave: "square", tones: [262, 330, 523], duration: 190, gain: .019, haptic: [8, 18, 8] }),
+  air: Object.freeze({ wave: "sine", tones: [392, 784], duration: 230, gain: .018, haptic: [6] })
 });
 
 export function sanitizeFeedbackPreferences(raw) {
@@ -657,12 +673,19 @@ export function sanitizeFeedbackPreferences(raw) {
     if (value === false || value === "false" || value === 0 || value === "0") return false;
     return fallback;
   };
-  const rawVolume = Number(source.volume ?? source.masterVolume);
+  const volumePreference = (value, fallback) => {
+    const volume = Number(value);
+    return Number.isFinite(volume) ? Math.min(1, Math.max(0, volume)) : fallback;
+  };
   return {
     sound: booleanPreference(source.sound, true),
+    music: booleanPreference(source.music, true),
     haptics: booleanPreference(source.haptics, true),
+    resultDetails: booleanPreference(source.resultDetails, false),
     muted: booleanPreference(source.muted, false),
-    volume: Number.isFinite(rawVolume) ? Math.min(1, Math.max(0, rawVolume)) : .75
+    volume: volumePreference(source.volume ?? source.masterVolume, .75),
+    musicVolume: volumePreference(source.musicVolume, 1),
+    sfxVolume: volumePreference(source.sfxVolume ?? source.soundVolume, 1)
   };
 }
 
@@ -676,8 +699,9 @@ export function feedbackCuePolicy(cue, preferences, environment = {}) {
   const prefs = sanitizeFeedbackPreferences(preferences);
   if (!definition) return { cue, audio: null, haptic: null };
   const hidden = environment.documentHidden === true;
-  const audio = prefs.sound && !prefs.muted && prefs.volume > 0 && environment.audioAvailable !== false && environment.silent !== true && !hidden
-    ? { wave: definition.wave, tones: [...definition.tones], duration: definition.duration, gain: definition.gain * prefs.volume }
+  const sfxVolume = prefs.volume * prefs.sfxVolume;
+  const audio = prefs.sound && !prefs.muted && sfxVolume > 0 && environment.audioAvailable !== false && environment.silent !== true && !hidden
+    ? { wave: definition.wave, tones: [...definition.tones], duration: definition.duration, gain: definition.gain * sfxVolume }
     : null;
   const haptic = prefs.haptics && environment.hapticsAvailable !== false && environment.reducedMotion !== true && !hidden ? [...definition.haptic] : null;
   return { cue, audio, haptic };

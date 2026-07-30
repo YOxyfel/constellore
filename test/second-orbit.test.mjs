@@ -4,6 +4,7 @@ import { readFile } from "node:fs/promises";
 
 import {
   SECOND_ORBIT_ROUTE,
+  createSecondOrbitGame,
   sanitizeSecondOrbitState,
   secondOrbitProgress
 } from "../public/second-orbit.mjs";
@@ -38,9 +39,13 @@ test("Second Orbit state is strictly reduced to booleans", () => {
 
 test("Second Orbit is client-side and never sends an unsupported server mode", () => {
   const beginBranch = app.slice(app.indexOf("async function beginMode"), app.indexOf("async function beginCustomTarget"));
-  assert.match(beginBranch, /mode === "second-orbit"[\s\S]+openSecondOrbitBriefing/);
-  assert.match(app, /startWithGame\(secondOrbitGame\(\), null\)/);
-  assert.doesNotMatch(app.slice(app.indexOf("function startSecondOrbit"), app.indexOf("function openFirstOrbitBriefing")), /createRun|requestMissionPreview/);
+  assert.match(beginBranch, /mode === "second-orbit"[\s\S]+startSecondOrbit\(\{\s*enterThroughGate:\s*true\s*\}\)/);
+  assert.match(app, /await startWithGame\(createSecondOrbitGame\(selectUniverse\(202\)\), null, \{ enterThroughGate \}\)/);
+  const game = createSecondOrbitGame({ id: "test-universe" });
+  assert.equal(game.mode, "second-orbit");
+  assert.equal(game.target, "Mountain");
+  assert.equal(game.scoreEligible, false);
+  assert.equal(game.rewardEligible, false);
+  assert.doesNotMatch(app.slice(app.indexOf("function startSecondOrbit"), app.indexOf("function startExplore")), /createRun|requestMissionPreview/);
   assert.match(page, /id="replaySecondOrbit"/);
 });
-

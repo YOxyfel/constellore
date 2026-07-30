@@ -52,7 +52,16 @@ test("cloud profiles use a strict allowlist and optimistic version conflicts", a
     cosmetics: { theme: "aurora", board: "nebula", trail: "comet", sound: "glass" },
     firstOrbit: { seen: true, completed: true },
     rivalGhostEnabled: false,
-    feedbackPreferences: { sound: true, haptics: false, muted: false, volume: 0.5 },
+    feedbackPreferences: {
+      sound: true,
+      music: true,
+      haptics: false,
+      resultDetails: true,
+      muted: false,
+      volume: 0.5,
+      musicVolume: 0.35,
+      sfxVolume: 0.8
+    },
     discovered: ["Earth", "Water", "earth"],
     masteryCelebrated: ["celestial"],
     recipeMastery: {
@@ -65,14 +74,41 @@ test("cloud profiles use a strict allowlist and optimistic version conflicts", a
   assert.equal(updated.version, 1);
   assert.deepEqual(updated.profile.discovered, ["Earth", "Water"]);
   assert.deepEqual(updated.profile.firstOrbit, { seen: true, completed: true });
+  assert.equal(updated.profile.feedbackPreferences.resultDetails, true);
+  assert.equal(updated.profile.feedbackPreferences.musicVolume, 0.35);
+  assert.equal(updated.profile.feedbackPreferences.sfxVolume, 0.8);
 
   await assert.rejects(
     store.updateCloudProfile(player.id, 0, { theme: "void" }),
     (error) => error.serviceCode === "cloud_profile_conflict" && error.details.current.version === 1
   );
   await assert.rejects(store.updateCloudProfile(player.id, 1, { credits: 999_999 }), (error) => error.serviceCode === "invalid_cloud_profile");
+  await assert.rejects(store.updateCloudProfile(player.id, 1, { feedbackPreferences: { resultDetails: "true" } }), (error) => error.serviceCode === "invalid_cloud_profile");
   await assert.rejects(store.updateCloudProfile(player.id, 1, { cosmetics: { board: "void", scoreBoost: "yes" } }), (error) => error.serviceCode === "invalid_cloud_profile");
   await assert.rejects(store.updateCloudProfile(player.id, 1, { firstOrbit: { seen: false, completed: true } }), (error) => error.serviceCode === "invalid_cloud_profile");
+
+  for (const field of ["volume", "musicVolume", "sfxVolume"]) {
+    for (const value of [-0.01, 1.01, Number.NaN, Number.POSITIVE_INFINITY, "0.5"]) {
+      await assert.rejects(
+        store.updateCloudProfile(player.id, 1, { feedbackPreferences: { [field]: value } }),
+        (error) => error.serviceCode === "invalid_cloud_profile",
+        `${field} must reject ${String(value)}`
+      );
+    }
+  }
+
+  const legacyUpdated = await store.updateCloudProfile(player.id, 1, {
+    feedbackPreferences: { sound: false, haptics: true, muted: true, volume: 0.2 }
+  });
+  assert.equal(legacyUpdated.version, 2);
+  assert.deepEqual(legacyUpdated.profile.feedbackPreferences, {
+    sound: false,
+    haptics: true,
+    muted: true,
+    volume: 0.2,
+    musicVolume: 0.35,
+    sfxVolume: 0.8
+  });
 });
 
 test("real-money fulfillment is creative-only while earned credits and Word Vault ownership remain server-authoritative", async () => {

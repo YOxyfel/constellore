@@ -25,9 +25,10 @@ test("each mission resets both desktop and mobile inventory scroll positions", (
   assert.match(start, /els\.wordList\.scrollLeft = 0/);
 });
 
-test("Rival Ghost waits for three real wins and uses verified route length when available", () => {
+test("Rival Ghost waits until the ten-game focus window is complete and uses verified route length when available", () => {
   const eligibility = app.slice(app.indexOf("function competitiveGhostEligible"), app.indexOf("function renderGhostPreview"));
-  assert.match(eligibility, /profile\.wins >= 3/);
+  assert.match(eligibility, /profile\.wins >= HOME_MENU_ADVANCED_WINS/);
+  assert.match(eligibility, /!state\.focusMode/);
   const estimate = app.slice(app.indexOf("function ghostStepEstimate"), app.indexOf("function ghostTimeline"));
   assert.match(estimate, /routeLength/);
   assert.match(estimate, /minimumMoves/);

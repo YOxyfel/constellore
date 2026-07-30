@@ -40,9 +40,11 @@ jobs:
       - run: npm run build:pages
         env:
           PUBLIC_FEEDBACK_API_URL: ${{ vars.PUBLIC_FEEDBACK_API_URL }}
+          PUBLIC_DUEL_API_URL: ${{ vars.PUBLIC_DUEL_API_URL }}
       - run: npm run check:pages
         env:
           PUBLIC_FEEDBACK_API_URL: ${{ vars.PUBLIC_FEEDBACK_API_URL }}
+          PUBLIC_DUEL_API_URL: ${{ vars.PUBLIC_DUEL_API_URL }}
       - run: npm run test:e2e:pages
 
   itch-package:
@@ -60,9 +62,11 @@ jobs:
       - run: npm run build:itch
         env:
           PUBLIC_FEEDBACK_API_URL: ${{ vars.PUBLIC_FEEDBACK_API_URL }}
+          PUBLIC_DUEL_API_URL: ${{ vars.PUBLIC_DUEL_API_URL }}
       - run: npm run check:itch
         env:
           PUBLIC_FEEDBACK_API_URL: ${{ vars.PUBLIC_FEEDBACK_API_URL }}
+          PUBLIC_DUEL_API_URL: ${{ vars.PUBLIC_DUEL_API_URL }}
       - name: Upload verified HTML5 package
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:

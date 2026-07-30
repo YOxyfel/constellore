@@ -3,9 +3,11 @@ import assert from "node:assert/strict";
 import { once } from "node:events";
 import { readFile } from "node:fs/promises";
 import { curatedCombination, server } from "../server.mjs";
+import { COSMETIC_COLLECTIONS } from "../public/cosmetic-economy.mjs";
 
 const starters = ["Earth", "Water", "Fire", "Air"];
 const releaseVersion = JSON.parse(await readFile(new URL("../package.json", import.meta.url), "utf8")).version;
+const auroraCollection = COSMETIC_COLLECTIONS.find((entry) => entry.slug === "aurora-archive");
 
 function verifiedRoute(target) {
   const known = new Map(starters.map((word) => [word.toLowerCase(), word]));
@@ -326,6 +328,28 @@ test("authenticated HTTP runs produce verified Pure and Open leaderboard scores"
   assert.equal(playerCheck.response.status, 200);
   assert.equal(playerCheck.payload.player.id, registration.payload.player.id);
 
+  const unauthenticatedCosmeticPurchase = await request("/api/cosmetics/buy", {
+    method: "POST",
+    authenticated: false,
+    body: { collectionId: auroraCollection.id, idempotencyKey: "api-cosmetic-unauth-001" }
+  });
+  assert.equal(unauthenticatedCosmeticPurchase.response.status, 401);
+  const forgedCosmeticPrice = await request("/api/cosmetics/buy", {
+    method: "POST",
+    body: { collectionId: auroraCollection.id, idempotencyKey: "api-cosmetic-forged-001", price: 1 }
+  });
+  assert.equal(forgedCosmeticPrice.response.status, 400);
+  assert.equal(forgedCosmeticPrice.payload.code, "invalid_cosmetic_purchase_request");
+  const insufficientCosmeticPurchase = await request("/api/cosmetics/buy", {
+    method: "POST",
+    body: { collectionId: auroraCollection.id, idempotencyKey: "api-cosmetic-insufficient-001" }
+  });
+  assert.equal(insufficientCosmeticPurchase.response.status, 402);
+  assert.equal(insufficientCosmeticPurchase.payload.code, "insufficient_credits");
+  assert.equal(insufficientCosmeticPurchase.payload.details.price, auroraCollection.creditPrice);
+  assert.equal(insufficientCosmeticPurchase.payload.details.balance, 300);
+  assert.equal((await request("/api/player")).payload.player.credits, 300);
+
   const currentEvent = await request("/api/events/current");
   assert.equal(currentEvent.response.status, 200);
   assert.match(currentEvent.payload.serverTime, /^\d{4}-\d{2}-\d{2}T/);
@@ -340,10 +364,10 @@ test("authenticated HTTP runs produce verified Pure and Open leaderboard scores"
   assert.equal(incompleteEventClaim.response.status, 422);
   assert.equal(incompleteEventClaim.payload.code, "cosmic_event_incomplete");
 
-  const quickStart = await request("/api/run/start", { method: "POST", body: { mode: "quick" } });
+  const quickStart = await request("/api/run/start", { method: "POST", body: { mode: "daily" } });
   assert.equal(quickStart.response.status, 201);
   assert.equal(quickStart.payload.run.ranked, true);
-  assert.ok(quickStart.payload.run.deadlineAt);
+  assert.equal(quickStart.payload.run.deadlineAt, null, "the shared Daily challenge remains relaxed");
   assert.deepEqual(quickStart.payload.run.routeProgress, {
     total: quickStart.payload.game.routeLength,
     remaining: quickStart.payload.game.routeLength,
@@ -395,7 +419,7 @@ test("authenticated HTTP runs produce verified Pure and Open leaderboard scores"
   assert.equal(impossible.response.status, 422);
   assert.equal(impossible.payload.code, "impossible_combination");
 
-  const parallelAttempt = await request("/api/run/start", { method: "POST", body: { mode: "quick" } });
+  const parallelAttempt = await request("/api/run/start", { method: "POST", body: { mode: "daily" } });
   assert.equal(parallelAttempt.response.status, 409);
   assert.equal(parallelAttempt.payload.code, "ranked_attempt_active");
   const rankedBoundaryStart = quickStart;
@@ -417,11 +441,12 @@ test("authenticated HTTP runs produce verified Pure and Open leaderboard scores"
   assert.equal(boundaryResume.payload.progress.attempts, 3, "a rejected ranked recipe consumes an attempt for errorless integrity");
   assert.equal(boundaryResume.payload.progress.rejectedAttempts, 1);
 
-  const play = async (started) => {
+  const play = async (started, { paced = false } = {}) => {
     const route = verifiedRoute(started.payload.game.target);
     let finalCombination = null;
     let remaining = started.payload.run.routeProgress.remaining;
     for (const step of route) {
+      if (paced) await new Promise((resolve) => setTimeout(resolve, 25));
       finalCombination = await request("/api/combine", {
         method: "POST",
         body: {
@@ -446,7 +471,7 @@ test("authenticated HTTP runs produce verified Pure and Open leaderboard scores"
     return { route, finalCombination };
   };
 
-  const quickPlay = await play(quickStart);
+  const quickPlay = await play(quickStart, { paced: true });
   assert.equal(quickPlay.finalCombination.payload.division, "pure");
   assert.equal(quickPlay.finalCombination.payload.assist, "none");
   assert.equal(quickPlay.finalCombination.payload.scoreEligible, true);
@@ -533,7 +558,7 @@ test("authenticated HTTP runs produce verified Pure and Open leaderboard scores"
   assert.equal(pureSubmit.payload.placement.entry.signature.privacy, "anonymous");
   assert.deepEqual(pureSubmit.payload.verifiedSignature, pureSubmit.payload.placement.entry.signature);
   assert.equal(pureSubmit.payload.placement.community.player.rank, 1);
-  assert.equal(pureSubmit.payload.creditReward, 4);
+  assert.equal(pureSubmit.payload.creditReward, 10);
   const retriedPureSubmit = await request("/api/run/submit", {
     method: "POST",
     body: { runId: quickStart.payload.run.id, runToken: quickStart.payload.run.token }
@@ -595,7 +620,7 @@ test("authenticated HTTP runs produce verified Pure and Open leaderboard scores"
   assert.equal(repeatedPurchase.payload.balance, purchase.payload.balance);
   assert.equal(repeatedPurchase.payload.player.credits, purchase.payload.player.credits);
 
-  const movesStart = await request("/api/run/start", { method: "POST", body: { mode: "moves" } });
+  const movesStart = await request("/api/run/start", { method: "POST", body: { mode: "weekly" } });
   assert.equal(movesStart.response.status, 201);
   assert.equal(movesStart.payload.run.ranked, true);
   const activation = await request("/api/market/activate", {
@@ -643,14 +668,14 @@ test("authenticated HTTP runs produce verified Pure and Open leaderboard scores"
     "x-constellore-player": assistedRegistration.payload.player.id,
     "x-constellore-token": assistedRegistration.payload.playerToken
   };
-  const assistedStart = await request("/api/run/start", { method: "POST", body: { mode: "quick" } });
+  const assistedStart = await request("/api/run/start", { method: "POST", body: { mode: "daily" } });
   assert.equal(assistedStart.response.status, 201);
   assert.equal(assistedStart.payload.run.ranked, true);
   assert.equal(assistedStart.payload.run.scoringDisabled, false);
-  const parallelAssistedStart = await request("/api/run/start", { method: "POST", body: { mode: "quick" } });
+  const parallelAssistedStart = await request("/api/run/start", { method: "POST", body: { mode: "daily" } });
   assert.equal(parallelAssistedStart.response.status, 409);
   assert.equal(parallelAssistedStart.payload.code, "ranked_attempt_active");
-  const preForfeitPreview = await request("/api/run/preview", { method: "POST", body: { mode: "quick" } });
+  const preForfeitPreview = await request("/api/run/preview", { method: "POST", body: { mode: "daily" } });
   assert.equal(preForfeitPreview.response.status, 200);
   assert.equal(preForfeitPreview.payload.game.scoreEligible, true);
   assert.ok(Number.isInteger(preForfeitPreview.payload.game.routeLength));
@@ -693,7 +718,7 @@ test("authenticated HTTP runs produce verified Pure and Open leaderboard scores"
   assert.equal(assistedSubmit.payload.weeklyBonus, 0);
   assert.equal(assistedSubmit.payload.player.credits, 300);
 
-  const postForfeitStart = await request("/api/run/start", { method: "POST", body: { mode: "quick" } });
+  const postForfeitStart = await request("/api/run/start", { method: "POST", body: { mode: "daily" } });
   assert.equal(postForfeitStart.response.status, 201);
   assert.equal(postForfeitStart.payload.run.ranked, false);
   assert.equal(postForfeitStart.payload.run.scoringDisabled, true);
@@ -721,7 +746,7 @@ test("authenticated HTTP runs produce verified Pure and Open leaderboard scores"
   assert.equal(stalePreviewStart.response.status, 409);
   assert.equal(stalePreviewStart.payload.code, "mission_stale", "a run may not start under scoring terms that changed after its briefing");
 
-  const assistedPreview = await request("/api/run/preview", { method: "POST", body: { mode: "quick" } });
+  const assistedPreview = await request("/api/run/preview", { method: "POST", body: { mode: "daily" } });
   assert.equal(assistedPreview.response.status, 200);
   assert.equal(assistedPreview.payload.game.ranked, false);
   assert.equal(assistedPreview.payload.game.scoreEligible, false, "the briefing must disclose an earlier forfeit before replay starts");
@@ -763,7 +788,10 @@ test("authenticated HTTP runs produce verified Pure and Open leaderboard scores"
 
   const disguisedMovesStart = await request("/api/run/start", { method: "POST", body: { mode: "moves", custom: true } });
   assert.equal(disguisedMovesStart.response.status, 201);
-  assert.equal(disguisedMovesStart.payload.run.ranked, true, "client-controlled custom flags cannot downgrade official challenges before revealing them");
+  assert.equal(disguisedMovesStart.payload.run.ranked, false, "a client-controlled custom flag cannot bypass Bronze relaxation");
+  assert.equal(disguisedMovesStart.payload.game.mode, "reach");
+  assert.equal(disguisedMovesStart.payload.game.timeLimit, null);
+  assert.equal(disguisedMovesStart.payload.game.moveLimit, null);
   const disguisedMovesReveal = await request("/api/run/reveal", {
     method: "POST",
     body: { runId: disguisedMovesStart.payload.run.id, runToken: disguisedMovesStart.payload.run.token }
@@ -772,7 +800,9 @@ test("authenticated HTTP runs produce verified Pure and Open leaderboard scores"
   const movesReplayAfterReveal = await request("/api/run/start", { method: "POST", body: { mode: "moves" } });
   assert.equal(movesReplayAfterReveal.response.status, 201);
   assert.equal(movesReplayAfterReveal.payload.run.ranked, false);
-  assert.equal(movesReplayAfterReveal.payload.run.scoringDisabled, true);
+  assert.equal(movesReplayAfterReveal.payload.run.scoringDisabled, false);
+  assert.equal(movesReplayAfterReveal.payload.game.mode, "reach");
+  assert.notEqual(movesReplayAfterReveal.payload.game.target, disguisedMovesStart.payload.game.target);
 
   const twistStart = await request("/api/run/start", { method: "POST", body: { mode: "reach", seed: 14, target: "Telescope" } });
   assert.equal(twistStart.response.status, 201);

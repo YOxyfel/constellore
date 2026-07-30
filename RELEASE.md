@@ -1,6 +1,6 @@
 # Constellore release runbook
 
-This runbook covers the **free local-practice beta** distributed on GitHub Pages and itch.io. It does not authorize a paid launch or claim that the separate Node service is production-ready.
+This runbook covers the **free hybrid beta** distributed on GitHub Pages and itch.io. Solo play remains local practice; optional Constellation Scramble matches use the separately operated Node service. It does not authorize a paid launch or claim that the single-instance beta service is ready for commercial scale.
 
 ## Product boundary to publish
 
@@ -12,12 +12,14 @@ The current portable build is a target-based word-route puzzle with:
 - recipe explanations and spoiler-safe category direction;
 - browser-local progress;
 - unranked practice completion;
+- optional private and public live 1v1 Scramble matches through an exact configured HTTPS Duel API;
+- server-authoritative open match boards, reconnect state, results, and a separate Duel Rating;
 - no live AI generation;
-- no score upload or verified leaderboard;
+- no solo score upload or verified solo leaderboard from the portable package;
 - no cross-device or recoverable account;
 - no checkout, paid entitlement, rewarded ad, or uploaded/network gameplay telemetry. Bounded aggregate diagnostics remain on-device and can be exported or reset.
 
-Do not describe the itch/Pages package as AI-generated on the spot, globally ranked, account-backed, or monetized. Those capabilities require the separately operated online architecture and additional release gates.
+Do not describe the itch/Pages package as AI-generated on the spot, globally ranked in solo play, cloud-saved, or monetized. Scramble is the only live gameplay boundary: it uses a pseudonymous guest identity and sends the pairings the player deliberately makes during a match. Solo progress remains device-local.
 
 ## Build and verify
 
@@ -104,7 +106,9 @@ Verify the deployed artifact, not only localhost:
 - install metadata offers the 192px, 512px, and maskable icons;
 - offline reload works after one successful online load;
 - the service worker leaves unrelated origin caches untouched;
-- no checkout, ad, leaderboard upload, account recovery, or live-AI claim appears as an available local feature;
+- no checkout, ad, solo leaderboard upload, cloud-save, or live-AI claim appears as an available local feature;
+- private Scramble invitations are unranked, public Scramble uses only Duel Rating, and both recover after a brief disconnect or refresh;
+- the rival's visible board never exposes an internal player ID, bearer token, private run ID, or hidden solution route;
 - social preview validators receive the 1200×630 image and large-card metadata;
 - there are no requests to Google Fonts from the static release;
 - the browser console has no uncaught error during a complete route.

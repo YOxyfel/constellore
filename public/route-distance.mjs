@@ -120,7 +120,11 @@ export function authoredMovesRemaining({
       if (betterPlan(candidate, best)) best = candidate;
     }
     visiting.delete(resultKey);
-    memo.set(resultKey, best);
+    // A failed search can be specific to the current recursion stack: one
+    // candidate may point back to an ancestor even though the same word has a
+    // valid route when reached through another candidate. Only successful
+    // plans are context-independent and safe to memoize.
+    if (best) memo.set(resultKey, best);
     return best;
   };
 

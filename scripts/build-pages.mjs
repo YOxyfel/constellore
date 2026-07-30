@@ -2,11 +2,15 @@ import { copyFile, cp, mkdir, readFile, readdir, rm, writeFile } from "node:fs/p
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { writeLocalWorldModule } from "./build-local-world.mjs";
+import { assertCosmeticPacksAreLazy, validateCosmeticPacks } from "./cosmetic-assets.mjs";
+import { validateAudioPacks } from "./audio-assets.mjs";
 import { generateReleaseAssets } from "./generate-release-assets.mjs";
 import { minifyCss } from "./minify-css.mjs";
+import { validatePublicDuelApiUrl } from "./public-duel-config.mjs";
 import { validatePublicFeedbackApiUrl } from "./public-feedback-config.mjs";
 import { releaseMetadata, withAssetVersion, writeReleaseMetadata } from "./release-metadata.mjs";
 import { renderServiceWorker } from "./service-worker-source.mjs";
+import { SECONDARY_SURFACE_FILES } from "../public/secondary-surface-loader.mjs";
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const output = join(root, "dist-pages");
@@ -16,6 +20,7 @@ const pagesUrl = (process.env.PAGES_BASE_URL || `https://${repositoryOwner.toLow
 const configuredBetaUrl = process.env.PUBLIC_BETA_URL?.trim() || "";
 const configuredItchUrl = process.env.PUBLIC_ITCH_URL?.trim() || "";
 const configuredFeedbackApiUrl = process.env.PUBLIC_FEEDBACK_API_URL?.trim() || "";
+const configuredDuelApiUrl = process.env.PUBLIC_DUEL_API_URL?.trim() || "";
 const release = await releaseMetadata({ channel: "github-pages", runtime: "local-practice" });
 
 async function listRelativeFiles(directory, base = directory) {
@@ -89,16 +94,41 @@ function setBodyDataAttribute(document, name, value) {
   return updated;
 }
 
+function compactGameHtml(document) {
+  const protectedContents = [];
+  const protectedDocument = String(document).replace(
+    /(<(script|style|pre|textarea)\b[^>]*>)([\s\S]*?)(<\/\2\s*>)/gi,
+    (block, opening, tag, content, closing) => {
+      const token = `CONSTELLORE_PROTECTED_HTML_${protectedContents.length}_END`;
+      protectedContents.push({ token, content });
+      return `${opening}${token}${closing}`;
+    }
+  );
+  let compacted = protectedDocument
+    .replace(/<!--(?!\[if\b)[\s\S]*?-->/gi, "")
+    .replace(/>\s+</g, "> <")
+    .trim();
+  for (const { token, content } of protectedContents) {
+    compacted = compacted.replace(token, () => content);
+  }
+  return compacted
+    .replace(/(<link rel="canonical"[^>]*>)\s*/i, "$1\n")
+    .replace(/(<meta property="og:url"[^>]*>)\s*/i, "$1\n");
+}
+
 const validatedPagesUrl = requirePagesUrl(pagesUrl);
 const externalBetaUrl = requireBetaUrl(configuredBetaUrl);
 const itchUrl = requireItchUrl(configuredItchUrl);
 const feedbackApiUrl = validatePublicFeedbackApiUrl(configuredFeedbackApiUrl);
+const duelApiUrl = validatePublicDuelApiUrl(configuredDuelApiUrl);
 const localBetaUrl = new URL("play/", validatedPagesUrl).href;
 const betaUrl = externalBetaUrl || localBetaUrl;
 const safePagesUrl = escapeAttribute(validatedPagesUrl);
 const safeBetaUrl = escapeAttribute(betaUrl);
 
 await generateReleaseAssets();
+await validateCosmeticPacks(join(root, "public"));
+await validateAudioPacks(join(root, "public"));
 await rm(output, { recursive: true, force: true });
 await mkdir(output, { recursive: true });
 
@@ -115,6 +145,7 @@ html = setBodyDataAttribute(html, "data-build-id", release.buildId);
 if (!externalBetaUrl) {
   const staticCopy = new Map([
     ["reach a destination word in the free public beta", "reach a destination word in the free local practice beta"],
+    ["No account needed. Practice progress stays on this device.", "No account needed. Solo progress stays on this device and works offline. Live Scramble duels use the configured online service."],
     ["Play the public beta free in your browser", "Play the local practice beta free in your browser"],
     ["Build a universe. Find the word. Public beta.", "Build a universe. Find the word. Local practice beta."],
     ["reach the destination word in a free public beta", "reach the destination word in a free local practice puzzle"],
@@ -127,12 +158,12 @@ if (!externalBetaUrl) {
     ["<li><strong>Verified orbits</strong><span>Pure + Open</span></li>", "<li><strong>Local practice</strong><span>No account</span></li>"],
     ["aria-label=\"Public beta notice\"", "aria-label=\"Local practice beta notice\""],
     ["SERVER-BACKED BETA IS LIVE", "LOCAL PRACTICE IS LIVE"],
-    ["Official runs use server-verified scoring, anonymous Recovery Kits, and separate Pure and Open ladders. Checkout and ads remain disabled.", "This downloadable/browser build is deterministic and local: no live AI, verified ranking, checkout, ads, or cross-device account."],
+    ["Official runs use server-verified scoring, anonymous Recovery Kits, and separate Pure and Open ladders. Checkout and ads remain disabled.", "Solo play is deterministic, local, and offline-capable: no live AI, verified ranking, checkout, ads, or cross-device account. Live Scramble duels require the configured online service."],
     ["The beta runs<br><em>right in this page.</em>", "Play here.<br><em>Your progress stays local.</em>"],
-    ["No install, account, or payment required. Start a run now; if you are on a phone, the beta opens in a full-screen layout designed for touch.", "No install, account, or payment required. This practice build saves progress on this device; verified rankings and the global Exchange need the online server."],
+    ["No install, account, or payment required. Start a run now; if you are on a phone, the beta opens in a full-screen layout designed for touch.", "No install, account, or payment required. Solo progress stays on this device and works offline; live Scramble duels require a connection."],
     ["<strong>PLAY BETA</strong><small>FREE · VERIFIED RUNS</small>", "<strong>PLAY PRACTICE</strong><small>FREE · LOCAL SAVE</small>"],
     ["Fair routes.<br><em>Separate ladders.</em>", "Practice locally.<br><em>No pretend ladder.</em>"],
-    ["Official runs are verified by the server. Pure paths use only discovered combinations. Wished, Vault, or powerup-assisted runs compete in Open, so creative shortcuts never erase a clean solve.", "The public web and itch editions run fully in your browser. Progress stays on this device, every completion is practice-only, and payments are disabled."],
+    ["Official runs are verified by the server. Pure paths use only discovered combinations. Wished, Vault, or powerup-assisted runs compete in Open, so creative shortcuts never erase a clean solve.", "The public web and itch editions run every solo mode locally in your browser. Progress stays on this device, every solo completion is practice-only, live Scramble is online-only, and payments are disabled."],
     ["An anonymous Recovery Kit can move progression between devices without requiring an email or public username.", "Verified online leaderboards, recoverable profiles, and a live word service require the separately hosted online beta."],
     ["Start a verified route", "Start a practice route"],
     ["<div class=\"rank-head\"><span>VERIFIED RANKINGS · ASYNC</span><strong>PURE + OPEN</strong></div>", "<div class=\"rank-head\"><span>PLANNED ONLINE · PREVIEW</span><strong>NOT LIVE</strong></div>"],
@@ -141,11 +172,11 @@ if (!externalBetaUrl) {
     ["Yes. The public beta has no checkout or rewarded advertising. It is for testing the core route puzzle, controls, balance, and combination quality.", "Yes. The local practice beta has no checkout or rewarded advertising. It is for testing the core route puzzle, controls, balance, and combination quality."],
     ["No. The browser creates a temporary guest identity on this device. A recoverable account system will arrive before paid ownership is enabled.", "No. Local-practice progress is stored in this browser and cannot yet be recovered on another device. Clearing site data resets it."],
     ["No. The browser creates a temporary guest identity on this device. Save the one-time Recovery Kit to restore progression on another device.", "No. Local-practice progress is stored in this browser and cannot be recovered on another device. Clearing site data resets it."],
-    ["Yes. Beta progression may be reset for safety or balancing. The player profile includes export and deletion controls, and Recovery Kits rotate after use.", "Yes. Practice progress may reset between beta versions. There is no uploaded leaderboard in this package."],
+    ["Yes. Beta progression may be reset for safety or balancing. Menu → Settings and data includes export and deletion controls, and Recovery Kits rotate after use.", "Yes. Practice progress may reset between beta versions. There is no uploaded leaderboard in this package."],
     ["No. The reviewed graph stays selective so successful combinations remain meaningful. Every official target has a build-verified route from the four starters.", "No. The local world uses the reviewed authored graph, so not every pair combines. Every included target has a build-verified route."],
     ["Official routes never depend on live AI. If the experimental casual service is configured, generated recipes are labelled, bounded, persisted for consistency, and scored in Open.", "No. The public web and itch practice builds use a prebuilt local word world. Experimental live generation requires a separate online service and is not advertised as available here."],
     ["These are plain beta disclosures, not finished legal policies. Formal privacy terms, terms of use, trader details, and a private support route must be published before advertising or payments go live.", "These are plain beta disclosures, not finished legal policies. Formal privacy terms, terms of use, and a private support route must be published before accounts, advertising, or payments go live."],
-    ["The online beta stores an anonymous guest profile, verified run state, and bounded aggregate diagnostics. It collects no email or public player name, and provides profile export and deletion.", "Local practice keeps progression in browser storage and uploads no gameplay telemetry. Bounded on-device diagnostics can be exported or reset; a launch signal is sent only if you choose it."],
+    ["The online beta stores an anonymous guest profile, verified run state, and bounded aggregate diagnostics. It collects no email or public player name, and provides profile export and deletion.", "Solo progression stays in browser storage and uploads no solo gameplay telemetry. Live Scramble sends only bounded authenticated duel actions when you choose that online mode; on-device diagnostics can be exported or reset."],
     ["Free to play in your browser · Purchases disabled during beta", "Free local practice · No account · No payments · Progress stays on this device"]
   ]);
   for (const [current, replacement] of staticCopy) html = html.replaceAll(current, replacement);
@@ -177,8 +208,17 @@ gameHtml = withAssetVersion(gameHtml, release.version)
   .replaceAll('href="/manifest.webmanifest"', 'href="./manifest.webmanifest"')
   .replace('<link rel="apple-touch-icon" href="/icon.svg">', '<link rel="apple-touch-icon" href="./icon-192.png">')
   .replaceAll('href="/icon.svg"', 'href="./icon.svg"')
+  .replaceAll('href="/art/transitions/', 'href="./art/transitions/')
+  .replaceAll('href="/art/home/', 'href="./art/home/')
   .replace(new RegExp(`href="/styles[.]css[?]v=${release.version.replaceAll(".", "[.]")}"`), `href="./styles.css?v=${release.version}"`)
   .replace(new RegExp(`href="/simple-ui[.]css[?]v=${release.version.replaceAll(".", "[.]")}"`), `href="./simple-ui.css?v=${release.version}"`)
+  .replace(new RegExp(`href="/cosmic-gate[.]css[?]v=${release.version.replaceAll(".", "[.]")}"`), `href="./cosmic-gate.css?v=${release.version}"`)
+  .replace(new RegExp(`href="/epic-home[.]css[?]v=${release.version.replaceAll(".", "[.]")}"`), `href="./epic-home.css?v=${release.version}"`)
+  .replace(new RegExp(`href="/cosmetics-observatory[.]css[?]v=${release.version.replaceAll(".", "[.]")}"`), `href="./cosmetics-observatory.css?v=${release.version}"`)
+  .replace(new RegExp(`href="/cosmetics[.]css[?]v=${release.version.replaceAll(".", "[.]")}"`), `href="./cosmetics.css?v=${release.version}"`)
+  .replace(new RegExp(`href="/cosmos-circuit[.]css[?]v=${release.version.replaceAll(".", "[.]")}"`), `href="./cosmos-circuit.css?v=${release.version}"`)
+  .replace(new RegExp(`src="/cosmetic-preload-bootstrap[.]js[?]v=${release.version.replaceAll(".", "[.]")}"`), `src="./cosmetic-preload-bootstrap.js?v=${release.version}"`)
+  .replace(new RegExp(`src="/hero-recipes[.]mjs[?]v=${release.version.replaceAll(".", "[.]")}"`), `src="./hero-recipes.mjs?v=${release.version}"`)
   .replace(new RegExp(`src="/app[.]js[?]v=${release.version.replaceAll(".", "[.]")}"`), `src="./app.js?v=${release.version}"`)
   .replace(/\s*<link rel="preconnect" href="https:\/\/fonts[.]googleapis[.]com">\r?\n/gi, "\n")
   .replace(/\s*<link rel="preconnect" href="https:\/\/fonts[.]gstatic[.]com" crossorigin>\r?\n/gi, "\n")
@@ -187,12 +227,14 @@ gameHtml = setBodyDataAttribute(gameHtml, "data-runtime", "local-practice");
 gameHtml = setBodyDataAttribute(gameHtml, "data-build-version", release.version);
 gameHtml = setBodyDataAttribute(gameHtml, "data-build-id", release.buildId);
 gameHtml = setBodyDataAttribute(gameHtml, "data-feedback-api", feedbackApiUrl);
+gameHtml = setBodyDataAttribute(gameHtml, "data-duel-api", duelApiUrl);
+gameHtml = compactGameHtml(gameHtml);
 await writeFile(join(playOutput, "index.html"), gameHtml, "utf8");
 await writeReleaseMetadata(join(playOutput, "release.json"), { channel: "github-pages", runtime: "local-practice" });
 const publicRuntimeFiles = (await readdir(join(root, "public"), { withFileTypes: true }))
   .filter((entry) => entry.isFile())
   .map((entry) => entry.name)
-  .filter((name) => /^(?:app[.]js|(?:styles|simple-ui)[.]css|.+[.]mjs|icon(?:-maskable)?(?:-[0-9]+)?[.](?:png|svg))$/.test(name))
+  .filter((name) => /^(?:(?:app|cosmetic-preload-bootstrap)[.]js|(?:styles|simple-ui|cosmic-gate|epic-home|developer-console|cosmetics|cosmetics-observatory|cosmetic-world-preview|cosmic-interlude|cosmos-circuit|stardust-store|scramble)[.]css|.+[.]mjs|icon(?:-maskable)?(?:-[0-9]+)?[.](?:png|svg))$/.test(name))
   .sort((left, right) => left.localeCompare(right, "en"));
 for (const name of publicRuntimeFiles) {
   const source = join(root, "public", name);
@@ -205,8 +247,37 @@ for (const name of publicRuntimeFiles) {
     await copyFile(source, destination);
   }
 }
+const storySource = join(root, "public", "story");
+const storyOutput = join(playOutput, "story");
+for (const name of await listRelativeFiles(storySource)) {
+  const source = join(storySource, name);
+  const destination = join(storyOutput, name);
+  await mkdir(dirname(destination), { recursive: true });
+  if (/\.(?:js|mjs)$/.test(name)) {
+    await writeFile(destination, withAssetVersion(await readFile(source, "utf8"), release.version), "utf8");
+  } else if (name.endsWith(".css")) {
+    await writeFile(destination, minifyCss(await readFile(source, "utf8")), "utf8");
+  } else {
+    await copyFile(source, destination);
+  }
+}
+const cinematicSource = join(root, "public", "cinematic");
+const cinematicOutput = join(playOutput, "cinematic");
+for (const name of await listRelativeFiles(cinematicSource)) {
+  const source = join(cinematicSource, name);
+  const destination = join(cinematicOutput, name);
+  await mkdir(dirname(destination), { recursive: true });
+  if (/\.(?:js|mjs)$/.test(name)) {
+    await writeFile(destination, withAssetVersion(await readFile(source, "utf8"), release.version), "utf8");
+  } else if (name.endsWith(".css")) {
+    await writeFile(destination, minifyCss(await readFile(source, "utf8")), "utf8");
+  } else {
+    await copyFile(source, destination);
+  }
+}
 await cp(join(root, "public", "screenshots"), join(playOutput, "screenshots"), { recursive: true, force: true });
 await cp(join(root, "public", "art"), join(playOutput, "art"), { recursive: true, force: true });
+await cp(join(root, "public", "audio"), join(playOutput, "audio"), { recursive: true, force: true });
 await writeLocalWorldModule(join(playOutput, "local-world.mjs"));
 
 const manifest = JSON.parse(await readFile(join(root, "public", "manifest.webmanifest"), "utf8"));
@@ -225,12 +296,20 @@ manifest.shortcuts = (manifest.shortcuts || []).map((shortcut) => ({
 manifest.screenshots = (manifest.screenshots || []).map((screenshot) => ({ ...screenshot, src: `./screenshots/${screenshot.src.split("/").pop()}` }));
 await writeFile(join(playOutput, "manifest.webmanifest"), `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
 
+const secondarySurfaceAssets = new Set(SECONDARY_SURFACE_FILES);
 const practiceAssets = (await listRelativeFiles(playOutput))
   .filter((name) => (
     name !== "index.html"
     && name !== "service-worker.js"
+    && !secondarySurfaceAssets.has(name)
     && !name.startsWith("screenshots/")
     && !name.startsWith("art/ranks/")
+    && !name.startsWith("art/transitions/")
+    && !name.startsWith("art/home/")
+    && !name.startsWith("art/cosmetics/")
+    && !name.startsWith("audio/")
+    && !name.startsWith("story/")
+    && !name.startsWith("cinematic/")
   ))
   .map((name) => `./${name}${/\.(?:css|js|mjs)$/.test(name) ? `?v=${release.version}` : ""}`)
   .sort((left, right) => left.localeCompare(right, "en"));
@@ -238,9 +317,12 @@ const serviceWorker = renderServiceWorker({
   cachePrefix: "constellore-pages-practice-",
   version: release.version,
   assets: practiceAssets,
-  lazyAssets: ["./art/ranks/"],
+  lazyAssets: ["./art/ranks/", "./art/transitions/", "./art/home/", "./story/", "./cinematic/"],
+  lazyFiles: SECONDARY_SURFACE_FILES.map((name) => `./${name}?v=${release.version}`),
+  lazyPacks: ["./art/cosmetics/", "./audio/"],
   legacyCaches: ["constellore-shell-v24", "constellore-pages-practice-v27"]
 });
+assertCosmeticPacksAreLazy(serviceWorker);
 await writeFile(join(playOutput, "service-worker.js"), serviceWorker, "utf8");
 await writeFile(join(output, ".nojekyll"), "", "utf8");
 await writeFile(join(output, "sitemap.xml"), `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n  <url><loc>${safePagesUrl}</loc></url>\n  <url><loc>${escapeAttribute(new URL("privacy.html", validatedPagesUrl).href)}</loc></url>\n  <url><loc>${escapeAttribute(new URL("terms.html", validatedPagesUrl).href)}</loc></url>\n  <url><loc>${escapeAttribute(new URL("support.html", validatedPagesUrl).href)}</loc></url>\n  <url><loc>${escapeAttribute(localBetaUrl)}</loc></url>\n</urlset>\n`, "utf8");
@@ -250,3 +332,4 @@ console.log(externalBetaUrl ? `Playable server beta: ${externalBetaUrl}` : `Play
 console.log(itchUrl ? `itch.io CTA: ${itchUrl}` : "itch.io CTA: hidden (set PUBLIC_ITCH_URL after the public page exists)");
 console.log(itchUrl ? `Follow destination: itch.io (${itchUrl})` : "Follow destination: GitHub repository");
 console.log(feedbackApiUrl ? `Anonymous combination reports: ${feedbackApiUrl}` : "Anonymous combination reports: saved locally (set PUBLIC_FEEDBACK_API_URL for direct delivery)");
+console.log(duelApiUrl ? `Live Scramble duels: ${duelApiUrl}` : "Live Scramble duels: unavailable (set PUBLIC_DUEL_API_URL to the hosted /api/duels base)");

@@ -4,6 +4,8 @@ Constellore 3.0 is the release where the destination route becomes the product: 
 
 This document is a go/no-go contract. A feature existing in source is not enough; the corresponding automated, human, or external gate must pass.
 
+The manual accessibility pass is defined in [ACCESSIBILITY_CHECKLIST.md](ACCESSIBILITY_CHECKLIST.md). A release is not complete until that checklist has been exercised against the candidate build.
+
 ## Product shape
 
 - The first screen has one recommended action and one tutorial alternative.
@@ -21,6 +23,7 @@ Run from a clean checkout with Node.js 20 or 22:
 ```powershell
 npm ci
 npm run check
+npm run test:coverage
 npm run build:release
 npm run test:e2e
 ```
@@ -32,8 +35,9 @@ The gates cover:
 - server-computed ranked outcomes and exact challenge identity;
 - recovery, session expiry/revocation, replay defense, AI quarantine, rate limits, and secret-safe logging;
 - Pages and itch.io packaging, internal hashes, cache/version consistency, and runtime boundaries;
-- mobile Chromium, mobile WebKit, desktop Firefox, keyboard pause/recovery, a real starter fusion, horizontal overflow, 15 px text, and axe WCAG scans;
-- PWA screenshots, shortcuts, offline cache boundaries, and performance budgets.
+- mobile and desktop Chromium, mobile WebKit, desktop Firefox, keyboard steering/pause/recovery, a real starter fusion, horizontal overflow, 15 px text, and axe WCAG scans against both onboarding and live gameplay;
+- normal-motion victory timing plus an explicit reduced-motion project;
+- PWA screenshots, install metadata, update/offline reload behavior, cache boundaries, and performance budgets.
 
 Tags must exactly match `package.json` (`v3.0.0-beta.1`, for example). The tag workflow rejects unsynchronized release metadata and publishes the deterministic itch.io ZIP plus its SHA-256 sidecar.
 

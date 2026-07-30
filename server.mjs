@@ -5,14 +5,19 @@ import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { basename, dirname, extname, join, normalize } from "node:path";
 import { fileURLToPath } from "node:url";
-import { ANALYTICS_EVENT_NAMES, CREATIVE_COMMERCE_CATALOG, GameStore, MARKET_CATALOG, RunRegistry, isoWeekKey, serviceError } from "./game-services.mjs";
+import { ANALYTICS_EVENT_NAMES, CREATIVE_COMMERCE_CATALOG, GameStore, MARKET_CATALOG, RunRegistry, buildChallengeIdentity, effectiveRunStartedAt, isoWeekKey, normalizeRunEntryId, serviceError } from "./game-services.mjs";
+import { DuelService } from "./duel-services.mjs";
+import { listScrambleModeDefinitions } from "./public/scramble-arena.mjs";
 import { cosmicTwistSeedFor, selectCosmicTwist } from "./public/cosmic-twists.mjs";
 import { assistancePolicy, rankSenseCandidates, selectRouteNavigationTip, selectWordGift } from "./public/engagement-features.mjs";
 import {
   adaptiveChallengeProfile,
+  adaptiveDifficultyTag,
   adaptiveModePolicy,
   adaptiveRewardMultiplier,
+  adaptiveRunEntryPolicy,
   estimateAdaptiveChallengeLevel,
+  parseAdaptiveAvoidTarget,
   sanitizeAdaptiveDifficultyState,
   selectAdaptiveChallenge
 } from "./public/adaptive-difficulty.mjs";
@@ -31,8 +36,18 @@ import {
   routeRemixProgress
 } from "./public/route-remixes.mjs";
 import { createTargetPool } from "./public/target-pool.mjs";
+import {
+  goldenTargetCatalog as goldenTargetDefinitions,
+  goldenTargetOrder,
+  preferGoldenTargetCandidates
+} from "./public/golden-targets.mjs";
 import { recipeFingerprint, sanitizeRecipeRating } from "./public/recipe-feedback.mjs";
-import { buildAuthoredRouteProgress, createAuthoredRouteGraph } from "./public/route-distance.mjs";
+import {
+  authoredMovesRemaining,
+  buildAuthoredRouteProgress,
+  createAuthoredRouteGraph
+} from "./public/route-distance.mjs";
+import { PATH_GUARD_VERSION, createPathGuardEvidence, evaluatePathGuard, pathGuardEligibility } from "./public/path-guard.mjs";
 import { annotateUniverseResult, buildUniverseManifest, selectUniverse, validateUniverseRoute } from "./public/universe-director.mjs";
 import { AiRequestGate, MemoryRateLimiter, safeConcept, safeDiscoveryContext, trustedWriteOrigin } from "./server-safety.mjs";
 import { EXPANDED_RECIPES } from "./content/expanded-recipes.mjs";
@@ -53,9 +68,10 @@ const packageMetadata = JSON.parse(await readFile(join(projectRoot, "package.jso
 const gameStore = await new GameStore(storePath).init();
 const runRegistry = new RunRegistry(gameStore);
 await runRegistry.flush();
+export let duelService = null;
 const backupDirectory = storePath === ":memory:" ? "" : (process.env.CONSTELLORE_BACKUP_DIR || join(dirname(storePath), "backups"));
 const backupRetention = Math.min(30, Math.max(1, Number(process.env.CONSTELLORE_BACKUP_KEEP) || 7));
-const APP_VERSION = process.env.CONSTELLORE_VERSION || packageMetadata.version || "3.3.0-beta.1";
+const APP_VERSION = process.env.CONSTELLORE_VERSION || packageMetadata.version || "3.4.3-beta.1";
 const BUILD_VERSION = process.env.CONSTELLORE_BUILD_VERSION || process.env.GIT_COMMIT || process.env.RENDER_GIT_COMMIT || "local-dev";
 const GRAPH_VERSION = process.env.CONSTELLORE_GRAPH_VERSION || `world-${APP_VERSION}`;
 const RANKED_RULES_VERSION = "ranked-v3";
@@ -580,6 +596,23 @@ const coreTargetCatalog = [
   officialTarget("Space Station", "Build a home, build a rocket, then leave Earth.", 5)
 ];
 
+const goldenTargetCatalog = goldenTargetDefinitions().map((entry) => ({
+  ...officialTarget(entry.target, entry.clue, entry.tier),
+  goldenOrder: entry.order,
+  expectedRouteLength: entry.routeLength,
+  minimumFinalRecipes: entry.minimumFinalRecipes,
+  family: entry.family
+}));
+const goldenTargetKeys = new Set(goldenTargetCatalog.map((entry) => entry.target.toLocaleLowerCase("en-US")));
+const coreTargetKeys = new Set(coreTargetCatalog.map((entry) => entry.target.toLocaleLowerCase("en-US")));
+const targetPoolOfficialCatalog = [
+  // The original core metadata is a public compatibility contract used by
+  // missions, cards, and existing tests. Golden curation selects by target
+  // identity; it must never rewrite an established target's clue or tier.
+  ...coreTargetCatalog,
+  ...goldenTargetCatalog.filter((entry) => !coreTargetKeys.has(entry.target.toLocaleLowerCase("en-US")))
+];
+
 const targetPoolRecipes = [...recipes.values()];
 const targetPoolRoutes = new Map(
   [...reachableFromStarters()]
@@ -597,7 +630,7 @@ const targetCatalog = createTargetPool({
   routes: targetPoolRoutes,
   recipes: targetPoolRecipes,
   concepts: targetPoolConcepts,
-  officialTargets: coreTargetCatalog,
+  officialTargets: targetPoolOfficialCatalog,
   starters: STARTERS,
   minimumFinalRecipes: 1,
   maximumEnergyShare: 0.19
@@ -605,6 +638,88 @@ const targetCatalog = createTargetPool({
   ...entry,
   routeLength: route.length
 }));
+
+const duelTargetCatalog = targetCatalog.filter((entry) =>
+  Number(entry.routeLength) >= 4 && Number(entry.routeLength) <= 7
+);
+
+async function buildAuthoritativeDuelGame({
+  kind = "invite",
+  format = "target-race",
+  rules = {},
+  target = "",
+  seed,
+  duelId = "",
+  rematchOf = ""
+} = {}) {
+  if (!duelTargetCatalog.length) throw serviceError(503, "Duel destinations are not ready.", "duel_pool_unavailable");
+  const numericSeed = Number.isFinite(Number(seed))
+    ? Math.abs(Math.trunc(Number(seed)))
+    : stableHash(`${duelId}:${kind}:${rematchOf}:${randomUUID()}`);
+  const requestedTarget = String(target || "").trim().toLocaleLowerCase("en-US");
+  const targetEntry = requestedTarget
+    ? duelTargetCatalog.find((entry) => entry.target.toLocaleLowerCase("en-US") === requestedTarget)
+    : duelTargetCatalog[numericSeed % duelTargetCatalog.length];
+  if (!targetEntry) throw serviceError(422, "That destination is not available for a Duel.", "duel_target_unavailable");
+  const baseGame = directedServerGame(gameFor(targetEntry, "challenge", {
+    seed: numericSeed,
+    challengeId: `duel:${numericSeed}:${stableHash(targetEntry.target)}`,
+    mode: "duel",
+    modeName: format === "wordstorm"
+      ? "WORDSTORM"
+      : format === "forge-clash" ? "FORGE CLASH" : "TARGET RACE",
+    timeLimit: Math.max(1, Math.min(600, Math.floor(Number(rules.durationSeconds) || 300))),
+    moveLimit: null,
+    reward: 0,
+    ranked: false,
+    scoringDisabled: true,
+    scoreEligible: false,
+    rewardEligible: false,
+    leaderboardEligible: false,
+    aiEnabled: false,
+    graphVersion: GRAPH_VERSION,
+    buildVersion: BUILD_VERSION,
+    completionPolicy: format === "target-race" ? "target" : "external",
+    scrambleFormat: format,
+    rulesVersion: `scramble-${format}-v1`
+  }));
+  const verified = verifiedServerRoute(baseGame, { includeDynamic: false });
+  if (!verified) throw serviceError(422, "That Duel destination has no verified authored route.", "duel_target_unavailable");
+  const universeManifest = buildUniverseManifest({ seed: numericSeed, validation: verified.validation });
+  if (!universeManifest) throw serviceError(422, "That Duel universe is unavailable.", "duel_target_unavailable");
+  const game = {
+    ...baseGame,
+    universeManifest,
+    routeLength: verified.route.length
+  };
+  return {
+    game,
+    solutionRoute: verified.route.map((step) => ({ ...step })),
+    challengeIdentity: buildChallengeIdentity(game, {
+      assist: "none",
+      graphVersion: GRAPH_VERSION,
+      buildVersion: BUILD_VERSION
+    })
+  };
+}
+
+function resolveAuthoritativeDuelCombination(a, b) {
+  const result = authoredCombination(a, b);
+  if (!result) return null;
+  return {
+    ...result,
+    category: semanticCategoryFor(result.word) || null,
+    source: "world",
+    provisional: false,
+    recipeStatus: "verified"
+  };
+}
+
+duelService = new DuelService(gameStore, runRegistry, {
+  buildGame: buildAuthoritativeDuelGame,
+  resolveCombination: resolveAuthoritativeDuelCombination,
+  routeProgress: routeProgressForRun
+});
 
 // The Daily catalog now rotates through hundreds of checked destinations.
 // Tier-one concepts remain onboarding/sprint material rather than Daily repeats.
@@ -616,6 +731,13 @@ export function officialTargetCatalog() {
 
 export function coreOfficialTargetCatalog() {
   return coreTargetCatalog.map((entry) => ({ ...entry }));
+}
+
+export function goldenOfficialTargetCatalog() {
+  return targetCatalog
+    .filter((entry) => goldenTargetKeys.has(entry.target.toLocaleLowerCase("en-US")))
+    .sort((left, right) => goldenTargetOrder(left.target) - goldenTargetOrder(right.target))
+    .map((entry) => ({ ...entry }));
 }
 
 const cosmicLaws = [
@@ -1053,6 +1175,91 @@ function routeProgressForRun(run) {
   };
 }
 
+function pathGuardContextForRun(run) {
+  const game = run?.game || {};
+  const mode = String(game.mode || "").trim().toLowerCase();
+  const scoreEligible = Boolean(!run?.scoringDisabled && game.scoreEligible !== false);
+  return {
+    rankId: game.remixes?.rank?.id || "",
+    mode,
+    target: game.target || "",
+    assist: run?.assist || "",
+    scoringDisabled: !scoreEligible,
+    scoreEligible,
+    finished: Boolean(run?.completedAt),
+    ranked: Boolean(run?.ranked),
+    practiceReplay: game.practiceReplay === true,
+    remixes: game.remixes || null,
+    promotion: game.promotion || null,
+    tutorial: ["training", "second-orbit"].includes(mode),
+    multiplayer: mode === "scramble",
+    competitive: Boolean(run?.ranked || ["daily", "weekly", "challenge", "scramble"].includes(mode))
+  };
+}
+
+function pathGuardEnabledForRun(run) {
+  const game = run?.game;
+  if (
+    !run
+    || !game
+    || run.ranked
+    || game.adaptive !== true
+    || game.practiceReplay === true
+    || String(game.mode || "").trim().toLowerCase() !== "reach"
+    || Math.max(
+      Array.isArray(game.remixes?.rules) ? game.remixes.rules.length : 0,
+      Math.trunc(Number(game.remixes?.activeCount) || 0)
+    ) > 0
+  ) return false;
+  return pathGuardEligibility(pathGuardContextForRun(run)).active;
+}
+
+function pathGuardDecisionForRun(run, { a, b, result } = {}) {
+  const context = pathGuardContextForRun(run);
+  if (!pathGuardEnabledForRun(run) || !result?.word) {
+    return evaluatePathGuard(context, { a, b }, {});
+  }
+  if (!Array.isArray(run.solutionRoute) || !run.solutionRoute.length) {
+    return evaluatePathGuard(context, { a, b }, {});
+  }
+  const resultKey = String(result.word).trim().toLocaleLowerCase("en-US");
+  const available = new Set(
+    run.discovered instanceof Map
+      ? [...run.discovered.keys()].map((word) => String(word).trim().toLocaleLowerCase("en-US"))
+      : []
+  );
+  const followsGuidedRoute = Boolean(
+    resultKey
+    && !available.has(resultKey)
+    && run.solutionRoute.some(
+      (step) => String(step?.word || "").trim().toLocaleLowerCase("en-US") === resultKey
+    )
+  );
+  const pairEvidence = [{ a, b }];
+  const evidence = createPathGuardEvidence({
+    authoritative: true,
+    target: run.game.target,
+    ...(followsGuidedRoute
+      ? { expectedPairs: pairEvidence }
+      : { deadEndPairs: pairEvidence })
+  });
+  return evaluatePathGuard(context, { a, b }, evidence);
+}
+
+function pathGuardWrongPathPayload(run) {
+  return {
+    error: "WRONG PATH · That pairing does not follow this guided route. Your words stay ready and no move is used.",
+    code: "wrong_path",
+    rejected: true,
+    consumed: false,
+    nonConsuming: true,
+    pathGuard: {
+      version: PATH_GUARD_VERSION,
+      rankId: String(run?.game?.remixes?.rank?.id || "")
+    }
+  };
+}
+
 let trustedStaticRecipeCatalog = null;
 let canonicalStaticRecipeItemIndex = null;
 
@@ -1367,7 +1574,8 @@ function adaptiveCandidateCatalog() {
       routeLength: route.length,
       pathCount: adaptiveFinalRecipeCount(entry.target),
       remixFamilies,
-      difficultyLevel: adaptiveCandidateLevel(entry, route.length)
+      difficultyLevel: adaptiveCandidateLevel(entry, route.length),
+      goldenOrder: goldenTargetOrder(entry.target)
     }];
   });
   return adaptiveCandidateCatalogCache;
@@ -1605,7 +1813,14 @@ function withAdaptiveRouteRemixes(game, completedChallenges, routeContext = null
   };
 }
 
-function adaptiveGameForMode(mode, seed, candidateState, requestedTarget = "", routeContext = null) {
+function adaptiveGameForMode(
+  mode,
+  seed,
+  candidateState,
+  requestedTarget = "",
+  routeContext = null,
+  avoidTarget = ""
+) {
   const policy = adaptiveModePolicy({ mode });
   if (!policy.eligible) return null;
   const state = sanitizeAdaptiveDifficultyState(candidateState);
@@ -1613,9 +1828,16 @@ function adaptiveGameForMode(mode, seed, candidateState, requestedTarget = "", r
   const remixRank = routeContext?.challengeRank
     ? getRemixRankPresentation(routeContext.challengeRank.id)
     : getRemixRankPresentation({ completedChallenges: profile.completedChallenges });
-  const candidates = adaptiveCandidatesForMode(mode, seed, remixRank);
   const requestedKey = String(requestedTarget || "").trim().toLowerCase();
+  const allCandidates = adaptiveCandidatesForMode(mode, seed, remixRank);
+  const candidates = requestedKey
+    ? allCandidates
+    : preferGoldenTargetCandidates(allCandidates, {
+        completedChallenges: profile.completedChallenges
+      });
+  const avoidedKey = String(avoidTarget || "").trim().toLowerCase();
   const fixedCandidate = requestedKey
+    && requestedKey !== avoidedKey
     ? candidates.find((candidate) => candidate.target.toLowerCase() === requestedKey)
     : null;
   const selection = fixedCandidate
@@ -1637,7 +1859,7 @@ function adaptiveGameForMode(mode, seed, candidateState, requestedTarget = "", r
     : selectAdaptiveChallenge({
         state,
         candidates,
-        context: { mode, seed }
+        context: { mode, seed, avoidTarget }
       });
   if (!selection.selected) return null;
   const challengeLevel = estimateAdaptiveChallengeLevel(selection.selected);
@@ -1661,6 +1883,7 @@ function adaptiveGameForMode(mode, seed, candidateState, requestedTarget = "", r
     surge: profile.surge,
     surgeBaseLevel: profile.baseLevel,
     challengeLevel,
+    difficultyTag: adaptiveDifficultyTag(challengeLevel),
     adaptiveRewardMultiplier: rewardMultiplier,
     adaptiveMessage: adaptiveChallengeMessage(profile),
     ranked: false,
@@ -1692,7 +1915,15 @@ function standardTargetPoolForMode(mode) {
   return standardModeTargetPools[mode] || standardModeTargetPools.reach;
 }
 
-export function buildGameForMode(mode, seed = 0, customTarget = "", stage = 0, adaptiveState = null, routeContext = null) {
+export function buildGameForMode(
+  mode,
+  seed = 0,
+  customTarget = "",
+  stage = 0,
+  adaptiveState = null,
+  routeContext = null,
+  avoidTarget = ""
+) {
   const normalizedMode = ["reach", "quick", "moves", "daily", "weekly", "challenge"].includes(mode) ? mode : "reach";
   if (adaptiveState) {
     const adaptiveGame = adaptiveGameForMode(
@@ -1700,7 +1931,8 @@ export function buildGameForMode(mode, seed = 0, customTarget = "", stage = 0, a
       seed,
       adaptiveState,
       customTarget,
-      routeContext
+      routeContext,
+      avoidTarget
     );
     if (adaptiveGame) return adaptiveGame;
   }
@@ -1868,7 +2100,12 @@ const mime = {
   ".jpg": "image/jpeg",
   ".jpeg": "image/jpeg",
   ".webp": "image/webp",
-  ".ico": "image/x-icon"
+  ".ico": "image/x-icon",
+  ".mp4": "video/mp4",
+  ".mp3": "audio/mpeg",
+  ".ogg": "audio/ogg",
+  ".opus": "audio/ogg; codecs=opus",
+  ".wav": "audio/wav"
 };
 
 const requestLimiter = new MemoryRateLimiter({ windowMs: 60_000, maximumKeys: 10_000 });
@@ -1889,13 +2126,56 @@ const RECOVERY_RATE_WINDOW_MS = 15 * 60_000;
 const RECOVERY_RATE_LIMIT = 10;
 const analyticsEvents = new Set(ANALYTICS_EVENT_NAMES);
 
+export function clientAddress(request) {
+  const socketAddress = isIP(String(request?.socket?.remoteAddress || ""))
+    ? String(request.socket.remoteAddress)
+    : "unknown";
+  if (process.env.CONSTELLORE_TRUST_PROXY !== "true") return socketAddress;
+  const forwarded = String(request?.headers?.["x-forwarded-for"] || "")
+    .split(",", 1)[0]
+    .trim();
+  return isIP(forwarded) ? forwarded : socketAddress;
+}
+
+function cloudProfileSyncEnabled() {
+  return process.env.CONSTELLORE_CLOUD_PROFILE_ENABLED === "true";
+}
+
+function duelsEnabled() {
+  const configured = String(process.env.CONSTELLORE_DUELS_ENABLED || "").trim().toLowerCase();
+  if (configured === "true") return true;
+  if (configured === "false") return false;
+  return process.env.NODE_ENV !== "production";
+}
+
+function publicDuelsEnabled() {
+  if (!duelsEnabled()) return false;
+  const configured = String(process.env.CONSTELLORE_PUBLIC_DUELS_ENABLED || "").trim().toLowerCase();
+  if (configured === "true") return true;
+  if (configured === "false") return false;
+  return process.env.NODE_ENV !== "production";
+}
+
+function requireDuels({ publicMatchmaking = false } = {}) {
+  if (!duelsEnabled()) throw serviceError(404, "Live Duels are not enabled.", "duels_disabled");
+  if (publicMatchmaking && !publicDuelsEnabled()) {
+    throw serviceError(404, "Public Duel matchmaking is not enabled.", "public_duels_disabled");
+  }
+}
+
+function playerRegistrationRateLimit() {
+  if (process.env.NODE_ENV !== "test") return 20;
+  const configured = Number.parseInt(process.env.CONSTELLORE_TEST_PLAYER_REGISTRATION_LIMIT || "", 10);
+  return Number.isFinite(configured) ? Math.min(1_000, Math.max(20, configured)) : 20;
+}
+
 function rateLimited(request, limit = 180, bucket = "general") {
-  const key = `${request.socket.remoteAddress || "unknown"}:${bucket}`;
+  const key = `${clientAddress(request)}:${bucket}`;
   return requestLimiter.limited(key, limit);
 }
 
 function analyticsRateLimited(request, limit = 240) {
-  const key = gameStore.sign(`rate:analytics:${request.socket.remoteAddress || "unknown"}`);
+  const key = gameStore.sign(`rate:analytics:${clientAddress(request)}`);
   const now = Date.now();
   const current = analyticsRequestWindows.get(key);
   if (!current || now - current.startedAt > 60_000) {
@@ -1909,12 +2189,7 @@ function analyticsRateLimited(request, limit = 240) {
 }
 
 function combinationReportRateLimited(request) {
-  const socketAddress = request.socket.remoteAddress || "unknown";
-  const forwarded = process.env.CONSTELLORE_TRUST_PROXY === "true"
-    ? String(request.headers["x-forwarded-for"] || "").split(",")[0].trim()
-    : "";
-  const clientAddress = isIP(forwarded) ? forwarded : socketAddress;
-  const key = gameStore.sign(`rate:combination-report:${clientAddress}`);
+  const key = gameStore.sign(`rate:combination-report:${clientAddress(request)}`);
   const now = Date.now();
   const current = combinationReportRequestWindows.get(key);
   if (!current || now - current.startedAt > COMBINATION_REPORT_RATE_WINDOW_MS) {
@@ -1932,7 +2207,7 @@ function combinationReportRateLimited(request) {
 }
 
 function adminRateLimited(request, limit = 240) {
-  const key = gameStore.sign(`rate:admin:${request.socket.remoteAddress || "unknown"}`);
+  const key = gameStore.sign(`rate:admin:${clientAddress(request)}`);
   const now = Date.now();
   const current = adminRequestWindows.get(key);
   if (!current || now - current.startedAt > 60_000) {
@@ -1949,7 +2224,7 @@ function recoveryRateLimited(request, playerId) {
   const now = Date.now();
   for (const [key, window] of recoveryRequestWindows) if (now - window.startedAt > RECOVERY_RATE_WINDOW_MS) recoveryRequestWindows.delete(key);
   while (recoveryRequestWindows.size >= 5_000) recoveryRequestWindows.delete(recoveryRequestWindows.keys().next().value);
-  const key = gameStore.sign(`rate:recovery:${request.socket.remoteAddress || "unknown"}:${String(playerId || "")}`);
+  const key = gameStore.sign(`rate:recovery:${clientAddress(request)}:${String(playerId || "")}`);
   const current = recoveryRequestWindows.get(key);
   if (!current) {
     recoveryRequestWindows.set(key, { startedAt: now, count: 1 });
@@ -1964,7 +2239,7 @@ function recipeFeedbackRateLimited(request, playerId) {
   const windowMs = 60_000;
   for (const [key, window] of recipeFeedbackRequestWindows) if (now - window.startedAt > windowMs) recipeFeedbackRequestWindows.delete(key);
   while (recipeFeedbackRequestWindows.size >= 5_000) recipeFeedbackRequestWindows.delete(recipeFeedbackRequestWindows.keys().next().value);
-  const key = gameStore.sign(`rate:recipe-feedback:${request.socket.remoteAddress || "unknown"}:${playerId}`);
+  const key = gameStore.sign(`rate:recipe-feedback:${clientAddress(request)}:${playerId}`);
   const current = recipeFeedbackRequestWindows.get(key);
   if (!current) {
     recipeFeedbackRequestWindows.set(key, { startedAt: now, count: 1 });
@@ -1982,7 +2257,7 @@ function interestRateLimited(request) {
   while (interestRequestWindows.size >= INTEREST_RATE_MAX_KEYS) {
     interestRequestWindows.delete(interestRequestWindows.keys().next().value);
   }
-  const networkAddress = request.socket.remoteAddress || "unknown";
+  const networkAddress = clientAddress(request);
   // The anonymous UUID is attacker-controlled and must not create a fresh
   // allowance. One network bucket protects both metric quality and disk use.
   const key = gameStore.sign(`rate:interest:${networkAddress}`);
@@ -2091,6 +2366,18 @@ function hasOnlyKeys(value, required, allowed) {
     && Object.keys(value).every((key) => allowed.includes(key));
 }
 
+function validatedAdaptiveAvoidTarget(value) {
+  const parsed = parseAdaptiveAvoidTarget(value);
+  if (!parsed.valid) {
+    throw serviceError(
+      400,
+      "The previous target must be 80 characters or fewer.",
+      "invalid_avoid_target"
+    );
+  }
+  return parsed.target;
+}
+
 function billingSettings() {
   let checkoutUrl = "";
   try {
@@ -2099,12 +2386,15 @@ function billingSettings() {
   } catch { /* Billing remains disabled until a valid URL is configured. */ }
   // A checkout URL alone must never collect money before a verified provider
   // adapter is ready to write authoritative entitlements.
-  const fulfillmentReady = process.env.CONSTELLORE_COMMERCE_FULFILLMENT_READY === "true";
+  const storageCommerceSafe = gameStore.storageHealth().commerceSafe === true;
+  const fulfillmentReady = process.env.CONSTELLORE_COMMERCE_FULFILLMENT_READY === "true"
+    && storageCommerceSafe;
   const billingEnabled = Boolean(checkoutUrl && fulfillmentReady);
   return {
     checkoutUrl: billingEnabled ? checkoutUrl : "",
     billingEnabled,
     fulfillmentReady,
+    storageCommerceSafe,
     testStoreEnabled: process.env.NODE_ENV !== "production" && process.env.CONSTELLORE_ENABLE_TEST_STORE === "true" && !billingEnabled,
     creditPacks: [],
     products: CREATIVE_COMMERCE_CATALOG.map((product) => ({ ...product }))
@@ -2129,10 +2419,20 @@ function officialRunDetails(
   const week = isoWeekKey();
   const safeStage = Math.min(2, Math.max(0, Number(stage) || 0));
   const adaptivePolicy = adaptiveModePolicy({ mode, custom });
-  const adaptive = Boolean(adaptiveRequest?.adaptive === true && adaptivePolicy.eligible && !custom);
-  const routeChallengeState = adaptive && playerId
+  const mayNeedRouteState = adaptivePolicy.eligible
+    && (adaptiveRequest?.adaptive === true || ["quick", "moves"].includes(mode));
+  const candidateRouteChallengeState = mayNeedRouteState && playerId
     ? gameStore.routeChallengeState(playerId)
     : null;
+  const entryPolicy = adaptiveRunEntryPolicy({
+    mode,
+    custom,
+    adaptive: adaptiveRequest?.adaptive === true,
+    rank: candidateRouteChallengeState?.currentRank
+  });
+  const effectiveMode = entryPolicy.mode;
+  const adaptive = Boolean(entryPolicy.personal && adaptivePolicy.eligible && !custom);
+  const routeChallengeState = adaptive ? candidateRouteChallengeState : null;
   const requestedStartStyle = ["classic", "shuffled"].includes(
     String(adaptiveRequest?.startStyle || "").trim().toLowerCase()
   )
@@ -2158,42 +2458,110 @@ function officialRunDetails(
           recentTargets: adaptiveRequest?.recentTargets
         })
     : null;
-  const ranked = ["daily", "weekly", "quick", "moves"].includes(mode) && !adaptive;
-  let seed = Number.isFinite(Number(requestedSeed)) ? Math.abs(Number(requestedSeed)) : stableHash(`${Date.now()}:${mode}`);
+  const ranked = ["daily", "weekly", "quick", "moves"].includes(effectiveMode) && !adaptive;
+  let seed = Number.isFinite(Number(requestedSeed)) ? Math.abs(Number(requestedSeed)) : stableHash(`${Date.now()}:${effectiveMode}`);
   // Sequential UTC day numbers guarantee that the official destination moves
   // to the next catalog entry instead of merely hoping a date hash changes it.
-  if (mode === "daily") seed = Math.floor(Date.parse(`${today}T00:00:00Z`) / 86_400_000);
-  if (mode === "weekly") seed = stableHash(`weekly:${week}`);
-  if (["quick", "moves"].includes(mode) && !adaptive) seed = stableHash(`${mode}:${today}`);
+  if (effectiveMode === "daily") seed = Math.floor(Date.parse(`${today}T00:00:00Z`) / 86_400_000);
+  if (effectiveMode === "weekly") seed = stableHash(`weekly:${week}`);
+  if (["quick", "moves"].includes(effectiveMode) && !adaptive) seed = stableHash(`${effectiveMode}:${today}`);
   const target = adaptive
     ? String(adaptiveRequest?.adaptiveTarget || "")
-    : ["challenge", "reach"].includes(mode) ? requestedTarget : "";
+    : ["challenge", "reach"].includes(effectiveMode) ? requestedTarget : "";
+  const avoidTarget = adaptive
+    ? String(adaptiveRequest?.avoidTarget || "")
+    : "";
   const game = directedServerGame(buildGameForMode(
-    mode,
+    effectiveMode,
     seed,
     target,
     safeStage,
     adaptiveState,
-    authoritativeRouteContext
+    authoritativeRouteContext,
+    avoidTarget
   ));
   if (!game) return null;
-  const challengeId = mode === "daily" ? `daily:${today}`
-    : mode === "weekly" ? `weekly:${week}:${safeStage}`
-      : adaptive ? `practice:adaptive:${mode}:${stableHash(`${game.target}:${seed}`)}`
-      : ["quick", "moves"].includes(mode) ? `${mode}:${today}`
-        : `practice:${mode}:${seed}`;
+  const challengeId = effectiveMode === "daily" ? `daily:${today}`
+    : effectiveMode === "weekly" ? `weekly:${week}:${safeStage}`
+      : adaptive ? `practice:adaptive:${effectiveMode}:${stableHash(`${game.target}:${seed}`)}`
+      : ["quick", "moves"].includes(effectiveMode) ? `${effectiveMode}:${today}`
+        : `practice:${effectiveMode}:${seed}`;
   return {
     game: { ...game, ranked, challengeId, graphVersion: GRAPH_VERSION, buildVersion: BUILD_VERSION, rulesVersion: RANKED_RULES_VERSION },
     ranked,
     challengeId,
     seed,
     adaptiveState,
-    adaptiveTarget: adaptive ? target : ""
+    adaptiveTarget: adaptive ? target : "",
+    avoidTarget
   };
 }
 
 const MISSION_PREVIEW_TTL_MS = 15 * 60_000;
-const MISSION_PREVIEW_TOKEN_LIMIT = 16_000;
+const MISSION_PREVIEW_TOKEN_LIMIT = 160;
+const missionPreviews = new Map();
+
+const PRIVATE_ADAPTIVE_GAME_FIELDS = [
+  "adaptiveVersion",
+  "adaptiveLevel",
+  "adaptiveBaseLevel",
+  "adaptiveEffectiveLevel",
+  "adaptiveCompletedChallenges",
+  "adaptiveCompletionsTowardNextLevel",
+  "adaptiveCompletionsUntilNextLevel",
+  "adaptiveMajorChallengePending",
+  "adaptiveMajorChallengeBaseLevel",
+  "adaptiveSurge",
+  "adaptiveSurgeBonus",
+  "adaptiveSurgeBaseLevel",
+  "surge",
+  "surgeBaseLevel",
+  "challengeLevel",
+  "adaptiveRewardMultiplier",
+  "adaptiveMessage"
+];
+
+function publicMissionGame(game) {
+  const projected = structuredClone(game || {});
+  for (const field of PRIVATE_ADAPTIVE_GAME_FIELDS) delete projected[field];
+  if (projected.startProfile) {
+    for (const field of [
+      "canonicalRouteLength",
+      "routeStartIndex",
+      "routeLength",
+      "productiveStarterCount",
+      "sidePathCount",
+      "fallback",
+      "fallbackReason",
+      "selection",
+      "difficulty"
+    ]) delete projected.startProfile[field];
+  }
+  if (projected.remixes) {
+    projected.remixes = {
+      version: Math.max(1, Math.trunc(Number(projected.remixes.version) || 1)),
+      rank: {
+        id: String(projected.remixes.rank?.id || ""),
+        number: Math.max(1, Math.trunc(Number(projected.remixes.rank?.number) || 1)),
+        name: String(projected.remixes.rank?.name || "")
+      },
+      activeCount: Array.isArray(projected.remixes.rules)
+        ? projected.remixes.rules.length
+        : Math.max(0, Math.trunc(Number(projected.remixes.activeCount) || 0)),
+      rules: Array.isArray(projected.remixes.rules)
+        ? projected.remixes.rules.map((rule) => ({
+            id: String(rule.id || ""),
+            family: String(rule.family || ""),
+            title: String(rule.title || ""),
+            instruction: String(rule.instruction || ""),
+            detail: String(rule.detail || "")
+          }))
+        : []
+    };
+  }
+  projected.difficultyTag = projected.difficultyTag === "Difficult" ? "Difficult" : "";
+  return projected;
+}
 
 function missionBriefingFingerprint(game) {
   return JSON.stringify({
@@ -2264,6 +2632,7 @@ function missionBriefingFingerprint(game) {
     rewardEligible: game.rewardEligible !== false,
     leaderboardEligible: Boolean(game.leaderboardEligible),
     adaptive: Boolean(game.adaptive),
+    difficultyTag: game.difficultyTag === "Difficult" ? "Difficult" : "",
     adaptiveVersion: Number.isFinite(Number(game.adaptiveVersion)) ? Math.max(1, Math.round(Number(game.adaptiveVersion))) : null,
     adaptiveLevel: Number.isFinite(Number(game.adaptiveLevel)) ? Math.max(1, Math.min(10, Math.round(Number(game.adaptiveLevel)))) : null,
     adaptiveBaseLevel: Number.isFinite(Number(game.adaptiveBaseLevel)) ? Math.max(1, Math.min(10, Math.round(Number(game.adaptiveBaseLevel)))) : null,
@@ -2350,6 +2719,7 @@ function missionPreviewRequest(details, body) {
     adaptiveMajorChallengeBaseLevel: details.adaptiveState?.majorChallengeBaseLevel ?? null,
     recentTargets: details.adaptiveState?.recentTargets || [],
     adaptiveTarget: details.game.adaptive ? String(details.adaptiveTarget || "") : "",
+    avoidTarget: details.game.adaptive ? String(details.avoidTarget || "") : "",
     startStyle: ["classic", "shuffled"].includes(String(body.startStyle || "").trim().toLowerCase())
       ? String(body.startStyle).trim().toLowerCase()
       : "auto"
@@ -2357,11 +2727,19 @@ function missionPreviewRequest(details, body) {
 }
 
 function createMissionPreviewToken(playerId, request, game, route = []) {
-  const payload = Buffer.from(JSON.stringify({
+  const now = Date.now();
+  for (const [token, preview] of missionPreviews) {
+    if (!preview || preview.expiresAt <= now) missionPreviews.delete(token);
+  }
+  while (missionPreviews.size >= 512) {
+    missionPreviews.delete(missionPreviews.keys().next().value);
+  }
+  const token = `mission_${randomUUID()}`;
+  missionPreviews.set(token, {
     v: 3,
     playerId,
-    expiresAt: Date.now() + MISSION_PREVIEW_TTL_MS,
-    request,
+    expiresAt: now + MISSION_PREVIEW_TTL_MS,
+    request: structuredClone(request),
     fingerprint: missionBriefingFingerprint(game),
     route: request.custom ? route.slice(0, 9).map((step) => ({
       a: step.a,
@@ -2371,30 +2749,26 @@ function createMissionPreviewToken(playerId, request, game, route = []) {
       note: step.note,
       source: step.source || "ai-route"
     })) : []
-  }), "utf8").toString("base64url");
-  return `${payload}.${gameStore.signFor("mission-preview", payload)}`;
+  });
+  return token;
 }
 
 function readMissionPreviewToken(token, playerId) {
   try {
     if (typeof token !== "string" || token.length < 40 || token.length > MISSION_PREVIEW_TOKEN_LIMIT) throw new Error("invalid");
-    const separator = token.lastIndexOf(".");
-    if (separator < 1) throw new Error("invalid");
-    const encoded = token.slice(0, separator);
-    const signature = token.slice(separator + 1);
-    const validPurposeSignature = gameStore.verifyFor("mission-preview", encoded, signature);
-    const validLegacySignature = gameStore.verify(`mission-preview:v1:${encoded}`, signature);
-    if (!validPurposeSignature && !validLegacySignature) throw new Error("invalid");
-    const payload = JSON.parse(Buffer.from(encoded, "base64url").toString("utf8"));
+    const payload = missionPreviews.get(token);
+    if (!payload) throw new Error("invalid");
     if (!hasExactKeys(payload, ["v", "playerId", "expiresAt", "request", "fingerprint", "route"])) throw new Error("invalid");
     if (payload.v !== 3 || payload.playerId !== playerId || !Number.isFinite(payload.expiresAt) || payload.expiresAt <= Date.now()) throw new Error("invalid");
-    if (!hasExactKeys(payload.request, ["mode", "seed", "target", "stage", "custom", "adaptive", "adaptiveVersion", "adaptiveLevel", "failureStreak", "adaptiveCompletedChallenges", "adaptiveMajorChallengePending", "adaptiveMajorChallengeBaseLevel", "recentTargets", "adaptiveTarget", "startStyle"])
+    if (!hasExactKeys(payload.request, ["mode", "seed", "target", "stage", "custom", "adaptive", "adaptiveVersion", "adaptiveLevel", "failureStreak", "adaptiveCompletedChallenges", "adaptiveMajorChallengePending", "adaptiveMajorChallengeBaseLevel", "recentTargets", "adaptiveTarget", "avoidTarget", "startStyle"])
       || typeof payload.fingerprint !== "string"
+      || typeof payload.request.avoidTarget !== "string"
+      || payload.request.avoidTarget.length > 80
       || !Array.isArray(payload.request.recentTargets)
       || payload.request.recentTargets.length > 8
       || !Array.isArray(payload.route)
       || payload.route.length > 9) throw new Error("invalid");
-    return payload;
+    return structuredClone(payload);
   } catch {
     throw serviceError(409, "This mission briefing expired or changed. Review the refreshed mission before starting.", "mission_stale");
   }
@@ -2403,6 +2777,8 @@ function readMissionPreviewToken(token, playerId) {
 function publicRun(run, token) {
   const scoreEligible = !run.scoringDisabled && run.game?.scoreEligible !== false;
   const scoreMultiplier = scoreEligible ? assistancePolicy(run.assist).scoreMultiplier : 0;
+  const activationPending = Boolean(run.activatedAt == null);
+  const startedAt = effectiveRunStartedAt(run);
   return {
     id: run.runId,
     token,
@@ -2416,8 +2792,9 @@ function publicRun(run, token) {
     challengeId: run.challengeId,
     challengeKey: run.challengeBaseIdentity?.key || null,
     challenge: run.challengeBaseIdentity?.descriptor || null,
-    startedAt: new Date(run.startedAt).toISOString(),
-    deadlineAt: run.game.timeLimit ? new Date(run.startedAt + run.game.timeLimit * 1000).toISOString() : null,
+    startedAt: new Date(startedAt).toISOString(),
+    deadlineAt: run.game.timeLimit && !activationPending ? new Date(startedAt + run.game.timeLimit * 1000).toISOString() : null,
+    activationPending,
     routeProgress: routeProgressForRun(run),
     remixProgress: run.remixRuntime
       ? routeRemixProgress(run.remixRuntime, run.remixProgress)
@@ -2439,6 +2816,31 @@ function configuredAppOrigins(request) {
     } catch { /* Invalid deployment configuration never broadens write access. */ }
   }
   return [...origins];
+}
+
+function isHybridDuelApiPath(pathname) {
+  return pathname === "/api/player"
+    || pathname === "/api/player/register"
+    || pathname === "/api/duels"
+    || pathname.startsWith("/api/duels/");
+}
+
+function allowHybridDuelOrigin(request, response) {
+  const rawOrigin = String(request.headers.origin || "").trim();
+  if (!rawOrigin) return true;
+  let origin;
+  try {
+    origin = new URL(rawOrigin);
+  } catch {
+    return false;
+  }
+  if (!["http:", "https:"].includes(origin.protocol) || origin.origin !== rawOrigin.replace(/\/$/, "")) return false;
+  const sameOrigin = origin.host.toLowerCase() === String(request.headers.host || "").toLowerCase();
+  if (!sameOrigin && !configuredAppOrigins(request).includes(origin.origin)) return false;
+  response.setHeader("Access-Control-Allow-Origin", origin.origin);
+  response.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
+  response.setHeader("Vary", "Origin");
+  return true;
 }
 
 function allowApiWriteOrigin(request) {
@@ -2529,6 +2931,58 @@ async function jsonBody(request, maximumBytes = 50_000) {
   }
 }
 
+const duelEventStreams = new Set();
+
+function writeDuelEvent(response, event) {
+  if (!event || !Number.isInteger(Number(event.sequence)) || response.destroyed || response.writableEnded) return false;
+  response.write(`id: ${Number(event.sequence)}\n`);
+  response.write(`event: ${String(event.type || "duel_event").replace(/[^\w-]/g, "_")}\n`);
+  response.write(`data: ${JSON.stringify(event)}\n\n`);
+  return true;
+}
+
+async function sendDuelEventStream(request, response, duelId, playerId, after = 0) {
+  let lastSequence = Math.max(0, Math.trunc(Number(after) || 0));
+  response.writeHead(200, {
+    "Content-Type": "text/event-stream; charset=utf-8",
+    "Cache-Control": "no-store, no-transform",
+    Connection: "keep-alive",
+    "X-Accel-Buffering": "no"
+  });
+  response.write(": constellore-duel-stream\n\n");
+
+  const emit = (payload) => {
+    const events = Array.isArray(payload) ? payload : Array.isArray(payload?.events) ? payload.events : [payload];
+    for (const event of events) {
+      const sequence = Math.trunc(Number(event?.sequence) || 0);
+      if (sequence <= lastSequence) continue;
+      if (writeDuelEvent(response, event)) lastSequence = sequence;
+    }
+  };
+
+  const unsubscribe = duelService.subscribe(duelId, playerId, emit);
+  emit(await duelService.eventsSince(duelId, playerId, lastSequence));
+  const heartbeat = setInterval(() => {
+    if (!response.destroyed && !response.writableEnded) response.write(`: heartbeat ${Date.now()}\n\n`);
+  }, 15_000);
+  heartbeat.unref();
+
+  let closed = false;
+  const stream = {
+    close() {
+      if (closed) return;
+      closed = true;
+      clearInterval(heartbeat);
+      unsubscribe?.();
+      duelEventStreams.delete(stream);
+      if (!response.writableEnded) response.end();
+    }
+  };
+  duelEventStreams.add(stream);
+  request.once("close", () => stream.close());
+  response.once("error", () => stream.close());
+}
+
 export const server = createServer(async (request, response) => {
   const requestId = randomUUID();
   const requestStartedAt = performance.now();
@@ -2543,6 +2997,26 @@ export const server = createServer(async (request, response) => {
   setSecurityHeaders(response);
   try {
     const url = new URL(request.url, `http://${request.headers.host || "localhost"}`);
+    const isHybridDuelApi = isHybridDuelApiPath(url.pathname);
+    if (isHybridDuelApi && !allowHybridDuelOrigin(request, response)) {
+      const duelRoute = url.pathname === "/api/duels" || url.pathname.startsWith("/api/duels/");
+      return sendJson(response, 403, {
+        error: duelRoute
+          ? "That origin is not allowed to use live Duels."
+          : "That origin is not allowed to change game data.",
+        code: duelRoute ? "duel_origin_denied" : "write_origin_denied"
+      });
+    }
+    if (isHybridDuelApi && request.method === "OPTIONS") {
+      response.setHeader("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS");
+      response.setHeader(
+        "Access-Control-Allow-Headers",
+        "Accept, Content-Type, X-Constellore-Player, X-Constellore-Token"
+      );
+      response.setHeader("Access-Control-Max-Age", "600");
+      response.writeHead(204);
+      return response.end();
+    }
     const isApiWrite = ["POST", "PUT", "PATCH", "DELETE"].includes(request.method) && url.pathname.startsWith("/api/");
     const hasDedicatedCorsPolicy = ["/api/interest", "/api/analytics", "/api/combination-reports"].includes(url.pathname);
     if (isApiWrite && !hasDedicatedCorsPolicy && !allowApiWriteOrigin(request)) {
@@ -2627,19 +3101,28 @@ export const server = createServer(async (request, response) => {
         billingEnabled: billing.billingEnabled,
         checkoutUrl: billing.checkoutUrl,
         fulfillmentReady: billing.fulfillmentReady,
+        storageCommerceSafe: billing.storageCommerceSafe,
         testStoreEnabled: billing.testStoreEnabled,
         creditPacks: billing.creditPacks,
         products: billing.products,
+        cloudProfileEnabled: cloudProfileSyncEnabled(),
         commercePolicy: { realMoney: "cosmetic-or-creative-only", rankedAdvantages: false, starCreditsSoldForCash: false },
         rewardedAdsEnabled: process.env.REWARDED_ADS_ENABLED === "true",
         founderPrice: process.env.NEBULA_PRICE || "€6.99",
         gameName: "Constellore",
         publisher: "Oxyfel Games",
-        aiEnabled: Boolean(process.env.OPENAI_API_KEY)
+        aiEnabled: Boolean(process.env.OPENAI_API_KEY),
+        duels: {
+          enabled: duelsEnabled(),
+          publicMatchmakingEnabled: publicDuelsEnabled(),
+          seasonId: "v5-s1",
+          transport: "fetch-sse",
+          modes: listScrambleModeDefinitions().map((mode) => structuredClone(mode))
+        }
       });
     }
     if (request.method === "POST" && url.pathname === "/api/player/register") {
-      if (rateLimited(request, 20, "player-register")) return sendJson(response, 429, { error: "Too many player registrations." });
+      if (rateLimited(request, playerRegistrationRateLimit(), "player-register")) return sendJson(response, 429, { error: "Too many player registrations." });
       const registration = await gameStore.registerPlayer({ withRecoveryCode: true });
       const session = await gameStore.issuePlayerSession(registration.player.id, { deviceLabel: "web beta" });
       return sendJson(response, 201, {
@@ -2660,6 +3143,189 @@ export const server = createServer(async (request, response) => {
     if (request.method === "GET" && url.pathname === "/api/player") {
       const player = requirePlayer(request);
       return sendJson(response, 200, { player: gameStore.publicPlayer(player.id) });
+    }
+    if (request.method === "POST" && url.pathname === "/api/duels/invites") {
+      requireDuels();
+      if (rateLimited(request, 20, "duel-invite")) return sendJson(response, 429, { error: "Too many Duel invitations.", code: "duel_rate_limited" });
+      const player = requirePlayer(request);
+      const body = await jsonBody(request, 1_024);
+      if (!hasOnlyKeys(body, ["actionId"], ["actionId", "format", "target", "seed"])) {
+        throw serviceError(400, "Scramble invitations require an action ID and optional mode, target, or seed.", "invalid_duel_invite");
+      }
+      return sendJson(response, 201, await duelService.createInvite(player.id, body));
+    }
+    if (request.method === "POST" && url.pathname === "/api/duels/join") {
+      requireDuels();
+      if (rateLimited(request, 60, "duel-join")) return sendJson(response, 429, { error: "Too many Duel join attempts.", code: "duel_rate_limited" });
+      const player = requirePlayer(request);
+      const body = await jsonBody(request, 1_024);
+      if (!hasExactKeys(body, ["actionId", "inviteCode"])) {
+        throw serviceError(400, "Joining a Duel requires only an invite code and action ID.", "invalid_duel_join");
+      }
+      return sendJson(response, 200, await duelService.joinInvite(player.id, body));
+    }
+    if (url.pathname === "/api/duels/matchmaking") {
+      requireDuels({ publicMatchmaking: true });
+      const player = requirePlayer(request);
+      if (request.method === "GET") {
+        return sendJson(response, 200, await duelService.queueStatus(player.id));
+      }
+      if (request.method === "DELETE") {
+        if (rateLimited(request, 30, `duel-queue:${player.id}`)) return sendJson(response, 429, { error: "The matchmaking controls need a moment.", code: "duel_rate_limited" });
+        return sendJson(response, 200, await duelService.leavePublicQueue(player.id));
+      }
+      response.setHeader("Allow", "GET, DELETE, OPTIONS");
+      return sendJson(response, 405, { error: "Method not allowed.", code: "method_not_allowed" });
+    }
+    if (request.method === "POST" && url.pathname === "/api/duels/matchmaking/join") {
+      requireDuels({ publicMatchmaking: true });
+      const player = requirePlayer(request);
+      if (rateLimited(request, 30, `duel-queue:${player.id}`)) return sendJson(response, 429, { error: "The matchmaking controls need a moment.", code: "duel_rate_limited" });
+      const body = await jsonBody(request, 512);
+      if (
+        !hasOnlyKeys(body, ["actionId"], ["actionId", "format", "soloWins"])
+        || (
+          Object.hasOwn(body, "soloWins")
+          && (!Number.isInteger(body.soloWins) || body.soloWins < 0 || body.soloWins > 100_000)
+        )
+      ) {
+        throw serviceError(400, "Matchmaking requires an action ID, optional mode, and an optional bounded solo-win count.", "invalid_duel_matchmaking");
+      }
+      return sendJson(response, 200, await duelService.joinPublicQueue(player.id, body));
+    }
+    if (request.method === "GET" && url.pathname === "/api/duels/rating") {
+      requireDuels();
+      const player = requirePlayer(request);
+      return sendJson(response, 200, await duelService.rating(
+        player.id,
+        url.searchParams.get("format") || undefined
+      ));
+    }
+    if (request.method === "GET" && url.pathname === "/api/duels/leaderboard") {
+      requireDuels({ publicMatchmaking: true });
+      requirePlayer(request);
+      const limit = Math.min(100, Math.max(1, Math.trunc(Number(url.searchParams.get("limit")) || 50)));
+      return sendJson(response, 200, await duelService.leaderboard(
+        limit,
+        url.searchParams.get("format") || undefined
+      ));
+    }
+    const duelRoute = /^\/api\/duels\/([^/]+)(?:\/(ready|actions|events|heartbeat|forfeit|rematch))?$/.exec(url.pathname);
+    if (duelRoute) {
+      requireDuels();
+      const player = requirePlayer(request);
+      const duelId = decodeURIComponent(duelRoute[1]);
+      const operation = duelRoute[2] || "";
+      if (!operation && request.method === "GET") {
+        return sendJson(response, 200, await duelService.snapshot(duelId, player.id));
+      }
+      if (operation === "events" && request.method === "GET") {
+        const after = Math.max(0, Math.trunc(Number(url.searchParams.get("after")) || 0));
+        await duelService.snapshot(duelId, player.id);
+        return sendDuelEventStream(request, response, duelId, player.id, after);
+      }
+      if (operation === "ready" && request.method === "POST") {
+        if (rateLimited(request, 120, `duel-lifecycle:${player.id}`)) return sendJson(response, 429, { error: "The Duel lobby needs a moment.", code: "duel_rate_limited" });
+        const body = await jsonBody(request, 512);
+        if (!hasExactKeys(body, ["actionId", "ready"]) || typeof body.ready !== "boolean") {
+          throw serviceError(400, "Ready status requires only a boolean and action ID.", "invalid_duel_ready");
+        }
+        return sendJson(response, 200, await duelService.ready(duelId, player.id, body));
+      }
+      if (operation === "actions" && request.method === "POST") {
+        if (rateLimited(request, 240, `duel-action:${player.id}`)) return sendJson(response, 429, { error: "Too many Duel actions.", code: "duel_rate_limited" });
+        const body = await jsonBody(request, 2_048);
+        if (!hasExactKeys(body, ["a", "actionId", "b", "expectedRevision"])) {
+          throw serviceError(400, "Duel actions require only two ingredients, a board revision, and an action ID.", "invalid_duel_action");
+        }
+        return sendJson(response, 200, await duelService.act(duelId, player.id, body));
+      }
+      if (operation === "heartbeat" && request.method === "POST") {
+        const body = await jsonBody(request, 512);
+        if (!hasExactKeys(body, ["lastEventSequence"])) {
+          throw serviceError(400, "Duel heartbeat requires only the last event sequence.", "invalid_duel_heartbeat");
+        }
+        return sendJson(response, 200, await duelService.heartbeat(duelId, player.id, body));
+      }
+      if (operation === "forfeit" && request.method === "POST") {
+        const body = await jsonBody(request, 512);
+        if (!hasExactKeys(body, ["actionId"])) {
+          throw serviceError(400, "Forfeit requires only an action ID.", "invalid_duel_forfeit");
+        }
+        return sendJson(response, 200, await duelService.forfeit(duelId, player.id, body));
+      }
+      if (operation === "rematch" && request.method === "POST") {
+        const body = await jsonBody(request, 512);
+        if (!hasExactKeys(body, ["actionId"])) {
+          throw serviceError(400, "Rematch requires only an action ID.", "invalid_duel_rematch");
+        }
+        return sendJson(response, 200, await duelService.requestRematch(duelId, player.id, body));
+      }
+      response.setHeader("Allow", operation === "events" || !operation ? "GET, OPTIONS" : "POST, OPTIONS");
+      return sendJson(response, 405, { error: "Method not allowed.", code: "method_not_allowed" });
+    }
+    if (request.method === "GET" && url.pathname === "/api/circuit") {
+      if (rateLimited(request, 120, "circuit-status")) {
+        return sendJson(response, 429, { error: "Too many Circuit status requests.", code: "circuit_rate_limited" });
+      }
+      const player = requirePlayer(request);
+      return sendJson(response, 200, await gameStore.circuitStatus(player.id));
+    }
+    if (request.method === "POST" && url.pathname === "/api/circuit/start") {
+      if (rateLimited(request, 40, "circuit-start")) {
+        return sendJson(response, 429, { error: "Too many Circuit launches.", code: "circuit_rate_limited" });
+      }
+      const player = requirePlayer(request);
+      const body = await jsonBody(request, 1_024);
+      if (!hasOnlyKeys(body, ["idempotencyKey", "mode"], ["idempotencyKey", "mode", "path", "practiceBoost"])) {
+        throw serviceError(400, "Circuit launches require mode, idempotencyKey, and optional path or Practice boost fields.", "invalid_circuit_start");
+      }
+      const result = await gameStore.startCircuitAttempt(player.id, body);
+      return sendJson(response, result.resumed ? 200 : 201, result);
+    }
+    if (request.method === "POST" && url.pathname === "/api/circuit/submit") {
+      if (rateLimited(request, 60, "circuit-submit")) {
+        return sendJson(response, 429, { error: "Too many Circuit submissions.", code: "circuit_rate_limited" });
+      }
+      const player = requirePlayer(request);
+      const body = await jsonBody(request, 128_000);
+      if (!hasOnlyKeys(
+        body,
+        ["attemptId", "attemptToken", "events", "idempotencyKey", "reason"],
+        ["attemptId", "attemptToken", "chosenBoost", "crazyRewardChoice", "events", "idempotencyKey", "reason"]
+      )) {
+        throw serviceError(400, "Circuit submissions contain unsupported fields.", "invalid_circuit_submission");
+      }
+      return sendJson(response, 200, await gameStore.submitCircuitAttempt(player.id, body));
+    }
+    if (request.method === "POST" && url.pathname === "/api/circuit/abandon") {
+      if (rateLimited(request, 60, "circuit-abandon")) {
+        return sendJson(response, 429, { error: "Too many Circuit requests.", code: "circuit_rate_limited" });
+      }
+      const player = requirePlayer(request);
+      const body = await jsonBody(request, 1_024);
+      if (!hasExactKeys(body, ["attemptId", "attemptToken", "idempotencyKey"])) {
+        throw serviceError(400, "Circuit abandonment requires only the signed attempt credentials.", "invalid_circuit_abandon");
+      }
+      return sendJson(response, 200, await gameStore.abandonCircuitAttempt(player.id, body));
+    }
+    if (request.method === "GET" && url.pathname === "/api/star-path") {
+      if (rateLimited(request, 120, "star-path-status")) {
+        return sendJson(response, 429, { error: "Too many Star Path requests.", code: "star_path_rate_limited" });
+      }
+      const player = requirePlayer(request);
+      return sendJson(response, 200, await gameStore.starPathStatus(player.id));
+    }
+    if (request.method === "POST" && url.pathname === "/api/star-path/claim") {
+      if (rateLimited(request, 40, "star-path-claim")) {
+        return sendJson(response, 429, { error: "Too many Star Path claims.", code: "star_path_rate_limited" });
+      }
+      const player = requirePlayer(request);
+      const body = await jsonBody(request, 512);
+      if (!hasExactKeys(body, ["tier", "track"])) {
+        throw serviceError(400, "Star Path claims require only track and tier.", "invalid_star_path_claim");
+      }
+      return sendJson(response, 200, await gameStore.claimStarPathReward(player.id, body));
     }
     if (request.method === "POST" && url.pathname === "/api/player/recovery/rotate") {
       const player = requirePlayer(request);
@@ -2683,11 +3349,23 @@ export const server = createServer(async (request, response) => {
       return sendJson(response, 200, await gameStore.revokePlayerSession(player.id, playerToken));
     }
     if (request.method === "GET" && url.pathname === "/api/player/profile") {
+      if (!cloudProfileSyncEnabled()) {
+        return sendJson(response, 404, {
+          error: "Cloud gameplay saving is not enabled.",
+          code: "cloud_profile_disabled"
+        });
+      }
       if (rateLimited(request, 120, "profile-read")) return sendJson(response, 429, { error: "Too many profile requests." });
       const player = requirePlayer(request);
       return sendJson(response, 200, gameStore.cloudProfile(player.id));
     }
     if (request.method === "PUT" && url.pathname === "/api/player/profile") {
+      if (!cloudProfileSyncEnabled()) {
+        return sendJson(response, 404, {
+          error: "Cloud gameplay saving is not enabled.",
+          code: "cloud_profile_disabled"
+        });
+      }
       if (rateLimited(request, 20, "profile-write")) return sendJson(response, 429, { error: "Too many profile updates." });
       const player = requirePlayer(request);
       const body = await jsonBody(request, 256_000);
@@ -2704,6 +3382,7 @@ export const server = createServer(async (request, response) => {
       const player = requirePlayer(request);
       const body = await jsonBody(request, 256);
       if (!hasExactKeys(body, ["confirm"]) || body.confirm !== "DELETE") throw serviceError(400, "Confirm deletion with the exact word DELETE.", "deletion_confirmation_required");
+      await duelService.revokePlayer(player.id);
       const result = await gameStore.deleteFreePlayerData(player.id);
       runRegistry.revokePlayer(player.id);
       return sendJson(response, 200, result);
@@ -2731,6 +3410,18 @@ export const server = createServer(async (request, response) => {
       const player = requirePlayer(request);
       const { quoteId, idempotencyKey } = await jsonBody(request);
       const purchase = await gameStore.buyLicense(player.id, quoteId, idempotencyKey);
+      return sendJson(response, 200, { ...purchase, player: gameStore.publicPlayer(player.id) });
+    }
+    if (request.method === "POST" && url.pathname === "/api/cosmetics/buy") {
+      if (rateLimited(request, 30, "cosmetics-buy")) {
+        return sendJson(response, 429, { error: "Too many cosmetic purchase requests.", code: "cosmetic_purchase_rate_limited" });
+      }
+      const player = requirePlayer(request);
+      const body = await jsonBody(request, 1_024);
+      if (!hasExactKeys(body, ["collectionId", "idempotencyKey"])) {
+        throw serviceError(400, "Cosmetic purchases require only collectionId and idempotencyKey.", "invalid_cosmetic_purchase_request");
+      }
+      const purchase = await gameStore.buyCosmeticCollection(player.id, body.collectionId, body.idempotencyKey);
       return sendJson(response, 200, { ...purchase, player: gameStore.publicPlayer(player.id) });
     }
     if (request.method === "POST" && url.pathname === "/api/market/activate") {
@@ -2796,8 +3487,12 @@ export const server = createServer(async (request, response) => {
       if (rateLimited(request, 160, "run-preview")) return sendJson(response, 429, { error: "Too many missions mapped." });
       const player = requirePlayer(request);
       const body = await jsonBody(request);
+      body.avoidTarget = validatedAdaptiveAvoidTarget(body.avoidTarget);
       const mode = ["reach", "quick", "moves", "daily", "weekly", "challenge"].includes(body.mode) ? body.mode : "reach";
-      if (body.adaptive === true && adaptiveModePolicy({ mode, custom: Boolean(body.custom) }).eligible) {
+      if (
+        (body.adaptive === true || ["quick", "moves"].includes(mode))
+        && adaptiveModePolicy({ mode, custom: Boolean(body.custom) }).eligible
+      ) {
         const prepared = gameStore.ensureRoutePromotion(player.id);
         if (prepared.changed) await gameStore.persist();
       }
@@ -2827,7 +3522,7 @@ export const server = createServer(async (request, response) => {
       const previewRequest = missionPreviewRequest(details, body);
       const previewToken = createMissionPreviewToken(player.id, previewRequest, game, verified.route);
       return sendJson(response, 200, {
-        game: { ...game, routeLength: verified.route.length },
+        game: publicMissionGame({ ...game, routeLength: verified.route.length }),
         previewToken,
         player: gameStore.publicPlayer(player.id)
       });
@@ -2836,10 +3531,20 @@ export const server = createServer(async (request, response) => {
       if (rateLimited(request, 100, "run-start")) return sendJson(response, 429, { error: "Too many runs started." });
       const player = requirePlayer(request);
       const body = await jsonBody(request);
+      const entryId = Object.hasOwn(body, "entryId")
+        ? normalizeRunEntryId(body.entryId)
+        : undefined;
       const preview = body.previewToken ? readMissionPreviewToken(body.previewToken, player.id) : null;
-      const runRequest = preview?.request || body;
+      const sourceRunRequest = preview?.request || body;
+      const runRequest = {
+        ...sourceRunRequest,
+        avoidTarget: validatedAdaptiveAvoidTarget(sourceRunRequest.avoidTarget)
+      };
       const mode = ["reach", "quick", "moves", "daily", "weekly", "challenge"].includes(runRequest.mode) ? runRequest.mode : "reach";
-      if (runRequest.adaptive === true && adaptiveModePolicy({ mode, custom: Boolean(runRequest.custom) }).eligible) {
+      if (
+        (runRequest.adaptive === true || ["quick", "moves"].includes(mode))
+        && adaptiveModePolicy({ mode, custom: Boolean(runRequest.custom) }).eligible
+      ) {
         const prepared = gameStore.ensureRoutePromotion(player.id);
         if (prepared.changed) await gameStore.persist();
       }
@@ -2887,21 +3592,42 @@ export const server = createServer(async (request, response) => {
         challengeId: details.challengeId,
         scoringDisabled: Boolean(priorForfeit),
         forfeitReason: priorForfeit?.reason,
-        remixRuntime
+        remixRuntime,
+        deferActivation: body.deferActivation === true,
+        entryId
       });
       if (scopedSolutionRoute) {
         started.run.solutionRoute = scopedSolutionRoute.map((step) => ({ ...step }));
         started.run.solutionRecipes = new Map(scopedSolutionRoute.map((step) => [keyFor(step.a, step.b), { ...step }]));
       }
       await runRegistry.persist(started.run);
-      return sendJson(response, 201, { game, run: publicRun(started.run, started.token), player: gameStore.publicPlayer(player.id) });
+      return sendJson(response, 201, {
+        game: publicMissionGame(game),
+        run: publicRun(started.run, started.token),
+        player: gameStore.publicPlayer(player.id)
+      });
+    }
+    if (request.method === "POST" && url.pathname === "/api/run/activate") {
+      if (rateLimited(request, 160, "run-activate")) return sendJson(response, 429, { error: "The next orbit needs a moment." });
+      const player = requirePlayer(request);
+      const body = await jsonBody(request, 1_024);
+      if (!hasExactKeys(body, ["runId", "runToken"])) {
+        throw serviceError(400, "Run activation requires only runId and runToken.", "invalid_activation_request");
+      }
+      const run = runRegistry.get(body.runId, player.id, body.runToken);
+      runRegistry.activate(run);
+      await runRegistry.persist(run);
+      return sendJson(response, 200, {
+        run: publicRun(run, body.runToken),
+        player: gameStore.publicPlayer(player.id)
+      });
     }
     if (request.method === "POST" && url.pathname === "/api/run/replay") {
       if (rateLimited(request, 80, "run-replay")) return sendJson(response, 429, { error: "Too many challenges restarted." });
       const player = requirePlayer(request);
       const body = await jsonBody(request, 1_024);
-      if (!hasExactKeys(body, ["runId", "runToken"])) {
-        throw serviceError(400, "Restart requires only runId and runToken.", "invalid_replay_request");
+      if (!hasOnlyKeys(body, ["runId", "runToken"], ["runId", "runToken", "deferActivation"])) {
+        throw serviceError(400, "Restart requires a run ID, token, and optional deferred start.", "invalid_replay_request");
       }
       const source = runRegistry.get(body.runId, player.id, body.runToken);
       if (!source.completedAt) {
@@ -2937,13 +3663,14 @@ export const server = createServer(async (request, response) => {
         ranked: false,
         challengeId,
         scoringDisabled: false,
-        remixRuntime
+        remixRuntime,
+        deferActivation: body.deferActivation === true
       });
       started.run.solutionRoute = verified.route.map((step) => ({ ...step }));
       started.run.solutionRecipes = new Map(verified.route.map((step) => [keyFor(step.a, step.b), { ...step }]));
       await runRegistry.persist(started.run);
       return sendJson(response, 201, {
-        game,
+        game: publicMissionGame(game),
         run: publicRun(started.run, started.token),
         player: gameStore.publicPlayer(player.id)
       });
@@ -2951,12 +3678,21 @@ export const server = createServer(async (request, response) => {
     if (request.method === "POST" && url.pathname === "/api/run/resume") {
       const player = requirePlayer(request);
       const body = await jsonBody(request, 1_024);
-      if (!hasExactKeys(body, ["runId", "runToken"])) throw serviceError(400, "Run resume requires only runId and runToken.", "invalid_resume_request");
+      if (
+        !hasOnlyKeys(body, ["runId", "runToken"], ["runId", "runToken", "deferActivation"])
+        || (Object.hasOwn(body, "deferActivation") && typeof body.deferActivation !== "boolean")
+      ) {
+        throw serviceError(400, "Run resume requires a run ID, token, and optional deferred activation.", "invalid_resume_request");
+      }
       const { runId, runToken } = body;
       const run = runRegistry.get(runId, player.id, runToken);
-      const eventState = gameStore.cosmicEventState(player.id, new Date(run.startedAt));
+      if (run.activatedAt == null && body.deferActivation !== true) {
+        runRegistry.activate(run);
+        await runRegistry.persist(run);
+      }
+      const eventState = gameStore.cosmicEventState(player.id, new Date(effectiveRunStartedAt(run)));
       return sendJson(response, 200, {
-        game: run.game,
+        game: publicMissionGame(run.game),
         run: publicRun(run, runToken),
         progress: runRegistry.progress(run),
         cosmicEvent: eventState.event,
@@ -3241,7 +3977,7 @@ export const server = createServer(async (request, response) => {
       const stage = Number(url.searchParams.get("stage") || 0);
       const game = directedServerGame(buildGameForMode(mode, seed, target, stage));
       if (!game) return sendJson(response, 422, { error: "That target has no verified route yet.", needsAi: !process.env.OPENAI_API_KEY });
-      return sendJson(response, 200, game);
+      return sendJson(response, 200, publicMissionGame(game));
     }
     if (request.method === "GET" && url.pathname === "/api/analytics/summary") {
       requireAdmin(request);
@@ -3419,6 +4155,9 @@ export const server = createServer(async (request, response) => {
       }
       if (!result && !run?.ranked) result = contextualCombination(safeA, safeB);
       if (!result) {
+        if (run && pathGuardEnabledForRun(run)) {
+          return sendJson(response, 409, pathGuardWrongPathPayload(run));
+        }
         let rejectedAttempt = null;
         if (run) {
           rejectedAttempt = runRegistry.recordRejectedAttempt(run, { a: safeA, b: safeB });
@@ -3436,6 +4175,18 @@ export const server = createServer(async (request, response) => {
           } : {})
         });
       }
+      let pathGuardDecision = { active: false, blocked: false };
+      if (run) {
+        runRegistry.canCombine(run, safeA, safeB);
+        pathGuardDecision = pathGuardDecisionForRun(run, {
+          a: safeA,
+          b: safeB,
+          result
+        });
+        if (pathGuardDecision.blocked) {
+          return sendJson(response, 409, pathGuardWrongPathPayload(run));
+        }
+      }
       const { word, emoji, note, source } = result;
       const category = semanticCategoryFor(word) || registerWishConcept(word);
       let responseResult = {
@@ -3449,8 +4200,7 @@ export const server = createServer(async (request, response) => {
       };
       let universeContext = null;
       if (run) {
-        runRegistry.canCombine(run, safeA, safeB);
-        const twist = run.game.remixes?.activeCount ? null : selectCosmicTwist({
+        const twist = (run.game.remixes?.activeCount || pathGuardDecision.active) ? null : selectCosmicTwist({
           a: safeA,
           b: safeB,
           canonicalResult: responseResult,
@@ -3491,7 +4241,7 @@ export const server = createServer(async (request, response) => {
             : ""
         };
       }
-      const eventState = run && runPlayer ? gameStore.cosmicEventState(runPlayer.id, new Date(run.startedAt)) : null;
+      const eventState = run && runPlayer ? gameStore.cosmicEventState(runPlayer.id, new Date(effectiveRunStartedAt(run))) : null;
       const runPolicy = assistancePolicy(run?.assist || "none");
       const scoringDisabled = Boolean(run && (run.scoringDisabled || run.forfeited || runPolicy.study));
       return sendJson(response, 200, {
@@ -3568,6 +4318,7 @@ function sendJson(response, status, value) {
 }
 
 let backupTimer = null;
+let duelTickTimer = null;
 let shutdownPromise = null;
 
 export function shutdownServer(signal = "shutdown") {
@@ -3575,6 +4326,9 @@ export function shutdownServer(signal = "shutdown") {
   shutdownPromise = (async () => {
     structuredLog("info", "shutdown_started", { signal });
     if (backupTimer) clearInterval(backupTimer);
+    if (duelTickTimer) clearInterval(duelTickTimer);
+    for (const stream of [...duelEventStreams]) stream.close();
+    await Promise.resolve(duelService?.shutdown?.());
     server.closeIdleConnections?.();
     const closePromise = new Promise((resolve) => {
       if (!server.listening) return resolve();
@@ -3599,6 +4353,13 @@ if (isMainModule) {
     void createSafeBackup().catch((error) => structuredLog("error", "backup_failed", { code: error.code || "backup_failed" }));
   }, 24 * 60 * 60_000);
   backupTimer.unref();
+  duelTickTimer = setInterval(() => {
+    if (!duelsEnabled()) return;
+    void Promise.resolve(duelService.tick()).catch((error) => {
+      structuredLog("error", "duel_tick_failed", { code: error.code || "duel_tick_failed" });
+    });
+  }, 250);
+  duelTickTimer.unref();
   process.once("SIGTERM", () => void shutdownServer("SIGTERM").then(() => { process.exitCode = 0; }));
   process.once("SIGINT", () => void shutdownServer("SIGINT").then(() => { process.exitCode = 0; }));
   server.listen(port, () => structuredLog("info", "server_started", { port, version: APP_VERSION, build: BUILD_VERSION, graphVersion: GRAPH_VERSION, storage: gameStore.storageHealth().kind }));

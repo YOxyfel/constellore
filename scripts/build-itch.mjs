@@ -4,6 +4,9 @@ import { promisify } from "node:util";
 import { cp, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
+import { assertCosmeticPacksAreLazy, COSMETIC_PACKS } from "./cosmetic-assets.mjs";
+import { AUDIO_PACKS } from "./audio-assets.mjs";
+import { validatePublicDuelApiUrl } from "./public-duel-config.mjs";
 import { createDeterministicZip, sha256 } from "./release-archive.mjs";
 import { writeReleaseMetadata } from "./release-metadata.mjs";
 
@@ -14,6 +17,7 @@ const output = join(root, "dist-itch");
 const siteOutput = join(output, "site");
 const packageMetadata = JSON.parse(await readFile(join(root, "package.json"), "utf8"));
 const artifactName = `constellore-html5-v${packageMetadata.version}.zip`;
+const duelApiUrl = validatePublicDuelApiUrl(process.env.PUBLIC_DUEL_API_URL);
 
 async function listFiles(directory) {
   const files = [];
@@ -38,7 +42,8 @@ await execute(process.execPath, [join(root, "scripts", "build-pages.mjs")], {
     GITHUB_TOKEN: "",
     PAGES_BASE_URL: "https://yoxyfel.github.io/constellore/",
     PUBLIC_BETA_URL: "",
-    PUBLIC_ITCH_URL: ""
+    PUBLIC_ITCH_URL: "",
+    PUBLIC_DUEL_API_URL: duelApiUrl
   }
 });
 
@@ -54,6 +59,18 @@ await writeFile(join(siteOutput, "index.html"), gameHtml, "utf8");
 await writeReleaseMetadata(join(siteOutput, "release.json"), { channel: "itch-html5", runtime: "local-practice" });
 
 const runtimeFiles = await listFiles(siteOutput);
+const runtimePaths = new Set(runtimeFiles.map(archivePath));
+for (const pack of COSMETIC_PACKS) {
+  for (const asset of pack.assets) {
+    assert.ok(runtimePaths.has(asset.path), `The itch package is missing on-demand cosmetic asset ${asset.path}.`);
+  }
+}
+for (const pack of AUDIO_PACKS) {
+  for (const asset of pack.assets) {
+    assert.ok(runtimePaths.has(asset.path), `The itch package is missing on-demand audio asset ${asset.path}.`);
+  }
+}
+assertCosmeticPacksAreLazy(await readFile(join(siteOutput, "service-worker.js"), "utf8"));
 const runtimeEntries = await Promise.all(runtimeFiles.map(async (path) => {
   const data = await readFile(path);
   return { path: archivePath(path), data, bytes: data.length, sha256: sha256(data) };
@@ -67,12 +84,16 @@ const releaseManifest = {
   runtime: "local-practice",
   entrypoint: "index.html",
   productBoundary: {
+    soloPlay: "local-offline",
+    soloProgressLocalOnly: true,
+    liveDuels: "online-only",
+    duelRatingServerBacked: true,
+    duelApiConfigured: Boolean(duelApiUrl),
     liveAi: false,
     scoreUpload: false,
     payments: false,
     rewardedAds: false,
-    crossDeviceAccount: false,
-    localProgressOnly: true
+    crossDeviceAccount: false
   },
   files: runtimeEntries.map(({ path, bytes, sha256: digest }) => ({ path, bytes, sha256: digest }))
 };
@@ -98,4 +119,5 @@ await writeFile(`${artifactPath}.sha256`, `${artifactDigest}  ${artifactName}\n`
 
 console.log(`Built deterministic itch HTML5 package: ${artifactPath}`);
 console.log(`SHA-256: ${artifactDigest}`);
+console.log(duelApiUrl ? `Live Scramble duels: ${duelApiUrl}` : "Live Scramble duels: unavailable; solo play remains local/offline.");
 console.log("Upload the versioned ZIP itself; do not upload the dist-itch/site folder.");

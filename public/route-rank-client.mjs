@@ -1,6 +1,6 @@
-import { sanitizeAdaptiveDifficultyState } from "./adaptive-difficulty.mjs?v=3.3.0-beta.1";
-import { getRankBoardArtTier } from "./rank-board-art.mjs?v=3.3.0-beta.1";
-import { getRemixRankPresentation } from "./remix-progression.mjs?v=3.3.0-beta.1";
+import { sanitizeAdaptiveDifficultyState } from "./adaptive-difficulty.mjs?v=5.0.0-beta.1";
+import { getRankBoardArtTier } from "./rank-board-art.mjs?v=5.0.0-beta.1";
+import { getRemixRankPresentation } from "./remix-progression.mjs?v=5.0.0-beta.1";
 
 const clamp = (value, minimum, maximum) => Math.min(maximum, Math.max(minimum, value));
 
@@ -63,6 +63,69 @@ export function sanitizeRouteRankSummary(candidate) {
     familyMastery: candidate.familyMastery && typeof candidate.familyMastery === "object"
       ? structuredClone(candidate.familyMastery)
       : {}
+  };
+}
+
+export function routeRankProgressPresentation(candidate) {
+  const summary = sanitizeRouteRankSummary(candidate)
+    || sanitizeRouteRankSummary({ rank: "bronze", challengeRank: "bronze" });
+  const rank = summary.rank;
+  const nextRank = rank.nextRank;
+  const promotion = summary.promotion;
+  const inferredRequired = nextRank
+    ? Math.max(0, nextRank.masteryPoints - rank.masteryPoints)
+    : 0;
+  const pointsRequired = summary.mastery.pointsRequired || inferredRequired;
+  const pointsIntoRank = summary.mastery.pointsRequired
+    ? summary.mastery.pointsIntoRank
+    : clamp(summary.mastery.points - rank.masteryPoints, 0, pointsRequired);
+  const pointsRemaining = nextRank
+    ? summary.mastery.nextThreshold == null
+      ? Math.max(0, nextRank.masteryPoints - summary.mastery.points)
+      : summary.mastery.pointsRemaining
+    : 0;
+  let progress = Math.round(
+    summary.mastery.pointsRequired
+      ? summary.mastery.fraction * 100
+      : pointsRequired > 0
+        ? pointsIntoRank / pointsRequired * 100
+        : 100
+  );
+  let status = nextRank
+    ? `${pointsRemaining.toLocaleString("en-US")} mastery to ${nextRank.name}`
+    : "Highest Route Rank reached";
+  let detail = `${summary.mastery.points.toLocaleString("en-US")} total mastery`;
+
+  if (promotion.active && promotion.targetRank) {
+    progress = Math.round(promotion.attemptsCompleted / promotion.attemptsTotal * 100);
+    status = `${promotion.targetRank.name} promotion · ${promotion.wins} of ${promotion.winsRequired} wins`;
+    detail = `${promotion.attemptsCompleted} of ${promotion.attemptsTotal} promotion games complete`;
+  } else if (promotion.eligible && promotion.targetRank) {
+    progress = 100;
+    status = `${promotion.targetRank.name} promotion ready`;
+    detail = "Your next ranked challenge starts the promotion series";
+  } else if (nextRank && pointsRequired > 0) {
+    detail = `${pointsIntoRank.toLocaleString("en-US")} of ${pointsRequired.toLocaleString("en-US")} rank mastery`;
+  }
+
+  const nextUnlock = rank.id === "bronze"
+    ? "Silver unlocks Free play and custom targets"
+    : rank.id === "silver"
+      ? "Gold unlocks timed games and Adventures"
+      : nextRank
+        ? `${nextRank.name} brings a richer sky and tougher routes`
+        : "Every Route Rank and sky is unlocked";
+
+  return {
+    id: rank.id,
+    name: rank.name,
+    number: rank.number,
+    mark: rank.name.slice(0, 1).toUpperCase(),
+    progress: clamp(progress, 0, 100),
+    status,
+    detail,
+    nextUnlock,
+    meterLabel: `${rank.name} Route Rank. ${status}. ${detail}.`
   };
 }
 

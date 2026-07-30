@@ -6,32 +6,37 @@ const ROUTE = [
     emoji: "🟤",
     category: "nature",
     title: "Make Mud",
-    instruction: "Combine Earth and Water.",
-    tip: "Drop one word onto the other."
-  },
-  {
-    a: "Mud",
-    b: "Fire",
-    word: "Brick",
-    emoji: "🧱",
-    category: "structure",
-    title: "Make Brick",
-    instruction: "Combine Mud and Fire.",
-    tip: "New words stay in your list."
-  },
-  {
-    a: "Brick",
-    b: "Brick",
-    word: "Wall",
-    emoji: "🧱",
-    category: "structure",
-    title: "Make Wall",
-    instruction: "Place Brick twice. Combine the two Bricks.",
-    tip: "You can use every word more than once."
+    instruction: "Tap Earth, then tap Water.",
+    tip: "Or drag one word onto the other."
   }
 ];
 
 export const FIRST_ORBIT_ROUTE = Object.freeze(ROUTE.map((step) => Object.freeze({ ...step })));
+export const FIRST_ORBIT_STARTERS = Object.freeze(["Earth", "Water", "Fire", "Air"]);
+export const FIRST_ORBIT_TARGET = FIRST_ORBIT_ROUTE.at(-1).word;
+export const FIRST_ORBIT_COMBINATION_COUNT = FIRST_ORBIT_ROUTE.length;
+
+export function createFirstOrbitGame(universe) {
+  return {
+    mode: "training",
+    modeName: "First Game",
+    target: FIRST_ORBIT_TARGET,
+    emoji: "\u{1F7E4}",
+    starters: [...FIRST_ORBIT_STARTERS],
+    seed: 101,
+    tier: 1,
+    timeLimit: null,
+    moveLimit: null,
+    law: null,
+    aiEnabled: false,
+    universe,
+    scoreEligible: false,
+    rewardEligible: false,
+    leaderboardEligible: false,
+    ranked: false,
+    training: true
+  };
+}
 
 function wordKey(value) {
   return String(value || "").trim().toLocaleLowerCase();

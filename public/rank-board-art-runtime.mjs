@@ -1,7 +1,7 @@
 import {
   getRankBoardArtCssVariables,
   getRankBoardArtPresentation
-} from "./rank-board-art.mjs?v=3.3.0-beta.1";
+} from "./rank-board-art.mjs?v=5.0.0-beta.1";
 
 export const RANK_BOARD_ART_PRELOAD_ATTRIBUTE = "data-constellore-rank-board-art";
 

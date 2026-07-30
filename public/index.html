@@ -24,41 +24,104 @@
   <link rel="manifest" href="/manifest.webmanifest">
   <link rel="icon" href="/icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="/icon.svg">
-  <link rel="stylesheet" href="/styles.css?v=3.3.0-beta.1">
-  <link rel="stylesheet" href="/simple-ui.css?v=3.3.0-beta.1">
+  <script data-cosmetic-preload-bootstrap src="/cosmetic-preload-bootstrap.js?v=5.0.0-beta.1"></script>
+  <link rel="stylesheet" href="/styles.css?v=5.0.0-beta.1">
+  <link rel="stylesheet" href="/simple-ui.css?v=5.0.0-beta.1">
+  <link rel="stylesheet" href="/cosmic-gate.css?v=5.0.0-beta.1">
+  <link rel="stylesheet" href="/epic-home.css?v=5.0.0-beta.1">
+  <link rel="stylesheet" href="/cosmetics.css?v=5.0.0-beta.1">
+  <style data-launch-blackout>
+    html,
+    body.cosmic-intro-pending {
+      background: #000;
+    }
+
+    body.cosmic-intro-pending :is(#startScreen, #gameScreen) {
+      visibility: hidden;
+    }
+  </style>
 </head>
-<body class="simple-ui first-session training-needed" data-build-version="3.3.0-beta.1" data-build-id="3.3.0-beta.1+source" data-feedback-api="">
+<body class="simple-ui first-session training-needed cosmic-intro-pending" data-build-version="5.0.0-beta.1" data-build-id="5.0.0-beta.1+source" data-feedback-api="" data-duel-api="/api/duels">
+  <div id="cosmicGate" data-phase="idle" data-kind="intro" aria-hidden="true" hidden style="display:none">
+    <div class="cosmic-gate__door cosmic-gate__door--left" aria-hidden="true"></div>
+    <div class="cosmic-gate__door cosmic-gate__door--right" aria-hidden="true"></div>
+    <div class="cosmic-gate__particles" aria-hidden="true"><i class="cosmic-gate__particle"></i><i class="cosmic-gate__particle"></i><i class="cosmic-gate__particle"></i><i class="cosmic-gate__particle"></i><i class="cosmic-gate__particle"></i></div>
+    <div class="cosmic-gate__seam" aria-hidden="true"></div>
+    <div class="cosmic-gate__seal" aria-hidden="true"></div>
+    <div class="cosmic-gate__first-discovery" aria-hidden="true" hidden>
+      <div class="cosmic-gate__nova"></div>
+      <div class="cosmic-gate__confetti"></div>
+      <div class="cosmic-gate__first-discovery-title">
+        <span>FIRST DISCOVERY</span>
+        <strong><i>🟤</i> MUD</strong>
+        <small>CONSTELLATION COMPLETE</small>
+      </div>
+    </div>
+    <div class="cosmic-gate__content" role="status" aria-live="polite" aria-atomic="true">
+      <div class="cosmic-gate__panel">
+        <p class="cosmic-gate__eyebrow" hidden></p>
+        <p class="cosmic-gate__label">CONSTELLORE</p>
+        <p class="cosmic-gate__copy" hidden></p>
+      </div>
+    </div>
+  </div>
+  <noscript><style>#cosmicGate{display:none!important}body.cosmic-intro-pending #startScreen{visibility:visible}</style></noscript>
   <section class="start-screen" id="startScreen" aria-labelledby="startTitle">
-    <div class="practice-banner" id="practiceBanner" hidden><a href="../">← Website</a><span>LOCAL PRACTICE · SAVED ON THIS DEVICE · NO PAYMENTS</span></div>
+    <div class="practice-banner" id="practiceBanner" hidden>
+      <a href="../"><span aria-hidden="true">←</span><span>Website</span></a>
+      <span class="practice-banner__status">
+        <strong>LOCAL PRACTICE</strong>
+        <small class="practice-banner__detail">SAVED ON THIS DEVICE · NO PAYMENTS</small>
+        <small class="practice-banner__compact">SAVED HERE · NO PAYMENTS</small>
+      </span>
+    </div>
     <div class="start-stars" aria-hidden="true"></div>
+    <div class="home-vfx" aria-hidden="true">
+      <span class="home-vfx__halo"></span>
+      <span class="home-vfx__meteor home-vfx__meteor--one"></span>
+      <span class="home-vfx__meteor home-vfx__meteor--two"></span>
+      <span class="home-vfx__star home-vfx__star--one"></span>
+      <span class="home-vfx__star home-vfx__star--two"></span>
+      <span class="home-vfx__star home-vfx__star--three"></span>
+      <span class="home-vfx__star home-vfx__star--four"></span>
+      <span class="home-vfx__star home-vfx__star--five"></span>
+      <span class="home-vfx__star home-vfx__star--six"></span>
+    </div>
     <header class="start-nav">
       <div class="brand"><span class="brand-star" aria-hidden="true">✦</span><span class="brand-name">CONSTELLORE</span><small>BY OXYFEL GAMES</small></div>
       <div class="start-actions">
-        <button class="profile-chip" id="profileButton" type="button" aria-label="Open your stats and settings">
-          <span class="profile-label">Stats</span><small><b id="profileLevel">1</b> · <span aria-hidden="true">✦</span> <b id="profileDust">0</b></small>
+        <button class="hub-menu-button customize-button" id="customizeButton" type="button" aria-haspopup="dialog" aria-label="Customize your game"><span aria-hidden="true">✧</span><b>Customize</b></button>
+        <button class="profile-chip" id="profileButton" type="button" aria-label="Open your Route Rank and progress">
+          <b class="profile-chip__fallback">Rank</b><span class="profile-chip__mark" aria-hidden="true">◇</span><span class="profile-chip__copy"><span class="profile-chip__kind">Rank</span><b class="profile-label">Bronze</b></span><small><b id="profileLevel">1</b> · <span aria-hidden="true">✦</span> <b id="profileDust">0</b></small>
         </button>
-        <button class="hub-menu-button" id="hubMenuButton" type="button" aria-haspopup="dialog" aria-controls="hubMenuDialog" data-progressive="secondary"><span aria-hidden="true">☰</span><b>Menu</b></button>
+        <button class="hub-menu-button" id="hubMenuButton" type="button" aria-haspopup="dialog" aria-controls="hubMenuDialog" aria-label="Open main menu" data-progressive="secondary"><span aria-hidden="true">☰</span><b>Menu</b></button>
       </div>
     </header>
 
     <main class="start-content">
       <div class="hero-row">
         <div class="start-copy">
-          <span class="eyebrow simple-hidden">WORD GAME</span>
-          <h1 id="startTitle">Make the target word.</h1>
-          <p class="hero-promise">Combine two words to make a new word. Keep going until you make the target.</p>
-          <div class="recipe-example" aria-label="Example: Earth plus Water makes Mud">
-            <span>🌍 <b>EARTH</b></span><i aria-hidden="true">+</i><span>💧 <b>WATER</b></span><i aria-hidden="true">→</i><strong>🟤 MUD</strong>
+          <p class="hero-kicker"><span aria-hidden="true">✦</span> A COSMIC WORD GAME <span aria-hidden="true">✦</span></p>
+          <h1 id="startTitle"><span>Make worlds</span> <em>out of words.</em></h1>
+          <p class="hero-promise">Combine two ideas to discover something new. Keep going until you create the target word.</p>
+          <div class="hero-forge">
+            <span class="hero-forge__orbit hero-forge__orbit--outer" aria-hidden="true"></span>
+            <span class="hero-forge__orbit hero-forge__orbit--inner" aria-hidden="true"></span>
+            <div class="recipe-example" id="heroRecipeExample" role="img" aria-label="Example: Earth plus Water makes Mud" data-cycle="even">
+              <span class="recipe-word recipe-word--source"><span data-hero-recipe="a-emoji" aria-hidden="true">🌍</span> <b data-hero-recipe="a">EARTH</b></span><i aria-hidden="true">+</i><span class="recipe-word recipe-word--source"><span data-hero-recipe="b-emoji" aria-hidden="true">💧</span> <b data-hero-recipe="b">WATER</b></span><i aria-hidden="true">→</i><strong class="recipe-word recipe-word--result"><span data-hero-recipe="result-emoji" aria-hidden="true">🟤</span> <span data-hero-recipe="result">MUD</span></strong>
+            </div>
           </div>
           <section class="primary-orbit-panel" aria-labelledby="primaryOrbitTitle">
-            <span class="eyebrow simple-hidden" id="primaryOrbitKicker">RECOMMENDED</span>
-            <h2 id="primaryOrbitTitle">Ready to play?</h2>
-            <p id="primaryOrbitDescription">Your first target is Wall. We will show you how to play.</p>
+            <div class="primary-orbit-copy">
+              <span class="primary-orbit-kicker" id="primaryOrbitKicker">FIRST CONSTELLATION</span>
+              <h2 id="primaryOrbitTitle">Make Mud</h2>
+              <p id="primaryOrbitDescription">Earth + Water. One move. You can’t get lost.</p>
+            </div>
             <div class="primary-orbit-actions">
-              <button class="primary-orbit-button" id="primaryOrbitButton" type="button"><span>Play</span><b aria-hidden="true">→</b></button>
+              <button class="primary-orbit-button" id="primaryOrbitButton" type="button"><span>Begin</span><b aria-hidden="true">→</b></button>
               <button class="primary-orbit-secondary" id="primaryOrbitSecondary" type="button">Choose game</button>
             </div>
-            <small class="primary-orbit-meta" id="primaryOrbitMeta">Wall</small>
+            <small class="primary-orbit-meta" id="primaryOrbitMeta">Mud · 1 combination</small>
           </section>
         </div>
         <section class="universe-summary simple-hidden" aria-label="Your progress" data-progressive="progress">
@@ -72,13 +135,17 @@
         </section>
       </div>
 
-      <details class="home-disclosure mode-picker" id="modePicker" data-progressive="secondary">
-        <summary id="modeSectionTitle">
-          <span><small>MORE CHOICES</small><strong>Choose game</strong></span>
-          <em>Relaxed, timed, or limited moves</em>
-          <b class="disclosure-toggle" aria-hidden="true">+</b>
-        </summary>
-          <div class="home-disclosure-panel">
+      <section class="home-catalog mode-picker" id="modePicker" data-progressive="secondary" aria-labelledby="modeSectionTitle">
+        <header class="home-catalog-heading">
+          <span class="home-catalog-mark" aria-hidden="true">&#9678;</span>
+          <div>
+            <span class="eyebrow">AVAILABLE NOW</span>
+            <h2 id="modeSectionTitle">Choose a game</h2>
+            <p id="modeSectionSummary">Relaxed play</p>
+          </div>
+          <div class="home-rank-chip"><small>ROUTE RANK</small><strong id="homeRouteRank">Bronze</strong></div>
+        </header>
+        <div class="home-catalog-body">
           <p class="disclosure-intro">Every game has the same goal: make the target word.</p>
           <div class="mode-grid" aria-label="Choose a game">
             <article class="mode-card featured" data-home-mode="reach">
@@ -103,15 +170,14 @@
             </article>
           </div>
         </div>
-      </details>
+      </section>
 
-      <details class="home-disclosure explore-hub" id="exploreHub" data-progressive="secondary">
-        <summary id="exploreTitle">
-          <span><small>OTHER GAMES</small><strong>More ways to play</strong></span>
-          <em>Today’s word, free play, or your own target</em>
-          <b class="disclosure-toggle" aria-hidden="true">+</b>
-        </summary>
-        <div class="home-disclosure-panel explore-grid" aria-labelledby="exploreTitle">
+      <section class="home-catalog explore-hub" id="exploreHub" data-progressive="secondary" aria-labelledby="exploreTitle">
+        <header class="home-catalog-heading compact">
+          <span class="home-catalog-mark" aria-hidden="true">∞</span>
+          <div><span class="eyebrow">SILVER ORBIT</span><h2 id="exploreTitle">Explore freely</h2><p>Daily, open-ended, and player-chosen targets</p></div>
+        </header>
+        <div class="home-catalog-body explore-grid">
           <article class="explore-card daily-destination" data-home-mode="daily">
             <span class="explore-card-icon" aria-hidden="true">✦</span>
             <div><small>DAILY WORD</small><strong>Today’s word</strong><p>Everyone gets the same target today.</p></div>
@@ -135,15 +201,27 @@
             </form>
           </details>
         </div>
-      </details>
+      </section>
 
-      <details class="home-disclosure adventures-hub" id="adventuresHub" data-progressive="adventure">
-        <summary id="adventuresTitle">
-          <span><small>LONGER ROUTES &amp; EVENTS</small><strong>Adventures</strong></span>
-          <em>Weekly routes · Voyages · Live events</em>
-          <b class="disclosure-toggle" aria-hidden="true">+</b>
-        </summary>
-        <div class="home-disclosure-panel adventure-grid" aria-labelledby="adventuresTitle">
+      <button class="expedition-banner scramble-home" id="scrambleHomeButton" type="button" data-progressive="secondary" aria-haspopup="dialog">
+        <span class="expedition-orb" aria-hidden="true">&#9889;</span>
+        <span class="expedition-copy"><small>CONSTELLATION SCRAMBLE ARENA &middot; LIVE 1V1</small><strong>Choose your competitive mode</strong><span id="scrambleHomeStatus">Target Race &middot; Wordstorm &middot; Forge Clash</span></span>
+        <span class="expedition-progress"><b>LIVE 1V1</b><i aria-hidden="true"><em></em></i></span>
+        <b class="expedition-arrow" aria-hidden="true">&rarr;</b>
+      </button>
+
+      <button class="expedition-banner cosmos-circuit-home" id="cosmosCircuitHomeButton" type="button" data-progressive="secondary" data-development-only="cosmos-suite" aria-haspopup="dialog" aria-controls="cosmosCircuitDialog" aria-hidden="true" hidden>
+        <span class="expedition-orb cosmos-circuit-home-mark" aria-hidden="true">&#10148;</span>
+        <span class="expedition-copy"><small>COSMOS CIRCUIT</small><strong>Fly today&rsquo;s course</strong><span id="cosmosCircuitHomeStatus">Practice is free &middot; earned Launch Passes unlock rewards</span></span>
+        <b class="expedition-arrow" aria-hidden="true">&rarr;</b>
+      </button>
+
+      <section class="home-catalog adventures-hub" id="adventuresHub" data-progressive="adventure" aria-labelledby="adventuresTitle">
+        <header class="home-catalog-heading compact">
+          <span class="home-catalog-mark" aria-hidden="true">✦</span>
+          <div><span class="eyebrow">GOLD ORBIT</span><h2 id="adventuresTitle">Adventures</h2><p>Weekly routes, Voyages, and live events</p></div>
+        </header>
+        <div class="home-catalog-body adventure-grid">
           <button class="adventure-card expedition-banner" id="weeklyButton" type="button" data-mode="weekly">
             <span class="expedition-orb" aria-hidden="true">✦</span>
             <span class="expedition-copy"><small>WEEKLY ROUTE</small><strong id="weeklyTitle">The Three-Star Rift</strong><span id="weeklyDescription">Three targets. One shared route.</span></span>
@@ -165,24 +243,105 @@
             <span aria-hidden="true">&rarr;</span>
           </button>
         </div>
-      </details>
+      </section>
     </main>
 
     <dialog class="modal hub-menu-modal" id="hubMenuDialog" aria-labelledby="hubMenuTitle">
       <button class="modal-close" data-close="hubMenuDialog" type="button" aria-label="Close menu">&times;</button>
       <span class="eyebrow">YOUR CONSTELLORE</span>
       <h2 id="hubMenuTitle">Menu</h2>
-      <p>Updates, progress, and other parts of the game.</p>
+      <p>Customize the game, manage your settings, and visit the rest of Constellore.</p>
       <div class="hub-menu-grid">
-        <button class="hub-menu-action" id="updatesButton" type="button" aria-haspopup="dialog" aria-controls="updatesDialog"><span aria-hidden="true">✦</span><b>Updates</b><small>What's new in 3.3</small><i aria-hidden="true">→</i></button>
+        <button class="hub-menu-action" id="updatesButton" type="button" aria-haspopup="dialog" aria-controls="updatesDialog"><span aria-hidden="true">✦</span><b>Updates</b><small>What's new in 5.0</small><i aria-hidden="true">→</i></button>
         <button class="hub-menu-action" id="installButton" type="button" hidden><span aria-hidden="true">↓</span><b>Install game</b><small>Add Constellore to this device</small><i aria-hidden="true">→</i></button>
+        <button class="hub-menu-action" id="openObservatory" type="button"><span aria-hidden="true">✧</span><b>Customize</b><small id="cosmeticLoadout">Celestial Atlas equipped</small><i aria-hidden="true">→</i></button>
+        <button class="hub-menu-action circuit-menu-action" id="cosmosCircuitButton" type="button" data-progressive="secondary" data-development-only="cosmos-suite" aria-haspopup="dialog" aria-controls="cosmosCircuitDialog" aria-hidden="true" hidden><span aria-hidden="true">➤</span><b>Cosmos Circuit</b><small id="cosmosCircuitMenuStatus">3 Launch Passes ready</small><i aria-hidden="true">→</i></button>
+        <button class="hub-menu-action star-path-menu-action" id="starPathButton" type="button" data-progressive="secondary" data-development-only="cosmos-suite" aria-haspopup="dialog" aria-controls="starPathDialog" aria-hidden="true" hidden><span aria-hidden="true">✦</span><b>Star Path</b><small id="starPathMenuStatus">Season rewards</small><i aria-hidden="true">→</i></button>
         <button class="hub-menu-action" id="leaderboardButton" type="button" data-progressive="advanced"><span aria-hidden="true">≋</span><b>Leaderboards</b><small>Compare verified routes</small><i aria-hidden="true">→</i></button>
         <button class="hub-menu-action" id="viewMastery" type="button" data-progressive="advanced"><span aria-hidden="true">✦</span><b>Recipe Mastery</b><small>Review your combinations</small><i aria-hidden="true">→</i></button>
-        <button class="hub-menu-action" id="createChallenge" type="button" data-progressive="advanced"><span aria-hidden="true">↗</span><b>Challenge a friend</b><small>Share one exact target</small><i aria-hidden="true">→</i></button>
+        <button class="hub-menu-action" id="scrambleMenuButton" type="button" data-progressive="secondary" aria-haspopup="dialog"><span aria-hidden="true">&#9889;</span><b>Scramble Arena</b><small id="scrambleMenuStatus">Three live open-board competitive modes</small><i aria-hidden="true">→</i></button>
+        <button class="hub-menu-action" id="createChallenge" type="button" data-progressive="sharing"><span aria-hidden="true">↗</span><b>Challenge a friend</b><small>Share one exact target</small><i aria-hidden="true">→</i></button>
         <button class="hub-menu-action" id="marketButton" type="button" data-progressive="advanced"><span aria-hidden="true">◈</span><b>Word Exchange</b><small>Find a useful word</small><i aria-hidden="true">→</i></button>
-        <button class="hub-menu-action premium" id="startPremium" type="button" data-progressive="advanced"><span aria-hidden="true">✧</span><b>Supporter Pack</b><small>Cosmetic boards, trails, and sounds</small><i aria-hidden="true">→</i></button>
+        <button class="hub-menu-action premium" id="startPremium" type="button" data-progressive="advanced"><span aria-hidden="true">✧</span><b>Supporter Pack</b><small>Seven complete cosmetic collections</small><i aria-hidden="true">→</i></button>
       </div>
-      <p class="hub-unlock-note" data-progressive="advanced-lock"><strong>More unlocks naturally.</strong> Complete two scored games to reveal community and collection features.</p>
+      <p class="hub-unlock-note" data-progressive="advanced-lock">More opens after 10 completed games.</p>
+      <section class="hub-menu-settings" aria-labelledby="hubMenuSettingsTitle">
+        <header>
+          <span class="eyebrow">ACCOUNT AND APP</span>
+          <h3 id="hubMenuSettingsTitle">Settings and data</h3>
+        </header>
+        <div class="hub-menu-disclosures">
+          <details class="profile-disclosure menu-disclosure profile-account" id="cloudProfileGroup" name="hub-settings">
+            <summary><span><strong>Account</strong><small id="cloudProfileSummary">Identity and recovery</small></span><b aria-hidden="true">+</b></summary>
+            <section class="cloud-account-card" id="cloudAccountSection" aria-labelledby="cloudAccountTitle">
+              <div class="cloud-account-head"><span><small>ONLINE IDENTITY</small><strong id="cloudAccountTitle">Recover verified access</strong></span><b id="cloudSyncStatus" role="status" aria-live="polite" aria-atomic="true">Gameplay stays on this device</b></div>
+              <p class="cloud-local-note">Your words, Stardust, progress, and settings remain device-local. This beta account is only for verified runs, ownership, export, deletion, and Recovery Kit access.</p>
+              <div class="cloud-player-id"><span>PLAYER ID</span><code id="cloudPlayerId">Creating…</code></div>
+              <div class="cloud-account-actions">
+                <button id="syncCloudProfile" type="button" hidden>Sync gameplay</button>
+                <button id="restoreOwnership" type="button">Restore ownership</button>
+                <button id="rotateRecoveryKit" type="button">Create new recovery kit</button>
+                <button id="exportPlayerData" type="button">Export my data</button>
+                <button id="deletePlayerData" type="button">Delete free account</button>
+              </div>
+              <details>
+                <summary>Recover an existing universe</summary>
+                <form id="recoverAccountForm">
+                  <label for="recoverPlayerId">Player ID</label>
+                  <input id="recoverPlayerId" autocomplete="username" maxlength="80" required placeholder="Your saved player ID">
+                  <label for="recoverCodeInput">Recovery code</label>
+                  <input id="recoverCodeInput" autocomplete="off" maxlength="64" required placeholder="CF-0000-0000-…">
+                  <p class="form-message" id="recoverMessage" aria-live="polite"></p>
+                  <button class="secondary-action" type="submit"><span>Recover and rotate kit</span><span aria-hidden="true">→</span></button>
+                </form>
+              </details>
+            </section>
+          </details>
+          <details class="profile-disclosure menu-disclosure profile-preferences" name="hub-settings">
+            <summary><span><strong>Settings</strong><small>Sound, feel, and lessons</small></span><b aria-hidden="true">+</b></summary>
+            <div class="profile-disclosure-content">
+              <section class="training-replay-card" aria-labelledby="trainingReplayTitle">
+                <span aria-hidden="true">&#10022;</span>
+                <div><strong id="trainingReplayTitle">First Orbit training</strong><small id="trainingReplayStatus">Available to replay</small></div>
+                <button id="replayFirstOrbit" type="button">Replay</button>
+              </section>
+              <section class="training-replay-card" aria-labelledby="secondOrbitReplayTitle">
+                <span aria-hidden="true">◇</span>
+                <div><strong id="secondOrbitReplayTitle">Second Orbit lesson</strong><small id="secondOrbitReplayStatus">Reach Mountain in three route fusions</small></div>
+                <button id="replaySecondOrbit" type="button">Replay</button>
+              </section>
+              <fieldset class="feedback-picker">
+                <legend>Feel the cosmos</legend>
+                <button id="musicPreference" type="button" aria-pressed="true"><span aria-hidden="true">♫</span><b>Cosmic score</b><small>ON</small></button>
+                <button id="soundPreference" type="button" aria-pressed="true"><span aria-hidden="true">♪</span><b>Word &amp; fusion sounds</b><small>ON</small></button>
+                <button id="hapticPreference" type="button" aria-pressed="true"><span aria-hidden="true">≋</span><b>Haptic pulses</b><small>ON</small></button>
+                <div class="feedback-mixer" role="group" aria-labelledby="feedbackMixerTitle">
+                  <strong id="feedbackMixerTitle">Volume mix</strong>
+                  <div class="feedback-volume"><label for="masterVolumePreference">Master volume</label><output id="masterVolumeValue" for="masterVolumePreference">75%</output><input id="masterVolumePreference" type="range" min="0" max="1" step=".05" value=".75" aria-valuetext="75 percent"></div>
+                  <div class="feedback-volume"><label for="musicVolumePreference">Music volume</label><output id="musicVolumeValue" for="musicVolumePreference">100%</output><input id="musicVolumePreference" type="range" min="0" max="1" step=".05" value="1" aria-valuetext="100 percent"></div>
+                  <div class="feedback-volume"><label for="sfxVolumePreference">SFX volume</label><output id="sfxVolumeValue" for="sfxVolumePreference">100%</output><input id="sfxVolumePreference" type="range" min="0" max="1" step=".05" value="1" aria-valuetext="100 percent"></div>
+                </div>
+              </fieldset>
+              <fieldset class="feedback-picker result-display-picker">
+                <legend>Result screen</legend>
+                <button id="resultDetailsPreference" type="button" aria-pressed="false"><span aria-hidden="true">≡</span><b>Show “More details”</b><small>OFF</small></button>
+              </fieldset>
+            </div>
+          </details>
+          <details class="profile-disclosure menu-disclosure profile-data" name="hub-settings">
+            <summary><span><strong>Privacy and data</strong><small>Downloads and diagnostics</small></span><b aria-hidden="true">+</b></summary>
+            <div class="profile-disclosure-content">
+              <section class="local-diagnostics" id="localDiagnosticsSection" hidden aria-labelledby="localDiagnosticsTitle"><div><strong id="localDiagnosticsTitle">Local practice data</strong><small>Export or reset your save and local beta report. A report can include event counts, recipe pairs, and the short result you suggested, but never your name, contact details, or account.</small></div><button id="exportLocalPractice" type="button">Export save</button><button id="resetLocalPractice" type="button">Reset practice</button><button id="exportLocalDiagnostics" type="button">Export local report</button><button id="resetLocalDiagnostics" type="button">Reset local report</button></section>
+              <section class="diagnostics-preference" aria-labelledby="diagnosticsTitle">
+                <div><strong id="diagnosticsTitle">Optional play diagnostics</strong><small>Off by default. If enabled, Constellore sends bounded gameplay events with a random device cohort ID. No free text, email, or real name is included. Security and verified-run records are operational data and are handled separately.</small></div>
+                <button id="diagnosticsPreference" type="button" aria-pressed="false"><span aria-hidden="true">◇</span><b>Share optional diagnostics</b><small>OFF</small></button>
+                <button id="exportDiagnostics" type="button">Export diagnostics settings</button>
+                <button id="resetAnalyticsIdentity" type="button">Reset analytics ID</button>
+              </section>
+            </div>
+          </details>
+        </div>
+      </section>
     </dialog>
 
     <footer class="start-footer"><span>EARTH</span><i>•</i><span>WATER</span><i>•</i><span>FIRE</span><i>•</i><span>AIR</span></footer>
@@ -193,7 +352,7 @@
       <button class="nav-icon pause-run-button" id="pauseRunButton" type="button" aria-label="Open game menu" aria-haspopup="dialog" aria-controls="pauseDialog" title="Menu (Esc)"><span aria-hidden="true">☰</span><b>Menu</b></button>
       <div class="game-target">
         <span class="simple-hidden" id="modeName">RELAXED</span>
-        <div><strong>Make: <b id="targetWord">…</b></strong><button class="remix-pill" id="remixPill" type="button" aria-label="Show route rules" hidden>Rules 0/0</button><small class="run-division-pill practice simple-hidden" id="runDivisionPill">PRACTICE</small><small class="simple-hidden" id="journeyPill" hidden></small><small class="simple-hidden" id="universePill" hidden></small><small class="simple-hidden" id="lawPill" hidden></small></div>
+        <div><strong><span id="objectiveVerb">Make</span>: <b id="targetWord">…</b></strong><small class="difficulty-pill" id="difficultyPill" hidden>Difficult</small><button class="remix-pill" id="remixPill" type="button" aria-label="Show route rules" hidden>Rules 0/0</button><small class="run-division-pill practice simple-hidden" id="runDivisionPill">PRACTICE</small><small class="simple-hidden" id="journeyPill" hidden></small><small class="simple-hidden" id="universePill" hidden></small><small class="simple-hidden" id="lawPill" hidden></small></div>
       </div>
       <div class="game-hud">
         <div class="run-iq-hud" id="runIqHud" role="meter" aria-label="Playful Run IQ score" aria-valuemin="0" aria-valuemax="200" aria-valuenow="0" aria-valuetext="Run IQ 0. This is a playful score for this game, not an intelligence test." title="A playful score for this game — not a real intelligence test." hidden>
@@ -213,6 +372,20 @@
           <button class="powerup-shop-shortcut" id="powerupShopShortcut" type="button" title="Open help" aria-label="Open help" hidden><span aria-hidden="true">+</span></button>
         </div>
         <button class="nav-icon nav-atlas simple-hidden" id="atlasButton" type="button" aria-label="Open word path"><span aria-hidden="true">⌁</span><b id="pathCount">0</b></button>
+        <div class="vctl vplay" id="playVolumeControl" role="group" aria-label="Master and channel volume">
+          <button class="nav-icon vstep" id="playVolumeDown" type="button" aria-label="Decrease master volume">&minus;</button>
+          <output id="playMasterVolumeQuickValue" for="playMasterVolumePreference" aria-live="polite">75%</output>
+          <button class="nav-icon vstep" id="playVolumeUp" type="button" aria-label="Increase master volume">+</button>
+          <details class="vdet">
+            <summary class="nav-icon vstep" aria-label="Open sound channel mixer"><span aria-hidden="true">&#9835;</span><b>Mixer</b></summary>
+            <div class="feedback-mixer vpanel" role="group" aria-labelledby="playVolumeTitle">
+              <strong id="playVolumeTitle">Sound volume</strong>
+              <div class="feedback-volume"><label for="playMasterVolumePreference">Master</label><output id="playMasterVolumeValue" for="playMasterVolumePreference">75%</output><input id="playMasterVolumePreference" type="range" min="0" max="1" step=".05" value=".75" aria-valuetext="75 percent"></div>
+              <div class="feedback-volume"><label for="playMusicVolumePreference">Music</label><output id="playMusicVolumeValue" for="playMusicVolumePreference">100%</output><input id="playMusicVolumePreference" type="range" min="0" max="1" step=".05" value="1" aria-valuetext="100 percent"></div>
+              <div class="feedback-volume"><label for="playSfxVolumePreference">Effects</label><output id="playSfxVolumeValue" for="playSfxVolumePreference">100%</output><input id="playSfxVolumePreference" type="range" min="0" max="1" step=".05" value="1" aria-valuetext="100 percent"></div>
+            </div>
+          </details>
+        </div>
         <button class="nav-icon feedback-toggle simple-hidden" id="feedbackToggle" type="button" aria-label="Mute sound effects" aria-pressed="true"><span aria-hidden="true">♪</span></button>
         <button class="nav-icon nav-share simple-hidden" id="shareRunButton" type="button" aria-label="Share this game">↗</button>
       </div>
@@ -223,27 +396,39 @@
         <canvas id="cosmosCanvas" class="cosmos-canvas" aria-hidden="true"></canvas>
         <div class="nebula one" aria-hidden="true"></div>
         <div class="nebula two" aria-hidden="true"></div>
-        <nav class="board-quick-tools" id="boardQuickTools" aria-label="Board tools">
-          <button id="undoBoardAction" type="button" aria-label="Undo last board change" title="Undo last board change" disabled><span aria-hidden="true">&#8630;</span><b>Undo</b></button>
-          <button id="redoBoardAction" type="button" aria-label="Redo last board change" title="Redo last board change" disabled><span aria-hidden="true">&#8631;</span><b>Redo</b></button>
-          <button id="tidyBoard" type="button" aria-label="Tidy words on the board" title="Tidy words"><span aria-hidden="true">&#10022;</span><b>Tidy</b></button>
-          <button class="clear-board-action" id="resetBoard" type="button" aria-label="Clear all words from the board" title="Clear board"><span aria-hidden="true">&times;</span><b>Clear</b></button>
-        </nav>
+        <div class="board-top-hud" id="boardTopHud">
+          <nav class="board-quick-tools" id="boardQuickTools" aria-label="Board tools">
+            <button id="undoBoardAction" type="button" aria-label="Undo last board change" title="Undo last board change" disabled><span aria-hidden="true">&#8630;</span><b>Undo</b></button>
+            <button id="redoBoardAction" type="button" aria-label="Redo last board change" title="Redo last board change" disabled><span aria-hidden="true">&#8631;</span><b>Redo</b></button>
+            <button id="tidyBoard" type="button" aria-label="Tidy words on the board" title="Tidy words"><span aria-hidden="true">&#10022;</span><b>Tidy</b></button>
+            <button class="clear-board-action" id="resetBoard" type="button" aria-label="Clear all words from the board" title="Clear board"><span aria-hidden="true">&times;</span><b>Clear</b></button>
+          </nav>
+          <section class="run-milestone" id="runMilestone" aria-label="Closest known route">
+            <div><span id="milestoneText">Finding the closest route</span><b id="routeStepCount">0 STEPS LEFT</b></div>
+            <div class="route-star-strip" id="routeProgressTrail" aria-hidden="true"><i class="origin-star">✦</i><i class="target-star">?</i></div>
+            <i class="route-line" aria-hidden="true"><em id="milestoneBar"></em></i>
+          </section>
+          <section class="hint-objective" id="hintObjective" aria-labelledby="hintObjectiveLabel" hidden>
+            <small id="hintObjectiveLabel">CURRENT HINT</small>
+            <strong id="hintObjectiveText"></strong>
+          </section>
+        </div>
         <div class="board-guide" id="boardGuide">
           <span class="guide-orbit" aria-hidden="true"></span>
-          <strong>Drag a word here.</strong>
-          <span class="guide-copy guide-desktop">Drop one word onto another to combine them.</span>
-          <span class="guide-copy guide-mobile">Drop one word onto another to combine them.</span>
+          <strong>Combine two words.</strong>
+          <span class="guide-copy guide-desktop">Drag one word onto another, or select both.</span>
+          <span class="guide-copy guide-mobile">Tap one word, then another. You can also drag.</span>
         </div>
+        <section class="combination-story" id="combinationStory" data-combination-story hidden></section>
         <section class="first-orbit-guide" id="firstOrbitGuide" aria-labelledby="firstOrbitGuideTitle" hidden>
           <header>
             <span id="orbitLessonLabel"><i aria-hidden="true">&#10022;</i> LEARN TO PLAY</span>
             <button id="skipFirstOrbit" type="button">Skip</button>
           </header>
-          <div class="first-orbit-step"><b id="firstOrbitStep">1 of 3</b><span id="firstOrbitGuideTitle">Make Mud</span></div>
-          <p id="firstOrbitInstruction" aria-live="polite">Combine Earth and Water.</p>
-          <small id="firstOrbitTip">Drop one word onto the other.</small>
-          <div class="first-orbit-progress" role="progressbar" aria-label="Lesson progress" aria-valuemin="0" aria-valuemax="3" aria-valuenow="0"><i id="firstOrbitProgressBar"></i></div>
+          <div class="first-orbit-step"><b id="firstOrbitStep">1 of 1</b><span id="firstOrbitGuideTitle">Make Mud</span></div>
+          <p id="firstOrbitInstruction" aria-live="polite">Tap Earth, then tap Water.</p>
+          <small id="firstOrbitTip">Or drag one word onto the other.</small>
+          <div class="first-orbit-progress" role="progressbar" aria-label="Lesson progress" aria-valuemin="0" aria-valuemax="1" aria-valuenow="0"><i id="firstOrbitProgressBar"></i></div>
         </section>
         <button class="rival-ghost" id="rivalGhost" type="button" aria-label="Hide Rival Ghost pace" aria-pressed="true" hidden>
           <span class="ghost-orb" aria-hidden="true">◌</span>
@@ -304,7 +489,13 @@
         <section class="reveal-controller" id="revealController" aria-label="Revealed path controls" hidden>
           <div class="reveal-status">
             <span class="reveal-pulse" aria-hidden="true">&#10023;</span>
-            <div><small>SHOWING THE ANSWER &middot; NO POINTS</small><strong id="revealStepText">Getting the words ready&hellip;</strong></div>
+            <div>
+              <small>
+                <span class="reveal-label-wide">SHOWING THE ANSWER &middot; NO POINTS</span>
+                <span class="reveal-label-compact">ANSWER &middot; NO POINTS</span>
+              </small>
+              <strong id="revealStepText">Getting the words ready&hellip;</strong>
+            </div>
           </div>
           <div class="reveal-controls">
             <button id="revealPause" type="button" aria-pressed="false"><span aria-hidden="true">&#8545;</span><b>Pause</b></button>
@@ -313,11 +504,6 @@
           </div>
           <div class="reveal-progress" role="progressbar" aria-label="Answer path progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i id="revealProgressBar"></i></div>
           <p class="sr-only" id="revealAnnouncement" aria-live="polite"></p>
-        </section>
-        <section class="run-milestone" id="runMilestone" aria-label="Closest known route">
-          <div><span id="milestoneText">Finding the closest route</span><b id="routeStepCount">0 STEPS LEFT</b></div>
-          <div class="route-star-strip" id="routeProgressTrail" aria-hidden="true"><i class="origin-star">✦</i><i class="target-star">?</i></div>
-          <i class="route-line" aria-hidden="true"><em id="milestoneBar"></em></i>
         </section>
         <p class="sr-only" id="boardAnnouncement" role="status" aria-live="polite" aria-atomic="true"></p>
       </section>
@@ -342,30 +528,146 @@
     </main>
   </section>
 
+  <dialog class="cosmetic-world-preview" id="cosmeticWorldPreview" aria-labelledby="cosmeticPreviewTitle" aria-describedby="cosmeticPreviewDescription" aria-modal="true">
+    <div class="cosmetic-world-preview__bar">
+      <div class="cosmetic-world-preview__copy">
+        <span class="cosmetic-world-preview__kicker">PREVIEW ONLY &middot; NOT EQUIPPED</span>
+        <strong id="cosmeticPreviewTitle">Cosmetic preview</strong>
+        <small id="cosmeticPreviewDescription">The game is frozen while you inspect this look.</small>
+      </div>
+      <div class="cosmetic-world-preview__surfaces" id="cosmeticPreviewSurfaces" role="tablist" aria-label="Preview surface" hidden>
+        <button type="button" role="tab" data-cosmetic-preview-target="board">Board</button>
+        <button type="button" role="tab" data-cosmetic-preview-target="home">Home</button>
+        <button type="button" role="tab" data-cosmetic-preview-target="gate">Gate</button>
+        <button type="button" role="tab" data-cosmetic-preview-target="menu">Menu</button>
+      </div>
+      <button class="cosmetic-world-preview__exit" id="cosmeticPreviewExit" type="button">Exit preview</button>
+    </div>
+    <p class="sr-only" id="cosmeticPreviewStatus" aria-live="polite" aria-atomic="true"></p>
+  </dialog>
+
   <dialog id="updatesDialog" class="modal updates-modal" aria-labelledby="updatesTitle" aria-describedby="updatesIntro">
     <button class="modal-close" data-close="updatesDialog" type="button" aria-label="Close updates">×</button>
     <div class="updates-heading">
       <span class="updates-orb" aria-hidden="true">✦</span>
       <div>
-        <span class="eyebrow">10 UPDATES</span>
+        <span class="eyebrow">23 UPDATES</span>
         <h2 id="updatesTitle">Dev Logs / Updates</h2>
       </div>
     </div>
     <p id="updatesIntro">See what changed in each version.</p>
     <ol class="updates-list">
       <li class="updates-entry is-latest" data-update-entry>
-        <div class="updates-meta"><span>VERSION 3.3.0-BETA.1</span><time datetime="2026-07-25">JUL 25, 2026</time><b>LATEST</b></div>
+        <div class="updates-meta"><span>VERSION 5.0.0-BETA.1</span><time datetime="2026-07-29">JUL 29, 2026</time><b>LATEST</b></div>
+        <h3>Constellation Scramble</h3>
+        <p>Live 1v1 has arrived. Invite a friend to a private race or enter public matchmaking after your first scored solo win. Both players receive the same authored target and starting words, then launch together after a three-second countdown.</p>
+        <p>Every pairing is open knowledge. You can watch the rival attempt, fail, discover, steal, and change routes in real time, then manually race to use what you learned. There is no copy button and no hidden board.</p>
+        <p>The first player to make the target wins. After five minutes, the player closer to the verified route wins; an exact tie is a draw. Private matches never affect rating, while public matches use a separate seasonal Duel Rating and cannot change solo Route Rank, Stardust, mastery, or events.</p>
+        <p>Desktop and tablet keep both boards visible. Phones keep your own board primary with a permanent rival ticker and a full rival-board toggle. Refresh rejoins an active match, brief connection loss receives a recovery window, and completed matches support rematch and sharing.</p>
+        <p>Pages and itch remain fully local and offline for solo play. Only Scramble uses the live service, and its extra client files load on demand. Cosmos Circuit remains disabled while it receives separate development.</p>
+      </li>
+      <li class="updates-entry" data-update-entry>
+        <div class="updates-meta"><span>VERSION 4.0.0-BETA.4</span><time datetime="2026-07-29">JUL 29, 2026</time></div>
+        <h3>Shape Your Constellation</h3>
+        <p>Landscape launches now begin with the full 24-second “A Production by Oxyfel Games” Kintsugi ident, followed by the spaceship film through a fade-to-black transition and continuous cinematic sound design. The dedicated portrait phone cut is intentionally unchanged.</p>
+        <p>The full-screen opening begins automatically on page load. If a browser refuses first-visit sound autoplay, the film continues immediately in muted mode instead of waiting for a click, and sound remains available from its control.</p>
+        <p>The opening plays once per browser session. Refreshing Home returns directly to Home, while refreshing during a game restores the saved target, moves, discoveries, board positions, hints, and correct run music without replaying either intro.</p>
+        <p>Quit game now returns Home in one click without another confirmation or a Cosmic Gate delay. Direct master-volume decrease, percentage, and increase controls remain visible in every word level and Pause, with the full Music and Effects mixer still available beside them.</p>
+        <p>Each successful combination now grows a small story scene directly on the board: the first result becomes its foundation, later discoveries add landscape, life, structure, energy, and sky layers, and a wrong pair crumbles then rebuilds the valid story without deleting progress. Used hints stay visible as a Current Hint objective.</p>
+        <p>Star Trail now begins with three stars and scales to four and five. Every memory round locks input while showing the numbered order for exactly five seconds, then hides the numbers before recall. Completed games use automatic starting words without an extra selector, and Silver's Explore catalog now sits clearly beneath the primary orbit.</p>
+        <p>The Cosmetics Observatory now presents eight complete kits, each with responsive Home and opening Gate backgrounds. Pixel Frontier adds crisp 16-bit adventure styling, Bubble Reef brings an original whimsical undersea cartoon world, and Stellar Vanguard delivers an original cinematic space-opera sanctuary. Lunar Garden remains the deluxe moonlit treatment, while Eclipse Sovereign remains the sole prestige full-shell transformation.</p>
+        <p>Cosmetics remain presentation-only. Locked looks can be previewed, earned pieces can be mixed into any kit, effect intensity can be reduced or disabled, and responsive pack art now loads on demand without increasing the base install.</p>
+      </li>
+      <li class="updates-entry" data-update-entry>
+        <div class="updates-meta"><span>VERSION 3.5.1-BETA.1</span><time datetime="2026-07-26">JUL 26, 2026</time></div>
+        <h3>Your Ideas Can Reach Us</h3>
+        <p>Missing-combination ideas can now use a free, anonymous feedback receiver instead of requiring GitHub. The game sends only the two released words, one optional short answer, a fixed reason, the mode, and a duplicate-check value.</p>
+        <p>Every idea is still saved locally first and temporary failures remain in the small offline retry queue. The receiver stores neither a raw player identifier nor an IP address, and inactive rows expire automatically.</p>
+      </li>
+      <li class="updates-entry" data-update-entry>
+        <div class="updates-meta"><span>VERSION 3.5.0-BETA.1</span><time datetime="2026-07-26">JUL 26, 2026</time></div>
+        <h3>First Paths, Shared Skies</h3>
+        <p>The opening personal challenges now draw from a hand-tuned Golden 50: familiar targets with plain clues, verified three-to-seven-combination routes, and multiple logical ways to make the final word.</p>
+        <p>Every completed route can become a contextual, spoiler-safe constellation card. Its colors, celestial motif, clue, universe, Daily identity, and route silhouette belong to that exact journey, while its link preserves the target and seed for the next player.</p>
+        <p>The first ten completed games now stay focused on Play, combine, celebrate, and continue. Sharing, game choices, and Explore arrive in small steps; advanced ranks, competition, mastery, and economy surfaces wait until the core game is familiar.</p>
+      </li>
+      <li class="updates-entry" data-update-entry>
+        <div class="updates-meta"><span>VERSION 3.4.8-BETA.1</span><time datetime="2026-07-26">JUL 26, 2026</time></div>
+        <h3>A Clearer Finish</h3>
+        <p>More details is now about half its former height. It keeps the useful path, compact route grade, reward, scoring consequences, and sharing while removing duplicate metric boxes, the repeated mini-route, and the unavailable Community Sky explanation from local practice.</p>
+        <p>Completed Daily games and the final Weekly stage now offer Play next level and open a fresh relaxed challenge. Normal adaptive wins, Weekly stages, stories, onboarding, answer playback, and safe score uploads keep their purpose-built next actions.</p>
+      </li>
+      <li class="updates-entry" data-update-entry>
+        <div class="updates-meta"><span>VERSION 3.4.7-BETA.1</span><time datetime="2026-07-26">JUL 26, 2026</time></div>
+        <h3>A Gentle First Light</h3>
+        <p>A new player's first target is Mud: combine Earth and Water once, enjoy the discovery, and win with no clock or move limit. Bronze and Silver keep that relaxed spirit with no clock or move limit; timed and limited-move games unlock at Gold.</p>
+        <p>Ending a personal game without the target now opens a different, gentler challenge instead of repeating the same frustrating level. Replaying that exact challenge remains a deliberate secondary choice.</p>
+        <p>Challenge adjustment stays behind the scenes. Constellore never exposes hidden levels, failure counters, or formulas; only an exceptional run may show the simple Difficult label.</p>
+      </li>
+      <li class="updates-entry" data-update-entry>
+        <div class="updates-meta"><span>VERSION 3.4.6-BETA.1</span><time datetime="2026-07-26">JUL 26, 2026</time></div>
+        <h3>One Tap to the Stars</h3>
+        <p>Play now begins the chosen game in one tap. The Cosmic Gate closes immediately, prepares the challenge behind the doors, and opens directly onto the ready board.</p>
+        <p>A compact objective appears after the level is visible. It shows only the target, one short instruction, and one clear Start button instead of a crowded pre-game briefing.</p>
+        <p>Timed runs, scoring, and competitive progress remain frozen while the objective is open. They begin only when Start is pressed, so reading the goal never costs time or points.</p>
+      </li>
+      <li class="updates-entry" data-update-entry>
+        <div class="updates-meta"><span>VERSION 3.4.5-BETA.1</span><time datetime="2026-07-26">JUL 26, 2026</time></div>
+        <h3>A Thought Between Worlds</h3>
+        <p>Launch and new-level Cosmic Gates now pause long enough to show one of 50 short thoughts about imagination, creation, and discovery. The game avoids an immediate repeat and gives a clear author credit to each historical line.</p>
+        <p>The slower arrival belongs only to the start of a journey. Pause and Escape stay immediate, completed-game controls keep their existing timing, and timed challenges still wait until the board is fully visible.</p>
+        <p>The first screen now explains the target in simpler language and cycles through six logical example recipes, including Species + Air → Bird and Brick + Brick → Wall, instead of leaving one pair on screen forever.</p>
+      </li>
+      <li class="updates-entry" data-update-entry>
+        <div class="updates-meta"><span>VERSION 3.4.4-BETA.1</span><time datetime="2026-07-26">JUL 26, 2026</time></div>
+        <h3>Little Games Between Worlds</h3>
+        <p>Some completed personal challenges now lead to a short, optional Star Break before the next word. Connect four matching star pairs without crossing their constellation paths, or tap a trail of stars in order to light a new shape.</p>
+        <p>Star Breaks are calm breaks, not tests. They have no timer and never change points, rewards, Route Rank, leaderboards, Run IQ, or challenge difficulty. Skip is always available.</p>
+        <p>Each puzzle is generated from a checked solution and works with touch, mouse, or keyboard. Matching symbols support the colors, large targets make phone play comfortable, and reduced-motion and high-contrast settings are respected.</p>
+      </li>
+      <li class="updates-entry" data-update-entry>
+        <div class="updates-meta"><span>VERSION 3.4.3-BETA.1</span><time datetime="2026-07-26">JUL 26, 2026</time></div>
+        <h3>A New Sky Between Worlds</h3>
+        <p>The main menu now has its own constellation-world panorama instead of borrowing the Cosmic Gate artwork. Floating celestial islands, star rivers, and a quiet center give the home screen a distinct place in the universe.</p>
+        <p>Portrait, 1080p, and 4K-sized menu sources keep the scene crisp while each device loads only the artwork suited to its screen.</p>
+        <p>After a mission is confirmed, the Cosmic Gate now closes over the menu, prepares the board while hidden, and reopens directly onto the words. Timed challenges wait until the board is visible before their countdown begins.</p>
+        <p>The launch gate now keeps only the CONSTELLORE name on screen, removing the short-lived extra message instead of making every launch slower.</p>
+      </li>
+      <li class="updates-entry" data-update-entry>
+        <div class="updates-meta"><span>VERSION 3.4.2-BETA.1</span><time datetime="2026-07-25">JUL 25, 2026</time></div>
+        <h3>The Cosmos Comes Into Focus</h3>
+        <p>The Cosmic Gate now uses purpose-built portrait, 1080p, and 4K-sized responsive assets. Each screen receives artwork made for its shape and detail level.</p>
+        <p>The game no longer stretches one 1088px file across every phone, tablet, and monitor. Responsive selection keeps the gate sharp without asking smaller devices to carry the largest image.</p>
+        <p>The home background is now anchored to the viewport, so its panorama remains continuous while the page grows or scrolls instead of drifting with the content.</p>
+      </li>
+      <li class="updates-entry" data-update-entry>
+        <div class="updates-meta"><span>VERSION 3.4.1-BETA.1</span><time datetime="2026-07-25">JUL 25, 2026</time></div>
+        <h3>Results Stay With You</h3>
+        <p>Completed games now have a clear, sticky close button at the top of the result panel, so the way home remains available even while the results scroll.</p>
+        <p>Choosing it now follows the same full <strong>Return home</strong> flow as the main result action instead of only hiding the window. The finished game is cleaned up consistently before the menu returns.</p>
+        <p>If a verified score is still waiting to be saved, the result stays visible until it is safe to leave. Pending progress can no longer disappear behind a closed panel.</p>
+      </li>
+      <li class="updates-entry" data-update-entry>
+        <div class="updates-meta"><span>VERSION 3.4.0-BETA.1</span><time datetime="2026-07-25">JUL 25, 2026</time></div>
+        <h3>The Cosmic Gate Opens</h3>
+        <p>Constellore now opens on a living cosmos. A bright line draws through its center, the sky separates into two parallax doors, and the universe opens onto a cleaner, richer main menu with one obvious Play action.</p>
+        <p>The same doors now close around Pause and every completed game. Pause keeps Continue, Restart, Show path, and Quit together in one calm panel; Show path clearly warns that it gives no points before the answer begins.</p>
+        <p>Show Answer now grows the solution upward like constellation roots. All currently reachable branches animate in parallel, each result continues into the next combination, and Completed words and links remain as gently dimmed history behind the bright active wave. Pause, speed, finish, and one replay stay available; Study still gives no score, rewards, or saved reveal discoveries.</p>
+        <p>Challenge matching now stays private. The game no longer shows hidden levels, formulas, streak rules, or future adjustments. Only an especially hard mission receives one plain <strong>Difficult</strong> tag.</p>
+      </li>
+      <li class="updates-entry" data-update-entry>
+        <div class="updates-meta"><span>VERSION 3.3.0-BETA.1</span><time datetime="2026-07-25">JUL 25, 2026</time></div>
         <h3>One Play, a Growing Universe</h3>
-        <p>The main Play button now chooses a suitable challenge and opening for you. Bronze begins with Earth, Water, Fire, and Air; new mixes arrive gently from Silver onward, lending useful temporary words from a checked part of the real answer route. After a win, choose whether the next challenge uses Auto, the same four words, or a new mix.</p>
-        <p>Twelve permanent Route Ranks grow through mastery and best-of-three promotion games. Higher ranks combine more Route Remixes, while adaptive intensity adds unfamiliar rules only after you have shown you are ready. An easier challenge never removes a rank you already earned.</p>
+        <p>The main Play button now chooses a suitable challenge and opening for you. Bronze begins with Earth, Water, Fire, and Air; new mixes arrive gently from Silver onward, lending useful temporary words from a checked part of the real answer route. After a win, the next challenge automatically chooses the most suitable opening.</p>
+        <p>Twelve permanent Route Ranks grow through mastery and clear best-of-three promotion games. Higher ranks bring richer Route Remixes, while personal challenge matching now stays quietly behind the scenes.</p>
         <p>Six board skies now evolve with your rank, from a quiet common night through living nebulae and astral rifts to the crowned singularity for Legend and Cosmic. Responsive mobile, balanced, and cinematic artwork keeps every device light and readable.</p>
-        <p>Every adaptive target and starting mix is checked for a real route, with 500 possible destination words and recent targets avoided. These personal games do not enter shared leaderboards; Daily, Weekly, friend, story, training, and player-chosen challenges stay fixed for everyone.</p>
+        <p>Every personal target and starting mix is checked for a real route, with 500 possible destination words and recent targets avoided. These personal games do not enter shared leaderboards; Daily, Weekly, friend, story, training, and player-chosen challenges stay fixed for everyone.</p>
       </li>
       <li class="updates-entry" data-update-entry>
         <div class="updates-meta"><span>VERSION 3.2.0-BETA.1</span><time datetime="2026-07-25">JUL 25, 2026</time></div>
         <h3>A Journey That Learns How You Play</h3>
-        <p>Normal Relaxed, Timed, and Limited Moves games now choose a reachable target that fits your recent games. Every three completed challenges raise your normal level. One unfinished challenge lowers it by one. Every tenth completion unlocks one much harder Surge challenge. Missing it keeps your old level safe; finishing it unassisted with no mistakes and 200 Run IQ makes that Surge level your new normal.</p>
-        <p>Run IQ now begins at 0. Discoveries that genuinely move you toward the target earn most of the points, unrelated discoveries earn only a little, and a flawless target route can finish at 200. Trying a word pair that does not combine never changes challenge difficulty.</p>
+        <p>Normal Relaxed, Timed, and Limited Moves games now choose a reachable target that fits how you have been playing. Challenge matching adjusts quietly between games; exceptional missions carry one clear Difficult tag without exposing the formula behind them.</p>
+        <p>Run IQ now begins at 0. Discoveries that genuinely move you toward the target earn most of the points, unrelated discoveries earn only a little, and a flawless target route can finish at 200. Experimenting with word pairs never secretly changes the current challenge.</p>
         <p>Rewards match the target that was actually chosen, recently played targets are avoided, and every adaptive target has a checked route from its exact starting words.</p>
         <p>These are personal games, so they do not enter shared leaderboards. Daily, Weekly, friend, story, training, and player-chosen targets stay exactly the same for everyone.</p>
       </li>
@@ -418,7 +720,7 @@
     <p class="updates-footer"><span aria-hidden="true">✦</span> More transmissions will appear here as the universe grows. <small>BUILD <b id="buildVersion">DEVELOPMENT</b></small></p>
   </dialog>
 
-  <dialog id="pauseDialog" class="modal pause-modal" aria-labelledby="pauseTitle" aria-describedby="pauseDescription pauseClockPolicy">
+  <dialog id="pauseDialog" class="modal pause-modal cosmic-dialog-transition cosmic-dialog-transition--pause" aria-labelledby="pauseTitle" aria-describedby="pauseDescription pauseClockPolicy">
     <div class="pause-heading">
       <div>
         <h2 id="pauseTitle">Game paused</h2>
@@ -436,6 +738,20 @@
       <section><span id="pauseClockLabel">Time</span><strong id="pauseClock">00:00</strong></section>
     </div>
     <p class="pause-clock-policy" id="pauseClockPolicy" hidden><b id="pauseClockMessage">The timer keeps running.</b></p>
+    <div class="vctl vpause" id="pauseVolumeControl" role="group" aria-label="Master and channel volume">
+      <button class="nav-icon vstep" id="pauseVolumeDown" type="button" aria-label="Decrease master volume">&minus;</button>
+      <output id="pauseMasterVolumeQuickValue" for="pauseMasterVolumePreference" aria-live="polite">75%</output>
+      <button class="nav-icon vstep" id="pauseVolumeUp" type="button" aria-label="Increase master volume">+</button>
+      <details class="vdet">
+        <summary class="nav-icon vstep" aria-label="Open sound channel mixer"><span aria-hidden="true">&#9835;</span><b>Mixer</b></summary>
+        <div class="feedback-mixer vpanel" role="group" aria-labelledby="pauseVolumeTitle">
+          <strong id="pauseVolumeTitle">Sound volume</strong>
+          <div class="feedback-volume"><label for="pauseMasterVolumePreference">Master</label><output id="pauseMasterVolumeValue" for="pauseMasterVolumePreference">75%</output><input id="pauseMasterVolumePreference" type="range" min="0" max="1" step=".05" value=".75" aria-valuetext="75 percent"></div>
+          <div class="feedback-volume"><label for="pauseMusicVolumePreference">Music</label><output id="pauseMusicVolumeValue" for="pauseMusicVolumePreference">100%</output><input id="pauseMusicVolumePreference" type="range" min="0" max="1" step=".05" value="1" aria-valuetext="100 percent"></div>
+          <div class="feedback-volume"><label for="pauseSfxVolumePreference">Effects</label><output id="pauseSfxVolumeValue" for="pauseSfxVolumePreference">100%</output><input id="pauseSfxVolumePreference" type="range" min="0" max="1" step=".05" value="1" aria-valuetext="100 percent"></div>
+        </div>
+      </details>
+    </div>
     <div class="pause-confirmation" id="pauseConfirmation" role="status" aria-live="polite" hidden>
       <strong id="pauseConfirmationTitle">Are you sure?</strong>
       <span id="pauseConfirmationText">Your progress in this game will be lost.</span>
@@ -443,68 +759,58 @@
     </div>
     <div class="pause-actions">
       <button class="primary-action" id="resumePausedRun" type="button"><span>Continue</span><span aria-hidden="true">→</span></button>
+      <button class="secondary-action pause-reveal" id="pauseRevealPath" type="button"><span>Show path</span><small>No points</small><span aria-hidden="true">✦</span></button>
       <button class="secondary-action pause-restart" id="pauseRestart" type="button"><span>Restart</span><span aria-hidden="true">↻</span></button>
       <button class="quiet-action pause-exit" id="pauseExit" type="button">Quit game</button>
     </div>
   </dialog>
 
-  <dialog id="missionBriefingDialog" class="modal mission-briefing-modal" aria-labelledby="missionBriefingTitle" aria-describedby="missionBriefingRule missionBriefingScoreDetail">
+  <dialog id="missionBriefingDialog" class="modal mission-briefing-modal" aria-labelledby="missionBriefingTitle" aria-describedby="missionBriefingRule">
     <div class="mission-scroll" id="missionBriefingScroll">
-      <span class="eyebrow simple-hidden" id="missionBriefingMode">RELAXED</span>
       <div class="mission-target-lockup">
-        <span class="mission-target-emoji simple-hidden" id="missionBriefingEmoji" aria-hidden="true">&#10022;</span>
         <div>
-          <small>Your target</small>
+          <small>Your goal</small>
           <h2 id="missionBriefingTitle">Make <strong id="missionBriefingTarget">Telescope</strong></h2>
         </div>
       </div>
-      <p class="mission-clue" id="missionBriefingClue">Combine two words to make a new word.</p>
-      <p class="mission-win-rule" id="missionBriefingRule">Keep going until you make Telescope.</p>
-      <p class="mission-start-line"><strong id="missionBriefingStart">You start with 4 words</strong><span id="missionBriefingStarters">Earth, Water, Fire, and Air</span></p>
-      <div class="mission-division practice simple-hidden" id="missionBriefingDivision">
-        <span id="missionBriefingDivisionLabel">PRACTICE</span>
-        <div><strong id="missionBriefingDivisionTitle">Explore without leaderboard pressure</strong><small id="missionBriefingDivisionDetail">Guidance is available and this route stays on your device.</small></div>
+      <p class="mission-win-rule" id="missionBriefingRule">Keep combining words until you make Telescope.</p>
+      <p class="mission-adaptive-note" id="missionAdaptiveNote" hidden>Difficult</p>
+
+      <!-- The game still fills these values for saves and services, but they are
+           intentionally absent from the one-step player briefing. -->
+      <div class="mission-briefing-data" hidden aria-hidden="true">
+        <span id="missionBriefingMode">RELAXED</span>
+        <span id="missionBriefingEmoji">&#10022;</span>
+        <p id="missionBriefingClue">Combine two words to make a new word.</p>
+        <p><strong id="missionBriefingStart">You start with 4 words</strong><span id="missionBriefingStarters">Earth, Water, Fire, and Air</span></p>
+        <div class="mission-division practice" id="missionBriefingDivision">
+          <span id="missionBriefingDivisionLabel">PRACTICE</span>
+          <div><strong id="missionBriefingDivisionTitle">Explore without leaderboard pressure</strong><small id="missionBriefingDivisionDetail">Guidance is available and this route stays on your device.</small></div>
+        </div>
+        <div id="missionJourneyContext" hidden><span id="missionJourneyType">STORY</span><strong id="missionJourneyTitle"></strong><small id="missionJourneyStory"></small></div>
+        <div id="missionBriefingLaw" hidden><span>RULE</span><strong id="missionBriefingLawName"></strong><small id="missionBriefingLawDescription"></small></div>
+        <p id="missionBriefingLimitSummary">No time limit.</p>
+        <p id="missionBriefingIqRule" hidden>Run IQ starts at 0. Useful connections earn the most. A perfect route reaches 200.</p>
+        <section id="missionRemixSummary" aria-labelledby="missionRemixRank" hidden>
+          <div><strong id="missionRemixRank">Bronze Route Rank</strong><span id="missionRemixCount">Classic rules</span></div>
+          <ul id="missionRemixRules"></ul>
+        </section>
+        <strong id="missionBriefingLimit">No limit</strong>
+        <small id="missionBriefingLimitDetail">Explore at your own pace.</small>
+        <strong id="missionBriefingReward">70 Stardust</strong>
+        <small id="missionBriefingRewardDetail">Discoveries and bonuses can add more.</small>
+        <span id="missionBriefingScoreLabel">SCORING</span>
+        <strong id="missionBriefingScore">Practice</strong>
+        <small id="missionBriefingScoreDetail">This mode does not upload to a leaderboard.</small>
+        <p id="missionBriefingInteraction">Drop one word onto another to combine them.</p>
+        <p id="missionBriefingModeRule">There is no time limit.</p>
+        <p id="missionBriefingFairness">Route Signals are score-safe. Star Compass keeps 75% and Word Gift keeps 50% in Open; automatic Reveal becomes Study with 0 score.</p>
       </div>
-      <div class="mission-journey-context simple-hidden" id="missionJourneyContext" hidden><span id="missionJourneyType">STORY</span><strong id="missionJourneyTitle"></strong><small id="missionJourneyStory"></small></div>
-      <div class="mission-law simple-hidden" id="missionBriefingLaw" hidden><span>RULE</span><strong id="missionBriefingLawName"></strong><small id="missionBriefingLawDescription"></small></div>
-      <p class="mission-limit-line" id="missionBriefingLimitSummary">No time limit.</p>
-      <p class="mission-iq-rule" id="missionBriefingIqRule" hidden>Run IQ starts at 0. Useful connections earn the most. A perfect route reaches 200.</p>
-      <p class="mission-adaptive-note" id="missionAdaptiveNote" hidden>Matched to your recent games. Every three wins raise your normal level; ending one early lowers it by one.</p>
-      <section class="mission-remix-summary" id="missionRemixSummary" aria-labelledby="missionRemixRank" hidden>
-        <div><strong id="missionRemixRank">Bronze Route Rank</strong><span id="missionRemixCount">Classic rules</span></div>
-        <ul id="missionRemixRules"></ul>
-      </section>
-      <details class="mission-details simple-hidden">
-        <summary><span>More details</span><small>Optional</small></summary>
-        <div class="mission-facts" aria-label="Mission limits and scoring">
-          <section>
-            <span>LIMIT</span>
-            <strong id="missionBriefingLimit">No limit</strong>
-            <small id="missionBriefingLimitDetail">Explore at your own pace.</small>
-          </section>
-          <section>
-            <span>BASE REWARD</span>
-            <strong id="missionBriefingReward">70 Stardust</strong>
-            <small id="missionBriefingRewardDetail">Discoveries and bonuses can add more.</small>
-          </section>
-          <section>
-            <span id="missionBriefingScoreLabel">SCORING</span>
-            <strong id="missionBriefingScore">Practice</strong>
-            <small id="missionBriefingScoreDetail">This mode does not upload to a leaderboard.</small>
-          </section>
-        </div>
-        <div class="mission-how-to">
-          <strong>HOW COMBINING WORKS</strong>
-          <p id="missionBriefingInteraction">Drop one word onto another to combine them.</p>
-          <p id="missionBriefingModeRule">There is no time limit.</p>
-        </div>
-        <p class="mission-fairness" id="missionBriefingFairness">Route Signals are score-safe. Star Compass keeps 75% and Word Gift keeps 50% in Open; automatic Reveal becomes Study with 0 score.</p>
-      </details>
     </div>
     <div class="mission-actions">
       <p class="form-message mission-status" id="missionBriefingStatus" role="status" aria-live="polite"></p>
-      <button class="primary-action" id="beginMission" type="button"><span>Play</span><span aria-hidden="true">&rarr;</span></button>
-      <button class="quiet-action" id="cancelMission" type="button">Back</button>
+      <button class="primary-action" id="beginMission" type="button"><span>Start</span><span aria-hidden="true">&rarr;</span></button>
+      <button id="cancelMission" type="button" hidden tabindex="-1">Back</button>
     </div>
   </dialog>
 
@@ -533,6 +839,290 @@
     </section>
   </dialog>
 
+  <dialog id="cosmosCircuitDialog" class="modal cosmos-circuit-modal" aria-labelledby="cosmosCircuitTitle" aria-describedby="cosmosCircuitIntro">
+    <button class="modal-close" id="closeCosmosCircuit" type="button" aria-label="Close Cosmos Circuit">&times;</button>
+    <header class="circuit-heading">
+      <div><span class="eyebrow">DAILY SKILL FLIGHT</span><h2 id="cosmosCircuitTitle">Cosmos Circuit</h2><p id="cosmosCircuitIntro">Fly the shared course, pass planets in order, and thread stable tunnels around black holes.</p></div>
+      <div class="circuit-heading-actions">
+        <div class="circuit-pass-balance" aria-label="Launch Pass balance"><span aria-hidden="true">➤</span><strong id="circuitPassCount">3</strong><small>Launch Passes</small></div>
+        <button class="quiet-action circuit-guide-replay" id="showCircuitGuide" type="button" aria-controls="circuitGuide">How to fly</button>
+        <div class="vctl vcircuit" id="circuitVolumeControl" role="group" aria-label="Master and channel volume">
+          <button class="nav-icon vstep" id="circuitVolumeDown" type="button" aria-label="Decrease master volume">&minus;</button>
+          <output id="circuitMasterVolumeQuickValue" for="circuitMasterVolumePreference" aria-live="polite">75%</output>
+          <button class="nav-icon vstep" id="circuitVolumeUp" type="button" aria-label="Increase master volume">+</button>
+          <details class="vdet">
+            <summary class="nav-icon vstep" aria-label="Open sound channel mixer"><span aria-hidden="true">&#9835;</span><b>Mixer</b></summary>
+            <div class="feedback-mixer vpanel" role="group" aria-labelledby="circuitVolumeTitle">
+              <strong id="circuitVolumeTitle">Sound volume</strong>
+              <div class="feedback-volume"><label for="circuitMasterVolumePreference">Master</label><output id="circuitMasterVolumeValue" for="circuitMasterVolumePreference">75%</output><input id="circuitMasterVolumePreference" type="range" min="0" max="1" step=".05" value=".75" aria-valuetext="75 percent"></div>
+              <div class="feedback-volume"><label for="circuitMusicVolumePreference">Music</label><output id="circuitMusicVolumeValue" for="circuitMusicVolumePreference">100%</output><input id="circuitMusicVolumePreference" type="range" min="0" max="1" step=".05" value="1" aria-valuetext="100 percent"></div>
+              <div class="feedback-volume"><label for="circuitSfxVolumePreference">Effects</label><output id="circuitSfxVolumeValue" for="circuitSfxVolumePreference">100%</output><input id="circuitSfxVolumePreference" type="range" min="0" max="1" step=".05" value="1" aria-valuetext="100 percent"></div>
+            </div>
+          </details>
+        </div>
+      </div>
+    </header>
+
+    <section class="circuit-guide" id="circuitGuide" aria-labelledby="circuitGuideTitle" tabindex="-1" hidden>
+      <div>
+        <span class="eyebrow" data-circuit-copy="circuit.guide.eyebrow">FIRST FLIGHT</span>
+        <h3 id="circuitGuideTitle" data-circuit-copy="circuit.guide.title">Learn the route in under a minute</h3>
+        <p data-circuit-copy="circuit.guide.summary">Practice uses today's exact course, costs nothing, and never grants material rewards.</p>
+      </div>
+      <ol>
+        <li><span aria-hidden="true">1</span><p data-circuit-copy="circuit.guide.steer">Steer with touch, pointer, arrow keys, or W A S D.</p></li>
+        <li><span aria-hidden="true">2</span><p data-circuit-copy="circuit.guide.targets">Follow the direction cue and pass through planet gates and black-hole tunnels.</p></li>
+        <li><span aria-hidden="true">3</span><p data-circuit-copy="circuit.guide.powers">Choose one equal power at each beacon. Space or the Power button activates it.</p></li>
+        <li><span aria-hidden="true">4</span><p data-circuit-copy="circuit.guide.fairness">Reward Flights spend one earned Launch Pass. Entries are never sold and rewards are fixed.</p></li>
+      </ol>
+      <div class="circuit-guide-actions">
+        <button class="primary-action" id="startGuidedCircuitPractice" type="button"><span data-circuit-copy="circuit.guide.practice">Start guided Practice</span><span aria-hidden="true">&rarr;</span></button>
+        <button class="quiet-action" id="dismissCircuitGuide" type="button" data-circuit-copy="circuit.guide.dismiss">Got it</button>
+      </div>
+    </section>
+
+    <section class="circuit-lobby" id="circuitLobby">
+      <div class="circuit-lobby-tabs" role="tablist" aria-label="Cosmos Circuit sections">
+        <button id="circuitLobbyFlyTab" type="button" role="tab" aria-selected="true" aria-controls="circuitLobbyFlyPanel" data-circuit-lobby-tab="fly">Fly</button>
+        <button id="circuitLobbyProgressTab" type="button" role="tab" aria-selected="false" aria-controls="circuitLobbyProgressPanel" data-circuit-lobby-tab="progress" tabindex="-1">Progress</button>
+        <button id="circuitLobbyRewardsTab" type="button" role="tab" aria-selected="false" aria-controls="circuitLobbyRewardsPanel" data-circuit-lobby-tab="rewards" tabindex="-1">Rewards</button>
+        <button id="circuitLobbyRulesTab" type="button" role="tab" aria-selected="false" aria-controls="circuitLobbyRulesPanel" data-circuit-lobby-tab="rules" tabindex="-1">Rules</button>
+      </div>
+      <div class="circuit-lobby-panel" id="circuitLobbyFlyPanel" role="tabpanel" aria-labelledby="circuitLobbyFlyTab" data-circuit-lobby-panel="fly">
+      <div class="circuit-course-card">
+        <div class="circuit-course-sky" aria-hidden="true"><i></i><i></i><i></i><span>✦</span></div>
+        <div class="circuit-course-copy">
+          <span class="eyebrow" id="circuitCourseKey">TODAY'S COURSE</span>
+          <h3 id="circuitCourseName">The Atlas Run</h3>
+          <p id="circuitCourseDescription">Eight planetary gates, two black-hole tunnels, and one optional Stardust trail.</p>
+          <ul id="circuitCourseGoals" aria-label="Course goals"></ul>
+          <p class="circuit-featured-cosmetic" id="circuitFeaturedCosmetic">Season Locker: default flight styling</p>
+        </div>
+      </div>
+      <div class="circuit-mode-grid">
+        <article>
+          <span aria-hidden="true">◇</span>
+          <div><h3>Practice Flight</h3><p>Unlimited attempts. Learn today's exact route without spending a pass or earning material rewards.</p></div>
+          <button class="secondary-action" id="startCircuitPractice" type="button"><span>Practice</span><span aria-hidden="true">→</span></button>
+        </article>
+        <article class="ticketed">
+          <span aria-hidden="true">➤</span>
+          <div><h3>Reward Flight</h3><p>Spend one earned Launch Pass. Every milestone and its exact reward are shown before launch.</p></div>
+          <button class="primary-action" id="startCircuitReward" type="button"><span>Use 1 Launch Pass</span><span aria-hidden="true">→</span></button>
+        </article>
+        <article class="crazy-path-card">
+          <span aria-hidden="true">☄</span>
+          <div>
+            <small data-circuit-copy="crazy.card.eyebrow">ALL-OR-NOTHING</small>
+            <h3 data-circuit-copy="crazy.card.title">Crazy Path</h3>
+            <p data-circuit-copy="crazy.card.summary">Clear twenty required hazards on a faster route with tighter gates. One miss ends the attempt with zero reward.</p>
+            <ul>
+              <li data-circuit-copy="crazy.card.qualification">Complete a Cosmos-tier standard Reward Flight this UTC week</li>
+              <li data-circuit-copy="crazy.card.entry">Spend 3 earned Launch Passes · one attempt per UTC week</li>
+              <li data-circuit-copy="crazy.card.cooldown">Victory starts a 30-day cooldown</li>
+            </ul>
+          </div>
+          <button class="crazy-action" id="startCircuitCrazy" type="button"><span>Review 3-pass entry</span><span aria-hidden="true">→</span></button>
+          <p id="crazyPathStatus" role="status" aria-live="polite">Complete a Cosmos-tier standard Reward Flight this UTC week to qualify.</p>
+        </article>
+      </div>
+      <section class="crazy-path-confirm" id="crazyPathConfirm" role="alertdialog" aria-modal="true" aria-labelledby="crazyPathConfirmTitle" aria-describedby="crazyPathConfirmWarning" hidden>
+        <div>
+          <span class="eyebrow" data-circuit-copy="crazy.confirm.eyebrow">POINT OF NO RETURN</span>
+          <h3 id="crazyPathConfirmTitle" data-circuit-copy="crazy.confirm.title">Commit 3 Launch Passes?</h3>
+          <p id="crazyPathConfirmWarning" data-circuit-copy="crazy.confirm.warning">A missed required checkpoint, crash, timeout, expiry, or abandonment ends this attempt. Your three passes and this week’s attempt are not refunded.</p>
+          <ul>
+            <li data-circuit-copy="crazy.confirm.noPartial">No extraction or partial milestone reward</li>
+            <li data-circuit-copy="crazy.confirm.noProgress">No powers, Path XP, or weekly-objective progress on failure</li>
+            <li data-circuit-copy="crazy.confirm.equalPowers">Stored Practice powers cannot enter; checkpoint powers are equal for everyone</li>
+            <li data-circuit-copy="crazy.confirm.reward">Success chooses 20 of each now or 3 of each per UTC day for 30 days</li>
+          </ul>
+        </div>
+        <footer>
+          <button class="secondary-action" id="cancelCrazyPath" type="button" data-circuit-copy="crazy.confirm.cancel">Keep training</button>
+          <button class="crazy-action" id="confirmCrazyPath" type="button"><span data-circuit-copy="crazy.confirm.launch">Launch Crazy Path · spend 3 passes</span><span aria-hidden="true">→</span></button>
+        </footer>
+      </section>
+      <p class="circuit-pass-policy"><strong>Pass refill:</strong> up to 3 earned Launch Passes each UTC day, banked to a maximum of 6. If the wallet is full, today’s refill stays available until there is room.</p>
+      <p class="sr-only" id="circuitPassStatus" role="status" aria-live="polite" aria-atomic="true"></p>
+      <p class="sr-only" id="crazyPowerStatus" role="status" aria-live="polite" aria-atomic="true"></p>
+      <button class="quiet-action circuit-abandon-action" id="abandonCircuitAttempt" type="button" hidden>Abandon saved flight</button>
+      <fieldset class="circuit-practice-loadout" id="circuitPracticeLoadout">
+        <legend>Optional Practice Flight power</legend>
+        <p>Race rewards can be equipped only in reward-free Practice Flights. Reward Flights always give every pilot the same checkpoint powers.</p>
+        <div>
+          <button type="button" data-practice-boost="shield" aria-pressed="false"><span>Shield</span><small id="circuitBoostShield">0</small></button>
+          <button type="button" data-practice-boost="phase" aria-pressed="false"><span>Phase</span><small id="circuitBoostPhase">0</small></button>
+          <button type="button" data-practice-boost="magnet" aria-pressed="false"><span>Magnet</span><small id="circuitBoostMagnet">0</small></button>
+          <button type="button" data-practice-boost="timeWarp" aria-pressed="false"><span>Time Warp</span><small id="circuitBoostTimeWarp">0</small></button>
+        </div>
+      </fieldset>
+      </div>
+      <div class="circuit-lobby-panel" id="circuitLobbyProgressPanel" role="tabpanel" aria-labelledby="circuitLobbyProgressTab" data-circuit-lobby-panel="progress" hidden>
+        <section class="circuit-live-ops" aria-labelledby="circuitWeeklyTitle">
+          <header>
+            <div><span class="eyebrow">ROTATING FLIGHT PLAN</span><h3 id="circuitWeeklyTitle">Weekly challenges</h3></div>
+            <div class="circuit-rotation-clock"><small>NEXT DAILY COURSE</small><strong id="circuitRotationCountdown">--:--:--</strong><span id="circuitWeeklyEnds">Weekly plan resets Monday UTC</span></div>
+          </header>
+          <div class="circuit-live-ops-grid">
+            <section aria-labelledby="circuitObjectivesTitle">
+              <div class="circuit-panel-title"><h4 id="circuitObjectivesTitle">Cosmetic objectives</h4><small>Practice counts</small></div>
+              <ol class="circuit-objectives" id="circuitWeeklyChallenges"></ol>
+            </section>
+            <section aria-labelledby="circuitRecordsTitle">
+              <div class="circuit-panel-title"><h4 id="circuitRecordsTitle">My local leaderboard</h4><small>Private to this device</small></div>
+              <ol class="circuit-records" id="circuitPersonalRecords"></ol>
+              <p id="circuitRecordsStatus">Launch and Practice bests are kept separately. No fake rivals or personal information.</p>
+            </section>
+          </div>
+          <p class="circuit-live-ops-fairness"><strong>Cosmetic-only competition:</strong> weekly rewards and personal records never grant Launch Passes, powers, currency, score, or faster progression.</p>
+        </section>
+      </div>
+      <div class="circuit-lobby-panel" id="circuitLobbyRewardsPanel" role="tabpanel" aria-labelledby="circuitLobbyRewardsTab" data-circuit-lobby-panel="rewards" hidden>
+      <section class="circuit-reward-ladder" aria-labelledby="circuitRewardsTitle">
+        <div><span class="eyebrow">FIXED, NEVER RANDOM</span><h3 id="circuitRewardsTitle">Completion rewards</h3></div>
+        <ol id="circuitRewardLadder"></ol>
+      </section>
+      </div>
+      <div class="circuit-lobby-panel" id="circuitLobbyRulesPanel" role="tabpanel" aria-labelledby="circuitLobbyRulesTab" data-circuit-lobby-panel="rules" hidden>
+      <section class="circuit-local-backup" aria-labelledby="circuitBackupTitle">
+        <div>
+          <span class="eyebrow">LOCAL-ONLY DATA</span>
+          <h3 id="circuitBackupTitle">Manual Circuit backup</h3>
+          <p>Practice wallet, weekly progress, private records, guides, and claimed seasonal cosmetics stay on this device. Export or import JSON to move them manually. No cloud sync. When signed in, cloud wallet, powers, and Star Path ownership are never replaced by this file.</p>
+        </div>
+        <div class="circuit-backup-actions">
+          <button class="secondary-action" id="exportCircuitBackup" type="button"><span>Export JSON</span><span aria-hidden="true">↓</span></button>
+          <button class="quiet-action" id="importCircuitBackup" type="button">Import JSON</button>
+          <input id="importCircuitBackupFile" type="file" accept=".json,application/json" hidden>
+        </div>
+        <p id="circuitBackupStatus" role="status" aria-live="polite"></p>
+      </section>
+      <p class="circuit-fairness"><strong>Fair flight:</strong> the course, ship handling, checkpoint powers, and scoring are identical for everyone. Launch Passes are earned and never sold.</p>
+      </div>
+    </section>
+
+    <section class="circuit-flight" id="circuitFlight" aria-label="Cosmos Circuit flight" aria-describedby="circuitFlightInstruction circuitTargetCue circuitNavigationStatus" hidden>
+      <p class="crazy-flight-banner" id="circuitFlightRiskBanner" data-circuit-copy="crazy.flight.banner" hidden>CRAZY PATH · ALL OR NOTHING · ANY REQUIRED MISS ENDS THE FLIGHT</p>
+      <div class="circuit-hud">
+        <div><small>COURSE</small><strong id="circuitHudCourse">Atlas Run</strong></div>
+        <div><small>TIME</small><strong id="circuitHudTime">01:30</strong></div>
+        <div><small>FLOW</small><strong id="circuitHudFlow">x1.0</strong></div>
+        <div><small>GATES</small><strong id="circuitHudGates">0 / 8</strong></div>
+      </div>
+      <div class="circuit-stage">
+        <canvas id="cosmosCircuitCanvas" width="960" height="540" aria-hidden="true"></canvas>
+        <div class="circuit-reticle" aria-hidden="true"></div>
+        <div class="circuit-countdown" id="circuitCountdown" aria-hidden="true"></div>
+        <div class="circuit-ability-choice" id="circuitAbilityChoice" role="group" aria-labelledby="circuitAbilityPrompt" hidden>
+          <strong id="circuitAbilityPrompt">Choose a checkpoint power</strong>
+          <div><button type="button" data-circuit-ability="shield">Shield</button><button type="button" data-circuit-ability="magnet">Magnet</button></div>
+        </div>
+      </div>
+      <div class="circuit-progress" role="progressbar" aria-label="Course progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i id="circuitProgressBar"></i></div>
+      <div class="circuit-flight-actions">
+        <button class="circuit-power-button" id="activateCircuitPower" type="button" disabled><span aria-hidden="true">✦</span><b>No power ready</b><small>Space</small></button>
+        <p class="circuit-vector" id="circuitTargetCue">Next planet gate: straight ahead</p>
+        <p id="circuitFlightInstruction">Steer with pointer, touch, arrow keys, or A and D. Space activates your checkpoint power.</p>
+        <button class="quiet-action circuit-extract-action" id="extractCircuitFlight" type="button" disabled hidden>Bank progress</button>
+        <button class="quiet-action" id="pauseCircuitFlight" type="button">Pause</button>
+        <button class="quiet-action" id="leaveCircuitFlight" type="button">Save and leave</button>
+      </div>
+      <p class="sr-only" id="circuitFlightStatus" role="status" aria-live="polite" aria-atomic="true"></p>
+      <p class="sr-only" id="circuitNavigationStatus" role="status" aria-live="polite" aria-atomic="true"></p>
+    </section>
+
+    <section class="circuit-result" id="circuitResult" hidden>
+      <span class="circuit-result-mark" aria-hidden="true">✦</span>
+      <span class="eyebrow" id="circuitResultEyebrow">FLIGHT COMPLETE</span>
+      <h3 id="circuitResultTitle" tabindex="-1">Galaxy flight</h3>
+      <p id="circuitResultSummary"></p>
+      <div class="circuit-result-grid">
+        <div><strong id="circuitResultGates">0 / 8</strong><span>planet gates</span></div>
+        <div><strong id="circuitResultTunnels">0 / 2</strong><span>anomaly tunnels</span></div>
+        <div><strong id="circuitResultFlow">0</strong><span>Flow score</span></div>
+      </div>
+      <div class="circuit-reward-choice" id="circuitRewardChoice" role="group" aria-labelledby="circuitRewardChoiceTitle" hidden>
+        <strong id="circuitRewardChoiceTitle">Choose your fixed Practice boost</strong>
+        <p id="circuitRewardChoiceStatus">Your choice will be added after verification.</p>
+        <div>
+          <button type="button" data-circuit-reward-boost="shield"><span aria-hidden="true">◈</span>Shield</button>
+          <button type="button" data-circuit-reward-boost="phase"><span aria-hidden="true">◇</span>Phase</button>
+          <button type="button" data-circuit-reward-boost="magnet"><span aria-hidden="true">✦</span>Magnet</button>
+          <button type="button" data-circuit-reward-boost="timeWarp"><span aria-hidden="true">⌁</span>Time Warp</button>
+        </div>
+      </div>
+      <fieldset class="crazy-reward-choice" id="crazyRewardChoice" aria-describedby="crazyRewardChoiceStatus" hidden>
+        <legend data-circuit-copy="crazy.reward.legend">Choose your Crazy Path reward</legend>
+        <p data-circuit-copy="crazy.reward.summary">Both rewards are exact, Practice-only, and begin after verification. This choice cannot be changed.</p>
+        <div>
+          <label>
+            <input type="radio" name="crazyReward" value="instant">
+            <span><strong data-circuit-copy="crazy.reward.instant.title">Immediate Cache</strong><small data-circuit-copy="crazy.reward.instant.detail">20 Shield, 20 Phase, 20 Magnet, and 20 Time Warp now · 80 powers total</small></span>
+          </label>
+          <label>
+            <input type="radio" name="crazyReward" value="daily">
+            <span><strong data-circuit-copy="crazy.reward.daily.title">Thirty-Day Supply</strong><small data-circuit-copy="crazy.reward.daily.detail">3 of every power per UTC day for 30 days · 90 of each, 360 powers total · elapsed days accrue</small></span>
+          </label>
+        </div>
+        <p id="crazyRewardChoiceStatus" role="status" aria-live="polite" data-circuit-copy="crazy.reward.prompt">Choose one reward to continue.</p>
+        <button class="crazy-action" id="confirmCrazyReward" type="button" data-circuit-copy="crazy.reward.confirm" disabled>Confirm permanent reward</button>
+      </fieldset>
+      <div class="circuit-result-reward" id="circuitResultReward"><small>REWARD</small><strong>Practice flight · no material reward</strong><span>Course mastery is still recorded.</span></div>
+      <div class="circuit-result-actions" id="circuitResultActions">
+        <button class="primary-action" id="retryCircuitFlight" type="button"><span>Fly again</span><span aria-hidden="true">→</span></button>
+        <button class="secondary-action" id="returnCircuitLobby" type="button"><span>Course lobby</span><span aria-hidden="true">◇</span></button>
+      </div>
+    </section>
+  </dialog>
+
+  <dialog id="starPathDialog" class="modal star-path-modal" aria-labelledby="starPathTitle" aria-describedby="starPathIntro">
+    <button class="modal-close" id="closeStarPath" type="button" aria-label="Close Star Path">&times;</button>
+    <header class="star-path-heading">
+      <div><span class="eyebrow" id="starPathSeason">SEASON 01</span><h2 id="starPathTitle">Star Path</h2><p id="starPathIntro">Word routes and Cosmos Circuit milestones advance one shared cosmetic season.</p></div>
+      <div class="circuit-heading-actions">
+        <div class="star-path-level"><small>LEVEL</small><strong id="starPathLevel">1</strong><span id="starPathXp">0 / 100 XP</span></div>
+        <button class="quiet-action circuit-guide-replay" id="showStarPathGuide" type="button" aria-controls="starPathGuide">How it works</button>
+      </div>
+    </header>
+    <section class="circuit-guide star-path-guide" id="starPathGuide" aria-labelledby="starPathGuideTitle" tabindex="-1" hidden>
+      <div>
+        <span class="eyebrow" data-circuit-copy="path.guide.eyebrow">HOW STAR PATH WORKS</span>
+        <h3 id="starPathGuideTitle" data-circuit-copy="path.guide.title">One season, two cosmetic lanes</h3>
+        <p data-circuit-copy="path.guide.summary">Eligible word wins and verified Circuit milestones earn the same XP whether or not you support the game.</p>
+      </div>
+      <ol>
+        <li><span aria-hidden="true">1</span><p data-circuit-copy="path.guide.free">The Free Constellation lane is available to every player.</p></li>
+        <li><span aria-hidden="true">2</span><p data-circuit-copy="path.guide.supporter">The Supporter lane adds only cosmetics, profile pieces, and soundtrack unlocks.</p></li>
+        <li><span aria-hidden="true">3</span><p data-circuit-copy="path.guide.fairness">Neither lane changes speed, scores, Launch Passes, powers, or reward quantities.</p></li>
+        <li><span aria-hidden="true">4</span><p data-circuit-copy="path.guide.pacing">Your first eligible win or verified flight each UTC week includes 200 catch-up XP. Base gains are capped at 125 XP per UTC day.</p></li>
+      </ol>
+      <div class="circuit-guide-actions">
+        <button class="primary-action" id="dismissStarPathGuide" type="button"><span data-circuit-copy="path.guide.dismiss">View reward track</span><span aria-hidden="true">&rarr;</span></button>
+      </div>
+    </section>
+    <section class="star-path-locker" aria-labelledby="starPathLockerTitle">
+      <div>
+        <span class="eyebrow">SEASON LOCKER</span>
+        <h3 id="starPathLockerTitle">Feature an earned cosmetic in Cosmos Circuit</h3>
+        <p>Every claimed badge, trail, frame, hull, decal, gate, and remix has a visible flight treatment. Choose one at a time; this never changes handling or score.</p>
+      </div>
+      <label for="starPathFeaturedReward">Featured flight cosmetic</label>
+      <select id="starPathFeaturedReward">
+        <option value="">Default Circuit styling</option>
+      </select>
+      <p id="starPathLockerStatus" role="status" aria-live="polite">Claim a season or weekly cosmetic to add it here.</p>
+    </section>
+    <div class="star-path-progress" role="progressbar" aria-label="Star Path level progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i id="starPathProgressBar"></i></div>
+    <div class="star-path-track-tools">
+      <div class="star-path-track-head"><span>FREE CONSTELLATION</span><span>SUPPORTER COSMETICS</span></div>
+      <button class="quiet-action" id="claimAllStarPathRewards" type="button">Claim all available</button>
+    </div>
+    <ol class="star-path-track" id="starPathTrack" aria-label="Season reward track"></ol>
+    <p class="star-path-fairness"><strong>Cosmetic only:</strong> Supporter rewards never increase speed, score, Launch Pass generation, checkpoint powers, or reward quantities.</p>
+    <p id="starPathStatus" role="status" aria-live="polite"></p>
+  </dialog>
+
   <dialog id="paywallDialog" class="modal premium-modal" aria-labelledby="paywallTitle">
     <button class="modal-close" data-close="paywallDialog" type="button" aria-label="Close">×</button>
     <span class="modal-orb" aria-hidden="true">✧</span>
@@ -541,10 +1131,11 @@
     <p>Support Constellore and personalize how your constellations look and sound. This pack never changes recipes, Guidance, score, time, moves, or leaderboard eligibility.</p>
     <div class="price"><strong id="founderPrice">€6.99</strong><span>one time</span></div>
     <ul>
-      <li>Aurora and Solar cosmos themes</li>
-      <li>Nebula and Blueprint boards, Comet and Prism trails, and two sound packs</li>
+      <li>Seven complete Supporter collections: Aurora Archive, Solar Foundry, Lunar Garden, Eclipse Sovereign, Pixel Frontier, Bubble Reef, and Stellar Vanguard</li>
+      <li>Every kit includes responsive Home and opening Gate backgrounds, word plaques, movement and fusion trails, Rank-sky finish, menu finish, and sound theme</li>
+      <li>Eclipse Sovereign is the prestige full-shell transformation; earlier kits keep the familiar Home layout</li>
       <li>Supporter styling for your constellation cards</li>
-      <li>Lifetime access to this cosmetic collection</li>
+      <li>Mix every owned piece, or equip any full collection in one action</li>
     </ul>
     <p class="founder-fairness"><strong>Fair by design:</strong> supporters and free players solve the same World Graph under the same competitive rules. Beta entitlements and progression may reset before paid launch.</p>
     <button class="primary-action" id="checkoutButton" type="button"><span>Get Supporter Pack</span><span aria-hidden="true">→</span></button>
@@ -688,6 +1279,24 @@
       <div><strong>Show the answer</strong><p>Shows every step. You get no points.</p></div>
       <button class="reveal-trigger" id="revealPathButton" type="button" aria-haspopup="dialog" aria-controls="revealDialog" aria-label="Show the answer; gives no points"><b>Show answer</b><span aria-hidden="true">→</span></button>
     </section>
+    <section class="stardust-store" aria-labelledby="stardustStoreTitle">
+      <header>
+        <div><small>EARNED IN PLAY</small><h3 id="stardustStoreTitle">Stardust supplies</h3></div>
+        <strong><span aria-hidden="true">&#10022;</span> <span id="stardustStoreBalance">0</span></strong>
+      </header>
+      <p>Spend earned Stardust on optional help. Star Compass enters the declared Open division at 75% score; Streak Shield has no score effect. Neither is sold for money.</p>
+      <div class="stardust-store-grid">
+        <article>
+          <div><strong id="starCompassName">Star Compass</strong><small id="starCompassDescription">One non-spoiler direction glow &middot; Open division at 75% score &middot; maximum 9</small></div>
+          <button id="buyStarCompass" type="button" aria-labelledby="starCompassName starCompassPrice" aria-describedby="starCompassDescription stardustCompassStock"><span id="starCompassPrice">90 Stardust</span><b id="stardustCompassStock">0 / 9</b></button>
+        </article>
+        <article>
+          <div><strong id="streakShieldName">Streak Shield</strong><small id="streakShieldDescription">Protects one missed calendar day &middot; maximum 3</small></div>
+          <button id="buyStreakShield" type="button" aria-labelledby="streakShieldName streakShieldPrice" aria-describedby="streakShieldDescription stardustShieldStock"><span id="streakShieldPrice">240 Stardust</span><b id="stardustShieldStock">0 / 3</b></button>
+        </article>
+      </div>
+      <p class="stardust-store-status" id="stardustStoreStatus" role="status" aria-live="polite">Exact, non-random, earn-only supplies.</p>
+    </section>
     <div class="simple-hidden" aria-hidden="true">
       <b id="senseDialogCount">1</b><small id="senseEarnNote">One available.</small>
       <button id="useSense" type="button">Use extra hint</button>
@@ -711,23 +1320,34 @@
   <dialog id="profileDialog" class="modal profile-modal" aria-labelledby="profileRankTitle">
     <button class="modal-close" data-close="profileDialog" type="button" aria-label="Close">×</button>
     <header class="profile-heading">
-      <div><h2 id="profileRankTitle">Your progress</h2></div>
+      <div class="profile-title-block"><span class="eyebrow">PLAYER CONSTELLATION</span><h2 id="profileRankTitle">Your progress</h2><p>Complete routes, build mastery, and watch your sky evolve.</p></div>
       <div class="public-callsign simple-hidden"><span>Public name</span><strong id="profileCallsign">Loading…</strong><small>Used on leaderboards</small></div>
     </header>
+    <section class="profile-route-rank" id="profileRouteRankCard" data-rank="bronze" aria-labelledby="profileRouteRankName">
+      <div class="profile-rank-crest" aria-hidden="true"><span id="profileRouteRankMark">B</span><i></i></div>
+      <div class="profile-rank-main">
+        <span class="profile-rank-kicker">ROUTE RANK</span>
+        <div class="profile-rank-title"><h3 id="profileRouteRankName">Bronze</h3><small id="profileRouteRankNumber">RANK 01</small></div>
+        <p id="profileRouteRankStatus">Build mastery to reach Silver.</p>
+        <div class="profile-rank-meter" id="profileRouteRankMeter" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-valuetext="Bronze Route Rank. 50 mastery to Silver." aria-label="Bronze Route Rank progress"><i id="profileRouteRankProgress"></i></div>
+        <div class="profile-rank-meta"><span id="profileRouteRankDetail">0 total mastery</span><b id="profileRouteRankPercent">0%</b></div>
+      </div>
+      <aside class="profile-rank-unlock"><small>NEXT MILESTONE</small><strong id="profileRouteRankUnlock">Silver unlocks Free play and custom targets</strong></aside>
+    </section>
     <section class="profile-overview" aria-label="Profile overview">
-      <div class="profile-total simple-hidden"><span aria-hidden="true">✦</span><strong id="profileTotalDust">0</strong><small>Points</small></div>
+      <div class="profile-total"><span aria-hidden="true">✦</span><strong id="profileTotalDust">0</strong><small>Stardust &middot; spendable</small></div>
       <div class="profile-grid profile-core-grid">
-        <div><strong id="profileWords">4</strong><span>Words found</span></div>
-        <div><strong id="profileWins">0</strong><span>Games won</span></div>
-        <div><strong id="profileStreak">0</strong><span>Day streak</span></div>
+        <div><i aria-hidden="true">✦</i><strong id="profileWords">4</strong><span>Words found</span></div>
+        <div><i aria-hidden="true">◇</i><strong id="profileWins">0</strong><span>Games won</span></div>
+        <div><i aria-hidden="true">↗</i><strong id="profileStreak">0</strong><span>Day streak</span></div>
       </div>
     </section>
     <section class="progression-dashboard simple-hidden" aria-label="Lifetime and weekly progression">
       <article><span><small>LIFETIME ATLAS</small><strong id="lifetimeRankName">Stargazer I</strong></span><b><span id="lifetimePoints">0</span> XP</b><i aria-hidden="true"><em id="lifetimeRankProgress"></em></i><small id="lifetimeRankNext">250 Atlas XP to Stargazer II</small></article>
       <article><span><small id="weeklyRatingSeason">WEEKLY MOMENTUM</small><strong id="weeklyRatingName">Quiet Orbit</strong></span><b id="weeklyRatingValue">1000</b><i aria-hidden="true"><em id="weeklyRatingProgress"></em></i><small id="weeklyRatingNext">Resets weekly. Your lifetime rank is safe.</small></article>
     </section>
-    <details class="profile-more">
-      <summary>More</summary>
+    <section class="profile-more" aria-labelledby="profileMoreTitle">
+      <header class="profile-more-heading"><div><span class="eyebrow">YOUR UNIVERSE</span><h3 id="profileMoreTitle">Progress and rewards</h3></div><p>Review discoveries, mastery, and achievements earned through play.</p></header>
       <div class="profile-more-content">
     <div class="profile-disclosure-grid">
       <details class="profile-archive profile-disclosure">
@@ -745,78 +1365,8 @@
         <section class="badge-shelf" aria-label="Constellation badges"><div><span class="eyebrow">EARNED, NEVER LOST</span><h3 id="badgeShelfTitle">Constellation badges</h3></div><div id="badgeShelf"></div></section>
       </details>
     </div>
-    <div class="profile-options-grid">
-    <details class="profile-disclosure profile-account" id="cloudProfileGroup">
-      <summary><span><strong>Account</strong><small id="cloudProfileSummary">Save or recover</small></span><b aria-hidden="true">+</b></summary>
-      <section class="cloud-account-card" id="cloudAccountSection" aria-labelledby="cloudAccountTitle">
-        <div class="cloud-account-head"><span><small>RECOVERABLE CLOUD PROFILE</small><strong id="cloudAccountTitle">Keep your universe</strong></span><b id="cloudSyncStatus" role="status" aria-live="polite" aria-atomic="true">Connecting…</b></div>
-        <div class="cloud-player-id"><span>PLAYER ID</span><code id="cloudPlayerId">Creating…</code></div>
-        <div class="cloud-account-actions">
-          <button id="syncCloudProfile" type="button">Sync now</button>
-          <button id="restoreOwnership" type="button">Restore ownership</button>
-          <button id="rotateRecoveryKit" type="button">Create new recovery kit</button>
-          <button id="exportPlayerData" type="button">Export my data</button>
-          <button id="deletePlayerData" type="button">Delete free account</button>
-        </div>
-        <details>
-          <summary>Recover an existing universe</summary>
-          <form id="recoverAccountForm">
-            <label for="recoverPlayerId">Player ID</label>
-            <input id="recoverPlayerId" autocomplete="username" maxlength="80" required placeholder="Your saved player ID">
-            <label for="recoverCodeInput">Recovery code</label>
-            <input id="recoverCodeInput" autocomplete="off" maxlength="64" required placeholder="CF-0000-0000-…">
-            <p class="form-message" id="recoverMessage" aria-live="polite"></p>
-            <button class="secondary-action" type="submit"><span>Recover and rotate kit</span><span aria-hidden="true">→</span></button>
-          </form>
-        </details>
-      </section>
-    </details>
-    <details class="profile-disclosure profile-preferences">
-      <summary><span><strong>Settings</strong><small>Sound, feel, and lessons</small></span><b aria-hidden="true">+</b></summary>
-      <div class="profile-disclosure-content">
-        <section class="training-replay-card" aria-labelledby="trainingReplayTitle">
-          <span aria-hidden="true">&#10022;</span>
-          <div><strong id="trainingReplayTitle">First Orbit training</strong><small id="trainingReplayStatus">Available to replay</small></div>
-          <button id="replayFirstOrbit" type="button">Replay</button>
-        </section>
-        <section class="training-replay-card" aria-labelledby="secondOrbitReplayTitle">
-          <span aria-hidden="true">◇</span>
-          <div><strong id="secondOrbitReplayTitle">Second Orbit lesson</strong><small id="secondOrbitReplayStatus">Reach Mountain in three route fusions</small></div>
-          <button id="replaySecondOrbit" type="button">Replay</button>
-        </section>
-        <fieldset class="feedback-picker">
-          <legend>Feel the cosmos</legend>
-          <button id="soundPreference" type="button" aria-pressed="true"><span aria-hidden="true">♪</span><b>Fusion sounds</b><small>ON</small></button>
-          <button id="hapticPreference" type="button" aria-pressed="true"><span aria-hidden="true">≋</span><b>Haptic pulses</b><small>ON</small></button>
-        </fieldset>
-        <fieldset class="theme-picker">
-          <legend>Cosmos theme</legend>
-          <button type="button" data-theme="void"><i class="theme-swatch void"></i><span>Deep Void</span><small>OWNED</small></button>
-          <button type="button" data-theme="aurora"><i class="theme-swatch aurora"></i><span>Aurora</span><small>PASS</small></button>
-          <button type="button" data-theme="solar"><i class="theme-swatch solar"></i><span>Solar</span><small>PASS</small></button>
-        </fieldset>
-        <fieldset class="cosmetic-picker">
-          <legend>Supporter loadout</legend>
-          <div id="cosmeticLoadout"></div>
-          <small>Cosmetics never change recipes, score, time, moves, or leaderboard eligibility.</small>
-        </fieldset>
       </div>
-    </details>
-    <details class="profile-disclosure profile-data">
-      <summary><span><strong>Privacy and data</strong><small>Downloads and diagnostics</small></span><b aria-hidden="true">+</b></summary>
-      <div class="profile-disclosure-content">
-        <section class="local-diagnostics" id="localDiagnosticsSection" hidden aria-labelledby="localDiagnosticsTitle"><div><strong id="localDiagnosticsTitle">Local practice data</strong><small>Export or reset your save and local beta report. A report can include event counts, recipe pairs, and the short result you suggested, but never your name, contact details, or account.</small></div><button id="exportLocalPractice" type="button">Export save</button><button id="resetLocalPractice" type="button">Reset practice</button><button id="exportLocalDiagnostics" type="button">Export local report</button><button id="resetLocalDiagnostics" type="button">Reset local report</button></section>
-        <section class="diagnostics-preference" aria-labelledby="diagnosticsTitle">
-          <div><strong id="diagnosticsTitle">Optional play diagnostics</strong><small>Off by default. If enabled, Constellore sends bounded gameplay events with a random device cohort ID. No free text, email, or real name is included. Security and verified-run records are operational data and are handled separately.</small></div>
-          <button id="diagnosticsPreference" type="button" aria-pressed="false"><span aria-hidden="true">◇</span><b>Share optional diagnostics</b><small>OFF</small></button>
-          <button id="exportDiagnostics" type="button">Export diagnostics settings</button>
-          <button id="resetAnalyticsIdentity" type="button">Reset analytics ID</button>
-        </section>
-      </div>
-    </details>
-    </div>
-      </div>
-    </details>
+    </section>
   </dialog>
 
   <dialog id="recoveryDialog" class="modal recovery-modal" aria-labelledby="recoveryTitle">
@@ -842,37 +1392,53 @@
       <span id="shareStats">Same universe. Different path.</span>
     </div>
     <figure class="constellation-card-preview"><img id="shareCardPreview" alt="Constellation card preview"></figure>
-    <button class="secondary-action modal-wide-action" id="downloadCard" type="button"><span>Download constellation card</span><span aria-hidden="true">↓</span></button>
-    <button class="primary-action" id="copyChallenge" type="button"><span>Copy challenge link</span><span aria-hidden="true">⧉</span></button>
-    <button class="quiet-action" id="nativeShare" type="button" hidden>Share with another app</button>
+    <button class="secondary-action modal-wide-action" id="downloadCard" type="button"><span>Save constellation card</span><span aria-hidden="true">↓</span></button>
+    <button class="primary-action" id="copyChallenge" type="button"><span>Challenge a friend</span><span aria-hidden="true">↗</span></button>
+    <button class="quiet-action" id="nativeShare" type="button" hidden>Copy challenge instead</button>
   </dialog>
 
-  <dialog id="resultDialog" class="modal result-modal" aria-labelledby="resultTitle" aria-describedby="resultStats">
-    <span class="result-emoji" id="resultEmoji">✦</span>
+  <dialog id="cosmicInterludeDialog" class="modal cosmic-interlude-modal" aria-labelledby="cosmicInterludeTitle" aria-describedby="cosmicInterludeDescription cosmicInterludeStatus">
+    <header class="cosmic-interlude-heading">
+      <span class="cosmic-interlude-mark" aria-hidden="true">&#10022;</span>
+      <div>
+        <span class="cosmic-interlude-kicker">JUST FOR FUN</span>
+        <h2 id="cosmicInterludeTitle">Connect the matching stars</h2>
+        <p id="cosmicInterludeDescription">Draw a line between each matching pair. The lines cannot cross.</p>
+      </div>
+      <p class="cosmic-interlude-status" id="cosmicInterludeStatus">Connect 4 pairs</p>
+    </header>
+    <div class="cosmic-interlude-stage" id="cosmicInterludeStage" role="group" aria-labelledby="cosmicInterludeTitle" aria-describedby="cosmicInterludeDescription cosmicInterludeMemory cosmicInterludeStageHelp" tabindex="0">
+      <canvas id="cosmicInterludeCanvas" width="960" height="540" aria-hidden="true"></canvas>
+      <div class="cosmic-interlude-endpoints" id="cosmicInterludeEndpoints" role="group" aria-label="Stars to connect"></div>
+      <p class="cosmic-interlude-memory" id="cosmicInterludeMemory" role="status" aria-live="polite" aria-atomic="true" hidden>Memorize the numbered stars.</p>
+      <p class="cosmic-interlude-stage-help" id="cosmicInterludeStageHelp">Choose a star, then choose its matching star.</p>
+    </div>
+    <div class="cosmic-interlude-actions">
+      <button class="primary-action" id="cosmicInterludePrimary" type="button" hidden disabled><span>Continue</span><span aria-hidden="true">&rarr;</span></button>
+      <button class="quiet-action" id="cosmicInterludeUndo" type="button" hidden disabled>Undo line</button>
+      <button class="quiet-action" id="cosmicInterludeSkip" type="button">Skip</button>
+    </div>
+    <p class="sr-only" id="cosmicInterludeAnnouncement" role="status" aria-live="polite" aria-atomic="true"></p>
+  </dialog>
+
+  <dialog id="resultDialog" class="modal result-modal cosmic-dialog-transition cosmic-dialog-transition--result" aria-labelledby="resultTitle" aria-describedby="resultStats">
+    <button class="modal-close result-close" id="resultClose" data-close="resultDialog" type="button" aria-label="Leave this completed game and return to the main menu">×</button>
+    <span class="result-emoji" id="resultEmoji" aria-hidden="true">✦</span>
     <span class="eyebrow simple-hidden" id="resultKicker">DONE</span>
     <h2 id="resultTitle">You made it!</h2>
     <p id="resultStats"></p>
     <p class="result-adaptive-note" id="resultAdaptiveNote" hidden></p>
     <p class="result-remix-note" id="resultRemixNote" hidden></p>
-    <section class="start-style-control result-next-options" id="resultNextOptions" aria-labelledby="startStyleLabel" hidden>
-      <span><strong id="startStyleLabel">Next challenge starts with</strong><small id="startStyleSummary">Auto chooses the best starting words for you.</small></span>
-      <div class="start-style-options" role="radiogroup" aria-label="Choose how the next game begins" aria-describedby="startStyleSummary">
-        <button type="button" role="radio" aria-checked="true" aria-label="Auto: let the game choose the best starting words" title="Let the game choose" data-start-style="auto">Auto</button>
-        <button type="button" role="radio" aria-checked="false" aria-label="Same four: always start with Earth, Water, Fire, and Air" title="Always use Earth, Water, Fire, and Air" tabindex="-1" data-start-style="classic">Same 4</button>
-        <button type="button" role="radio" aria-checked="false" aria-label="New mix: start with different useful words" title="Start with different useful words" tabindex="-1" data-start-style="shuffled">New mix</button>
-      </div>
-    </section>
     <div class="result-actions" id="resultActions">
       <button class="primary-action" id="resultRetry" type="button">Play next</button>
       <button class="secondary-action" id="resultReplay" type="button">Restart challenge</button>
       <button class="quiet-action" id="resultPrimary" type="button"><span>Main menu</span><span aria-hidden="true">→</span></button>
     </div>
-    <details class="result-details" id="resultDetails">
+    <details class="result-details" id="resultDetails" hidden>
       <summary><span>More details</span><b aria-hidden="true">+</b></summary>
       <div class="result-details-panel">
       <section class="result-route-card" aria-labelledby="resultRouteTitle">
         <div><span>Your path</span><strong id="resultRouteTitle">How you made it</strong><small id="resultRouteSummary">0 combinations · 0 words</small></div>
-        <div class="result-route-trail" id="resultRouteTrail" aria-hidden="true"><i>✦</i><i>?</i></div>
         <button id="resultAtlas" type="button"><span>View path</span><span aria-hidden="true">→</span></button>
       </section>
       <div class="mastery-result-card" id="resultMasteryCard" hidden><span>RECIPE MASTERY</span><strong id="resultMasteryText"></strong></div>
@@ -880,13 +1446,11 @@
       <div class="signature-orb" id="signatureResultGrade" aria-hidden="true">A</div>
       <div><span>SIGNATURE CONSTELLATION</span><strong id="signatureResultTitle">Luminous Route</strong><small id="signatureResultSummary">Efficient, original, and entirely yours.</small></div>
       <b id="signatureResultScore">86</b>
-      <div class="signature-metrics" id="signatureResultMetrics"></div>
-      <small class="signature-best" id="signaturePersonalBest"></small>
     </section>
     <section class="community-result-card" id="communityResultCard" hidden aria-labelledby="communityResultTitle">
       <span>COMMUNITY SKY</span><strong id="communityResultTitle">Your route among the stars</strong>
       <div class="community-stats" id="communityResultStats"></div>
-      <small id="communityResultNote">Verified comparisons use completed asynchronous routes, never live multiplayer.</small>
+      <small id="communityResultNote">Verified solo comparisons use completed asynchronous routes, never the live Scramble match.</small>
       <button class="quiet-action" id="raceCommunityGhost" type="button">Race a nearby route</button>
     </section>
     <div class="partial-assist-result-card" id="partialAssistResultCard" hidden><span>OPEN ASSISTANCE</span><strong id="partialAssistScore">75% SCORE</strong><small id="partialAssistDetail">Your result still counts in Open with a visible assistance penalty.</small></div>
@@ -900,8 +1464,107 @@
     </details>
   </dialog>
 
+  <dialog id="developerLoginDialog" class="modal developer-login-modal" aria-labelledby="developerLoginTitle" aria-describedby="developerLoginIntro">
+    <button class="modal-close" data-close="developerLoginDialog" type="button" aria-label="Close developer sign in">&times;</button>
+    <span class="developer-seal" aria-hidden="true">DEV</span>
+    <span class="eyebrow">LOCAL PRACTICE TOOLS</span>
+    <h2 id="developerLoginTitle">Developer sign in</h2>
+    <p id="developerLoginIntro">Enter the internal test credentials to open the console.</p>
+    <form class="developer-login-form" id="developerLoginForm">
+      <label for="developerLoginName">Login name</label>
+      <input id="developerLoginName" name="developer-login" type="text" autocomplete="off" autocapitalize="none" spellcheck="false" required>
+      <label for="developerLoginPassword">Password</label>
+      <input id="developerLoginPassword" name="developer-password" type="password" autocomplete="off" required>
+      <p class="developer-login-status" id="developerLoginStatus" role="alert" aria-live="assertive"></p>
+      <button class="primary-action" type="submit"><span>Unlock console</span><span aria-hidden="true">&rarr;</span></button>
+    </form>
+    <small class="developer-security-note">Device-only access gate. Credentials are never saved or sent.</small>
+  </dialog>
+
+  <dialog id="developerDialog" class="modal developer-modal" aria-labelledby="developerTitle" aria-describedby="developerIntro">
+    <button class="modal-close" data-close="developerDialog" type="button" aria-label="Close developer console">&times;</button>
+    <header class="developer-heading">
+      <span class="developer-seal" aria-hidden="true">DEV</span>
+      <div>
+        <span class="eyebrow">LOCAL PRACTICE TOOLS</span>
+        <h2 id="developerTitle">Developer console</h2>
+        <p id="developerIntro">Simulate progression, launch reproducible games, and inspect presentation states. Test runs stay local and unranked.</p>
+      </div>
+      <button class="developer-lock" id="lockDeveloperConsole" type="button">Lock</button>
+    </header>
+
+    <div class="developer-current" aria-label="Current test state">
+      <span><small>ROUTE RANK</small><strong id="developerCurrentRank">Bronze</strong></span>
+      <span><small>ADAPTIVE LEVEL</small><strong id="developerCurrentDifficulty">1</strong></span>
+      <span><small>COMPLETED GAMES</small><strong id="developerCurrentWins">0</strong></span>
+    </div>
+
+    <section class="developer-section" aria-labelledby="developerSetupTitle">
+      <header><span aria-hidden="true">&#9672;</span><div><h3 id="developerSetupTitle">Test setup</h3><p>Applying a preset ends the current local game. Rank presets also complete onboarding and set the minimum games needed for that rank's catalog.</p></div></header>
+      <div class="developer-setting-grid">
+        <label class="developer-field" for="developerRank">
+          <span>Route Rank</span>
+          <select id="developerRank"></select>
+          <small id="developerRankSummary">Classic Bronze routes</small>
+        </label>
+        <button class="secondary-action developer-apply" id="applyDeveloperRank" type="button"><span>Apply rank preset</span><span aria-hidden="true">&rarr;</span></button>
+
+        <label class="developer-field developer-level-field" for="developerDifficulty">
+          <span>Adaptive level <output id="developerDifficultyValue" for="developerDifficulty">1</output></span>
+          <input id="developerDifficulty" type="range" min="1" max="10" step="1" value="1">
+          <small id="developerDifficultySummary">Gentle target selection</small>
+        </label>
+        <button class="secondary-action developer-apply" id="applyDeveloperDifficulty" type="button"><span>Apply level</span><span aria-hidden="true">&rarr;</span></button>
+      </div>
+    </section>
+
+    <section class="developer-section" aria-labelledby="developerLaunchTitle">
+      <header><span aria-hidden="true">&#9655;</span><div><h3 id="developerLaunchTitle">Launch a test game</h3><p>Every launch uses a stable seed so the same rank and level can be compared repeatedly.</p></div></header>
+      <div class="developer-action-grid">
+        <button type="button" data-developer-mode="training"><span aria-hidden="true">&#9733;</span><b>First lesson</b><small>Mud in one combination</small></button>
+        <button type="button" data-developer-mode="second-orbit"><span aria-hidden="true">&#10022;</span><b>Second lesson</b><small>Guided Mountain route</small></button>
+        <button type="button" data-developer-mode="reach"><span aria-hidden="true">&#9678;</span><b>Relaxed</b><small>Current rank and level</small></button>
+        <button type="button" data-developer-mode="quick"><span aria-hidden="true">&#9201;</span><b>Timed</b><small>Unlocks at Gold</small></button>
+        <button type="button" data-developer-mode="moves"><span aria-hidden="true">&#8644;</span><b>Move limit</b><small>Unlocks at Gold</small></button>
+        <button type="button" data-developer-mode="explore"><span aria-hidden="true">&infin;</span><b>Free play</b><small>Unlocks at Silver</small></button>
+        <button type="button" data-developer-mode="daily"><span aria-hidden="true">&#9788;</span><b>Daily word</b><small>Fresh daily state</small></button>
+        <button type="button" data-developer-mode="weekly"><span aria-hidden="true">&#10023;</span><b>Weekly route</b><small>Unlocks at Gold</small></button>
+      </div>
+    </section>
+
+    <section class="developer-section" aria-labelledby="developerShowcaseTitle">
+      <header><span aria-hidden="true">&#10024;</span><div><h3 id="developerShowcaseTitle">Showcase and inspect</h3><p>Open presentation states without earning rewards or changing progression.</p></div></header>
+      <div class="developer-action-grid developer-showcase-grid">
+        <button id="showcaseShareCard" type="button"><span aria-hidden="true">&#8599;</span><b>Sharing card</b><small>Completed House sample</small></button>
+        <button id="showcaseFirstWin" type="button"><span aria-hidden="true">&#10022;</span><b>First-win VFX</b><small>Stars, nova, and confetti</small></button>
+        <button id="exportDeveloperSnapshot" type="button"><span aria-hidden="true">&#8681;</span><b>Debug snapshot</b><small>Export sanitized local state</small></button>
+      </div>
+    </section>
+
+    <section class="developer-section developer-danger-zone" aria-labelledby="developerResetTitle">
+      <header><span aria-hidden="true">&#9888;</span><div><h3 id="developerResetTitle">Fresh-start testing</h3><p>Erase every Constellore save key on this device and reload into the first-ever Mud lesson.</p></div></header>
+      <div class="developer-reset-actions">
+        <button id="resetDeveloperFreshStart" type="button"><span>Reset everything and restart</span><span aria-hidden="true">&#8635;</span></button>
+        <button class="quiet-action" id="cancelDeveloperReset" type="button" hidden>Cancel reset</button>
+      </div>
+    </section>
+
+    <p class="developer-status" id="developerStatus" role="status" aria-live="polite"></p>
+  </dialog>
+
+  <dialog id="developerVfxDialog" class="modal developer-vfx-modal" aria-labelledby="developerVfxTitle" aria-describedby="developerVfxDescription">
+    <button class="modal-close" id="closeDeveloperVfx" type="button" aria-label="Close celebration preview">&times;</button>
+    <span class="result-emoji" aria-hidden="true">&#128994;</span>
+    <span class="eyebrow">VFX PREVIEW</span>
+    <h2 id="developerVfxTitle">First constellation complete!</h2>
+    <p id="developerVfxDescription">This is the celebration shown after the player's first Mud discovery.</p>
+    <button class="primary-action" id="finishDeveloperVfx" type="button"><span>Return to developer console</span><span aria-hidden="true">&rarr;</span></button>
+  </dialog>
+
   <div class="connection-badge" id="connectionBadge" role="status" hidden>Offline — reconnect to make new words</div>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
-  <script type="module" src="/app.js?v=3.3.0-beta.1"></script>
+  <button class="developer-menu-trigger" id="developerMenuButton" type="button" aria-haspopup="dialog" aria-controls="developerLoginDialog developerDialog" aria-label="Open developer console" title="Developer console (Ctrl+Shift+D)" hidden><b>DEV</b><small id="developerTriggerState" hidden></small></button>
+  <script type="module" src="/hero-recipes.mjs?v=5.0.0-beta.1"></script>
+  <script type="module" src="/app.js?v=5.0.0-beta.1"></script>
 </body>
 </html>

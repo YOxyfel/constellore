@@ -321,25 +321,43 @@ test("ghost snapshots interpolate pace and expose projected milestone state only
 test("feedback preferences sanitize JSON, booleans, mute, and volume", () => {
   assert.deepEqual(sanitizeFeedbackPreferences('{"sound":"false","haptics":"true","muted":false,"volume":2}'), {
     sound: false,
+    music: true,
     haptics: true,
+    resultDetails: false,
     muted: false,
-    volume: 1
+    volume: 1,
+    musicVolume: 1,
+    sfxVolume: 1
   });
-  assert.deepEqual(sanitizeFeedbackPreferences({ muted: true, masterVolume: -.5, haptics: 0 }), {
+  assert.deepEqual(sanitizeFeedbackPreferences({ muted: true, masterVolume: -.5, musicVolume: 2, soundVolume: .35, haptics: 0 }), {
     sound: true,
+    music: true,
     haptics: false,
+    resultDetails: false,
     muted: true,
-    volume: 0
+    volume: 0,
+    musicVolume: 1,
+    sfxVolume: .35
   });
-  assert.deepEqual(sanitizeFeedbackPreferences("invalid"), { sound: true, haptics: true, muted: false, volume: .75 });
+  assert.deepEqual(sanitizeFeedbackPreferences("invalid"), {
+    sound: true,
+    music: true,
+    haptics: true,
+    resultDetails: false,
+    muted: false,
+    volume: .75,
+    musicVolume: 1,
+    sfxVolume: 1
+  });
 });
 
 test("feedback cue policy is volume-aware and safe for silent, reduced-motion, and hidden contexts", () => {
-  const active = feedbackCuePolicy("success", { volume: .5 }, { audioAvailable: true, hapticsAvailable: true });
+  const active = feedbackCuePolicy("success", { volume: .5, sfxVolume: .4, musicVolume: 0 }, { audioAvailable: true, hapticsAvailable: true });
   assert.deepEqual(active.audio.tones, FEEDBACK_CUES.success.tones);
-  assert.equal(active.audio.gain, FEEDBACK_CUES.success.gain * .5);
+  assert.equal(active.audio.gain, FEEDBACK_CUES.success.gain * .5 * .4);
   assert.deepEqual(active.haptic, FEEDBACK_CUES.success.haptic);
   assert.notEqual(active.audio.tones, FEEDBACK_CUES.success.tones, "policy returns mutable copies, not cue constants");
+  assert.equal(feedbackCuePolicy("success", { sfxVolume: 0 }, {}).audio, null);
 
   const silent = feedbackCuePolicy("success", {}, { silent: true });
   assert.equal(silent.audio, null);
