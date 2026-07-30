@@ -1,8 +1,12 @@
 import { expect, test } from "@playwright/test";
+import { installSeenIntroFixture } from "./intro-fixture.mjs";
 
 const viewports = [
   { name: "wide desktop", width: 1440, height: 900 },
   { name: "compact desktop", width: 835, height: 677 },
+  { name: "near-square tablet", width: 655, height: 610 },
+  { name: "portrait tablet", width: 797, height: 1265 },
+  { name: "short landscape goal", width: 758, height: 414 },
   { name: "narrow mobile", width: 320, height: 568 }
 ];
 
@@ -37,6 +41,7 @@ async function expectControlsRemainInsideViewport(page, selectors, context) {
     });
   });
 
+  expect(layout.length, `${context}: expected at least one visible control`).toBeGreaterThan(0);
   for (const item of layout) {
     expect(item.left, `${context}: ${item.label} starts outside the viewport`).toBeGreaterThanOrEqual(-1);
     expect(item.right, `${context}: ${item.label} ends outside the viewport`).toBeLessThanOrEqual(item.viewportWidth + 1);
@@ -93,10 +98,24 @@ async function atlasSurfaceDetails(page) {
   });
 }
 
-test.beforeEach(async ({ page }) => {
-  await page.addInitScript(() => {
-    localStorage.clear();
-    sessionStorage.clear();
+test.beforeEach(async ({ page }, testInfo) => {
+  const freshFirstOrbit = testInfo.title.includes("unfinished first constellation");
+  const profile = {
+    version: 7,
+    wins: 0,
+    firstOrbit: { seen: true, completed: true },
+    secondOrbit: { seen: true, completed: true }
+  };
+  const localStorageEntries = freshFirstOrbit
+    ? []
+    : [
+        ["constellore-profile-v1", JSON.stringify(profile)],
+        ["constellore-local-profile-v1", JSON.stringify(profile)]
+      ];
+  await installSeenIntroFixture(page, {
+    resetStorage: true,
+    localStorageEntries,
+    launchToMenu: freshFirstOrbit
   });
 });
 
@@ -104,6 +123,7 @@ for (const viewport of viewports) {
   test(`simple UI surfaces stay clean at ${viewport.name}`, async ({ page }) => {
     await page.setViewportSize({ width: viewport.width, height: viewport.height });
     await page.goto("/play/");
+    await expect(page.locator("#cosmicGate")).toBeHidden();
 
     const primaryOrbit = page.locator(".primary-orbit-panel");
     const primaryButton = page.locator("#primaryOrbitButton");
@@ -111,11 +131,11 @@ for (const viewport of viewports) {
     await expect(primaryButton).toBeVisible();
     await primaryButton.scrollIntoViewIfNeeded();
 
-    const artUrl = await page.evaluate(() => new URL("art/celestial-atlas-bg-v1.webp", window.location.href).href);
+    const artUrl = await page.evaluate(() => new URL("art/home/home-cosmos-v1-portrait.webp", window.location.href).href);
     const art = await page.request.get(artUrl);
-    expect(art.ok(), "the celestial-atlas background must be served by the playable build").toBe(true);
+    expect(art.ok(), "the cinematic home background must be served by the playable build").toBe(true);
     expect(art.headers()["content-type"]).toContain("image/webp");
-    expect((await art.body()).byteLength, "the atlas art must not regress to an empty placeholder").toBeGreaterThan(50_000);
+    expect((await art.body()).byteLength, "the home art must not regress to an empty placeholder").toBeGreaterThan(50_000);
 
     const surface = await atlasSurfaceDetails(page);
     for (const [name, token] of Object.entries(surface.tokens)) {
@@ -123,14 +143,16 @@ for (const viewport of viewports) {
       expect(surface.tokenChannels[name], `${name} must resolve to a real color`).toHaveLength(3);
     }
     expect(
-      surface.backgroundLayers.some((layer) => layer.includes("celestial-atlas-bg-v1.webp")),
-      "the home scene must actually use the celestial-atlas artwork"
+      surface.backgroundLayers.some((layer) => layer.includes("home-cosmos-v1-")),
+      "the home scene must actually use the responsive cinematic artwork"
     ).toBe(true);
     expect(surface.primaryBackgroundImage, "the main action should retain its crafted gold surface").toContain("gradient");
     expect(surface.primaryBoxShadow, "the main action should retain visible surface depth").not.toBe("none");
     expect(surface.primaryBackgroundColor).not.toBe("rgb(0, 0, 0)");
     expect(surface.primaryColor).not.toBe(surface.legacyViolet);
     expect(surface.primaryIsTopmost, "decoration must never cover the main action").toBe(true);
+    await expect(page.locator(".home-vfx")).toHaveAttribute("aria-hidden", "true");
+    await expect(page.locator("#primaryOrbitSecondary")).toBeHidden();
 
     const gold = surface.tokenChannels["--atlas-gold"];
     const teal = surface.tokenChannels["--atlas-teal"];
@@ -155,16 +177,22 @@ for (const viewport of viewports) {
       `${viewport.name} home`
     );
 
-    // Secondary home choices are intentionally hidden during the first-play
-    // tutorial. Reveal the normal returning-player home state so this test
-    // exercises the reported expanded "More ways to play" layout directly.
+    // The catalog itself should communicate progression: Bronze sees the core
+    // action, Silver adds Explore, and Gold opens games plus Adventures.
+    await expect(page.locator("#modePicker")).toBeHidden();
+    await expect(page.locator("#exploreHub")).toBeHidden();
+    await expect(page.locator("#adventuresHub")).toBeHidden();
+
     const exploreHub = page.locator("#exploreHub");
+    await page.locator("body").evaluate((body) => {
+      body.classList.remove("first-session", "choices-ready", "adventures-ready", "advanced-ready");
+      body.classList.add("explore-ready");
+    });
+    await expect(exploreHub).toBeVisible();
+    await expect(page.locator("#modePicker")).toBeHidden();
+    await expect(page.locator("#adventuresHub")).toBeHidden();
+
     const cardLayout = await exploreHub.evaluate((hub) => {
-      // Keep the returning-player layout and measurement in one browser task.
-      // The startup sync can otherwise restore first-session between an
-      // artificial class change and a later measurement in a busy full suite.
-      document.body.classList.remove("first-session");
-      hub.open = true;
       const cards = hub.querySelectorAll(".explore-card");
       const card = cards[1];
       const content = card.querySelector(":scope > div");
@@ -194,9 +222,35 @@ for (const viewport of viewports) {
       `${viewport.name} expanded game choices`
     );
 
+    await page.locator("body").evaluate((body) => {
+      body.classList.add("choices-ready", "adventures-ready", "advanced-ready");
+    });
+    await expect(page.locator("#modePicker")).toBeVisible();
+    await expect(page.locator("#adventuresHub")).toBeVisible();
+    await expectControlsRemainInsideViewport(
+      page,
+      ["#modePicker", "#modePicker .mode-card", "#adventuresHub", "#adventuresHub button"],
+      `${viewport.name} Gold catalogs`
+    );
+
     await primaryButton.click();
     const briefing = page.locator("#missionBriefingDialog");
     await expect(briefing).toHaveJSProperty("open", true);
+    const briefingCenter = await briefing.evaluate((dialog) => {
+      const rect = dialog.getBoundingClientRect();
+      return {
+        horizontalOffset: Math.abs(rect.left + rect.width / 2 - document.documentElement.clientWidth / 2),
+        verticalOffset: Math.abs(rect.top + rect.height / 2 - document.documentElement.clientHeight / 2),
+        top: rect.top,
+        bottom: rect.bottom,
+        viewportHeight: document.documentElement.clientHeight
+      };
+    });
+    expect(briefingCenter.horizontalOffset, "the goal prompt must stay horizontally centered").toBeLessThanOrEqual(1);
+    expect(briefingCenter.verticalOffset, "the goal prompt must stay vertically centered").toBeLessThanOrEqual(1);
+    expect(briefingCenter.top, "the goal prompt must stay within the viewport top").toBeGreaterThanOrEqual(-1);
+    expect(briefingCenter.bottom, "the goal prompt must stay within the viewport bottom").toBeLessThanOrEqual(briefingCenter.viewportHeight + 1);
+    await expect(briefing.locator("#beginMission")).toBeVisible();
 
     const missionActions = await briefing.locator(".mission-actions").evaluate((element) => {
       const style = getComputedStyle(element);
@@ -216,13 +270,101 @@ for (const viewport of viewports) {
   });
 }
 
+test("Silver Orbit stays below the hero at the reported desktop boundary", async ({ page }) => {
+  await page.setViewportSize({ width: 1430, height: 1075 });
+  await page.goto("/play/");
+  await expect(page.locator("body")).toHaveAttribute("data-home-stage", /.+/);
+  const hero = page.locator(".hero-row");
+  await expect(hero).toBeVisible();
+
+  const layout = await page.locator(".start-content").evaluate((content) => {
+    document.body.classList.remove("first-session", "choices-ready", "adventures-ready", "advanced-ready");
+    document.body.classList.add("explore-ready");
+    const heroRect = content.querySelector(".hero-row").getBoundingClientRect();
+    const exploreHub = content.querySelector("#exploreHub");
+    const exploreRect = exploreHub.getBoundingClientRect();
+    const contentRect = content.getBoundingClientRect();
+    const headerRect = content.querySelector("#exploreHub .home-catalog-heading").getBoundingClientRect();
+    return {
+      justifyContent: getComputedStyle(content).justifyContent,
+      exploreDisplay: getComputedStyle(exploreHub).display,
+      modeDisplay: getComputedStyle(content.querySelector("#modePicker")).display,
+      adventuresDisplay: getComputedStyle(content.querySelector("#adventuresHub")).display,
+      gap: exploreRect.top - heroRect.bottom,
+      contentLeft: contentRect.left,
+      contentRight: contentRect.right,
+      exploreLeft: exploreRect.left,
+      exploreRight: exploreRect.right,
+      exploreHeight: exploreRect.height,
+      headerTop: headerRect.top,
+      headerBottom: headerRect.bottom,
+      exploreTop: exploreRect.top,
+      exploreBottom: exploreRect.bottom
+    };
+  });
+  expect(layout.justifyContent).toBe("flex-start");
+  expect(layout.exploreDisplay).not.toBe("none");
+  expect(layout.modeDisplay).toBe("none");
+  expect(layout.adventuresDisplay).toBe("none");
+  expect(layout.gap, "Silver Orbit must flow after the hero rather than overlay it").toBeGreaterThanOrEqual(12);
+  expect(layout.exploreHeight, "desktop Explore should stay a compact secondary catalog").toBeLessThanOrEqual(440);
+  expect(layout.exploreLeft).toBeGreaterThanOrEqual(layout.contentLeft - 1);
+  expect(layout.exploreRight).toBeLessThanOrEqual(layout.contentRight + 1);
+  expect(layout.headerTop).toBeGreaterThanOrEqual(layout.exploreTop - 1);
+  expect(layout.headerBottom).toBeLessThanOrEqual(layout.exploreBottom + 1);
+  await expectNoHorizontalOverflow(page, "1430x1075 Silver Orbit home");
+});
+
+test("an unfinished first constellation returns to a cinematic one-action home", async ({ page }) => {
+  await page.setViewportSize({ width: 655, height: 610 });
+  await page.goto("/play/");
+
+  await expect(page.locator("#cosmicGate")).toBeHidden();
+  await expect(page.locator("#startScreen")).toBeVisible();
+  await expect(page.locator("#primaryOrbitTitle")).toHaveText("Make Mud");
+  await expect(page.locator("#primaryOrbitButton")).toContainText("Begin");
+  await expect(page.locator("#primaryOrbitSecondary")).toBeHidden();
+  await expect(page.locator("#modePicker")).toBeHidden();
+  await expect(page.locator("#exploreHub")).toBeHidden();
+  await expect(page.locator("#adventuresHub")).toBeHidden();
+
+  await page.locator("#primaryOrbitButton").click();
+  const briefing = page.locator("#missionBriefingDialog");
+  await expect(briefing).toHaveJSProperty("open", true);
+  await page.locator("#beginMission").click();
+  await expect(briefing).toHaveJSProperty("open", false);
+  await expect(page.locator("#gameScreen")).toBeVisible();
+  await expect(page.locator("#targetWord")).toHaveText("Mud");
+  await page.locator("#skipFirstOrbit").click();
+
+  await expect(page.locator("#startScreen")).toBeVisible();
+  await expect(page.locator("#primaryOrbitTitle")).toHaveText("Return to Mud");
+  await expect(page.locator("#primaryOrbitButton")).toContainText("Continue");
+  await expect(page.locator("#primaryOrbitSecondary")).toBeHidden();
+  await expect(page.locator("#modePicker")).toBeHidden();
+  await expect(page.locator("#exploreHub")).toBeHidden();
+  await expect(page.locator("#adventuresHub")).toBeHidden();
+  await expect(page.locator(".home-vfx")).toHaveCSS("pointer-events", "none");
+
+  const heroGeometry = await page.locator(".start-content").evaluate((hero) => {
+    const rect = hero.getBoundingClientRect();
+    return { top: rect.top, bottom: rect.bottom, viewportHeight: innerHeight };
+  });
+  expect(heroGeometry.top).toBeGreaterThanOrEqual(-1);
+  expect(heroGeometry.bottom).toBeLessThanOrEqual(heroGeometry.viewportHeight + 1);
+
+  await page.locator("#primaryOrbitButton").click();
+  await expect(page.locator("#gameScreen")).toBeVisible();
+  await expect(page.locator("#targetWord")).toHaveText("Mud");
+});
+
 test("celestial decoration becomes still when reduced motion is requested", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto("/play/");
 
   expect(await page.evaluate(() => matchMedia("(prefers-reduced-motion: reduce)").matches)).toBe(true);
 
-  const motion = await page.locator(".start-screen, .start-stars, .primary-orbit-panel, #primaryOrbitButton")
+  const motion = await page.locator(".start-screen, .home-vfx, .home-vfx__halo, .home-vfx__meteor, .hero-forge__orbit, .primary-orbit-panel, #primaryOrbitButton")
     .evaluateAll((elements) => {
       const toMilliseconds = (part) => {
         const value = Number.parseFloat(part);
@@ -250,6 +392,7 @@ test("the one-action flow stays usable in Windows forced-colors mode", async ({ 
 
   await page.emulateMedia({ forcedColors: "active" });
   await page.goto("/play/");
+  await expect(page.locator("#cosmicGate")).toBeHidden();
 
   expect(await page.evaluate(() => matchMedia("(forced-colors: active)").matches)).toBe(true);
   const primaryButton = page.locator("#primaryOrbitButton");
@@ -259,19 +402,19 @@ test("the one-action flow stays usable in Windows forced-colors mode", async ({ 
   const geometry = await primaryButton.evaluate((button) => {
     const rect = button.getBoundingClientRect();
     const style = getComputedStyle(button);
-    const topmost = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);
     return {
       width: rect.width,
       height: rect.height,
-      borderStyle: style.borderStyle,
-      topmost: Boolean(topmost && (topmost === button || button.contains(topmost)))
+      borderStyle: style.borderStyle
     };
   });
   expect(geometry.width).toBeGreaterThanOrEqual(44);
   expect(geometry.height).toBeGreaterThanOrEqual(44);
   expect(geometry.borderStyle).not.toBe("none");
-  expect(geometry.topmost, "forced color adjustments must not cover the main action").toBe(true);
 
+  // Playwright's actionability checks verify that the enabled control really
+  // receives pointer events; this is stronger and less brittle than probing
+  // one center pixel with elementFromPoint().
   await primaryButton.click();
   await expect(page.locator("#missionBriefingDialog")).toHaveJSProperty("open", true);
 });
@@ -319,7 +462,6 @@ for (const viewport of [
     await result.evaluate((dialog) => {
       dialog.querySelector("#resultTitle").textContent = "You made Telescope!";
       dialog.querySelector("#resultStats").textContent = "7 words found · 8 moves · 200 Run IQ";
-      dialog.querySelector("#resultNextOptions").hidden = false;
       for (const button of dialog.querySelectorAll("#resultActions > button")) button.hidden = false;
       dialog.querySelector("#resultRetry").textContent = "Next challenge";
       dialog.querySelector("#resultReplay").textContent = "Restart challenge";
@@ -330,22 +472,17 @@ for (const viewport of [
     await expectNoHorizontalOverflow(page, `${viewport.name} result`);
     await expectControlsRemainInsideViewport(
       page,
-      ["#resultDialog", "#resultNextOptions", "#resultActions > button"],
+      ["#resultDialog", "#resultActions > button"],
       `${viewport.name} result`
     );
     const resultLayout = await result.evaluate((dialog) => ({
       overflow: dialog.scrollWidth > dialog.clientWidth + 1,
-      optionsOverflow: (() => {
-        const options = dialog.querySelector("#resultNextOptions");
-        return options.scrollWidth > options.clientWidth + 1;
-      })(),
       actions: [...dialog.querySelectorAll("#resultActions > button")].map((button) => {
         const rect = button.getBoundingClientRect();
         return { width: rect.width, height: rect.height, overflow: button.scrollWidth > button.clientWidth + 1 };
       })
     }));
     expect(resultLayout.overflow).toBe(false);
-    expect(resultLayout.optionsOverflow).toBe(false);
     expect(resultLayout.actions).toHaveLength(3);
     expect(resultLayout.actions.every((button) => button.width >= 44 && button.height >= 44 && !button.overflow)).toBe(true);
   });

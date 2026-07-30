@@ -1,0 +1,991 @@
+/*
+ * Constellore cinematic gate
+ *
+ * This module is intentionally opt-in. The full-screen gate expects a direct
+ * child of <body>; dialog companions only activate when their classes are added.
+ */
+
+:root {
+  --cosmic-gate-art: url("./art/transitions/cosmic-gate-v2-md.webp");
+}
+
+@media (orientation: landscape) and (width >= 2200px),
+  (orientation: landscape) and (width >= 900px) and (resolution >= 1.5dppx) {
+  :root {
+    --cosmic-gate-art: url("./art/transitions/cosmic-gate-v2-lg.webp");
+  }
+}
+
+@media (orientation: portrait) {
+  :root {
+    --cosmic-gate-art: url("./art/transitions/cosmic-gate-v2-portrait.webp");
+  }
+}
+
+#cosmicGate {
+  --gate-accent: #8defff;
+  --gate-accent-2: #ae8cff;
+  --gate-warm: #f6c879;
+  --gate-ink: #050914;
+  --gate-close-time: 720ms;
+  --gate-open-time: 760ms;
+  --gate-ease-in: cubic-bezier(.72, 0, .22, 1);
+  --gate-ease-out: cubic-bezier(.16, .76, .2, 1);
+  position: fixed;
+  z-index: 2147483000;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  isolation: isolate;
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+  color: #f8fbff;
+  background: var(--gate-ink);
+  font-family: Manrope, Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: 15px;
+  line-height: 1.45;
+  contain: layout paint;
+}
+
+#cosmicGate[hidden] {
+  display: none !important;
+}
+
+#cosmicGate:is(
+  [data-phase="primed"],
+  [data-phase="closing"],
+  [data-phase="closed"],
+  [data-phase="opening"]
+) {
+  visibility: visible;
+  opacity: 1;
+  pointer-events: auto;
+}
+
+body.transition-active {
+  overflow: hidden;
+  overscroll-behavior: none;
+  touch-action: none;
+}
+
+#cosmicGate[data-kind="intro"] {
+  --gate-accent: #a8f3ff;
+  --gate-accent-2: #a58bff;
+  --gate-close-time: 900ms;
+  --gate-open-time: 1250ms;
+}
+
+#cosmicGate[data-kind="enter"] {
+  --gate-accent: #6de8ff;
+  --gate-accent-2: #a58cff;
+  --gate-close-time: 1050ms;
+  --gate-open-time: 1150ms;
+}
+
+#cosmicGate[data-kind="pause"] {
+  --gate-accent: #75d9d6;
+  --gate-accent-2: #789bbd;
+}
+
+#cosmicGate[data-kind="resume"] {
+  --gate-accent: #80f4e0;
+  --gate-accent-2: #6dd7ff;
+}
+
+#cosmicGate[data-kind="victory"] {
+  --gate-accent: #ffe4a1;
+  --gate-accent-2: #ed9e48;
+  --gate-warm: #fff0b7;
+  --gate-close-time: 820ms;
+}
+
+#cosmicGate[data-kind="exit"] {
+  --gate-accent: #f4b27d;
+  --gate-accent-2: #a77dbb;
+}
+
+.cosmic-gate__door,
+.cosmic-door {
+  position: absolute;
+  z-index: 1;
+  top: 0;
+  bottom: 0;
+  width: calc(50% + 2px);
+  overflow: hidden;
+  background: #070b18;
+  box-shadow: 0 0 70px rgba(0, 0, 0, .72);
+  will-change: transform;
+  transition-property: transform;
+  transition-duration: var(--gate-open-time);
+  transition-timing-function: var(--gate-ease-out);
+}
+
+.cosmic-gate__door::before,
+.cosmic-door::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 100vw;
+  min-width: 100dvw;
+  background:
+    radial-gradient(circle at 50% 52%, transparent 0 17%, rgba(2, 4, 12, .12) 31%, rgba(2, 4, 12, .5) 100%),
+    var(--cosmic-gate-art) center / cover no-repeat;
+  filter: saturate(.96) brightness(.72) contrast(1.08);
+}
+
+.cosmic-gate__door::after,
+.cosmic-door::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  opacity: .92;
+  background:
+    linear-gradient(90deg, rgba(3, 7, 17, .42), transparent 26%, transparent 74%, rgba(3, 7, 17, .5)),
+    repeating-linear-gradient(0deg, transparent 0 46px, color-mix(in srgb, var(--gate-accent) 8%, transparent) 47px, transparent 48px),
+    radial-gradient(circle at 50% 50%, color-mix(in srgb, var(--gate-accent-2) 7%, transparent), transparent 57%);
+  mix-blend-mode: screen;
+  pointer-events: none;
+}
+
+.cosmic-gate__door--left,
+.cosmic-door--left {
+  left: 0;
+  border-right: 1px solid color-mix(in srgb, var(--gate-accent) 40%, transparent);
+  transform: translate3d(-102%, 0, 0);
+}
+
+.cosmic-gate__door--left::before,
+.cosmic-door--left::before {
+  left: 0;
+}
+
+.cosmic-gate__door--right,
+.cosmic-door--right {
+  right: 0;
+  border-left: 1px solid color-mix(in srgb, var(--gate-accent-2) 42%, transparent);
+  transform: translate3d(102%, 0, 0);
+}
+
+.cosmic-gate__door--right::before,
+.cosmic-door--right::before {
+  right: 0;
+}
+
+#cosmicGate:is([data-phase="closing"], [data-phase="closed"]) :is(
+  .cosmic-gate__door--left,
+  .cosmic-gate__door--right,
+  .cosmic-door--left,
+  .cosmic-door--right
+) {
+  transform: translate3d(0, 0, 0);
+  transition-duration: var(--gate-close-time);
+  transition-timing-function: var(--gate-ease-in);
+}
+
+#cosmicGate[data-phase="primed"] :is(
+  .cosmic-gate__door--left,
+  .cosmic-gate__door--right,
+  .cosmic-door--left,
+  .cosmic-door--right
+) {
+  transform: translate3d(0, 0, 0);
+  transition: none;
+}
+
+#cosmicGate[data-phase="opening"] :is(.cosmic-gate__door--left, .cosmic-door--left) {
+  transform: translate3d(-102%, 0, 0);
+}
+
+#cosmicGate[data-phase="opening"] :is(.cosmic-gate__door--right, .cosmic-door--right) {
+  transform: translate3d(102%, 0, 0);
+}
+
+#cosmicGate[data-kind="victory"] :is(.cosmic-gate__door, .cosmic-door)::before {
+  filter: saturate(1.12) brightness(.82) contrast(1.06);
+}
+
+.cosmic-gate__particles {
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+  background-image:
+    radial-gradient(circle at 13% 24%, var(--gate-accent) 0 1px, transparent 1.8px),
+    radial-gradient(circle at 77% 18%, var(--gate-warm) 0 1px, transparent 1.8px),
+    radial-gradient(circle at 24% 76%, #fff 0 1px, transparent 1.6px),
+    radial-gradient(circle at 88% 69%, var(--gate-accent-2) 0 1px, transparent 1.8px);
+  background-size: 151px 151px, 211px 211px, 127px 127px, 181px 181px;
+  transition: opacity 260ms ease;
+}
+
+.cosmic-gate__particle {
+  --particle-x: 0px;
+  --particle-y: -70px;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  color: var(--gate-accent);
+  background: currentColor;
+  box-shadow: 0 0 11px 3px currentColor;
+  animation: cosmic-gate-particle 1.7s ease-in-out infinite alternate;
+}
+
+.cosmic-gate__particle:nth-child(1) { --particle-x: -34vw; --particle-y: -27vh; }
+.cosmic-gate__particle:nth-child(2) { --particle-x: 31vw; --particle-y: -19vh; color: var(--gate-warm); animation-delay: -1s; }
+.cosmic-gate__particle:nth-child(3) { --particle-x: -27vw; --particle-y: 28vh; color: var(--gate-accent-2); animation-delay: -.35s; }
+.cosmic-gate__particle:nth-child(4) { --particle-x: 37vw; --particle-y: 25vh; animation-delay: -1.4s; }
+.cosmic-gate__particle:nth-child(5) { --particle-x: 12vw; --particle-y: -35vh; color: #fff; animation-delay: -.75s; }
+.cosmic-gate__particle:nth-child(n+6) { display: none; }
+
+#cosmicGate:is([data-phase="closing"], [data-phase="closed"]) .cosmic-gate__particles {
+  opacity: .76;
+  transition-delay: 240ms;
+}
+
+.cosmic-gate__seam {
+  position: absolute;
+  z-index: 3;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  opacity: 0;
+  transform: translateX(-50%) scaleY(.16);
+  background: linear-gradient(transparent 3%, var(--gate-accent) 28%, #fff 50%, var(--gate-accent-2) 72%, transparent 97%);
+  box-shadow:
+    0 0 8px var(--gate-accent),
+    0 0 28px color-mix(in srgb, var(--gate-accent) 62%, transparent),
+    0 0 70px color-mix(in srgb, var(--gate-accent-2) 45%, transparent);
+  transition:
+    opacity 200ms ease,
+    transform 440ms var(--gate-ease-out);
+  pointer-events: none;
+}
+
+.cosmic-gate__seal {
+  position: absolute;
+  z-index: 4;
+  left: 50%;
+  top: 50%;
+  width: clamp(82px, 10vw, 136px);
+  aspect-ratio: 1;
+  border: 1px solid color-mix(in srgb, var(--gate-accent) 78%, white);
+  border-radius: 50%;
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(.46) rotate(-38deg);
+  background:
+    radial-gradient(circle, rgba(4, 8, 19, .96) 0 22%, transparent 23%),
+    conic-gradient(from 45deg, transparent, color-mix(in srgb, var(--gate-accent) 54%, transparent), transparent 22%, color-mix(in srgb, var(--gate-accent-2) 58%, transparent), transparent 48%, color-mix(in srgb, var(--gate-warm) 45%, transparent), transparent 76%);
+  box-shadow:
+    inset 0 0 25px color-mix(in srgb, var(--gate-accent-2) 30%, transparent),
+    0 0 0 10px rgba(4, 8, 18, .36),
+    0 0 42px color-mix(in srgb, var(--gate-accent) 45%, transparent);
+  transition:
+    opacity 180ms ease,
+    transform 520ms var(--gate-ease-out);
+  pointer-events: none;
+}
+
+.cosmic-gate__seal::before,
+.cosmic-gate__seal::after {
+  content: "";
+  position: absolute;
+  inset: 13%;
+  border: 1px dashed color-mix(in srgb, var(--gate-accent-2) 62%, transparent);
+  border-radius: 50%;
+}
+
+.cosmic-gate__seal::after {
+  inset: 35%;
+  border-style: solid;
+  background: var(--gate-accent);
+  box-shadow: 0 0 18px var(--gate-accent);
+}
+
+#cosmicGate:is([data-phase="closing"], [data-phase="closed"]) .cosmic-gate__seam {
+  opacity: .9;
+  transform: translateX(-50%) scaleY(1);
+  transition-delay: 310ms;
+}
+
+#cosmicGate:is([data-phase="closing"], [data-phase="closed"]) .cosmic-gate__seal {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1) rotate(0);
+  transition-delay: 330ms;
+}
+
+#cosmicGate[data-phase="opening"] :is(.cosmic-gate__seam, .cosmic-gate__seal) {
+  opacity: 0;
+  transition-delay: 0ms;
+}
+
+.cosmic-gate__content {
+  position: relative;
+  z-index: 5;
+  width: min(560px, calc(100% - 40px));
+  padding: max(20px, env(safe-area-inset-top)) max(20px, env(safe-area-inset-right)) max(20px, env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left));
+  opacity: 0;
+  transform: translateY(15px) scale(.97);
+  text-align: center;
+  text-wrap: balance;
+  transition:
+    opacity 220ms ease,
+    transform 340ms var(--gate-ease-out);
+  pointer-events: none;
+}
+
+.cosmic-gate__panel {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--gate-accent) 42%, rgba(255, 255, 255, .12));
+  border-radius: 22px;
+  padding: clamp(22px, 4vw, 38px);
+  background: linear-gradient(145deg, rgba(8, 13, 28, .9), rgba(12, 9, 28, .78));
+  box-shadow:
+    inset 0 1px rgba(255, 255, 255, .08),
+    0 22px 70px rgba(0, 0, 0, .5),
+    0 0 55px color-mix(in srgb, var(--gate-accent-2) 16%, transparent);
+  backdrop-filter: blur(15px);
+}
+
+.cosmic-gate__panel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  opacity: .5;
+  background:
+    linear-gradient(110deg, transparent 18%, color-mix(in srgb, var(--gate-accent) 11%, transparent), transparent 72%),
+    radial-gradient(circle at 50% 0, color-mix(in srgb, var(--gate-accent-2) 18%, transparent), transparent 56%);
+  pointer-events: none;
+}
+
+.cosmic-gate__eyebrow,
+.cosmic-gate__label,
+.cosmic-gate__copy {
+  position: relative;
+  z-index: 1;
+  margin: 0;
+}
+
+.cosmic-gate__eyebrow {
+  color: var(--gate-accent);
+  font: 700 15px/1.4 "DM Mono", Consolas, monospace;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+
+.cosmic-gate__label {
+  margin-top: 8px;
+  color: #fff;
+  font-size: clamp(24px, 4vw, 44px);
+  font-weight: 780;
+  letter-spacing: -.035em;
+  line-height: 1.06;
+  text-shadow: 0 0 28px color-mix(in srgb, var(--gate-accent) 34%, transparent);
+}
+
+.cosmic-gate__copy {
+  margin-top: 10px;
+  color: rgba(235, 241, 255, .76);
+  font-size: 15px;
+  line-height: 1.55;
+}
+
+#cosmicGate[data-content="quote"] .cosmic-gate__panel {
+  padding-block: clamp(28px, 5vw, 46px);
+}
+
+#cosmicGate[data-content="quote"] .cosmic-gate__eyebrow {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#cosmicGate[data-content="quote"] .cosmic-gate__label {
+  max-width: 19ch;
+  margin: 12px auto 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(25px, 3.5vw, 39px);
+  font-weight: 600;
+  letter-spacing: -.025em;
+  line-height: 1.18;
+}
+
+#cosmicGate[data-content="quote"] .cosmic-gate__copy {
+  margin-top: 14px;
+  color: color-mix(in srgb, var(--gate-accent) 66%, white);
+  font: 700 15px/1.45 "DM Mono", Consolas, monospace;
+  letter-spacing: .08em;
+}
+
+#cosmicGate:is([data-phase="closing"], [data-phase="closed"]) .cosmic-gate__content {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  transition-delay: 390ms;
+}
+
+#cosmicGate[data-phase="opening"] .cosmic-gate__content {
+  opacity: 0;
+  transform: translateY(-10px) scale(.98);
+  transition-delay: 0ms;
+}
+
+#cosmicGate[data-content="hidden"] .cosmic-gate__content {
+  opacity: 0;
+  transform: translateY(-8px) scale(.985);
+  transition-delay: 0ms;
+}
+
+/* Add these classes to native pause/result dialogs for a matching local portal. */
+dialog.cosmic-dialog-transition {
+  --dialog-cosmic-accent: #83e9e7;
+  --dialog-cosmic-accent-2: #9f88ff;
+  overflow: hidden;
+  font-size: 15px;
+  transform-origin: 50% 48%;
+  box-shadow:
+    0 30px 100px rgba(0, 0, 0, .62),
+    0 0 0 1px color-mix(in srgb, var(--dialog-cosmic-accent) 30%, transparent),
+    0 0 65px color-mix(in srgb, var(--dialog-cosmic-accent-2) 16%, transparent);
+}
+
+dialog.cosmic-dialog-transition::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  opacity: .58;
+  background:
+    radial-gradient(circle at 8% 8%, color-mix(in srgb, var(--dialog-cosmic-accent) 18%, transparent), transparent 38%),
+    radial-gradient(circle at 92% 92%, color-mix(in srgb, var(--dialog-cosmic-accent-2) 20%, transparent), transparent 42%);
+  pointer-events: none;
+}
+
+dialog.cosmic-dialog-transition::backdrop {
+  background:
+    radial-gradient(circle at 50% 48%, color-mix(in srgb, var(--dialog-cosmic-accent-2) 15%, transparent), transparent 38%),
+    rgba(2, 5, 13, .76);
+  backdrop-filter: blur(11px) saturate(.76);
+}
+
+dialog.cosmic-dialog-transition--pause {
+  --dialog-cosmic-accent: #77e0dc;
+  --dialog-cosmic-accent-2: #6f94b7;
+}
+
+dialog.cosmic-dialog-transition--result {
+  --dialog-cosmic-accent: #ffe19a;
+  --dialog-cosmic-accent-2: #c985ff;
+}
+
+dialog.cosmic-dialog-transition[data-phase="opening"] {
+  animation: cosmic-dialog-arrive 420ms var(--gate-ease-out, cubic-bezier(.16, .76, .2, 1)) both;
+}
+
+dialog.cosmic-dialog-transition[data-phase="opening"]::backdrop {
+  animation: cosmic-dialog-backdrop-in 300ms ease-out both;
+}
+
+dialog.cosmic-dialog-transition[data-phase="closing"] {
+  pointer-events: none;
+  animation: cosmic-dialog-leave 260ms cubic-bezier(.5, 0, 1, .5) both;
+}
+
+dialog.cosmic-dialog-transition[data-phase="closing"]::backdrop {
+  animation: cosmic-dialog-backdrop-out 260ms ease-in both;
+}
+
+dialog.cosmic-dialog-transition[data-phase="closed"] {
+  opacity: 1;
+  transform: none;
+}
+
+dialog.cosmic-dialog-transition :is(small, .eyebrow, .kicker) {
+  font-size: 15px;
+}
+
+.cosmic-gate__first-discovery {
+  position: absolute;
+  z-index: 7;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  isolation: isolate;
+  color: #fff4c9;
+  background:
+    radial-gradient(circle at 50% 50%, rgba(255, 224, 145, .22), transparent 20%),
+    radial-gradient(circle at 50% 50%, rgba(112, 225, 232, .12), transparent 48%);
+  pointer-events: none;
+}
+
+.cosmic-gate__first-discovery[hidden] {
+  display: none;
+}
+
+.cosmic-gate__first-discovery::before,
+.cosmic-gate__first-discovery::after {
+  content: "";
+  position: absolute;
+  inset: -28%;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.cosmic-gate__first-discovery::before {
+  opacity: 0;
+  background: repeating-conic-gradient(
+    from 7deg,
+    transparent 0 8deg,
+    rgba(255, 233, 171, .13) 9deg 10deg,
+    transparent 11deg 20deg
+  );
+}
+
+.cosmic-gate__first-discovery::after {
+  inset: 0;
+  opacity: 0;
+  background:
+    radial-gradient(circle at 50% 50%, rgba(255, 255, 255, .9) 0 1px, transparent 2px),
+    radial-gradient(circle at 15% 22%, rgba(255, 226, 151, .95) 0 1px, transparent 2px),
+    radial-gradient(circle at 82% 28%, rgba(120, 231, 236, .9) 0 1px, transparent 2px),
+    radial-gradient(circle at 74% 82%, rgba(205, 150, 255, .9) 0 1px, transparent 2px),
+    radial-gradient(circle at 24% 76%, rgba(255, 255, 255, .82) 0 1px, transparent 2px);
+  background-size: 43px 43px, 89px 89px, 113px 113px, 137px 137px, 71px 71px;
+}
+
+.cosmic-gate__nova {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: min(42vmin, 430px);
+  aspect-ratio: 1;
+  border: 1px solid rgba(255, 232, 166, .76);
+  border-radius: 50%;
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(.06);
+  background:
+    radial-gradient(circle, rgba(255, 255, 255, .98) 0 2%, rgba(255, 225, 143, .74) 4%, rgba(122, 225, 233, .2) 20%, transparent 58%);
+  box-shadow:
+    0 0 28px rgba(255, 239, 191, .92),
+    0 0 90px rgba(255, 198, 93, .58),
+    0 0 180px rgba(107, 219, 229, .34),
+    inset 0 0 55px rgba(255, 255, 255, .4);
+}
+
+.cosmic-gate__nova::before,
+.cosmic-gate__nova::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 180%;
+  height: 2px;
+  opacity: .75;
+  transform: translate(-50%, -50%);
+  background: linear-gradient(90deg, transparent, rgba(255, 239, 191, .92), transparent);
+  box-shadow: 0 0 18px rgba(255, 225, 143, .82);
+}
+
+.cosmic-gate__nova::after {
+  transform: translate(-50%, -50%) rotate(90deg);
+}
+
+.cosmic-gate__confetti {
+  position: absolute;
+  inset: 0;
+}
+
+.cosmic-gate__first-discovery-particle {
+  --burst-x: 0vmin;
+  --burst-y: 0vmin;
+  --burst-delay: 0ms;
+  --burst-duration: 900ms;
+  --burst-size: 8px;
+  --burst-spin: 180deg;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: var(--burst-size);
+  height: var(--burst-size);
+  opacity: 0;
+  color: #ffe39b;
+  transform: translate(-50%, -50%) scale(.2);
+  filter: drop-shadow(0 0 8px currentColor);
+  will-change: transform, opacity;
+}
+
+.cosmic-gate__first-discovery-particle[data-tone="cyan"] {
+  color: #79e7eb;
+}
+
+.cosmic-gate__first-discovery-particle[data-tone="violet"] {
+  color: #d49aff;
+}
+
+.cosmic-gate__first-discovery-particle[data-tone="white"] {
+  color: #fff;
+}
+
+.cosmic-gate__first-discovery-particle--star {
+  width: auto;
+  height: auto;
+  font-size: calc(var(--burst-size) * 1.8);
+  line-height: 1;
+}
+
+.cosmic-gate__first-discovery-particle--dust {
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 12px currentColor;
+}
+
+.cosmic-gate__first-discovery-particle--comet {
+  width: calc(var(--burst-size) * 3.2);
+  height: max(2px, calc(var(--burst-size) * .28));
+  border-radius: 999px;
+  background: linear-gradient(90deg, transparent, currentColor);
+  transform-origin: 100% 50%;
+}
+
+.cosmic-gate__first-discovery-title {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  justify-items: center;
+  gap: 7px;
+  opacity: 0;
+  transform: translateY(10px) scale(.86);
+  text-align: center;
+  text-shadow: 0 0 24px rgba(255, 225, 143, .76), 0 2px 18px rgba(0, 0, 0, .9);
+}
+
+.cosmic-gate__first-discovery-title span,
+.cosmic-gate__first-discovery-title small {
+  color: #8be9eb;
+  font: 700 15px "DM Mono", ui-monospace, monospace;
+  letter-spacing: .18em;
+}
+
+.cosmic-gate__first-discovery-title strong {
+  color: #fff3c5;
+  font: 700 clamp(42px, 8vw, 84px) "Cormorant Garamond", Georgia, serif;
+  line-height: .92;
+  letter-spacing: .035em;
+}
+
+.cosmic-gate__first-discovery-title strong i {
+  font-style: normal;
+  font-size: .62em;
+}
+
+.cosmic-gate__first-discovery-title small {
+  color: #ffe19a;
+  letter-spacing: .11em;
+}
+
+#cosmicGate[data-celebration="first-orbit"] .cosmic-gate__first-discovery {
+  animation: cosmic-first-discovery-wash 1.05s ease-out both;
+}
+
+#cosmicGate[data-celebration="first-orbit"] .cosmic-gate__first-discovery::before {
+  animation: cosmic-first-discovery-rays 1.05s ease-out both;
+}
+
+#cosmicGate[data-celebration="first-orbit"] .cosmic-gate__first-discovery::after {
+  animation: cosmic-first-discovery-stars 1.05s ease-out both;
+}
+
+#cosmicGate[data-celebration="first-orbit"] .cosmic-gate__nova {
+  animation: cosmic-first-discovery-nova 1.05s cubic-bezier(.16, .84, .2, 1) both;
+}
+
+#cosmicGate[data-celebration="first-orbit"] .cosmic-gate__first-discovery-particle {
+  animation: cosmic-first-discovery-particle var(--burst-duration) cubic-bezier(.14, .68, .2, 1) var(--burst-delay) both;
+}
+
+#cosmicGate[data-celebration="first-orbit"] .cosmic-gate__first-discovery-title {
+  animation: cosmic-first-discovery-title 1.05s cubic-bezier(.16, .76, .2, 1) both;
+}
+
+@keyframes cosmic-gate-particle {
+  from { transform: translate3d(var(--particle-x), var(--particle-y), 0) scale(.7); opacity: .35; }
+  to { transform: translate3d(var(--particle-x), calc(var(--particle-y) - 14px), 0) scale(1.15); opacity: 1; }
+}
+
+@keyframes cosmic-first-discovery-wash {
+  0% { opacity: 0; background-color: rgba(255, 255, 255, 0); }
+  15% { opacity: 1; background-color: rgba(255, 244, 204, .16); }
+  100% { opacity: 1; background-color: rgba(5, 10, 24, .18); }
+}
+
+@keyframes cosmic-first-discovery-rays {
+  0% { opacity: 0; transform: rotate(-8deg) scale(.45); }
+  30% { opacity: .9; }
+  100% { opacity: .15; transform: rotate(13deg) scale(1.08); }
+}
+
+@keyframes cosmic-first-discovery-stars {
+  0% { opacity: 0; transform: scale(.72); }
+  24% { opacity: 1; }
+  100% { opacity: .74; transform: scale(1.05); }
+}
+
+@keyframes cosmic-first-discovery-nova {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(.04); }
+  24% { opacity: 1; }
+  68% { opacity: .84; transform: translate(-50%, -50%) scale(1); }
+  100% { opacity: .16; transform: translate(-50%, -50%) scale(1.55); }
+}
+
+@keyframes cosmic-first-discovery-particle {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) rotate(0deg) scale(.15);
+  }
+  16% { opacity: 1; }
+  76% { opacity: .95; }
+  100% {
+    opacity: 0;
+    transform:
+      translate(
+        calc(-50% + var(--burst-x)),
+        calc(-50% + var(--burst-y))
+      )
+      rotate(var(--burst-spin))
+      scale(1);
+  }
+}
+
+@keyframes cosmic-first-discovery-title {
+  0% { opacity: 0; transform: translateY(14px) scale(.8); filter: blur(9px); }
+  24% { opacity: 1; transform: translateY(-2px) scale(1.04); filter: blur(0); }
+  72% { opacity: 1; transform: none; filter: none; }
+  100% { opacity: .9; transform: translateY(-2px) scale(.99); filter: none; }
+}
+
+@keyframes cosmic-dialog-arrive {
+  from { opacity: 0; transform: translateY(22px) scale(.94); filter: blur(8px); }
+  62% { opacity: 1; transform: translateY(-2px) scale(1.008); filter: blur(0); }
+  to { opacity: 1; transform: none; filter: none; }
+}
+
+@keyframes cosmic-dialog-leave {
+  from { opacity: 1; transform: none; filter: none; }
+  to { opacity: 0; transform: translateY(12px) scale(.97); filter: blur(5px); }
+}
+
+@keyframes cosmic-dialog-backdrop-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes cosmic-dialog-backdrop-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@media (max-width: 600px) {
+  .cosmic-gate__door::before,
+  .cosmic-door::before {
+    background-position: 50% 48%;
+  }
+
+  .cosmic-gate__content {
+    width: min(100% - 24px, 470px);
+    padding: max(16px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+  }
+
+  .cosmic-gate__panel {
+    border-radius: 18px;
+    padding: 22px 18px;
+  }
+
+  .cosmic-gate__label {
+    font-size: clamp(25px, 9vw, 38px);
+  }
+
+  #cosmicGate[data-content="quote"] .cosmic-gate__label {
+    font-size: clamp(23px, 7.4vw, 34px);
+  }
+
+  .cosmic-gate__seal {
+    width: clamp(76px, 24vw, 108px);
+  }
+
+  .cosmic-gate__first-discovery-title {
+    gap: 5px;
+    padding-inline: 14px;
+  }
+
+  .cosmic-gate__first-discovery-title strong {
+    font-size: clamp(40px, 15vw, 62px);
+  }
+}
+
+@media (max-height: 520px) and (orientation: landscape) {
+  .cosmic-gate__content {
+    width: min(620px, calc(100% - 96px));
+    padding: max(10px, env(safe-area-inset-top)) max(34px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(34px, env(safe-area-inset-left));
+  }
+
+  .cosmic-gate__panel {
+    border-radius: 16px;
+    padding: 15px 24px;
+  }
+
+  .cosmic-gate__label {
+    margin-top: 4px;
+    font-size: clamp(22px, 5.5vh, 32px);
+  }
+
+  .cosmic-gate__copy {
+    margin-top: 5px;
+  }
+
+  #cosmicGate[data-content="quote"] .cosmic-gate__panel {
+    padding-block: 18px;
+  }
+
+  #cosmicGate[data-content="quote"] .cosmic-gate__label {
+    max-width: 26ch;
+    margin-top: 6px;
+    font-size: clamp(20px, 5.2vh, 29px);
+    line-height: 1.12;
+  }
+
+  #cosmicGate[data-content="quote"] .cosmic-gate__copy {
+    margin-top: 7px;
+  }
+
+  .cosmic-gate__seal {
+    width: clamp(66px, 18vh, 94px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #cosmicGate,
+  #cosmicGate *,
+  dialog.cosmic-dialog-transition {
+    animation-duration: .01ms !important;
+    animation-delay: 0ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: .01ms !important;
+    transition-delay: 0ms !important;
+  }
+
+  #cosmicGate .cosmic-gate__confetti,
+  #cosmicGate .cosmic-gate__first-discovery::before {
+    display: none;
+  }
+
+  #cosmicGate .cosmic-gate__first-discovery,
+  #cosmicGate .cosmic-gate__first-discovery::after,
+  #cosmicGate .cosmic-gate__nova,
+  #cosmicGate .cosmic-gate__first-discovery-title {
+    animation: none !important;
+  }
+
+  #cosmicGate .cosmic-gate__first-discovery {
+    opacity: 1;
+  }
+
+  #cosmicGate .cosmic-gate__first-discovery::after {
+    opacity: .6;
+  }
+
+  #cosmicGate .cosmic-gate__nova {
+    opacity: .55;
+    transform: translate(-50%, -50%) scale(1);
+  }
+
+  #cosmicGate .cosmic-gate__first-discovery-title {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+}
+
+@media (forced-colors: active) {
+  #cosmicGate {
+    --gate-accent: Highlight;
+    --gate-accent-2: Highlight;
+    --gate-warm: CanvasText;
+    color: CanvasText;
+    background: Canvas;
+    forced-color-adjust: none;
+  }
+
+  .cosmic-gate__door,
+  .cosmic-door,
+  .cosmic-gate__panel {
+    border-color: CanvasText;
+    background: Canvas;
+    box-shadow: none;
+  }
+
+  .cosmic-gate__door::before,
+  .cosmic-door::before,
+  .cosmic-gate__door::after,
+  .cosmic-door::after,
+  .cosmic-gate__particles,
+  .cosmic-gate__nova,
+  .cosmic-gate__confetti,
+  .cosmic-gate__first-discovery::before,
+  .cosmic-gate__first-discovery::after,
+  .cosmic-gate__panel::before {
+    display: none;
+  }
+
+  .cosmic-gate__first-discovery {
+    color: CanvasText;
+    background: Canvas;
+  }
+
+  .cosmic-gate__first-discovery-title,
+  .cosmic-gate__first-discovery-title :is(span, strong, small) {
+    color: CanvasText;
+    text-shadow: none;
+  }
+
+  .cosmic-gate__seam,
+  .cosmic-gate__seal,
+  .cosmic-gate__seal::after {
+    color: HighlightText;
+    border-color: Highlight;
+    background: Highlight;
+    box-shadow: none;
+  }
+
+  .cosmic-gate__eyebrow,
+  .cosmic-gate__label,
+  .cosmic-gate__copy {
+    color: CanvasText;
+    text-shadow: none;
+  }
+
+  dialog.cosmic-dialog-transition {
+    border: 2px solid CanvasText;
+    color: CanvasText;
+    background: Canvas;
+    box-shadow: none;
+    forced-color-adjust: none;
+  }
+
+  dialog.cosmic-dialog-transition::after {
+    display: none;
+  }
+
+  dialog.cosmic-dialog-transition::backdrop {
+    background: Canvas;
+  }
+}

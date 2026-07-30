@@ -5,10 +5,20 @@ import { server } from "../server.mjs";
 
 test("cloud account, restore, and protected operator contracts are enforced over HTTP", async (t) => {
   const previousAdminToken = process.env.CONSTELLORE_ADMIN_TOKEN;
+  const previousCloudProfile = process.env.CONSTELLORE_CLOUD_PROFILE_ENABLED;
+  const previousCheckout = process.env.NEBULA_CHECKOUT_URL;
+  const previousFulfillment = process.env.CONSTELLORE_COMMERCE_FULFILLMENT_READY;
   delete process.env.CONSTELLORE_ADMIN_TOKEN;
+  delete process.env.CONSTELLORE_CLOUD_PROFILE_ENABLED;
   t.after(() => {
     if (previousAdminToken === undefined) delete process.env.CONSTELLORE_ADMIN_TOKEN;
     else process.env.CONSTELLORE_ADMIN_TOKEN = previousAdminToken;
+    if (previousCloudProfile === undefined) delete process.env.CONSTELLORE_CLOUD_PROFILE_ENABLED;
+    else process.env.CONSTELLORE_CLOUD_PROFILE_ENABLED = previousCloudProfile;
+    if (previousCheckout === undefined) delete process.env.NEBULA_CHECKOUT_URL;
+    else process.env.NEBULA_CHECKOUT_URL = previousCheckout;
+    if (previousFulfillment === undefined) delete process.env.CONSTELLORE_COMMERCE_FULFILLMENT_READY;
+    else process.env.CONSTELLORE_COMMERCE_FULFILLMENT_READY = previousFulfillment;
   });
 
   server.listen(0, "127.0.0.1");
@@ -53,6 +63,13 @@ test("cloud account, restore, and protected operator contracts are enforced over
   assert.equal(config.payload.testStoreEnabled, false, "the test store must require an explicit opt-in flag");
   assert.equal(config.payload.commercePolicy.starCreditsSoldForCash, false);
   assert.deepEqual(config.payload.products.map((product) => product.id), ["constellore_founders_pass"]);
+  assert.equal(config.payload.cloudProfileEnabled, false);
+  assert.equal(config.payload.storageCommerceSafe, false);
+  process.env.NEBULA_CHECKOUT_URL = "https://checkout.example.test/founder";
+  process.env.CONSTELLORE_COMMERCE_FULFILLMENT_READY = "true";
+  const unsafeStorageConfig = await request("/api/config", { authenticated: false });
+  assert.equal(unsafeStorageConfig.payload.billingEnabled, false, "memory/JSON persistence must never enable real-money checkout");
+  assert.equal(unsafeStorageConfig.payload.fulfillmentReady, false);
 
   const registration = await request("/api/player/register", { method: "POST", authenticated: false });
   assert.equal(registration.response.status, 201);
@@ -65,6 +82,10 @@ test("cloud account, restore, and protected operator contracts are enforced over
   assert.equal(defaultTestGrant.response.status, 403);
   assert.equal(defaultTestGrant.payload.code, "test_store_disabled");
 
+  const disabledProfile = await request("/api/player/profile");
+  assert.equal(disabledProfile.response.status, 404);
+  assert.equal(disabledProfile.payload.code, "cloud_profile_disabled");
+  process.env.CONSTELLORE_CLOUD_PROFILE_ENABLED = "true";
   const initialProfile = await request("/api/player/profile");
   assert.deepEqual(initialProfile.payload, { version: 0, profile: {}, updatedAt: null });
   assert.equal(initialProfile.response.headers.get("cache-control"), "no-store");
@@ -76,13 +97,25 @@ test("cloud account, restore, and protected operator contracts are enforced over
         theme: "void",
         cosmetics: { theme: "void", board: "starlit", trail: "classic", sound: "cosmic" },
         firstOrbit: { seen: true, completed: true },
-        feedbackPreferences: { sound: false, haptics: true, muted: false, volume: 0.75 },
+        feedbackPreferences: {
+          sound: false,
+          music: true,
+          haptics: true,
+          resultDetails: true,
+          muted: false,
+          volume: 0.75,
+          musicVolume: 0.4,
+          sfxVolume: 0.65
+        },
         progression: { stardust: 420, wins: 3, dailyStreak: 2, lastDailyDate: "2026-07-17", dailyCompleted: "2026-07-17", streakShields: 1 }
       }
     }
   });
   assert.equal(updatedProfile.response.status, 200);
   assert.equal(updatedProfile.payload.version, 1);
+  assert.equal(updatedProfile.payload.profile.feedbackPreferences.resultDetails, true);
+  assert.equal(updatedProfile.payload.profile.feedbackPreferences.musicVolume, 0.4);
+  assert.equal(updatedProfile.payload.profile.feedbackPreferences.sfxVolume, 0.65);
   const forbiddenBalance = await request("/api/player/profile", { method: "PUT", body: { version: 1, profile: { credits: 999_999 } } });
   assert.equal(forbiddenBalance.response.status, 400);
   const lockedCosmetic = await request("/api/player/profile", { method: "PUT", body: { version: 1, profile: { cosmetics: { trail: "comet" } } } });
@@ -91,15 +124,46 @@ test("cloud account, restore, and protected operator contracts are enforced over
   const conflict = await request("/api/player/profile", { method: "PUT", body: { version: 0, profile: { theme: "void" } } });
   assert.equal(conflict.response.status, 409);
   assert.equal(conflict.payload.details.current.version, 1);
-  const largeProfile = await request("/api/player/profile", {
+  const invalidMusicVolume = await request("/api/player/profile", {
+    method: "PUT",
+    body: { version: 1, profile: { feedbackPreferences: { musicVolume: 1.01 } } }
+  });
+  assert.equal(invalidMusicVolume.response.status, 400);
+  assert.equal(invalidMusicVolume.payload.code, "invalid_cloud_profile");
+  const invalidSfxVolume = await request("/api/player/profile", {
+    method: "PUT",
+    body: { version: 1, profile: { feedbackPreferences: { sfxVolume: null } } }
+  });
+  assert.equal(invalidSfxVolume.response.status, 400);
+  assert.equal(invalidSfxVolume.payload.code, "invalid_cloud_profile");
+  const legacyProfile = await request("/api/player/profile", {
     method: "PUT",
     body: {
       version: 1,
+      profile: {
+        feedbackPreferences: { sound: true, haptics: false, muted: true, volume: 0.25 }
+      }
+    }
+  });
+  assert.equal(legacyProfile.response.status, 200);
+  assert.equal(legacyProfile.payload.version, 2);
+  assert.deepEqual(legacyProfile.payload.profile.feedbackPreferences, {
+    sound: true,
+    haptics: false,
+    muted: true,
+    volume: 0.25,
+    musicVolume: 0.4,
+    sfxVolume: 0.65
+  });
+  const largeProfile = await request("/api/player/profile", {
+    method: "PUT",
+    body: {
+      version: 2,
       profile: { discovered: Array.from({ length: 700 }, (_, index) => `Discovery-${String(index).padStart(4, "0")}-${"x".repeat(60)}`) }
     }
   });
   assert.equal(largeProfile.response.status, 200, "a valid mature cloud profile may exceed the old 50 KB transport cap");
-  assert.equal(largeProfile.payload.version, 2);
+  assert.equal(largeProfile.payload.version, 3);
 
   const restored = await request("/api/player/restore", { method: "POST", body: {} });
   assert.equal(restored.response.status, 200);

@@ -1,0 +1,2034 @@
+.cosmetics-observatory {
+  --observatory-ink: #f7f4e8;
+  --observatory-muted: #b9c1ce;
+  --observatory-panel: rgba(7, 12, 28, .94);
+  --observatory-panel-soft: rgba(16, 24, 44, .78);
+  --observatory-line: rgba(189, 210, 241, .2);
+  --observatory-line-strong: rgba(215, 228, 250, .4);
+  --observatory-accent: #b9e6ff;
+  --observatory-accent-ink: #06111e;
+  --observatory-gold: #f2cf83;
+  --observatory-focus: #fff4b3;
+  --observatory-radius: 18px;
+  box-sizing: border-box;
+  width: min(1180px, calc(100vw - 24px));
+  max-width: none;
+  height: min(900px, calc(100dvh - 24px));
+  max-height: none;
+  margin: auto;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid rgba(217, 228, 249, .26);
+  border-radius: 24px;
+  color: var(--observatory-ink);
+  background:
+    radial-gradient(circle at 12% 0%, rgba(97, 157, 218, .14), transparent 27rem),
+    linear-gradient(155deg, #0b1223 0%, #070b16 54%, #080d1a 100%);
+  box-shadow:
+    0 40px 100px rgba(0, 0, 0, .64),
+    inset 0 1px 0 rgba(255, 255, 255, .08);
+  color-scheme: dark;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.cosmetics-observatory:not([open]) {
+  display: none;
+}
+
+.cosmetics-observatory::backdrop {
+  background:
+    radial-gradient(circle at 50% 35%, rgba(29, 53, 91, .28), transparent 44rem),
+    rgba(2, 4, 10, .82);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+}
+
+.cosmetics-observatory *,
+.cosmetics-observatory *::before,
+.cosmetics-observatory *::after {
+  box-sizing: border-box;
+}
+
+.cosmetics-observatory button {
+  font: inherit;
+}
+
+.cosmetics-observatory button:focus-visible,
+.cosmetics-observatory [tabindex]:focus-visible {
+  outline: 3px solid var(--observatory-focus);
+  outline-offset: 3px;
+}
+
+.cosmetics-observatory__surface {
+  height: 100%;
+  overflow: auto;
+  scrollbar-color: rgba(185, 230, 255, .48) rgba(6, 10, 21, .5);
+  scrollbar-width: thin;
+}
+
+.cosmetics-observatory[data-preview-mode="true"] .cosmetics-observatory__surface {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  overflow: hidden;
+}
+
+.cosmetics-observatory__header {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 26px clamp(20px, 4vw, 46px) 20px;
+  border-bottom: 1px solid var(--observatory-line);
+  background:
+    linear-gradient(90deg, rgba(17, 28, 51, .84), rgba(9, 15, 29, .5)),
+    repeating-linear-gradient(90deg, transparent 0 90px, rgba(255, 255, 255, .02) 90px 91px);
+}
+
+.cosmetics-observatory__header h1 {
+  margin: 2px 0 7px;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(1.75rem, 4vw, 2.65rem);
+  font-weight: 500;
+  line-height: 1.05;
+  letter-spacing: -.025em;
+}
+
+.cosmetics-observatory__kicker {
+  margin: 0;
+  color: var(--observatory-accent);
+  font-size: .7rem;
+  font-weight: 800;
+  letter-spacing: .19em;
+  text-transform: uppercase;
+}
+
+.cosmetics-observatory__lede {
+  max-width: 67ch;
+  margin: 0;
+  color: var(--observatory-muted);
+  font-size: .92rem;
+  line-height: 1.55;
+}
+
+.cosmetics-observatory__close {
+  flex: 0 0 auto;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 9px 14px;
+  border: 1px solid var(--observatory-line);
+  border-radius: 999px;
+  color: var(--observatory-ink);
+  background: rgba(255, 255, 255, .04);
+  cursor: pointer;
+}
+
+.cosmetics-observatory__close:hover {
+  border-color: var(--observatory-line-strong);
+  background: rgba(255, 255, 255, .09);
+}
+
+.cosmetics-observatory__stage {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 18px;
+  padding: 22px clamp(20px, 4vw, 46px);
+  border-bottom: 1px solid var(--observatory-line);
+}
+
+.cosmetics-observatory__preview {
+  --preview-a: #82cfff;
+  --preview-b: #ddb979;
+  min-width: 0;
+}
+
+:is(
+  .cosmetics-observatory__preview,
+  .cosmetics-observatory__card-visual,
+  .cosmetics-observatory__mini-board,
+  .cosmetics-observatory__mini-plaque,
+  .cosmetics-observatory__mini-trail,
+  .cosmetics-observatory__scene-preview
+).is-aurora {
+  --preview-a: #8fffe4;
+  --preview-b: #82aaff;
+}
+
+:is(
+  .cosmetics-observatory__preview,
+  .cosmetics-observatory__card-visual,
+  .cosmetics-observatory__mini-board,
+  .cosmetics-observatory__mini-plaque,
+  .cosmetics-observatory__mini-trail,
+  .cosmetics-observatory__scene-preview
+).is-solar {
+  --preview-a: #ffbd5c;
+  --preview-b: #f46c3d;
+}
+
+:is(
+  .cosmetics-observatory__preview,
+  .cosmetics-observatory__card-visual,
+  .cosmetics-observatory__mini-board,
+  .cosmetics-observatory__mini-plaque,
+  .cosmetics-observatory__mini-trail,
+  .cosmetics-observatory__scene-preview
+).is-prism {
+  --preview-a: #ff90d8;
+  --preview-b: #80e8ff;
+}
+
+.cosmetics-observatory__preview.is-lunar,
+:is(
+  .cosmetics-observatory__card-visual,
+  .cosmetics-observatory__mini-board,
+  .cosmetics-observatory__mini-plaque,
+  .cosmetics-observatory__mini-trail,
+  .cosmetics-observatory__scene-preview
+).is-lunar {
+  --preview-a: #c9f7e8;
+  --preview-b: #b8a9ff;
+}
+
+.cosmetics-observatory__preview.is-eclipse,
+:is(
+  .cosmetics-observatory__card-visual,
+  .cosmetics-observatory__mini-board,
+  .cosmetics-observatory__mini-plaque,
+  .cosmetics-observatory__mini-trail,
+  .cosmetics-observatory__scene-preview
+).is-eclipse {
+  --preview-a: #f6d58a;
+  --preview-b: #9a72ff;
+}
+
+:is(
+  .cosmetics-observatory__preview,
+  .cosmetics-observatory__card-visual,
+  .cosmetics-observatory__mini-board,
+  .cosmetics-observatory__mini-plaque,
+  .cosmetics-observatory__mini-trail,
+  .cosmetics-observatory__scene-preview
+).is-pixel {
+  --preview-a: #44e8ff;
+  --preview-b: #ffd36f;
+}
+
+:is(
+  .cosmetics-observatory__preview,
+  .cosmetics-observatory__card-visual,
+  .cosmetics-observatory__mini-board,
+  .cosmetics-observatory__mini-plaque,
+  .cosmetics-observatory__mini-trail,
+  .cosmetics-observatory__scene-preview
+).is-reef {
+  --preview-a: #7cf4ef;
+  --preview-b: #ff9ed8;
+}
+
+:is(
+  .cosmetics-observatory__preview,
+  .cosmetics-observatory__card-visual,
+  .cosmetics-observatory__mini-board,
+  .cosmetics-observatory__mini-plaque,
+  .cosmetics-observatory__mini-trail,
+  .cosmetics-observatory__scene-preview
+).is-vanguard {
+  --preview-a: #9ec8ff;
+  --preview-b: #d8b573;
+}
+
+.cosmetics-observatory__preview-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 10px;
+}
+
+.cosmetics-observatory__preview-heading h2 {
+  margin: 4px 0 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.22rem;
+  font-weight: 500;
+}
+
+.cosmetics-observatory__preview-rank {
+  color: var(--observatory-muted);
+  font-size: .72rem;
+  letter-spacing: .06em;
+  white-space: nowrap;
+}
+
+.cosmetics-observatory__mini-board {
+  position: relative;
+  min-height: 170px;
+  overflow: hidden;
+  isolation: isolate;
+  border: 1px solid color-mix(in srgb, var(--preview-a) 35%, transparent);
+  border-radius: var(--observatory-radius);
+  background:
+    radial-gradient(circle at 22% 20%, rgba(255, 255, 255, .88) 0 1px, transparent 1.5px),
+    radial-gradient(circle at 72% 36%, rgba(255, 255, 255, .62) 0 1px, transparent 1.5px),
+    radial-gradient(circle at 84% 78%, var(--preview-a) 0 1px, transparent 1.7px),
+    radial-gradient(circle at 12% 80%, var(--preview-b) 0 1px, transparent 1.6px),
+    repeating-linear-gradient(36deg, transparent 0 42px, rgba(255, 255, 255, .025) 43px 44px),
+    radial-gradient(ellipse at 48% 110%, color-mix(in srgb, var(--preview-b) 20%, transparent), transparent 52%),
+    linear-gradient(145deg, #091226, #050a15 68%);
+  box-shadow:
+    inset 0 0 55px rgba(0, 0, 0, .42),
+    inset 0 1px 0 rgba(255, 255, 255, .08);
+}
+
+.cosmetics-observatory__mini-board::before,
+.cosmetics-observatory__mini-board::after {
+  position: absolute;
+  z-index: -1;
+  content: "";
+  pointer-events: none;
+}
+
+.cosmetics-observatory__mini-board::before {
+  inset: 0;
+  opacity: .34;
+  background:
+    linear-gradient(118deg, transparent 26%, color-mix(in srgb, var(--preview-a) 22%, transparent) 42%, transparent 58%),
+    radial-gradient(ellipse at 70% 20%, color-mix(in srgb, var(--preview-b) 16%, transparent), transparent 45%);
+  filter: blur(8px);
+  animation: observatory-aurora 9s ease-in-out infinite alternate;
+}
+
+.cosmetics-observatory__mini-board::after {
+  inset: 9px;
+  border: 1px solid rgba(221, 232, 250, .1);
+  border-radius: calc(var(--observatory-radius) - 6px);
+  background: linear-gradient(90deg, transparent 49.8%, rgba(255, 255, 255, .06) 50%, transparent 50.2%);
+}
+
+.cosmetics-observatory__mini-constellation {
+  position: absolute;
+  inset: 0;
+}
+
+.cosmetics-observatory__mini-plaque {
+  position: absolute;
+  z-index: 2;
+  min-width: 68px;
+  padding: 8px 11px;
+  border: 1px solid color-mix(in srgb, var(--preview-a) 48%, #748195);
+  border-radius: 7px;
+  color: #fff9e8;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, .09), transparent 45%),
+    rgba(11, 20, 35, .9);
+  box-shadow:
+    0 8px 22px rgba(0, 0, 0, .35),
+    inset 0 1px rgba(255, 255, 255, .12);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: .72rem;
+  letter-spacing: .12em;
+  text-align: center;
+}
+
+.cosmetics-observatory__mini-plaque:nth-child(1) {
+  top: 25px;
+  left: 10%;
+  transform: rotate(-3deg);
+}
+
+.cosmetics-observatory__mini-plaque:nth-child(2) {
+  top: 96px;
+  left: 43%;
+  transform: rotate(2deg);
+}
+
+.cosmetics-observatory__mini-plaque:nth-child(3) {
+  top: 32px;
+  right: 8%;
+  transform: rotate(3deg);
+}
+
+.cosmetics-observatory__mini-trail {
+  position: absolute;
+  top: 78px;
+  left: 21%;
+  width: 56%;
+  height: 3px;
+  border-radius: 99px;
+  background: linear-gradient(90deg, transparent, var(--preview-a) 15%, var(--preview-b) 82%, transparent);
+  box-shadow:
+    0 0 5px var(--preview-a),
+    0 0 16px color-mix(in srgb, var(--preview-a) 58%, transparent);
+  transform: rotate(-7deg);
+  animation: observatory-trail 2.8s ease-in-out infinite;
+}
+
+.cosmetics-observatory__mini-trail::before,
+.cosmetics-observatory__mini-trail::after {
+  position: absolute;
+  top: 50%;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 11px var(--preview-a);
+  content: "";
+  transform: translateY(-50%);
+}
+
+.cosmetics-observatory__mini-trail::before {
+  left: 20%;
+}
+
+.cosmetics-observatory__mini-trail::after {
+  right: 14%;
+}
+
+.cosmetics-observatory__scene-split {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.cosmetics-observatory__scene-preview {
+  --preview-a: #88cfff;
+  --preview-b: #d8b879;
+  position: relative;
+  min-height: 78px;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--preview-a) 34%, var(--observatory-line));
+  border-radius: 11px;
+  background:
+    radial-gradient(circle at 76% 22%, color-mix(in srgb, var(--preview-a) 22%, transparent), transparent 38%),
+    linear-gradient(145deg, #101a2c, #070b15);
+  background-position: center;
+  background-size: cover;
+  box-shadow: inset 0 1px rgba(255, 255, 255, .08);
+  isolation: isolate;
+}
+
+.cosmetics-observatory__scene-preview.has-image {
+  background:
+    linear-gradient(180deg, rgba(4, 8, 17, .08), rgba(3, 7, 15, .72)),
+    var(--observatory-preview-image) center / cover no-repeat;
+}
+
+.cosmetics-observatory__scene-preview.is-gate-style::after {
+  position: absolute;
+  z-index: 1;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 1px;
+  background: linear-gradient(transparent, var(--preview-a), var(--preview-b), transparent);
+  box-shadow: 0 0 10px var(--preview-a);
+  content: "";
+}
+
+.cosmetics-observatory__scene-seam {
+  position: absolute;
+  inset: 8px;
+  border: 1px solid rgba(255, 255, 255, .12);
+  border-radius: 7px;
+}
+
+.cosmetics-observatory__scene-label {
+  position: absolute;
+  z-index: 2;
+  right: 8px;
+  bottom: 7px;
+  left: 8px;
+  display: grid;
+  gap: 1px;
+  color: #fff;
+  text-shadow: 0 1px 5px #000;
+}
+
+.cosmetics-observatory__scene-label small {
+  color: color-mix(in srgb, var(--preview-a) 72%, white);
+  font-size: .56rem;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.cosmetics-observatory__scene-label strong {
+  overflow: hidden;
+  font-size: .68rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cosmetics-observatory__preview-caption {
+  margin: 9px 2px 0;
+  color: var(--observatory-muted);
+  font-size: .76rem;
+  line-height: 1.45;
+}
+
+.cosmetics-observatory__stage.is-preview-mode {
+  display: block;
+  min-height: 0;
+  overflow: auto;
+  padding-block: clamp(18px, 3vh, 34px);
+  background:
+    radial-gradient(circle at 50% 15%, color-mix(in srgb, var(--observatory-accent) 8%, transparent), transparent 34rem),
+    rgba(2, 6, 15, .28);
+}
+
+.cosmetics-observatory__preview.is-immersive {
+  display: grid;
+  width: min(920px, 100%);
+  min-height: 100%;
+  margin-inline: auto;
+}
+
+.cosmetics-observatory__preview.is-immersive .cosmetics-observatory__preview-heading {
+  margin-bottom: 14px;
+}
+
+.cosmetics-observatory__preview.is-immersive .cosmetics-observatory__preview-heading h2 {
+  font-size: clamp(1.35rem, 3vw, 2rem);
+}
+
+.cosmetics-observatory__preview-surfaces {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 4px;
+  margin-bottom: 14px;
+  padding: 4px;
+  border: 1px solid var(--observatory-line);
+  border-radius: 13px;
+  background: rgba(0, 0, 0, .3);
+}
+
+.cosmetics-observatory__preview-surface {
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 0;
+  border-radius: 9px;
+  color: var(--observatory-muted);
+  background: transparent;
+  cursor: pointer;
+}
+
+.cosmetics-observatory__preview-surface:hover {
+  color: var(--observatory-ink);
+  background: rgba(255, 255, 255, .06);
+}
+
+.cosmetics-observatory__preview-surface[aria-selected="true"] {
+  color: var(--observatory-accent-ink);
+  background: var(--observatory-accent);
+  box-shadow: 0 6px 22px color-mix(in srgb, var(--observatory-accent) 20%, transparent);
+  font-weight: 800;
+}
+
+.cosmetics-observatory__preview-surface-panel {
+  display: grid;
+  min-height: clamp(250px, 43vh, 470px);
+}
+
+.cosmetics-observatory__mini-board.is-immersive,
+.cosmetics-observatory__scene-preview.is-immersive,
+.cosmetics-observatory__menu-preview,
+.cosmetics-observatory__sound-preview {
+  min-height: clamp(250px, 43vh, 470px);
+  border-radius: clamp(14px, 2vw, 22px);
+}
+
+.cosmetics-observatory__mini-board.is-immersive .cosmetics-observatory__mini-plaque {
+  min-width: clamp(82px, 13vw, 132px);
+  padding: clamp(10px, 1.6vw, 16px);
+  font-size: clamp(.72rem, 1.4vw, 1rem);
+}
+
+.cosmetics-observatory__mini-board.is-immersive .cosmetics-observatory__mini-plaque:nth-child(1) {
+  top: 18%;
+}
+
+.cosmetics-observatory__mini-board.is-immersive .cosmetics-observatory__mini-plaque:nth-child(2) {
+  top: 64%;
+}
+
+.cosmetics-observatory__mini-board.is-immersive .cosmetics-observatory__mini-plaque:nth-child(3) {
+  top: 22%;
+}
+
+.cosmetics-observatory__mini-board.is-immersive .cosmetics-observatory__mini-trail {
+  top: 51%;
+  height: 4px;
+}
+
+.cosmetics-observatory__scene-preview.is-immersive {
+  border-color: color-mix(in srgb, var(--preview-a) 48%, var(--observatory-line));
+  box-shadow:
+    inset 0 1px rgba(255, 255, 255, .12),
+    0 20px 60px rgba(0, 0, 0, .24);
+}
+
+.cosmetics-observatory__scene-preview.is-immersive .cosmetics-observatory__scene-seam {
+  inset: 14px;
+  border-radius: 13px;
+}
+
+.cosmetics-observatory__scene-preview.is-immersive .cosmetics-observatory__scene-label {
+  right: 22px;
+  bottom: 20px;
+  left: 22px;
+}
+
+.cosmetics-observatory__scene-preview.is-immersive .cosmetics-observatory__scene-label small {
+  font-size: .68rem;
+}
+
+.cosmetics-observatory__scene-preview.is-immersive .cosmetics-observatory__scene-label strong {
+  font-size: clamp(.92rem, 2vw, 1.35rem);
+}
+
+.cosmetics-observatory__menu-preview {
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  padding: clamp(20px, 5vw, 56px);
+  border: 1px solid color-mix(in srgb, var(--preview-a) 38%, var(--observatory-line));
+  background:
+    radial-gradient(circle at 14% 10%, color-mix(in srgb, var(--preview-a) 20%, transparent), transparent 38%),
+    radial-gradient(circle at 90% 86%, color-mix(in srgb, var(--preview-b) 18%, transparent), transparent 36%),
+    linear-gradient(145deg, #0b1726, #050a15);
+}
+
+.cosmetics-observatory__menu-sample {
+  width: min(520px, 100%);
+  padding: clamp(22px, 5vw, 48px);
+  border: 1px solid color-mix(in srgb, var(--preview-a) 40%, var(--observatory-line));
+  border-radius: 18px;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, .07), transparent 46%),
+    rgba(8, 16, 30, .88);
+  box-shadow:
+    0 24px 70px rgba(0, 0, 0, .38),
+    inset 0 1px rgba(255, 255, 255, .1);
+  text-align: center;
+}
+
+.cosmetics-observatory__menu-sample h3,
+.cosmetics-observatory__sound-preview h3 {
+  margin: 8px 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(1.4rem, 4vw, 2.2rem);
+  font-weight: 500;
+}
+
+.cosmetics-observatory__menu-sample > p:not(.cosmetics-observatory__kicker),
+.cosmetics-observatory__sound-preview p:not(.cosmetics-observatory__kicker) {
+  margin: 0;
+  color: var(--observatory-muted);
+  line-height: 1.55;
+}
+
+.cosmetics-observatory__menu-actions {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 24px;
+}
+
+.cosmetics-observatory__menu-button {
+  min-width: 110px;
+  padding: 11px 18px;
+  border: 1px solid color-mix(in srgb, var(--preview-a) 45%, var(--observatory-line));
+  border-radius: 10px;
+  color: var(--observatory-ink);
+  background: rgba(255, 255, 255, .04);
+}
+
+.cosmetics-observatory__menu-button.is-primary {
+  color: #06111e;
+  background: linear-gradient(135deg, var(--preview-a), var(--preview-b));
+  font-weight: 800;
+}
+
+.cosmetics-observatory__sound-preview {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: clamp(18px, 4vw, 38px);
+  padding: clamp(24px, 6vw, 64px);
+  border: 1px solid color-mix(in srgb, var(--preview-a) 38%, var(--observatory-line));
+  background:
+    repeating-radial-gradient(circle at 18% 50%, transparent 0 26px, color-mix(in srgb, var(--preview-a) 9%, transparent) 27px 28px),
+    linear-gradient(145deg, #0b1726, #050a15);
+}
+
+.cosmetics-observatory__sound-glyph {
+  display: grid;
+  width: clamp(82px, 13vw, 130px);
+  aspect-ratio: 1;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--preview-a) 44%, transparent);
+  border-radius: 50%;
+  color: var(--preview-a);
+  background: color-mix(in srgb, var(--preview-a) 8%, transparent);
+  box-shadow: 0 0 50px color-mix(in srgb, var(--preview-a) 18%, transparent);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(2.4rem, 7vw, 4.8rem);
+}
+
+.cosmetics-observatory__footer.is-preview-mode {
+  position: static;
+}
+
+.cosmetics-observatory__effects {
+  min-width: 240px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.cosmetics-observatory__effects legend {
+  margin-bottom: 7px;
+  color: var(--observatory-muted);
+  font-size: .72rem;
+  font-weight: 750;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.cosmetics-observatory__segment {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 3px;
+  padding: 3px;
+  border: 1px solid var(--observatory-line);
+  border-radius: 11px;
+  background: rgba(0, 0, 0, .28);
+}
+
+.cosmetics-observatory__segment-button {
+  min-height: 38px;
+  padding: 7px 10px;
+  border: 0;
+  border-radius: 7px;
+  color: var(--observatory-muted);
+  background: transparent;
+  cursor: pointer;
+}
+
+.cosmetics-observatory__segment-button[aria-checked="true"] {
+  color: #07131f;
+  background: var(--observatory-accent);
+  box-shadow: 0 3px 12px rgba(75, 166, 224, .2);
+  font-weight: 800;
+}
+
+.cosmetics-observatory__tabs {
+  position: sticky;
+  z-index: 8;
+  top: 0;
+  display: flex;
+  gap: 7px;
+  padding: 12px clamp(20px, 4vw, 46px) 0;
+  border-bottom: 1px solid var(--observatory-line);
+  background: rgba(7, 11, 22, .95);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+}
+
+.cosmetics-observatory__tab {
+  position: relative;
+  min-height: 46px;
+  padding: 10px 18px;
+  border: 0;
+  color: var(--observatory-muted);
+  background: transparent;
+  cursor: pointer;
+}
+
+.cosmetics-observatory__tab::after {
+  position: absolute;
+  right: 12px;
+  bottom: -1px;
+  left: 12px;
+  height: 2px;
+  border-radius: 2px 2px 0 0;
+  background: transparent;
+  content: "";
+}
+
+.cosmetics-observatory__tab[aria-selected="true"] {
+  color: var(--observatory-ink);
+}
+
+.cosmetics-observatory__tab[aria-selected="true"]::after {
+  background: var(--observatory-accent);
+  box-shadow: 0 0 14px rgba(185, 230, 255, .46);
+}
+
+.cosmetics-observatory__panel {
+  min-height: 360px;
+  padding: 28px clamp(20px, 4vw, 46px) 42px;
+}
+
+.cosmetics-observatory__section-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 18px;
+  margin: 0 0 17px;
+}
+
+.cosmetics-observatory__section-heading:not(:first-child) {
+  margin-top: 38px;
+  padding-top: 28px;
+  border-top: 1px solid var(--observatory-line);
+}
+
+.cosmetics-observatory__section-heading h2 {
+  margin: 0;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(1.23rem, 2.4vw, 1.65rem);
+  font-weight: 500;
+}
+
+.cosmetics-observatory__section-heading p {
+  max-width: 62ch;
+  margin: 5px 0 0;
+  color: var(--observatory-muted);
+  font-size: .82rem;
+  line-height: 1.5;
+}
+
+.cosmetics-observatory__card-grid {
+  display: grid;
+  gap: 16px;
+}
+
+.cosmetics-observatory__card-grid.is-collections {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.cosmetics-observatory__card-grid.is-pieces {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.cosmetics-observatory__card {
+  position: relative;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--observatory-line);
+  border-radius: var(--observatory-radius);
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, .05), transparent 40%),
+    var(--observatory-panel-soft);
+  box-shadow: inset 0 1px rgba(255, 255, 255, .04);
+}
+
+.cosmetics-observatory__card-grid.is-collections > .cosmetics-observatory__card.is-full-shell {
+  grid-column: span 2;
+  border-color: color-mix(in srgb, #f6d58a 48%, var(--observatory-line));
+  background:
+    radial-gradient(circle at 92% 4%, rgba(154, 114, 255, .16), transparent 42%),
+    radial-gradient(circle at 6% 98%, rgba(246, 213, 138, .1), transparent 38%),
+    linear-gradient(145deg, rgba(31, 25, 48, .98), rgba(5, 8, 18, .97));
+  box-shadow:
+    0 18px 54px rgba(0, 0, 0, .28),
+    inset 0 1px rgba(255, 238, 198, .1);
+}
+
+.cosmetics-observatory__card-grid.is-collections > .cosmetics-observatory__card.is-full-shell .cosmetics-observatory__card-visual {
+  height: 142px;
+}
+
+.cosmetics-observatory__card[data-previewed="true"] {
+  border-color: color-mix(in srgb, var(--observatory-accent) 68%, transparent);
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--observatory-accent) 18%, transparent),
+    0 16px 38px rgba(0, 0, 0, .18);
+}
+
+.cosmetics-observatory__card[data-equipped="true"] {
+  border-color: color-mix(in srgb, var(--observatory-gold) 65%, transparent);
+}
+
+.cosmetics-observatory__card-visual {
+  --preview-a: #88cfff;
+  --preview-b: #d8b879;
+  position: relative;
+  height: 115px;
+  overflow: hidden;
+  border-bottom: 1px solid var(--observatory-line);
+  background:
+    radial-gradient(circle at 18% 27%, rgba(255, 255, 255, .8) 0 1px, transparent 1.5px),
+    radial-gradient(circle at 80% 35%, var(--preview-a) 0 1px, transparent 1.6px),
+    radial-gradient(circle at 62% 78%, var(--preview-b) 0 1px, transparent 1.6px),
+    linear-gradient(142deg, color-mix(in srgb, var(--preview-a) 14%, #09101e), #070b15 62%);
+}
+
+.cosmetics-observatory__card-visual.has-image {
+  background:
+    linear-gradient(180deg, rgba(3, 7, 15, .08), rgba(3, 7, 15, .76)),
+    var(--observatory-preview-image) center / cover no-repeat;
+}
+
+.cosmetics-observatory__card-visual::before {
+  position: absolute;
+  inset: -30%;
+  background:
+    linear-gradient(112deg, transparent 25%, color-mix(in srgb, var(--preview-a) 18%, transparent) 46%, transparent 68%),
+    repeating-radial-gradient(circle at 50% 130%, transparent 0 28px, rgba(255, 255, 255, .055) 29px 30px);
+  content: "";
+  transform: rotate(-5deg);
+  animation: observatory-card-light 12s linear infinite alternate;
+}
+
+.cosmetics-observatory__visual-star {
+  position: absolute;
+  top: 19px;
+  right: 23px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow:
+    0 0 9px var(--preview-a),
+    -44px 38px 0 -2px var(--preview-b),
+    -112px 18px 0 -3px #fff;
+}
+
+.cosmetics-observatory__visual-line {
+  position: absolute;
+  right: 20%;
+  bottom: 35px;
+  left: 17%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--preview-a), var(--preview-b), transparent);
+  box-shadow: 0 0 9px color-mix(in srgb, var(--preview-a) 54%, transparent);
+  transform: rotate(-8deg);
+}
+
+.cosmetics-observatory__visual-plaque {
+  position: absolute;
+  bottom: 18px;
+  left: 34%;
+  width: 76px;
+  height: 32px;
+  border: 1px solid color-mix(in srgb, var(--preview-a) 55%, #68788e);
+  border-radius: 6px;
+  background: rgba(10, 18, 31, .9);
+  box-shadow: 0 6px 15px rgba(0, 0, 0, .3);
+}
+
+.cosmetics-observatory__visual-detail {
+  position: absolute;
+  pointer-events: none;
+}
+
+.cosmetics-observatory__visual-label {
+  position: absolute;
+  z-index: 3;
+  right: 10px;
+  bottom: 8px;
+  left: 10px;
+  overflow: hidden;
+  color: #fff;
+  font-size: .61rem;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-overflow: ellipsis;
+  text-shadow: 0 1px 5px #000;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.cosmetics-observatory__card-visual.is-word-plaque .cosmetics-observatory__visual-line {
+  display: none;
+}
+
+.cosmetics-observatory__card-visual.is-word-plaque .cosmetics-observatory__visual-plaque {
+  top: 34%;
+  bottom: auto;
+  left: 24%;
+  width: 54%;
+  border-left-width: 3px;
+  border-radius: 999px;
+  box-shadow:
+    -34px 41px 0 -7px rgba(10, 18, 31, .92),
+    42px -24px 0 -9px rgba(10, 18, 31, .9),
+    0 7px 18px rgba(0, 0, 0, .34);
+}
+
+.cosmetics-observatory__card-visual.is-trail-set .cosmetics-observatory__visual-plaque {
+  display: none;
+}
+
+.cosmetics-observatory__card-visual.is-trail-set .cosmetics-observatory__visual-line {
+  right: 8%;
+  bottom: 48%;
+  left: 8%;
+  height: 4px;
+  transform: rotate(-13deg);
+}
+
+.cosmetics-observatory__card-visual.is-trail-set .cosmetics-observatory__visual-detail {
+  top: 29%;
+  right: 13%;
+  width: 11px;
+  height: 11px;
+  border: 2px solid #fff;
+  border-radius: 50%;
+  box-shadow:
+    0 0 15px var(--preview-a),
+    -92px 35px 0 -2px var(--preview-b),
+    -92px 35px 13px 0 var(--preview-a);
+}
+
+.cosmetics-observatory__card-visual.is-board-finish .cosmetics-observatory__visual-detail {
+  inset: 13px;
+  border: 1px solid color-mix(in srgb, var(--preview-a) 24%, transparent);
+  border-radius: 8px;
+  background:
+    repeating-linear-gradient(0deg, transparent 0 18px, color-mix(in srgb, var(--preview-a) 9%, transparent) 19px 20px),
+    repeating-linear-gradient(90deg, transparent 0 25px, color-mix(in srgb, var(--preview-b) 8%, transparent) 26px 27px);
+}
+
+.cosmetics-observatory__card-visual.is-board-finish .cosmetics-observatory__visual-plaque {
+  width: 55px;
+  height: 24px;
+}
+
+.cosmetics-observatory__card-visual:is(.is-home-scene, .is-gate-style, .is-collection).has-image
+  :is(.cosmetics-observatory__visual-star, .cosmetics-observatory__visual-line, .cosmetics-observatory__visual-plaque) {
+  display: none;
+}
+
+.cosmetics-observatory__card-visual:is(.is-home-scene, .is-gate-style, .is-collection).has-image
+  .cosmetics-observatory__visual-detail {
+  inset: 9px;
+  border: 1px solid rgba(255, 255, 255, .13);
+  border-radius: 8px;
+}
+
+.cosmetics-observatory__card-visual.is-gate-style::after {
+  position: absolute;
+  z-index: 2;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 1px;
+  background: linear-gradient(transparent, var(--preview-a), var(--preview-b), transparent);
+  box-shadow: 0 0 13px var(--preview-a);
+  content: "";
+}
+
+.cosmetics-observatory__card-visual.is-ui-finish .cosmetics-observatory__visual-plaque {
+  inset: 19% 15% 25%;
+  width: auto;
+  height: auto;
+  border-radius: 8px;
+  background:
+    linear-gradient(145deg, color-mix(in srgb, var(--preview-a) 11%, rgba(10, 18, 31, .96)), rgba(7, 12, 23, .96));
+}
+
+.cosmetics-observatory__card-visual.is-ui-finish .cosmetics-observatory__visual-line {
+  right: 26%;
+  bottom: 36%;
+  left: 26%;
+  height: 9px;
+  border: 1px solid color-mix(in srgb, var(--preview-a) 45%, transparent);
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--preview-a) 13%, transparent);
+  box-shadow: none;
+  transform: none;
+}
+
+.cosmetics-observatory__card-visual.is-sound-theme .cosmetics-observatory__visual-star,
+.cosmetics-observatory__card-visual.is-sound-theme .cosmetics-observatory__visual-plaque {
+  display: none;
+}
+
+.cosmetics-observatory__card-visual.is-sound-theme .cosmetics-observatory__visual-line {
+  top: 26%;
+  right: 13%;
+  bottom: auto;
+  left: 13%;
+  height: 52%;
+  background:
+    repeating-linear-gradient(
+      90deg,
+      transparent 0 5px,
+      var(--preview-a) 6px 9px,
+      transparent 10px 14px,
+      var(--preview-b) 15px 18px
+    );
+  box-shadow: 0 0 13px color-mix(in srgb, var(--preview-a) 35%, transparent);
+  clip-path: polygon(0 45%, 8% 28%, 16% 68%, 25% 18%, 35% 78%, 44% 35%, 53% 66%, 62% 12%, 72% 74%, 81% 30%, 91% 63%, 100% 42%, 100% 100%, 0 100%);
+  transform: none;
+}
+
+.cosmetics-observatory__card-body {
+  display: flex;
+  min-height: 255px;
+  flex-direction: column;
+  padding: 17px;
+}
+
+.cosmetics-observatory__card.is-piece {
+  display: grid;
+  grid-template-columns: minmax(126px, 32%) 1fr;
+}
+
+.cosmetics-observatory__card.is-piece .cosmetics-observatory__card-visual {
+  height: 100%;
+  min-height: 230px;
+  border-right: 1px solid var(--observatory-line);
+  border-bottom: 0;
+}
+
+.cosmetics-observatory__card.is-piece .cosmetics-observatory__card-body {
+  min-height: 230px;
+}
+
+.cosmetics-observatory__card-eyebrow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.cosmetics-observatory__badge,
+.cosmetics-observatory__state {
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  padding: 3px 8px;
+  border: 1px solid var(--observatory-line);
+  border-radius: 999px;
+  font-size: .62rem;
+  font-weight: 800;
+  letter-spacing: .055em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.cosmetics-observatory__badge.is-free {
+  color: #b9f1d8;
+  border-color: rgba(100, 221, 163, .34);
+  background: rgba(62, 177, 122, .1);
+}
+
+.cosmetics-observatory__badge.is-earned {
+  color: #bedcff;
+  border-color: rgba(96, 169, 238, .35);
+  background: rgba(70, 125, 190, .11);
+}
+
+.cosmetics-observatory__badge.is-supporter {
+  color: #ffe0a3;
+  border-color: rgba(241, 190, 91, .38);
+  background: rgba(190, 126, 40, .12);
+}
+
+.cosmetics-observatory__badge.is-rank-reward {
+  color: #bfe8ff;
+  border-color: rgba(100, 196, 246, .42);
+  background: rgba(54, 138, 190, .13);
+}
+
+.cosmetics-observatory__badge.is-purchase-only {
+  color: #ffe0a3;
+  border-color: rgba(241, 190, 91, .38);
+  background: rgba(190, 126, 40, .12);
+}
+
+.cosmetics-observatory__badge.is-event {
+  color: #efc8ff;
+  border-color: rgba(201, 115, 239, .4);
+  background: rgba(153, 75, 196, .12);
+}
+
+.cosmetics-observatory__states {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 5px;
+}
+
+.cosmetics-observatory__state {
+  color: var(--observatory-muted);
+  font-size: .56rem;
+}
+
+.cosmetics-observatory__state.is-equipped {
+  color: #ffe2a6;
+  border-color: rgba(242, 207, 131, .4);
+}
+
+.cosmetics-observatory__state.is-preview {
+  color: var(--observatory-accent);
+  border-color: rgba(185, 230, 255, .4);
+}
+
+.cosmetics-observatory__state.is-locked {
+  opacity: .72;
+}
+
+.cosmetics-observatory__card-title {
+  margin: 0 0 7px;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.12rem;
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+.cosmetics-observatory__card-copy {
+  margin: 0;
+  color: var(--observatory-muted);
+  font-size: .78rem;
+  line-height: 1.5;
+}
+
+.cosmetics-observatory__collection-facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+  margin-top: 13px;
+}
+
+.cosmetics-observatory__collection-fact {
+  display: grid;
+  align-content: center;
+  min-height: 43px;
+  padding: 7px 9px;
+  border: 1px solid color-mix(in srgb, var(--preview-a, var(--observatory-accent)) 24%, var(--observatory-line));
+  border-radius: 9px;
+  color: var(--observatory-ink);
+  background: rgba(255, 255, 255, .035);
+  line-height: 1.2;
+}
+
+.cosmetics-observatory__collection-fact small {
+  color: var(--observatory-muted);
+  font-size: .55rem;
+  font-weight: 800;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+}
+
+.cosmetics-observatory__collection-fact strong {
+  margin-top: 3px;
+  font-size: .69rem;
+}
+
+.cosmetics-observatory__collection-fact.is-background {
+  min-height: 43px;
+  color: color-mix(in srgb, var(--preview-a, var(--observatory-accent)) 72%, white);
+  font-size: .66rem;
+  font-weight: 780;
+}
+
+.cosmetics-observatory__collection-fact.is-price strong {
+  font-variant-numeric: tabular-nums;
+}
+
+.cosmetics-observatory__included-slots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin: 9px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cosmetics-observatory__included-slots li {
+  padding: 4px 7px;
+  border: 1px solid var(--observatory-line);
+  border-radius: 999px;
+  color: var(--observatory-muted);
+  background: rgba(0, 0, 0, .14);
+  font-size: .55rem;
+  font-weight: 750;
+  letter-spacing: .035em;
+}
+
+.cosmetics-observatory__card-meta,
+.cosmetics-observatory__unlock-hint {
+  margin: 11px 0 0;
+  color: #d6c28f;
+  font-size: .68rem;
+  line-height: 1.45;
+}
+
+.cosmetics-observatory__unlock-hint {
+  padding-left: 10px;
+  border-left: 2px solid rgba(215, 194, 143, .45);
+}
+
+.cosmetics-observatory__card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 18px;
+}
+
+.cosmetics-observatory__button,
+.cosmetics-observatory__icon-button {
+  min-height: 40px;
+  padding: 8px 13px;
+  border: 1px solid var(--observatory-line);
+  border-radius: 9px;
+  color: var(--observatory-ink);
+  background: rgba(255, 255, 255, .04);
+  cursor: pointer;
+}
+
+.cosmetics-observatory__button {
+  font-size: .74rem;
+  font-weight: 750;
+}
+
+.cosmetics-observatory__button:hover:not(:disabled),
+.cosmetics-observatory__icon-button:hover:not(:disabled) {
+  border-color: var(--observatory-line-strong);
+  background: rgba(255, 255, 255, .09);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .cosmetics-observatory__button:hover:not(:disabled),
+  .cosmetics-observatory__icon-button:hover:not(:disabled) {
+    transform: translateY(-1px);
+  }
+}
+
+.cosmetics-observatory__button:disabled,
+.cosmetics-observatory__icon-button:disabled,
+.cosmetics-observatory [data-commit-control][aria-disabled="true"] {
+  cursor: not-allowed;
+  opacity: .48;
+}
+
+.cosmetics-observatory [data-commit-control][aria-disabled="true"] {
+  pointer-events: none;
+}
+
+.cosmetics-observatory__button.is-primary {
+  border-color: rgba(185, 230, 255, .55);
+  color: var(--observatory-accent-ink);
+  background: linear-gradient(135deg, #d8f1ff, #9fd5f4);
+  box-shadow: 0 7px 18px rgba(78, 151, 199, .15);
+}
+
+.cosmetics-observatory__button.is-secondary {
+  border-color: rgba(185, 230, 255, .27);
+}
+
+.cosmetics-observatory__button.is-supporter {
+  border-color: rgba(242, 207, 131, .42);
+  color: #fbe1ac;
+  background: linear-gradient(135deg, rgba(173, 117, 43, .19), rgba(97, 67, 30, .1));
+}
+
+.cosmetics-observatory__button.is-quiet {
+  min-height: 36px;
+  color: var(--observatory-accent);
+  background: transparent;
+}
+
+.cosmetics-observatory__icon-button {
+  padding: 7px 11px;
+  color: var(--observatory-accent);
+  font-size: .7rem;
+}
+
+.cosmetics-observatory__piece-browser {
+  display: grid;
+  grid-template-columns: 190px minmax(0, 1fr);
+  align-items: start;
+  gap: 18px;
+}
+
+.cosmetics-observatory__piece-browser > .cosmetics-observatory__card-grid:first-child,
+.cosmetics-observatory__piece-browser > .cosmetics-observatory__empty:first-child {
+  grid-column: 1 / -1;
+}
+
+.cosmetics-observatory__slots {
+  position: sticky;
+  top: 70px;
+  display: grid;
+  gap: 5px;
+}
+
+.cosmetics-observatory__slot {
+  display: flex;
+  min-height: 43px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 9px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  color: var(--observatory-muted);
+  background: transparent;
+  cursor: pointer;
+  font-size: .72rem;
+  text-align: left;
+}
+
+.cosmetics-observatory__slot:hover {
+  color: var(--observatory-ink);
+  background: rgba(255, 255, 255, .04);
+}
+
+.cosmetics-observatory__slot[aria-pressed="true"] {
+  border-color: var(--observatory-line);
+  color: var(--observatory-ink);
+  background: rgba(185, 230, 255, .08);
+}
+
+.cosmetics-observatory__slot-count {
+  min-width: 22px;
+  padding: 2px 6px;
+  border-radius: 999px;
+  color: var(--observatory-muted);
+  background: rgba(255, 255, 255, .07);
+  font-size: .6rem;
+  text-align: center;
+}
+
+.cosmetics-observatory__empty {
+  display: grid;
+  min-height: 200px;
+  place-items: center;
+  align-content: center;
+  padding: 28px;
+  border: 1px dashed var(--observatory-line);
+  border-radius: var(--observatory-radius);
+  color: var(--observatory-muted);
+  text-align: center;
+}
+
+.cosmetics-observatory__empty-star {
+  color: var(--observatory-accent);
+  font-size: 1.7rem;
+}
+
+.cosmetics-observatory__empty h3 {
+  margin: 8px 0 4px;
+  color: var(--observatory-ink);
+  font-family: Georgia, "Times New Roman", serif;
+  font-weight: 500;
+}
+
+.cosmetics-observatory__empty p {
+  max-width: 50ch;
+  margin: 0;
+  font-size: .78rem;
+  line-height: 1.5;
+}
+
+.cosmetics-observatory__footer {
+  position: sticky;
+  z-index: 9;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 15px clamp(20px, 4vw, 46px);
+  border-top: 1px solid var(--observatory-line-strong);
+  background: rgba(7, 11, 21, .96);
+  box-shadow: 0 -14px 34px rgba(2, 5, 12, .55);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+}
+
+.cosmetics-observatory__footer-summary {
+  display: grid;
+  gap: 3px;
+}
+
+.cosmetics-observatory__footer-summary strong {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: .9rem;
+  font-weight: 500;
+}
+
+.cosmetics-observatory__footer-summary span {
+  color: var(--observatory-muted);
+  font-size: .7rem;
+}
+
+.cosmetics-observatory__footer-actions {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 9px;
+}
+
+.cosmetics-observatory__sr-only {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  clip-path: inset(50%) !important;
+  white-space: nowrap !important;
+}
+
+@keyframes observatory-aurora {
+  from {
+    opacity: .25;
+    transform: translate3d(-1.5%, 0, 0) scale(1);
+  }
+  to {
+    opacity: .45;
+    transform: translate3d(1.5%, -1%, 0) scale(1.04);
+  }
+}
+
+@keyframes observatory-trail {
+  0%,
+  100% {
+    opacity: .62;
+    filter: brightness(.9);
+  }
+  50% {
+    opacity: 1;
+    filter: brightness(1.25);
+  }
+}
+
+@keyframes observatory-card-light {
+  from {
+    transform: translate3d(-2%, 0, 0) rotate(-5deg);
+  }
+  to {
+    transform: translate3d(2%, -1%, 0) rotate(-3deg);
+  }
+}
+
+@media (max-width: 920px) {
+  .cosmetics-observatory__card-grid.is-collections {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .cosmetics-observatory__card-grid.is-pieces {
+    grid-template-columns: 1fr;
+  }
+
+  .cosmetics-observatory__piece-browser {
+    grid-template-columns: 170px minmax(0, 1fr);
+  }
+}
+
+@media (max-height: 780px) and (min-width: 721px) {
+  .cosmetics-observatory__header {
+    padding-block: 15px 13px;
+  }
+
+  .cosmetics-observatory__header h1 {
+    font-size: 2rem;
+  }
+
+  .cosmetics-observatory__lede {
+    max-width: 72ch;
+    font-size: .8rem;
+  }
+
+  .cosmetics-observatory__stage {
+    gap: 14px;
+    padding-block: 12px;
+  }
+
+  .cosmetics-observatory__preview-heading {
+    margin-bottom: 7px;
+  }
+
+  .cosmetics-observatory__mini-board {
+    min-height: 112px;
+  }
+
+  .cosmetics-observatory__scene-preview {
+    min-height: 58px;
+  }
+
+  .cosmetics-observatory__mini-plaque:nth-child(1) {
+    top: 15px;
+  }
+
+  .cosmetics-observatory__mini-plaque:nth-child(2) {
+    top: 68px;
+  }
+
+  .cosmetics-observatory__mini-plaque:nth-child(3) {
+    top: 19px;
+  }
+
+  .cosmetics-observatory__mini-trail {
+    top: 55px;
+  }
+
+  .cosmetics-observatory__preview-caption {
+    margin-top: 7px;
+    font-size: .74rem;
+  }
+
+  .cosmetics-observatory__tabs {
+    min-height: 48px;
+  }
+
+  .cosmetics-observatory__tab {
+    min-height: 48px;
+    padding-block: 11px;
+  }
+
+  .cosmetics-observatory__panel {
+    padding-top: 18px;
+  }
+}
+
+@media (max-width: 720px) {
+  .cosmetics-observatory {
+    width: 100vw;
+    height: 100dvh;
+    border-width: 0;
+    border-radius: 0;
+  }
+
+  .cosmetics-observatory__header {
+    padding-top: 18px;
+  }
+
+  .cosmetics-observatory__stage {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .cosmetics-observatory__stage.is-preview-mode {
+    display: block;
+  }
+
+  .cosmetics-observatory__sound-preview {
+    grid-template-columns: 1fr;
+    justify-items: center;
+    text-align: center;
+  }
+
+  .cosmetics-observatory__effects {
+    min-width: 0;
+  }
+
+  .cosmetics-observatory__piece-browser {
+    display: block;
+  }
+
+  .cosmetics-observatory__slots {
+    position: static;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin-bottom: 15px;
+  }
+
+  .cosmetics-observatory__card.is-piece {
+    grid-template-columns: minmax(105px, 29%) 1fr;
+  }
+
+  .cosmetics-observatory__footer {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .cosmetics-observatory__footer-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 520px) {
+  .cosmetics-observatory__surface {
+    scroll-padding-bottom: calc(96px + env(safe-area-inset-bottom));
+  }
+
+  .cosmetics-observatory__header {
+    gap: 12px;
+    padding: 14px 14px 12px;
+  }
+
+  .cosmetics-observatory__header h1 {
+    font-size: 1.55rem;
+  }
+
+  .cosmetics-observatory__kicker {
+    font-size: .62rem;
+  }
+
+  .cosmetics-observatory__lede {
+    font-size: .76rem;
+    line-height: 1.38;
+  }
+
+  .cosmetics-observatory__close {
+    padding-inline: 11px;
+    font-size: .72rem;
+  }
+
+  .cosmetics-observatory__stage {
+    gap: 12px;
+    padding: 14px;
+  }
+
+  .cosmetics-observatory__stage.is-preview-mode {
+    padding-block: 12px;
+  }
+
+  .cosmetics-observatory__preview.is-immersive .cosmetics-observatory__preview-heading {
+    margin-bottom: 9px;
+  }
+
+  .cosmetics-observatory__preview-surfaces {
+    gap: 2px;
+    margin-bottom: 10px;
+    padding: 3px;
+  }
+
+  .cosmetics-observatory__preview-surface {
+    min-height: 42px;
+    overflow: hidden;
+    padding-inline: 4px;
+    font-size: .66rem;
+    text-overflow: ellipsis;
+  }
+
+  .cosmetics-observatory__preview-surface-panel,
+  .cosmetics-observatory__mini-board.is-immersive,
+  .cosmetics-observatory__scene-preview.is-immersive,
+  .cosmetics-observatory__menu-preview,
+  .cosmetics-observatory__sound-preview {
+    min-height: min(42vh, 340px);
+  }
+
+  .cosmetics-observatory__menu-preview,
+  .cosmetics-observatory__sound-preview {
+    padding: 18px;
+  }
+
+  .cosmetics-observatory__menu-sample {
+    padding: 22px 16px;
+  }
+
+  .cosmetics-observatory__menu-actions {
+    margin-top: 18px;
+  }
+
+  .cosmetics-observatory__menu-button {
+    min-width: 94px;
+    padding-inline: 12px;
+  }
+
+  .cosmetics-observatory__sound-glyph {
+    width: 78px;
+  }
+
+  .cosmetics-observatory__preview-heading {
+    align-items: end;
+    flex-direction: row;
+    gap: 10px;
+    margin-bottom: 7px;
+  }
+
+  .cosmetics-observatory__preview-heading > * {
+    min-width: 0;
+  }
+
+  .cosmetics-observatory__preview-rank {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .cosmetics-observatory__mini-board {
+    min-height: 100px;
+  }
+
+  .cosmetics-observatory__scene-preview {
+    min-height: 58px;
+  }
+
+  .cosmetics-observatory__scene-label strong {
+    font-size: .62rem;
+  }
+
+  .cosmetics-observatory__mini-plaque:nth-child(1) {
+    top: 15px;
+  }
+
+  .cosmetics-observatory__mini-plaque:nth-child(2) {
+    top: 66px;
+  }
+
+  .cosmetics-observatory__mini-plaque:nth-child(3) {
+    top: 19px;
+  }
+
+  .cosmetics-observatory__mini-trail {
+    top: 54px;
+  }
+
+  .cosmetics-observatory__preview-caption {
+    display: -webkit-box;
+    overflow: hidden;
+    margin-top: 7px;
+    font-size: .72rem;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  .cosmetics-observatory__tabs {
+    overflow-x: auto;
+  }
+
+  .cosmetics-observatory__tab {
+    min-width: max-content;
+    padding-inline: 14px;
+  }
+
+  .cosmetics-observatory__section-heading {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .cosmetics-observatory__card-grid.is-collections {
+    grid-template-columns: 1fr;
+  }
+
+  .cosmetics-observatory__card-grid.is-collections > .cosmetics-observatory__card.is-full-shell {
+    grid-column: auto;
+  }
+
+  .cosmetics-observatory__card.is-piece {
+    display: block;
+  }
+
+  .cosmetics-observatory__card.is-piece .cosmetics-observatory__card-visual {
+    height: 94px;
+    min-height: 94px;
+    border-right: 0;
+    border-bottom: 1px solid var(--observatory-line);
+  }
+
+  .cosmetics-observatory__card.is-piece .cosmetics-observatory__card-body {
+    min-height: 215px;
+  }
+
+  .cosmetics-observatory__slots {
+    display: flex;
+    overflow-x: auto;
+    padding-bottom: 5px;
+  }
+
+  .cosmetics-observatory__slot {
+    min-width: 146px;
+  }
+
+  .cosmetics-observatory__card-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .cosmetics-observatory__footer-actions {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .cosmetics-observatory__footer-actions .cosmetics-observatory__button {
+    min-height: 44px;
+    overflow: hidden;
+    padding-inline: 8px;
+    font-size: .68rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .cosmetics-observatory__footer {
+    gap: 9px;
+    padding: 10px 14px max(10px, env(safe-area-inset-bottom));
+  }
+
+  .cosmetics-observatory__footer-summary {
+    min-width: 0;
+  }
+
+  .cosmetics-observatory__footer-summary strong {
+    font-size: .82rem;
+  }
+
+  .cosmetics-observatory__footer-summary span {
+    font-size: .64rem;
+  }
+}
+
+@media (max-width: 520px) and (max-height: 760px) {
+  .cosmetics-observatory__preview-rank,
+  .cosmetics-observatory__preview-caption {
+    display: none;
+  }
+
+  .cosmetics-observatory__mini-board {
+    min-height: 88px;
+  }
+
+  .cosmetics-observatory__scene-preview {
+    min-height: 52px;
+  }
+
+  .cosmetics-observatory__preview-surface-panel,
+  .cosmetics-observatory__mini-board.is-immersive,
+  .cosmetics-observatory__scene-preview.is-immersive,
+  .cosmetics-observatory__menu-preview,
+  .cosmetics-observatory__sound-preview {
+    min-height: 220px;
+  }
+
+  .cosmetics-observatory__footer {
+    gap: 7px;
+    padding: 8px 10px max(8px, env(safe-area-inset-bottom));
+  }
+
+  .cosmetics-observatory__footer-summary strong {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .cosmetics-observatory__footer-summary span {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cosmetics-observatory *,
+  .cosmetics-observatory *::before,
+  .cosmetics-observatory *::after {
+    scroll-behavior: auto !important;
+    animation-duration: .001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .001ms !important;
+  }
+}
+
+.cosmetics-observatory[data-effects="reduced"] *,
+.cosmetics-observatory[data-effects="reduced"] *::before,
+.cosmetics-observatory[data-effects="reduced"] *::after {
+  animation-duration: .001ms !important;
+  animation-iteration-count: 1 !important;
+}
+
+.cosmetics-observatory[data-effects="off"] .cosmetics-observatory__mini-board::before,
+.cosmetics-observatory[data-effects="off"] .cosmetics-observatory__mini-trail,
+.cosmetics-observatory[data-effects="off"] .cosmetics-observatory__card-visual::before {
+  display: none;
+}
+
+@media (prefers-reduced-data: reduce) {
+  .cosmetics-observatory::backdrop {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+
+  .cosmetics-observatory__tabs,
+  .cosmetics-observatory__footer {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+
+  .cosmetics-observatory__mini-board::before,
+  .cosmetics-observatory__card-visual::before {
+    display: none;
+  }
+
+  .cosmetics-observatory__card-visual.has-image,
+  .cosmetics-observatory__scene-preview.has-image {
+    background-image: linear-gradient(145deg, #101a2c, #070b15) !important;
+  }
+}
+
+body[data-save-data="true"] .cosmetics-observatory::backdrop,
+body[data-save-data="true"] .cosmetics-observatory__tabs,
+body[data-save-data="true"] .cosmetics-observatory__footer {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+body[data-save-data="true"] .cosmetics-observatory__mini-board::before,
+body[data-save-data="true"] .cosmetics-observatory__card-visual::before {
+  display: none;
+}
+
+body[data-save-data="true"] .cosmetics-observatory__card-visual.has-image,
+body[data-save-data="true"] .cosmetics-observatory__scene-preview.has-image {
+  background-image: linear-gradient(145deg, #101a2c, #070b15) !important;
+}
+
+@media (prefers-contrast: more) {
+  .cosmetics-observatory {
+    --observatory-muted: #e3e8ef;
+    --observatory-line: rgba(255, 255, 255, .42);
+    --observatory-line-strong: rgba(255, 255, 255, .7);
+    border-color: #fff;
+  }
+
+  .cosmetics-observatory__button,
+  .cosmetics-observatory__slot,
+  .cosmetics-observatory__segment-button,
+  .cosmetics-observatory__preview-surface {
+    border-width: 2px;
+  }
+}
+
+@media (forced-colors: active) {
+  .cosmetics-observatory,
+  .cosmetics-observatory__header,
+  .cosmetics-observatory__tabs,
+  .cosmetics-observatory__footer,
+  .cosmetics-observatory__card,
+  .cosmetics-observatory__collection-fact,
+  .cosmetics-observatory__included-slots li,
+  .cosmetics-observatory__mini-board,
+  .cosmetics-observatory__card-visual,
+  .cosmetics-observatory__scene-preview,
+  .cosmetics-observatory__menu-preview,
+  .cosmetics-observatory__menu-sample,
+  .cosmetics-observatory__sound-preview {
+    border-color: CanvasText;
+    color: CanvasText;
+    background: Canvas;
+    box-shadow: none;
+    forced-color-adjust: auto;
+  }
+
+  .cosmetics-observatory__button,
+  .cosmetics-observatory__icon-button,
+  .cosmetics-observatory__segment-button,
+  .cosmetics-observatory__slot,
+  .cosmetics-observatory__tab,
+  .cosmetics-observatory__preview-surface {
+    border: 1px solid ButtonText;
+    color: ButtonText;
+    background: ButtonFace;
+  }
+
+  .cosmetics-observatory__tab[aria-selected="true"],
+  .cosmetics-observatory__preview-surface[aria-selected="true"],
+  .cosmetics-observatory__segment-button[aria-checked="true"],
+  .cosmetics-observatory__slot[aria-pressed="true"] {
+    color: HighlightText;
+    background: Highlight;
+  }
+
+  .cosmetics-observatory__mini-trail {
+    background: Highlight;
+    box-shadow: none;
+  }
+}

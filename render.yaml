@@ -22,12 +22,20 @@ services:
         value: "false"
       - key: CONSTELLORE_ENABLE_TEST_STORE
         value: "false"
+      - key: CONSTELLORE_CLOUD_PROFILE_ENABLED
+        value: "false"
+      - key: CONSTELLORE_DUELS_ENABLED
+        value: "true"
+      - key: CONSTELLORE_PUBLIC_DUELS_ENABLED
+        value: "true"
       - key: REWARDED_ADS_ENABLED
         value: "false"
       - key: CONSTELLORE_TRUST_PROXY
         value: "true"
       - key: INTEREST_ALLOWED_ORIGINS
         value: https://yoxyfel.github.io
+      - key: APP_ALLOWED_ORIGINS
+        value: https://yoxyfel.github.io,https://html-classic.itch.zone
     # Free-to-play beta storage only. Do not use this JSON store for paid ownership.
     # OPENAI_API_KEY, NEBULA_CHECKOUT_URL, and CONSTELLORE_ADMIN_TOKEN are intentionally absent.
     disk:

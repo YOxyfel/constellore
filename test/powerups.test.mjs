@@ -111,7 +111,7 @@ test("the authenticated Word Gift endpoint is idempotent, spoiler-safe, and keep
     "x-constellore-player": registration.payload.player.id,
     "x-constellore-token": registration.payload.playerToken
   };
-  const started = await request("/api/run/start", { body: { mode: "quick" } });
+  const started = await request("/api/run/start", { body: { mode: "daily" } });
   const credentials = { runId: started.payload.run.id, runToken: started.payload.run.token };
 
   const malformed = await request("/api/run/gift", { body: { ...credentials, requestedWord: "Telescope" } });
@@ -164,13 +164,13 @@ test("the authenticated Word Gift endpoint is idempotent, spoiler-safe, and keep
 
   // Ranked integrity permits one active attempt per player. Start the pure
   // comparison only after the assisted run has been finalized.
-  const parallel = await request("/api/run/start", { body: { mode: "quick" } });
+  const parallel = await request("/api/run/start", { body: { mode: "weekly", stage: 0 } });
   assert.equal(parallel.response.status, 201);
   const parallelSubmit = await completeAndSubmit(parallel.payload);
   assert.equal(parallelSubmit.response.status, 201);
   assert.equal(parallelSubmit.payload.placement.entry.division, "pure");
 
-  const replay = await request("/api/run/start", { body: { mode: "quick" } });
+  const replay = await request("/api/run/start", { body: { mode: "weekly", stage: 1 } });
   assert.equal(replay.payload.run.ranked, true);
   assert.equal(replay.payload.run.scoringDisabled, false);
   assert.equal(replay.payload.run.assist, "none");
@@ -180,7 +180,7 @@ test("local-practice Word Gift mirrors the safe contract and fails closed during
   const directory = await mkdtemp(join(tmpdir(), "constellore-local-gift-"));
   context.after(() => rm(directory, { recursive: true, force: true }));
   await writeLocalWorldModule(join(directory, "local-world.mjs"));
-  for (const file of ["local-beta.mjs", "cosmic-twists.mjs", "engagement-features.mjs", "universe-director.mjs", "recipe-feedback.mjs", "adaptive-difficulty.mjs", "remix-progression.mjs", "remix-readiness.mjs", "route-remixes.mjs", "shuffled-start.mjs"]) {
+  for (const file of ["local-beta.mjs", "cosmic-twists.mjs", "engagement-features.mjs", "universe-director.mjs", "recipe-feedback.mjs", "adaptive-difficulty.mjs", "remix-progression.mjs", "remix-readiness.mjs", "path-guard.mjs", "route-remixes.mjs", "shuffled-start.mjs"]) {
     await copyFile(new URL(`../public/${file}`, import.meta.url), join(directory, file));
   }
   const moduleUrl = pathToFileURL(join(directory, "local-beta.mjs")).href;

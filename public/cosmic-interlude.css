@@ -1,0 +1,417 @@
+/* Cosmic Interludes: short, optional puzzles between word-finding runs. */
+.simple-ui .cosmic-interlude-modal {
+  --interlude-cyan: #81e9f4;
+  --interlude-gold: #f6ce79;
+  width: min(880px, calc(100% - 28px));
+  max-height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 24px);
+  overflow: auto;
+  padding: clamp(22px, 4vw, 38px);
+  border-color: rgba(129, 233, 244, .34);
+  background:
+    radial-gradient(circle at 13% 5%, rgba(129, 233, 244, .13), transparent 30%),
+    radial-gradient(circle at 87% 94%, rgba(246, 206, 121, .10), transparent 28%),
+    linear-gradient(145deg, #13233a 0%, #101b30 48%, #0c1526 100%);
+  box-shadow:
+    0 28px 90px rgba(2, 8, 18, .62),
+    0 0 0 1px rgba(129, 233, 244, .05) inset,
+    0 0 54px rgba(65, 147, 176, .14);
+}
+
+.simple-ui .cosmic-interlude-modal[open] {
+  display: grid;
+  gap: clamp(16px, 2.5vw, 24px);
+}
+
+.simple-ui .cosmic-interlude-modal::backdrop {
+  background:
+    radial-gradient(circle at 50% 42%, rgba(36, 89, 114, .22), transparent 44%),
+    rgba(3, 8, 17, .82);
+  backdrop-filter: blur(8px);
+}
+
+.simple-ui .cosmic-interlude-heading {
+  display: grid;
+  grid-template-columns: 58px minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 16px;
+}
+
+.simple-ui .cosmic-interlude-mark {
+  width: 58px;
+  height: 58px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(129, 233, 244, .46);
+  border-radius: 50%;
+  color: var(--interlude-cyan);
+  background:
+    radial-gradient(circle, rgba(129, 233, 244, .24), rgba(129, 233, 244, .04) 52%, transparent 54%);
+  font-size: 26px;
+  box-shadow: 0 0 26px rgba(129, 233, 244, .13);
+}
+
+.simple-ui .cosmic-interlude-kicker {
+  display: block;
+  margin: 1px 0 4px;
+  color: var(--interlude-cyan);
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.4;
+  letter-spacing: .12em;
+}
+
+.simple-ui .cosmic-interlude-heading h2 {
+  margin: 0;
+  font-size: clamp(28px, 4vw, 39px);
+}
+
+.simple-ui .cosmic-interlude-heading > div > p {
+  max-width: 620px;
+  margin: 8px 0 0;
+  color: var(--ui-muted);
+  font-size: 17px;
+  line-height: 1.5;
+}
+
+.simple-ui .cosmic-interlude-status {
+  min-height: 44px;
+  margin: 4px 0 0;
+  padding: 10px 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(246, 206, 121, .40);
+  border-radius: 999px;
+  color: #fff1c8;
+  background: rgba(246, 206, 121, .08);
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.simple-ui .cosmic-interlude-stage {
+  position: relative;
+  min-height: 330px;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border: 1px solid rgba(129, 233, 244, .32);
+  border-radius: 16px;
+  background:
+    radial-gradient(circle at 18% 24%, rgba(246, 206, 121, .75) 0 1px, transparent 2px),
+    radial-gradient(circle at 78% 21%, rgba(129, 233, 244, .78) 0 1px, transparent 2px),
+    radial-gradient(circle at 31% 72%, rgba(129, 233, 244, .55) 0 1px, transparent 2px),
+    radial-gradient(circle at 85% 78%, rgba(246, 206, 121, .58) 0 1px, transparent 2px),
+    radial-gradient(ellipse at center, rgba(34, 83, 109, .24), transparent 62%),
+    linear-gradient(160deg, rgba(5, 21, 38, .96), rgba(7, 14, 29, .98));
+  box-shadow:
+    0 20px 48px rgba(2, 8, 18, .35) inset,
+    0 0 36px rgba(74, 179, 197, .08) inset;
+  touch-action: none;
+  cursor: crosshair;
+}
+
+.simple-ui .cosmic-interlude-stage::before,
+.simple-ui .cosmic-interlude-stage::after {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+}
+
+.simple-ui .cosmic-interlude-stage::before {
+  inset: 0;
+  background-image:
+    radial-gradient(circle, rgba(228, 246, 255, .48) 0 1px, transparent 1.4px),
+    radial-gradient(circle, rgba(129, 233, 244, .32) 0 1px, transparent 1.5px);
+  background-position: 11px 17px, 43px 61px;
+  background-size: 97px 83px, 131px 109px;
+  opacity: .54;
+}
+
+.simple-ui .cosmic-interlude-stage::after {
+  width: 44%;
+  height: 120%;
+  top: -10%;
+  left: 28%;
+  background: linear-gradient(90deg, transparent, rgba(129, 233, 244, .07), transparent);
+  transform: skewX(-16deg);
+  animation: cosmic-interlude-shimmer 7s ease-in-out infinite alternate;
+}
+
+.simple-ui #cosmicInterludeCanvas {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.simple-ui .cosmic-interlude-endpoints {
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  pointer-events: none;
+}
+
+.simple-ui .cosmic-interlude-endpoint {
+  position: absolute;
+  min-width: 48px;
+  min-height: 48px;
+  display: grid;
+  place-items: center;
+  border: 2px solid var(--interlude-cyan);
+  border-radius: 50%;
+  color: var(--ui-text);
+  background: rgba(12, 27, 47, .92);
+  box-shadow:
+    0 0 0 6px rgba(129, 233, 244, .08),
+    0 0 22px rgba(129, 233, 244, .18);
+  font: 700 15px/1 inherit;
+  translate: -50% -50%;
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.simple-ui .cosmic-interlude-endpoint[aria-pressed="true"] {
+  border-color: var(--interlude-gold);
+  box-shadow:
+    0 0 0 7px rgba(246, 206, 121, .12),
+    0 0 28px rgba(246, 206, 121, .25);
+}
+
+.simple-ui .cosmic-interlude-endpoint.is-connected {
+  border-color: #8cf0b7;
+  color: #d7ffe7;
+  background: rgba(12, 56, 48, .94);
+}
+
+.simple-ui .cosmic-interlude-stage.memory-preview .cosmic-interlude-endpoint[aria-disabled="true"] {
+  opacity: 1;
+  cursor: wait;
+}
+
+.simple-ui .cosmic-interlude-memory {
+  position: absolute;
+  z-index: 4;
+  top: 13px;
+  left: 50%;
+  max-width: calc(100% - 28px);
+  margin: 0;
+  translate: -50% 0;
+  border: 1px solid rgba(246, 206, 121, .52);
+  border-radius: 999px;
+  padding: 9px 14px;
+  color: #fff1c8;
+  background: rgba(22, 24, 43, .92);
+  font-size: 16px;
+  font-weight: 800;
+  line-height: 1.25;
+  text-align: center;
+  white-space: nowrap;
+  box-shadow: 0 8px 26px rgba(2, 8, 18, .36);
+  pointer-events: none;
+}
+
+.simple-ui .cosmic-interlude-memory.is-recall {
+  border-color: rgba(129, 233, 244, .46);
+  color: #dffbff;
+}
+
+.simple-ui .cosmic-interlude-memory[hidden] {
+  display: none;
+}
+
+.simple-ui .cosmic-interlude-stage-help {
+  position: absolute;
+  z-index: 3;
+  right: 14px;
+  bottom: 14px;
+  left: 14px;
+  width: fit-content;
+  max-width: calc(100% - 28px);
+  margin: 0 auto;
+  padding: 8px 12px;
+  border: 1px solid rgba(200, 216, 239, .18);
+  border-radius: 999px;
+  color: #dce8f3;
+  background: rgba(8, 17, 31, .82);
+  font-size: 15px;
+  line-height: 1.35;
+  text-align: center;
+  backdrop-filter: blur(6px);
+  pointer-events: none;
+}
+
+.simple-ui .cosmic-interlude-actions {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) auto;
+  gap: 10px;
+}
+
+.simple-ui .cosmic-interlude-actions > button {
+  min-height: 52px;
+  font-size: 17px;
+}
+
+.simple-ui .cosmic-interlude-actions > .primary-action {
+  background: linear-gradient(100deg, #83c8df, #a4b8e7);
+}
+
+.simple-ui .cosmic-interlude-actions > [hidden] {
+  display: none;
+}
+
+.simple-ui #cosmicInterludeUndo:not([hidden]) {
+  color: #dce8f3;
+  border-color: rgba(200, 216, 239, .24);
+  background: rgba(8, 17, 31, .42);
+}
+
+@keyframes cosmic-interlude-shimmer {
+  from { opacity: .28; transform: translateX(-18%) skewX(-16deg); }
+  to { opacity: .72; transform: translateX(18%) skewX(-16deg); }
+}
+
+@media (max-width: 640px) {
+  .simple-ui .cosmic-interlude-modal {
+    width: calc(100% - env(safe-area-inset-left) - env(safe-area-inset-right) - 16px);
+    max-height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 12px);
+    padding:
+      max(18px, env(safe-area-inset-top))
+      max(14px, env(safe-area-inset-right))
+      max(16px, env(safe-area-inset-bottom))
+      max(14px, env(safe-area-inset-left));
+    border-radius: 14px;
+  }
+
+  .simple-ui .cosmic-interlude-heading {
+    grid-template-columns: 46px minmax(0, 1fr);
+    gap: 11px;
+  }
+
+  .simple-ui .cosmic-interlude-mark {
+    width: 46px;
+    height: 46px;
+    font-size: 22px;
+  }
+
+  .simple-ui .cosmic-interlude-heading h2 {
+    font-size: clamp(25px, 8vw, 32px);
+  }
+
+  .simple-ui .cosmic-interlude-heading > div > p {
+    font-size: 16px;
+  }
+
+  .simple-ui .cosmic-interlude-status {
+    grid-column: 1 / -1;
+    justify-self: start;
+    margin: 0;
+  }
+
+  .simple-ui .cosmic-interlude-stage {
+    min-height: 280px;
+    aspect-ratio: auto;
+  }
+
+  .simple-ui .cosmic-interlude-memory {
+    top: 10px;
+    max-width: calc(100% - 20px);
+    padding: 8px 11px;
+    font-size: 15px;
+  }
+
+  .simple-ui .cosmic-interlude-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .simple-ui .cosmic-interlude-actions > .primary-action {
+    grid-row: 1;
+  }
+}
+
+@media (max-height: 580px) and (min-width: 641px) {
+  .simple-ui .cosmic-interlude-modal {
+    width: min(940px, calc(100% - 20px));
+    padding: 16px 20px;
+  }
+
+  .simple-ui .cosmic-interlude-modal[open] {
+    grid-template-columns: minmax(260px, .72fr) minmax(430px, 1.5fr);
+    grid-template-rows: 1fr auto;
+    gap: 12px 18px;
+  }
+
+  .simple-ui .cosmic-interlude-heading {
+    grid-template-columns: 46px minmax(0, 1fr);
+  }
+
+  .simple-ui .cosmic-interlude-mark {
+    width: 46px;
+    height: 46px;
+  }
+
+  .simple-ui .cosmic-interlude-status {
+    grid-column: 1 / -1;
+    justify-self: start;
+  }
+
+  .simple-ui .cosmic-interlude-stage {
+    grid-column: 2;
+    grid-row: 1 / 3;
+    min-height: min(420px, calc(100dvh - 52px));
+  }
+
+  .simple-ui .cosmic-interlude-actions {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .simple-ui .cosmic-interlude-stage::after {
+    animation: none !important;
+    opacity: .38;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .simple-ui .cosmic-interlude-modal,
+  .simple-ui .cosmic-interlude-stage,
+  .simple-ui .cosmic-interlude-status,
+  .simple-ui .cosmic-interlude-memory,
+  .simple-ui .cosmic-interlude-stage-help {
+    border-color: currentColor;
+  }
+}
+
+@media (forced-colors: active) {
+  .simple-ui .cosmic-interlude-modal,
+  .simple-ui .cosmic-interlude-stage,
+  .simple-ui .cosmic-interlude-status,
+  .simple-ui .cosmic-interlude-memory,
+  .simple-ui .cosmic-interlude-stage-help {
+    border: 1px solid CanvasText;
+    color: CanvasText;
+    background: Canvas;
+    box-shadow: none;
+    forced-color-adjust: auto;
+  }
+
+  .simple-ui .cosmic-interlude-mark,
+  .simple-ui .cosmic-interlude-endpoint {
+    border: 1px solid Highlight;
+    color: Highlight;
+    background: Canvas;
+    box-shadow: none;
+  }
+
+  .simple-ui .cosmic-interlude-stage::before,
+  .simple-ui .cosmic-interlude-stage::after {
+    display: none;
+  }
+
+  .simple-ui .cosmic-interlude-actions > .primary-action {
+    color: ButtonText;
+    background: ButtonFace;
+  }
+}

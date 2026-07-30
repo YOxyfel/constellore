@@ -6,7 +6,8 @@ import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import test from "node:test";
 
-import { adaptiveRewardMultiplier } from "../public/adaptive-difficulty.mjs";
+import { adaptiveDifficultyTag, adaptiveRewardMultiplier } from "../public/adaptive-difficulty.mjs";
+import { createRemixProgressionState } from "../public/remix-progression.mjs";
 import { writeLocalWorldModule } from "../scripts/build-local-world.mjs";
 import { buildGameForMode, server, solutionRoute } from "../server.mjs";
 
@@ -14,6 +15,7 @@ const LOCAL_RUNTIME_ASSETS = [
   "adaptive-difficulty.mjs",
   "remix-progression.mjs",
   "remix-readiness.mjs",
+  "path-guard.mjs",
   "route-remixes.mjs",
   "shuffled-start.mjs",
   "local-beta.mjs",
@@ -75,6 +77,7 @@ test("adaptive server game construction is deterministic, reachable, personal, a
     assert.equal(first.scoreEligible, true);
     assert.equal(first.rewardEligible, true);
     assert.equal(first.adaptiveRewardMultiplier, adaptiveRewardMultiplier(first.challengeLevel));
+    assert.equal(first.difficultyTag, adaptiveDifficultyTag(first.challengeLevel));
     assertVerifiedRoute(first, { maximumLength });
 
     const baseGame = buildGameForMode(mode, first.seed, first.target);
@@ -116,6 +119,7 @@ test("adaptive construction exposes one-game Surge metadata without mutating the
   assert.equal(game.adaptiveSurgeBaseLevel, 6);
   assert.equal(game.surge, true);
   assert.equal(game.surgeBaseLevel, 6);
+  assert.equal(game.difficultyTag, adaptiveDifficultyTag(game.challengeLevel));
   assert.match(game.adaptiveMessage, /Surge challenge.*one much harder game/i);
   assertVerifiedRoute(game);
 });
@@ -182,43 +186,13 @@ test("signed server preview and start preserve one unranked adaptive mission whi
   const preview = await request("/api/run/preview", { method: "POST", body: adaptiveBody });
   assert.equal(preview.response.status, 200);
   assert.equal(preview.payload.game.adaptive, true);
-  assert.equal(preview.payload.game.adaptiveVersion, 2);
+  assert.equal(preview.payload.game.mode, "reach");
+  assert.equal(preview.payload.game.timeLimit, null);
+  assert.equal(preview.payload.game.moveLimit, null);
   // Online difficulty, rank, and Remix readiness are server-owned. Hostile or
-  // stale client claims cannot skip a new account into an advanced challenge.
-  assert.equal(preview.payload.game.adaptiveLevel, 4);
-  assert.equal(preview.payload.game.adaptiveBaseLevel, 4);
-  assert.equal(preview.payload.game.adaptiveEffectiveLevel, 4);
-  assert.equal(preview.payload.game.adaptiveCompletedChallenges, 0);
-  assert.equal(preview.payload.game.adaptiveCompletionsTowardNextLevel, 0);
-  assert.equal(preview.payload.game.adaptiveCompletionsUntilNextLevel, 3);
-  assert.equal(preview.payload.game.adaptiveMajorChallengePending, false);
-  assert.equal(preview.payload.game.adaptiveMajorChallengeBaseLevel, null);
-  assert.equal(preview.payload.game.adaptiveSurge, false);
-  assert.equal(preview.payload.game.adaptiveSurgeBonus, 0);
-  assert.equal(preview.payload.game.adaptiveSurgeBaseLevel, null);
-  assert.equal(preview.payload.game.surge, false);
-  assert.equal(preview.payload.game.surgeBaseLevel, 4);
-  assert.match(preview.payload.game.adaptiveMessage, /Complete 3 challenges/i);
-  assert.equal(preview.payload.game.remixes.rank.id, "bronze");
-  assert.equal(preview.payload.game.remixes.activeCount, 0);
-  assert.equal(preview.payload.player.routeRank.rank.id, "bronze");
-  assert.equal(preview.payload.player.routeRank.mastery.points, 0);
-  assert.equal(preview.payload.game.ranked, false);
-  assert.equal(preview.payload.game.leaderboardEligible, false);
-  assert.equal(preview.payload.game.scoreEligible, true);
-  assert.equal(preview.payload.game.rewardEligible, true);
-  assertVerifiedRoute(preview.payload.game, { maximumLength: 8 });
-
-  const started = await request("/api/run/start", {
-    method: "POST",
-    body: { previewToken: preview.payload.previewToken }
-  });
-  assert.equal(started.response.status, 201);
-  assert.equal(started.payload.game.target, preview.payload.game.target);
-  assert.equal(started.payload.game.reward, preview.payload.game.reward);
-  assert.equal(started.payload.game.adaptiveRewardMultiplier, preview.payload.game.adaptiveRewardMultiplier);
-  assert.equal(started.payload.game.challengeLevel, preview.payload.game.challengeLevel);
-  for (const field of [
+  // stale client claims cannot skip a new account into an advanced challenge,
+  // and the response does not reveal the server's counters or formula.
+  const privateDifficultyFields = [
     "adaptiveVersion",
     "adaptiveLevel",
     "adaptiveBaseLevel",
@@ -233,13 +207,83 @@ test("signed server preview and start preserve one unranked adaptive mission whi
     "adaptiveSurgeBaseLevel",
     "surge",
     "surgeBaseLevel",
+    "challengeLevel",
+    "adaptiveRewardMultiplier",
     "adaptiveMessage"
-  ]) {
-    assert.deepEqual(started.payload.game[field], preview.payload.game[field], field);
+  ];
+  for (const field of privateDifficultyFields) {
+    assert.equal(Object.hasOwn(preview.payload.game, field), false, `${field} must remain server-private`);
+  }
+  assert.match(preview.payload.previewToken, /^mission_[0-9a-f-]{36}$/);
+  assert.equal(preview.payload.previewToken.includes("."), false);
+  assert.equal(preview.payload.game.remixes.rank.id, "bronze");
+  assert.equal(preview.payload.game.remixes.activeCount, 0);
+  assert.equal(preview.payload.player.routeRank.rank.id, "bronze");
+  assert.equal(preview.payload.player.routeRank.mastery.points, 0);
+  assert.equal(Object.hasOwn(preview.payload.player.routeRank, "adaptiveDifficulty"), false);
+  assert.equal(Object.hasOwn(preview.payload.player.routeRank, "remixIntensity"), false);
+  assert.equal(preview.payload.game.ranked, false);
+  assert.equal(preview.payload.game.leaderboardEligible, false);
+  assert.equal(preview.payload.game.scoreEligible, true);
+  assert.equal(preview.payload.game.rewardEligible, true);
+  assert.ok(["", "Difficult"].includes(preview.payload.game.difficultyTag));
+  assertVerifiedRoute(preview.payload.game);
+
+  const manuallyRequestedPressure = await request("/api/run/preview", {
+    method: "POST",
+    body: {
+      mode: "moves",
+      seed: 7823,
+      adaptive: false,
+      routeProgression: {
+        rankId: "cosmic",
+        masteryPoints: 999999,
+        completedChallenges: 999999
+      }
+    }
+  });
+  assert.equal(manuallyRequestedPressure.response.status, 200);
+  assert.equal(manuallyRequestedPressure.payload.game.mode, "reach");
+  assert.equal(manuallyRequestedPressure.payload.game.adaptive, true);
+  assert.equal(manuallyRequestedPressure.payload.game.timeLimit, null);
+  assert.equal(manuallyRequestedPressure.payload.game.moveLimit, null);
+  assert.equal(manuallyRequestedPressure.payload.game.remixes.rank.id, "bronze");
+
+  const avoidedPreview = await request("/api/run/preview", {
+    method: "POST",
+    body: {
+      ...adaptiveBody,
+      avoidTarget: preview.payload.game.target.toLocaleUpperCase("en-US")
+    }
+  });
+  assert.equal(avoidedPreview.response.status, 200);
+  assert.notEqual(
+    avoidedPreview.payload.game.target.toLocaleLowerCase("en-US"),
+    preview.payload.game.target.toLocaleLowerCase("en-US")
+  );
+  assert.equal(Object.hasOwn(avoidedPreview.payload.game, "avoidTarget"), false);
+
+  const invalidAvoidTarget = await request("/api/run/preview", {
+    method: "POST",
+    body: { ...adaptiveBody, avoidTarget: "x".repeat(81) }
+  });
+  assert.equal(invalidAvoidTarget.response.status, 400);
+  assert.equal(invalidAvoidTarget.payload.code, "invalid_avoid_target");
+
+  const started = await request("/api/run/start", {
+    method: "POST",
+    body: { previewToken: avoidedPreview.payload.previewToken }
+  });
+  assert.equal(started.response.status, 201);
+  assert.equal(started.payload.game.target, avoidedPreview.payload.game.target);
+  assert.equal(started.payload.game.reward, avoidedPreview.payload.game.reward);
+  assert.equal(started.payload.game.difficultyTag, avoidedPreview.payload.game.difficultyTag);
+  for (const field of privateDifficultyFields) {
+    assert.equal(Object.hasOwn(started.payload.game, field), false, `${field} must remain server-private after start`);
   }
   assert.equal(started.payload.run.ranked, false);
   assert.equal(started.payload.run.leaderboardEligible, false);
-  assert.equal(started.payload.run.routeProgress.total, preview.payload.game.routeLength);
+  assert.equal(started.payload.run.routeProgress.total, avoidedPreview.payload.game.routeLength);
 
   const completedForReplay = await request("/api/run/reveal", {
     method: "POST",
@@ -318,6 +362,75 @@ test("the static beta preview/start adapter matches adaptive server semantics", 
   context.after(() => rm(directory, { recursive: true, force: true }));
   const { runtime, world } = await prepareLocalRuntime(directory);
 
+  const bronzePressure = await runtime.localRequest("/api/run/preview", {
+    method: "POST",
+    body: JSON.stringify({ mode: "quick", seed: 73 })
+  });
+  assert.equal(bronzePressure.game.mode, "reach");
+  assert.equal(bronzePressure.game.adaptive, true);
+  assert.equal(bronzePressure.game.timeLimit, null);
+  assert.equal(bronzePressure.game.moveLimit, null);
+  assert.equal(bronzePressure.game.remixes.rank.id, "bronze");
+
+  const goldPressure = await runtime.localRequest("/api/run/preview", {
+    method: "POST",
+    body: JSON.stringify({
+      mode: "quick",
+      seed: 73,
+      routeProgression: createRemixProgressionState({
+        rankId: "gold",
+        masteryPoints: 200,
+        completedChallenges: 8
+      })
+    })
+  });
+  assert.equal(goldPressure.game.mode, "quick");
+  assert.equal(goldPressure.game.adaptive, undefined);
+  assert.equal(goldPressure.game.timeLimit, 90);
+
+  const firstRecoveryCandidate = await runtime.localRequest("/api/run/preview", {
+    method: "POST",
+    body: JSON.stringify({
+      mode: "reach",
+      seed: 991,
+      adaptive: true,
+      adaptiveVersion: 2,
+      adaptiveLevel: 5
+    })
+  });
+  const alternateRecoveryCandidate = await runtime.localRequest("/api/run/preview", {
+    method: "POST",
+    body: JSON.stringify({
+      mode: "reach",
+      seed: 991,
+      adaptive: true,
+      adaptiveVersion: 2,
+      adaptiveLevel: 5,
+      avoidTarget: firstRecoveryCandidate.game.target.toLocaleUpperCase("en-US")
+    })
+  });
+  assert.notEqual(
+    alternateRecoveryCandidate.game.target.toLocaleLowerCase("en-US"),
+    firstRecoveryCandidate.game.target.toLocaleLowerCase("en-US")
+  );
+  assert.equal(
+    alternateRecoveryCandidate.game.adaptiveRecentTargets.at(-1),
+    alternateRecoveryCandidate.game.target
+  );
+  const startedAlternate = await runtime.localRequest("/api/run/start", {
+    method: "POST",
+    body: JSON.stringify({ previewToken: alternateRecoveryCandidate.previewToken })
+  });
+  assert.equal(startedAlternate.game.target, alternateRecoveryCandidate.game.target);
+
+  await assert.rejects(
+    runtime.localRequest("/api/run/preview", {
+      method: "POST",
+      body: JSON.stringify({ mode: "reach", adaptive: true, avoidTarget: "x".repeat(81) })
+    }),
+    (error) => error?.code === "invalid_avoid_target" && error?.status === 400
+  );
+
   const adaptiveBody = {
     mode: "moves",
     seed: 31415,
@@ -352,6 +465,7 @@ test("the static beta preview/start adapter matches adaptive server semantics", 
   assert.match(preview.game.adaptiveMessage, /Surge challenge/i);
   assert.equal(preview.game.ranked, false);
   assert.equal(preview.game.leaderboardEligible, false);
+  assert.equal(preview.game.difficultyTag, adaptiveDifficultyTag(preview.game.challengeLevel));
   assert.equal(preview.game.remixes.rank.id, "diamond");
   assert.ok(preview.game.remixes.activeCount >= 1 && preview.game.remixes.activeCount <= 2);
   assert.equal(preview.game.remixes.rules.length, preview.game.remixes.activeCount);

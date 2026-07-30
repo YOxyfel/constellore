@@ -330,7 +330,8 @@ test("repeating an adaptive forfeit is idempotent", async () => {
     1
   );
   assert.equal(store.publicRouteRank(playerId).mastery.points, 0);
-  assert.equal(store.publicRouteRank(playerId).adaptiveDifficulty.level, 3);
+  assert.equal(store.routeChallengeState(playerId).adaptiveDifficulty.level, 1);
+  assert.equal(Object.hasOwn(store.publicRouteRank(playerId), "adaptiveDifficulty"), false);
 });
 
 test("one active adaptive challenge prevents multi-tab mastery farming", async () => {

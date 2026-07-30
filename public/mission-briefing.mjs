@@ -1,5 +1,10 @@
+import {
+  FIRST_ORBIT_COMBINATION_COUNT,
+  FIRST_ORBIT_TARGET
+} from "./first-orbit.mjs?v=5.0.0-beta.1";
+
 const MODE_RULES = {
-  training: "We will show you three combinations.",
+  training: `Make ${FIRST_ORBIT_TARGET} in ${FIRST_ORBIT_COMBINATION_COUNT} combination${FIRST_ORBIT_COMBINATION_COUNT === 1 ? "" : "s"}.`,
   "second-orbit": "Make Mountain in three combinations.",
   explore: "There is no target, timer, or move limit.",
   reach: "There is no timer or move limit.",

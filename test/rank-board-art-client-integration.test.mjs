@@ -19,15 +19,13 @@ test("the client drives board art from permanent Route Rank", () => {
   assert.match(routeRankClient, /previousSky[.]id === nextSky[.]id/);
 });
 
-test("starting-word choices use one labelled radio group and roving focus", () => {
+test("starting words stay automatic without a result-screen selector", () => {
   const resultDialog = html.match(/<dialog\b(?=[^>]*id="resultDialog")[\s\S]*?<\/dialog>/)?.[0] || "";
-  const homeModePicker = html.match(/<details\b(?=[^>]*id="modePicker")[\s\S]*?<\/details>/)?.[0] || "";
-  assert.match(resultDialog, /role="radiogroup"[^>]+aria-describedby="startStyleSummary"/);
-  assert.match(resultDialog, /data-start-style="auto">Auto</);
-  assert.match(resultDialog, /data-start-style="classic">Same 4</);
-  assert.match(resultDialog, /data-start-style="shuffled">New mix</);
+  const homeModePicker = html.match(/<section\b(?=[^>]*id="modePicker")[\s\S]*?<\/section>/)?.[0] || "";
+  assert.doesNotMatch(resultDialog, /role="radiogroup"|startStyleSummary|data-start-style|Same 4|New mix/);
   assert.doesNotMatch(homeModePicker, /data-start-style|start-style-control/);
-  assert.match(app, /button\.tabIndex = selected \? 0 : -1/);
-  assert.match(app, /New mixes unlock after Bronze/);
-  assert.match(app, /bronzeLocked && preference === "shuffled"/);
+  assert.match(resultDialog, /id="resultRetry"/);
+  assert.match(app, /function nextStartStyleDecision\([\s\S]*preference:\s*"auto"/);
+  assert.match(app, /startStyle:\s*"auto"/);
+  assert.doesNotMatch(app, /startStylePreference|chooseStartStyle|data-start-style/);
 });

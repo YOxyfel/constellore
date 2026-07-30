@@ -4,16 +4,23 @@ test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
     localStorage.clear();
     sessionStorage.clear();
+    const profile = {
+      version: 7,
+      wins: 0,
+      firstOrbit: { seen: true, completed: true },
+      secondOrbit: { seen: true, completed: true }
+    };
+    localStorage.setItem("constellore-profile-v1", JSON.stringify(profile));
+    localStorage.setItem("constellore-local-profile-v1", JSON.stringify(profile));
   });
 });
 
-test("profile diagnostics actions remain readable in the desktop dialog", async ({ page }) => {
+test("Menu diagnostics actions remain readable in the desktop dialog", async ({ page }) => {
   // The original regression only appeared when the viewport was wide enough
-  // to miss the mobile breakpoint while the profile dialog stayed narrow.
+  // to miss the mobile breakpoint while the Menu dialog stayed narrow.
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.goto("/play/");
-  await page.locator("#profileDialog").evaluate((dialog) => {
-    dialog.querySelector(".profile-more").open = true;
+  await page.locator("#hubMenuDialog").evaluate((dialog) => {
     dialog.querySelector(".profile-data").open = true;
     dialog.showModal();
   });

@@ -3,35 +3,40 @@ import {
   canonicalLocalTarget,
   canonicalLocalWord,
   localAdaptiveCandidates,
+  localGoldenEarlyCompletionLimit,
   localItemFor,
   localRemixRecipesFor,
   localRouteTo,
   localSuggestions,
   lookupLocalCombination
-} from "./local-world.mjs?v=3.3.0-beta.1";
+} from "./local-world.mjs?v=5.0.0-beta.1";
 import {
   adaptiveChallengeProfile,
+  adaptiveDifficultyTag,
   adaptiveModePolicy,
   adaptiveRewardMultiplier,
+  adaptiveRunEntryPolicy,
   estimateAdaptiveChallengeLevel,
+  parseAdaptiveAvoidTarget,
+  rememberAdaptiveTarget,
   sanitizeAdaptiveDifficultyState,
   selectAdaptiveChallenge
-} from "./adaptive-difficulty.mjs?v=3.3.0-beta.1";
+} from "./adaptive-difficulty.mjs?v=5.0.0-beta.1";
 import {
   createRemixProgressionState,
   getPromotionEligibility,
   getRemixRankPresentation,
   sanitizeRemixProgressionState,
   selectChallengeRemixes
-} from "./remix-progression.mjs?v=3.3.0-beta.1";
+} from "./remix-progression.mjs?v=5.0.0-beta.1";
 import {
   sanitizeRemixReadinessState,
   selectAdaptiveRemixPlan
-} from "./remix-readiness.mjs?v=3.3.0-beta.1";
+} from "./remix-readiness.mjs?v=5.0.0-beta.1";
 import {
   CLASSIC_STARTERS,
   createChallengeStartProfile
-} from "./shuffled-start.mjs?v=3.3.0-beta.1";
+} from "./shuffled-start.mjs?v=5.0.0-beta.1";
 import {
   checkRouteRemixBeforeCombination,
   checkRouteRemixCompletion,
@@ -41,11 +46,12 @@ import {
   markRouteRemixAnswerRevealed,
   recordRouteRemixCombination,
   routeRemixProgress
-} from "./route-remixes.mjs?v=3.3.0-beta.1";
-import { cosmicTwistOptions, cosmicTwistSeedFor, selectCosmicTwist } from "./cosmic-twists.mjs?v=3.3.0-beta.1";
-import { QUICK_TIP_LIMIT, assistancePolicy, combineAssistance, rankSenseCandidates, selectRouteNavigationTip, selectWordGift } from "./engagement-features.mjs?v=3.3.0-beta.1";
-import { annotateUniverseResult, selectUniverse, validateUniverseRoute } from "./universe-director.mjs?v=3.3.0-beta.1";
-import { sanitizeRecipeRating } from "./recipe-feedback.mjs?v=3.3.0-beta.1";
+} from "./route-remixes.mjs?v=5.0.0-beta.1";
+import { cosmicTwistOptions, cosmicTwistSeedFor, selectCosmicTwist } from "./cosmic-twists.mjs?v=5.0.0-beta.1";
+import { QUICK_TIP_LIMIT, assistancePolicy, combineAssistance, rankSenseCandidates, selectRouteNavigationTip, selectWordGift } from "./engagement-features.mjs?v=5.0.0-beta.1";
+import { annotateUniverseResult, selectUniverse, validateUniverseRoute } from "./universe-director.mjs?v=5.0.0-beta.1";
+import { sanitizeRecipeRating } from "./recipe-feedback.mjs?v=5.0.0-beta.1";
+import { PATH_GUARD_VERSION, createPathGuardEvidence, evaluatePathGuard, pathGuardEligibility } from "./path-guard.mjs?v=5.0.0-beta.1";
 
 const runs = new Map();
 const missionPreviews = new Map();
@@ -93,6 +99,18 @@ function parseBody(options) {
   if (!options?.body) return {};
   try { return JSON.parse(options.body); }
   catch { return fail("That local request could not be read.", "invalid_json", 400); }
+}
+
+function validatedLocalAvoidTarget(value) {
+  const parsed = parseAdaptiveAvoidTarget(value);
+  if (!parsed.valid) {
+    fail(
+      "The previous target must be 80 characters or fewer.",
+      "invalid_avoid_target",
+      400
+    );
+  }
+  return parsed.target;
 }
 
 function publicPlayer() {
@@ -306,7 +324,7 @@ function adaptiveLocalGame(mode, seed, stage, request) {
     shared: Boolean(request?.shared),
     fixed: Boolean(request?.fixed)
   });
-  if (request?.adaptive !== true || !policy.eligible) return null;
+  if (!policy.eligible) return null;
   const adaptiveState = sanitizeAdaptiveDifficultyState({
     version: request.adaptiveVersion,
     level: request.adaptiveLevel,
@@ -318,8 +336,18 @@ function adaptiveLocalGame(mode, seed, stage, request) {
   });
   const profile = adaptiveChallengeProfile(adaptiveState);
   const routeContext = localChallengeContext(request, profile.completedChallenges);
+  const entryPolicy = adaptiveRunEntryPolicy({
+    mode,
+    custom: Boolean(request?.custom),
+    shared: Boolean(request?.shared),
+    fixed: Boolean(request?.fixed),
+    adaptive: request?.adaptive === true,
+    rank: routeContext.currentRank
+  });
+  if (!entryPolicy.personal) return null;
+  const effectiveMode = entryPolicy.mode;
   const remixRank = routeContext.challengeRank;
-  const candidates = localAdaptiveCandidates(mode).filter((candidate) => {
+  const allCandidates = localAdaptiveCandidates(effectiveMode).filter((candidate) => {
     const context = localRemixContext(candidate);
     if (!context) return false;
     const realizedUnlocked = remixRank.unlockedFamilies.filter(
@@ -328,7 +356,20 @@ function adaptiveLocalGame(mode, seed, stage, request) {
     return realizedUnlocked.length >= remixRank.minimumRemixes;
   });
   const requestedTarget = canonicalLocalTarget(request.adaptiveTarget);
+  const preferredCandidates = profile.completedChallenges < localGoldenEarlyCompletionLimit
+    ? allCandidates
+        .filter((candidate) => Number.isInteger(candidate.goldenOrder) && candidate.goldenOrder >= 0)
+        .sort((left, right) => left.goldenOrder - right.goldenOrder)
+    : allCandidates;
+  const candidates = requestedTarget
+    ? allCandidates
+    : preferredCandidates.length
+      ? preferredCandidates
+      : allCandidates;
+  const avoidTarget = validatedLocalAvoidTarget(request.avoidTarget);
+  const avoidedKey = avoidTarget.toLocaleLowerCase("en-US");
   const selection = requestedTarget
+    && requestedTarget.toLocaleLowerCase("en-US") !== avoidedKey
     ? {
         selected: candidates.find((candidate) => candidate.target.toLowerCase() === requestedTarget.toLowerCase()),
         metadata: {
@@ -344,11 +385,14 @@ function adaptiveLocalGame(mode, seed, stage, request) {
     : selectAdaptiveChallenge({
         state: adaptiveState,
         candidates,
-        context: { mode, seed }
+        context: { mode: effectiveMode, seed, avoidTarget }
       });
   const selected = selection.selected;
   if (!selected) return null;
-  const game = buildLocalGame(mode, seed, selected.target, stage);
+  const allocatedState = selection.state
+    ? sanitizeAdaptiveDifficultyState(selection.state)
+    : rememberAdaptiveTarget(adaptiveState, selected.target);
+  const game = buildLocalGame(effectiveMode, seed, selected.target, stage);
   if (!game) return null;
   const challengeLevel = estimateAdaptiveChallengeLevel(selected);
   const rewardMultiplier = adaptiveRewardMultiplier(challengeLevel);
@@ -365,12 +409,14 @@ function adaptiveLocalGame(mode, seed, stage, request) {
     adaptiveCompletionsUntilNextLevel: profile.completionsUntilNextLevel,
     adaptiveMajorChallengePending: adaptiveState.majorChallengePending,
     adaptiveMajorChallengeBaseLevel: adaptiveState.majorChallengeBaseLevel,
+    adaptiveRecentTargets: allocatedState.recentTargets,
     adaptiveSurge: profile.surge,
     adaptiveSurgeBonus: profile.majorChallengeBonus,
     adaptiveSurgeBaseLevel: adaptiveState.majorChallengeBaseLevel,
     surge: profile.surge,
     surgeBaseLevel: profile.baseLevel,
     challengeLevel,
+    difficultyTag: adaptiveDifficultyTag(challengeLevel),
     adaptiveRewardMultiplier: rewardMultiplier,
     adaptiveMessage: adaptiveChallengeMessage(profile),
     ranked: false,
@@ -478,8 +524,17 @@ function gameWithLocalStart(game, profile) {
 
 function directedLocalGame(mode, seed, target, stage, adaptiveRequest = null) {
   const request = adaptiveRequest || {};
+  const fallbackContext = localChallengeContext(request);
+  const fallbackPolicy = adaptiveRunEntryPolicy({
+    mode,
+    custom: Boolean(request?.custom),
+    shared: Boolean(request?.shared),
+    fixed: Boolean(request?.fixed),
+    adaptive: request?.adaptive === true,
+    rank: fallbackContext.currentRank
+  });
   const game = adaptiveLocalGame(mode, seed, stage, request)
-    || buildLocalGame(mode, seed, target, stage);
+    || buildLocalGame(fallbackPolicy.mode, seed, target, stage);
   if (!game) return null;
   const route = localRouteTo(game.target);
   if (!Array.isArray(route) || !route.length) return null;
@@ -589,6 +644,34 @@ function hasExactKeys(value, keys) {
   return isRecord(value) && Object.keys(value).sort().join(",") === [...keys].sort().join(",");
 }
 
+const RUN_ENTRY_ID_PATTERN = /^[A-Za-z0-9][A-Za-z0-9-]{15,79}$/;
+
+function normalizeLocalRunEntryId(value) {
+  if (value === undefined) return null;
+  if (typeof value !== "string" || !RUN_ENTRY_ID_PATTERN.test(value)) {
+    fail(
+      "Run entry IDs must be 16 to 80 letters, numbers, or hyphens.",
+      "invalid_run_entry_id",
+      400
+    );
+  }
+  return value;
+}
+
+function stableIdentityValue(value) {
+  if (Array.isArray(value)) return value.map((item) => stableIdentityValue(item));
+  if (!isRecord(value)) return value;
+  return Object.fromEntries(
+    Object.keys(value)
+      .sort()
+      .map((key) => [key, stableIdentityValue(value[key])])
+  );
+}
+
+function localRunEntryChallengeIdentity(game) {
+  return JSON.stringify(stableIdentityValue(game));
+}
+
 function boundedInteger(value, fallback = 0, maximum = 10_000) {
   const parsed = Number(value);
   if (!Number.isFinite(parsed)) return fallback;
@@ -681,16 +764,105 @@ function localRouteProgressForRun(run) {
   };
 }
 
+function localPathGuardContext(run) {
+  const game = run?.game || {};
+  const mode = String(game.mode || "").trim().toLowerCase();
+  const scoreEligible = Boolean(!run?.scoringDisabled && game.scoreEligible !== false);
+  return {
+    rankId: game.remixes?.rank?.id || "",
+    mode,
+    target: game.target || "",
+    assist: run?.assist || "",
+    scoringDisabled: !scoreEligible,
+    scoreEligible,
+    finished: Boolean(run?.completed),
+    ranked: false,
+    practiceReplay: game.practiceReplay === true,
+    remixes: game.remixes || null,
+    promotion: game.promotion || null,
+    tutorial: ["training", "second-orbit"].includes(mode),
+    multiplayer: mode === "scramble",
+    competitive: ["daily", "weekly", "challenge", "scramble"].includes(mode)
+  };
+}
+
+function localPathGuardEnabled(run) {
+  const game = run?.game;
+  if (
+    !run
+    || !game
+    || game.adaptive !== true
+    || game.practiceReplay === true
+    || String(game.mode || "").trim().toLowerCase() !== "reach"
+    || Math.max(
+      Array.isArray(game.remixes?.rules) ? game.remixes.rules.length : 0,
+      Math.trunc(Number(game.remixes?.activeCount) || 0)
+    ) > 0
+  ) return false;
+  return pathGuardEligibility(localPathGuardContext(run)).active;
+}
+
+function localPathGuardDecision(run, { a, b, result } = {}) {
+  const context = localPathGuardContext(run);
+  if (!localPathGuardEnabled(run) || !result?.word) {
+    return evaluatePathGuard(context, { a, b }, {});
+  }
+  if (!Array.isArray(run.solutionRoute) || !run.solutionRoute.length) {
+    return evaluatePathGuard(context, { a, b }, {});
+  }
+  const resultKey = String(result.word).trim().toLocaleLowerCase("en-US");
+  const followsGuidedRoute = Boolean(
+    resultKey
+    && !run.available.has(resultKey)
+    && run.solutionRoute.some(
+      (step) => String(step?.word || "").trim().toLocaleLowerCase("en-US") === resultKey
+    )
+  );
+  const pairEvidence = [{ a, b }];
+  return evaluatePathGuard(
+    context,
+    { a, b },
+    createPathGuardEvidence({
+      authoritative: true,
+      target: run.game.target,
+      ...(followsGuidedRoute
+        ? { expectedPairs: pairEvidence }
+        : { deadEndPairs: pairEvidence })
+    })
+  );
+}
+
+function localWrongPathError(run) {
+  const error = new Error("WRONG PATH · That pairing does not follow this guided route. Your words stay ready and no move is used.");
+  error.code = "wrong_path";
+  error.status = 409;
+  error.payload = {
+    error: error.message,
+    code: error.code,
+    rejected: true,
+    consumed: false,
+    nonConsuming: true,
+    pathGuard: {
+      version: PATH_GUARD_VERSION,
+      rankId: String(run?.game?.remixes?.rank?.id || "")
+    }
+  };
+  return error;
+}
+
 function publicRun(run) {
   const scoreEligible = !run.scoringDisabled && run.game?.scoreEligible !== false;
   const scoreMultiplier = scoreEligible ? assistancePolicy(run.assist).scoreMultiplier : 0;
+  const activationPending = Boolean(run.activatedAt == null);
+  const startedAt = run.activatedAt || run.startedAt;
   return {
     id: run.id,
     token: run.token,
     ranked: false,
     localOnly: true,
-    startedAt: run.startedAt,
-    deadlineAt: run.deadlineAt,
+    startedAt,
+    deadlineAt: activationPending ? null : run.deadlineAt,
+    activationPending,
     assist: run.assist,
     scoringDisabled: Boolean(run.scoringDisabled),
     scoreEligible,
@@ -702,6 +874,19 @@ function publicRun(run) {
       ? routeRemixProgress(run.remixRuntime, run.remixProgress)
       : null
   };
+}
+
+function activateLocalRun(run) {
+  if (!run || run.activatedAt != null) return run;
+  if (run.completed || run.moves || run.history.length) {
+    fail("This orbit can no longer be activated.", "run_activation_invalid", 409);
+  }
+  const activatedAt = new Date();
+  run.activatedAt = activatedAt.toISOString();
+  run.deadlineAt = run.game.timeLimit
+    ? new Date(activatedAt.getTime() + run.game.timeLimit * 1000).toISOString()
+    : null;
+  return run;
 }
 
 function publicDiscoveredItem(run, word) {
@@ -893,6 +1078,7 @@ function restoreRun(body) {
       adaptiveCompletedChallenges: snapshotGame.adaptiveCompletedChallenges,
       adaptiveMajorChallengePending: snapshotGame.adaptiveMajorChallengePending ?? snapshotGame.adaptiveSurge,
       adaptiveMajorChallengeBaseLevel: snapshotGame.adaptiveMajorChallengeBaseLevel ?? snapshotGame.adaptiveSurgeBaseLevel,
+      recentTargets: snapshotGame.adaptiveRecentTargets,
       adaptiveTarget: target
     } : {}),
     ...(snapshotGame.startProfile ? {
@@ -993,6 +1179,11 @@ function restoreRun(body) {
     && targetFound
     && (assistValue === "reveal" || remixCompletion.complete)
   );
+  const activationPending = Boolean(
+    snapshotRun.activationPending
+    && moves === 0
+    && !completed
+  );
   const twistEntry = history.find((entry) => entry.twisted);
   const restoredPrivateTips = privateTipRecordsFor({ id: runId, token: runToken }).slice(0, tipsUsed);
   const tipRecords = Array.from({ length: tipsUsed }, (_, index) => restoredPrivateTips[index] || ({
@@ -1006,7 +1197,8 @@ function restoreRun(body) {
     localOnly: true,
     game,
     startedAt,
-    deadlineAt: game.timeLimit ? new Date(startedAtMs + game.timeLimit * 1000).toISOString() : null,
+    activatedAt: activationPending ? null : startedAt,
+    deadlineAt: game.timeLimit && !activationPending ? new Date(startedAtMs + game.timeLimit * 1000).toISOString() : null,
     available,
     history,
     moves,
@@ -1093,6 +1285,7 @@ export async function localRequest(url, options = {}) {
   }
 
   if (method === "POST" && path === "/api/run/preview") {
+    body.avoidTarget = validatedLocalAvoidTarget(body.avoidTarget);
     const target = body.target ? canonicalLocalTarget(body.target) : "";
     if (body.target && !target) fail("That target is not mapped in local practice yet.", "local_target_unknown");
     const game = directedLocalGame(body.mode, body.seed, target, body.stage, body);
@@ -1119,14 +1312,17 @@ export async function localRequest(url, options = {}) {
   }
 
   if (method === "POST" && path === "/api/run/start") {
+    const entryId = Object.hasOwn(body, "entryId")
+      ? normalizeLocalRunEntryId(body.entryId)
+      : undefined;
     let game;
     if (body.previewToken) {
       pruneMissionPreviews();
       const preview = missionPreviews.get(body.previewToken);
       if (!preview) fail("This mission briefing expired or changed. Review the refreshed mission before starting.", "mission_stale", 409);
-      missionPreviews.delete(body.previewToken);
       game = cloneMissionGame(preview.game);
     } else {
+      body.avoidTarget = validatedLocalAvoidTarget(body.avoidTarget);
       const target = body.target ? canonicalLocalTarget(body.target) : "";
       if (body.target && !target) fail("That target is not mapped in local practice yet.", "local_target_unknown");
       game = directedLocalGame(body.mode, body.seed, target, body.stage, body);
@@ -1135,15 +1331,39 @@ export async function localRequest(url, options = {}) {
     const solutionRoute = verifiedLocalRoute(game);
     if (!solutionRoute) fail("The local universe could not verify a route to that target.", "local_route_invalid", 409);
     const remixRuntime = localRemixRuntimeForGame(game, solutionRoute);
+    const entryChallengeIdentity = entryId
+      ? localRunEntryChallengeIdentity(game)
+      : null;
+    if (entryId) {
+      const existingEntry = [...runs.values()].find((candidate) => candidate.entryId === entryId);
+      if (existingEntry) {
+        if (existingEntry.entryChallengeIdentity !== entryChallengeIdentity) {
+          fail(
+            "That run entry ID already belongs to a different challenge.",
+            "run_entry_conflict",
+            409
+          );
+        }
+        return {
+          player: publicPlayer(),
+          game: existingEntry.game,
+          run: publicRun(existingEntry)
+        };
+      }
+    }
     const startedAt = new Date();
+    const deferActivation = body.deferActivation === true;
     const run = {
       id: localId("run"),
       token: localId("token"),
       ranked: false,
       localOnly: true,
+      entryId,
+      entryChallengeIdentity,
       game,
       startedAt: startedAt.toISOString(),
-      deadlineAt: game.timeLimit ? new Date(startedAt.getTime() + game.timeLimit * 1000).toISOString() : null,
+      activatedAt: deferActivation ? null : startedAt.toISOString(),
+      deadlineAt: game.timeLimit && !deferActivation ? new Date(startedAt.getTime() + game.timeLimit * 1000).toISOString() : null,
       available: new Set(game.starters.map((word) => word.toLowerCase())),
       history: [],
       moves: 0,
@@ -1172,9 +1392,23 @@ export async function localRequest(url, options = {}) {
     };
   }
 
-  if (method === "POST" && path === "/api/run/replay") {
+  if (method === "POST" && path === "/api/run/activate") {
     if (!hasExactKeys(body, ["runId", "runToken"])) {
-      fail("Restart requires only runId and runToken.", "invalid_replay_request", 400);
+      fail("Run activation requires only runId and runToken.", "invalid_activation_request", 400);
+    }
+    const run = requireRun(body);
+    activateLocalRun(run);
+    return {
+      player: publicPlayer(),
+      run: publicRun(run)
+    };
+  }
+
+  if (method === "POST" && path === "/api/run/replay") {
+    if (!isRecord(body)
+      || !["runId", "runToken"].every((key) => Object.hasOwn(body, key))
+      || Object.keys(body).some((key) => !["runId", "runToken", "deferActivation"].includes(key))) {
+      fail("Restart requires a run ID, token, and optional deferred start.", "invalid_replay_request", 400);
     }
     const source = requireRun(body);
     if (!source.completed) {
@@ -1205,6 +1439,7 @@ export async function localRequest(url, options = {}) {
     if (!solutionRoute) fail("That exact challenge can no longer be verified.", "replay_unavailable", 422);
     const remixRuntime = localRemixRuntimeForGame(game, solutionRoute);
     const startedAt = new Date();
+    const deferActivation = body.deferActivation === true;
     const run = {
       id: localId("run"),
       token: localId("token"),
@@ -1212,7 +1447,8 @@ export async function localRequest(url, options = {}) {
       localOnly: true,
       game,
       startedAt: startedAt.toISOString(),
-      deadlineAt: game.timeLimit ? new Date(startedAt.getTime() + game.timeLimit * 1000).toISOString() : null,
+      activatedAt: deferActivation ? null : startedAt.toISOString(),
+      deadlineAt: game.timeLimit && !deferActivation ? new Date(startedAt.getTime() + game.timeLimit * 1000).toISOString() : null,
       available: new Set(game.starters.map((word) => word.toLowerCase())),
       history: [],
       moves: 0,
@@ -1242,7 +1478,21 @@ export async function localRequest(url, options = {}) {
   }
 
   if (method === "POST" && path === "/api/run/resume") {
-    return resumeResponse(restoreRun(body));
+    if (
+      !isRecord(body)
+      || !["runId", "runToken"].every((key) => Object.hasOwn(body, key))
+      || Object.keys(body).some((key) => !["runId", "runToken", "snapshot", "deferActivation"].includes(key))
+      || (Object.hasOwn(body, "deferActivation") && typeof body.deferActivation !== "boolean")
+    ) {
+      fail(
+        "Run resume requires a run ID, token, optional snapshot, and optional deferred activation.",
+        "invalid_resume_request",
+        400
+      );
+    }
+    const run = restoreRun(body);
+    if (run.activatedAt == null && body.deferActivation !== true) activateLocalRun(run);
+    return resumeResponse(run);
   }
 
   if (method === "POST" && path === "/api/recipe-feedback") {
@@ -1379,6 +1629,7 @@ export async function localRequest(url, options = {}) {
     const hasRunCredentials = Boolean(body.runId || body.runToken);
     const run = hasRunCredentials ? requireRun(body) : null;
     if (run?.completed) fail("This local orbit is already complete.", "run_complete", 409);
+    if (run && run.activatedAt == null) fail("This orbit is still opening.", "run_not_active", 409);
     const a = canonicalLocalWord(body.a);
     const b = canonicalLocalWord(body.b);
     const available = run?.available || new Set((Array.isArray(body.discovered) ? body.discovered : [])
@@ -1398,12 +1649,19 @@ export async function localRequest(url, options = {}) {
       );
     }
     const canonicalResult = lookupLocalCombination(a, b);
-    if (!canonicalResult) fail("Those ideas are outside this local universe.", "combination_missing");
+    if (!canonicalResult) {
+      if (run && localPathGuardEnabled(run)) throw localWrongPathError(run);
+      fail("Those ideas are outside this local universe.", "combination_missing");
+    }
     if (run?.remixRuntime) {
       const remixCheck = checkRouteRemixBeforeCombination(run.remixRuntime, run.remixProgress, { a, b });
       if (!remixCheck.allowed) fail(remixCheck.reason, "remix_pair_blocked", 409);
     }
-    const twist = run && !run.remixRuntime ? selectCosmicTwist({
+    const pathGuardDecision = run
+      ? localPathGuardDecision(run, { a, b, result: canonicalResult })
+      : { active: false, blocked: false };
+    if (pathGuardDecision.blocked) throw localWrongPathError(run);
+    const twist = run && !run.remixRuntime && !pathGuardDecision.active ? selectCosmicTwist({
       a,
       b,
       canonicalResult,

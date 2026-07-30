@@ -2,6 +2,10 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { cosmicTwistWords } from "../public/cosmic-twists.mjs";
 import {
+  GOLDEN_TARGET_EARLY_COMPLETION_LIMIT,
+  goldenTargetOrder
+} from "../public/golden-targets.mjs";
+import {
   INTENTIONAL_ENDPOINTS,
   WORLD_GRAPH_BETA_MAX_PROBLEMATIC_DEAD_ENDS,
   WORLD_GRAPH_VERSION,
@@ -159,8 +163,20 @@ export async function generateLocalWorldData() {
   const targetDetails = Object.fromEntries(words.filter((item) => naturalTargets.has(item.word.toLowerCase())).map((item) => {
     const known = buildGameForMode("reach", 0, item.word);
     return [item.word.toLowerCase(), known
-      ? { target: known.target, emoji: known.emoji, clue: known.clue, tier: known.tier }
-      : { target: item.word, emoji: item.emoji, clue: "A destination mapped in the local word universe.", tier: 3 }];
+      ? {
+          target: known.target,
+          emoji: known.emoji,
+          clue: known.clue,
+          tier: known.tier,
+          goldenOrder: goldenTargetOrder(known.target)
+        }
+      : {
+          target: item.word,
+          emoji: item.emoji,
+          clue: "A destination mapped in the local word universe.",
+          tier: 3,
+          goldenOrder: -1
+        }];
   }));
 
   const targetRoutes = {};
@@ -435,7 +451,8 @@ export async function writeLocalWorldModule(destination) {
       detail.emoji === payload.words[index]?.emoji ? "" : detail.emoji,
       topics,
       shared?.source === "official" ? 1 : 0,
-      Math.max(0, Math.trunc(Number(shared?.poolVersion) || 0))
+      Math.max(0, Math.trunc(Number(shared?.poolVersion) || 0)),
+      Math.trunc(Number(detail.goldenOrder) || 0)
     ]];
   });
   const packedModes = packLocalModeCycles({ ...payload, modes: unpackedModes }, targetIndexByWord);
@@ -456,7 +473,7 @@ export async function writeLocalWorldModule(destination) {
 const indexByWord = new Map(payload.words.map((item, index) => [item.word.toLowerCase(), index]));
 const recipeByOffset = new Map(payload.recipes.map((recipe) => [recipe[0], recipe]));
 const routeByTarget = new Map(payload.targetRoutes);
-const targetDetailByIndex = new Map(payload.targetDetails.map(([index, clue, tier, emoji, topicIndexes, official, poolVersion]) => [
+const targetDetailByIndex = new Map(payload.targetDetails.map(([index, clue, tier, emoji, topicIndexes, official, poolVersion, goldenOrder]) => [
   index,
   {
     clue,
@@ -464,7 +481,8 @@ const targetDetailByIndex = new Map(payload.targetDetails.map(([index, clue, tie
     emoji,
     topics: (topicIndexes || []).map((topicIndex) => payload.topicNames[topicIndex]).filter(Boolean),
     source: official ? "official" : "expanded",
-    poolVersion: Math.max(0, Number(poolVersion) || 0)
+    poolVersion: Math.max(0, Number(poolVersion) || 0),
+    goldenOrder: Number.isInteger(goldenOrder) ? goldenOrder : -1
   }
 ]));
 const finalRecipeCountByIndex = new Map();
@@ -624,7 +642,8 @@ function localTargetFields(index) {
     topics,
     primaryTopic: topics[0] || \"discovery\",
     source: detail?.source || \"expanded\",
-    poolVersion: detail?.poolVersion || 1
+    poolVersion: detail?.poolVersion || 1,
+    goldenOrder: Number.isInteger(detail?.goldenOrder) ? detail.goldenOrder : -1
   };
 }
 
@@ -730,6 +749,7 @@ export function localSuggestions(limit = 8) {
 export const localWorldSize = payload.words.length;
 export const localRecipeCount = payload.recipes.length;
 export const localGraphVersion = payload.contentQuality.graphVersion;
+export const localGoldenEarlyCompletionLimit = ${GOLDEN_TARGET_EARLY_COMPLETION_LIMIT};
 export const localContentQuality = structuredClone(payload.contentQuality);
 `;
   await mkdir(dirname(destination), { recursive: true });

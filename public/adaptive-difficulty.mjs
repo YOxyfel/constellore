@@ -1,15 +1,18 @@
 export const ADAPTIVE_DIFFICULTY_VERSION = 2;
 export const ADAPTIVE_LEVEL_MIN = 1;
 export const ADAPTIVE_LEVEL_MAX = 10;
-export const ADAPTIVE_LEVEL_START = 4;
+export const ADAPTIVE_LEVEL_START = 1;
 export const ADAPTIVE_RECENT_TARGET_LIMIT = 8;
 export const ADAPTIVE_COMPLETIONS_PER_LEVEL = 3;
 export const ADAPTIVE_MAJOR_CHALLENGE_INTERVAL = 10;
 export const ADAPTIVE_MAJOR_CHALLENGE_BONUS = 3;
+export const ADAPTIVE_DIFFICULT_TAG_LEVEL = 8;
+export const ADAPTIVE_AVOID_TARGET_MAX_LENGTH = 80;
+export const ADAPTIVE_PRESSURE_UNLOCK_RANK_NUMBER = 3;
 
 const MAX_FAILURE_STREAK = 100;
 const MAX_COMPLETED_CHALLENGES = 1_000_000;
-const MAX_TARGET_LENGTH = 80;
+const MAX_TARGET_LENGTH = ADAPTIVE_AVOID_TARGET_MAX_LENGTH;
 
 const EXCLUDED_MODES = new Set([
   "challenge",
@@ -63,6 +66,13 @@ function wholeNumber(value, fallback = 0) {
   return Number.isFinite(number) ? Math.round(number) : fallback;
 }
 
+export function adaptiveDifficultyTag(challengeLevel) {
+  const level = Number(challengeLevel);
+  return Number.isFinite(level) && level >= ADAPTIVE_DIFFICULT_TAG_LEVEL
+    ? "Difficult"
+    : "";
+}
+
 function cleanTarget(value) {
   if (value == null) return "";
   return String(value)
@@ -75,6 +85,58 @@ function cleanTarget(value) {
 
 function targetKey(value) {
   return cleanTarget(value).toLocaleLowerCase("en-US");
+}
+
+/**
+ * Parses the one client-authored target-selection exclusion. Keeping this
+ * boundary tiny and explicit lets preview/start requests bind the same
+ * canonical value without allowing arbitrary strings into run identity.
+ */
+export function parseAdaptiveAvoidTarget(value) {
+  if (value == null || value === "") return { valid: true, target: "" };
+  if (typeof value !== "string" || value.length > MAX_TARGET_LENGTH * 4) {
+    return { valid: false, target: "" };
+  }
+  const target = value
+    .normalize("NFKC")
+    .replace(/[\u0000-\u001f\u007f]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (target.length > MAX_TARGET_LENGTH) return { valid: false, target: "" };
+  return { valid: true, target };
+}
+
+function rankNumber(candidate) {
+  const direct = Number(candidate?.number);
+  if (Number.isFinite(direct)) return Math.max(1, Math.trunc(direct));
+  const id = String(candidate?.id ?? candidate ?? "").trim().toLowerCase();
+  if (id === "silver") return 2;
+  if (id === "gold") return 3;
+  return id === "bronze" || !id ? 1 : ADAPTIVE_PRESSURE_UNLOCK_RANK_NUMBER;
+}
+
+/**
+ * Bronze and Silver introduce the word graph without timers or move limits.
+ * A manual Quick/Moves request therefore becomes a personal Reach run until
+ * the authoritative Route Rank reaches Gold. Fixed/shared modes never enter
+ * this policy.
+ */
+export function adaptiveRunEntryPolicy(context = {}) {
+  const mode = String(context?.mode || "").trim().toLowerCase() || "reach";
+  const modePolicy = adaptiveModePolicy(context);
+  const requestedPressure = mode === "quick" || mode === "moves";
+  const pressureUnlocked = rankNumber(context?.rank) >= ADAPTIVE_PRESSURE_UNLOCK_RANK_NUMBER;
+  const sharedOrFixed = contextValue(context, "shared") || contextValue(context, "fixed");
+  const relaxedForRank = requestedPressure && !pressureUnlocked && !sharedOrFixed;
+  const personal = modePolicy.eligible && (context?.adaptive === true || relaxedForRank);
+  return {
+    personal,
+    relaxedForRank,
+    pressureUnlocked,
+    requestedMode: mode,
+    mode: relaxedForRank ? "reach" : mode,
+    policy: modePolicy
+  };
 }
 
 function sanitizedRecentTargets(candidate) {
@@ -101,6 +163,8 @@ export function createAdaptiveDifficultyState(level = ADAPTIVE_LEVEL_START) {
     completedChallenges: 0,
     majorChallengePending: false,
     majorChallengeBaseLevel: null,
+    recoveryLevel: null,
+    recoveryStrict: false,
     recentTargets: []
   };
 }
@@ -138,6 +202,16 @@ export function sanitizeAdaptiveDifficultyState(candidate) {
         ADAPTIVE_LEVEL_MAX
       )
     : null;
+  const recoveryLevel = candidateVersion >= 2
+    && candidate.recoveryLevel != null
+    && candidate.recoveryLevel !== ""
+    && Number.isFinite(Number(candidate.recoveryLevel))
+    ? clamp(
+        wholeNumber(candidate.recoveryLevel, level),
+        ADAPTIVE_LEVEL_MIN,
+        ADAPTIVE_LEVEL_MAX
+      )
+    : null;
   // A pending milestone always keeps an immutable copy of the ordinary level.
   // This makes a failed surge recover exactly, even after a torn local write.
   if (majorChallengePending) level = majorChallengeBaseLevel;
@@ -148,6 +222,8 @@ export function sanitizeAdaptiveDifficultyState(candidate) {
     completedChallenges,
     majorChallengePending,
     majorChallengeBaseLevel,
+    recoveryLevel,
+    recoveryStrict: recoveryLevel != null && candidate.recoveryStrict !== false,
     recentTargets: sanitizedRecentTargets(candidate.recentTargets)
   };
 }
@@ -324,6 +400,8 @@ export function applyAdaptiveChallengeOutcome(candidate, event = {}) {
   let completedChallenges = state.completedChallenges;
   let majorChallengePending = false;
   let majorChallengeBaseLevel = null;
+  let recoveryLevel = null;
+  let recoveryStrict = false;
   let adjustment = "progress";
   let levelRaised = false;
   let restoredAfterMajorFailure = false;
@@ -379,8 +457,15 @@ export function applyAdaptiveChallengeOutcome(candidate, event = {}) {
       // A milestone is a bonus test, not a punishment. Missing it consumes the
       // surge and returns exactly to the snapshotted ordinary level.
       restoredAfterMajorFailure = true;
+      recoveryLevel = activeMajorBaseLevel;
       message = "Surge ended — your normal challenge level is safe.";
     } else {
+      recoveryLevel = clamp(
+        wholeNumber(event?.challengeLevel, requestedLevelBefore),
+        ADAPTIVE_LEVEL_MIN,
+        ADAPTIVE_LEVEL_MAX
+      );
+      recoveryStrict = true;
       level = clamp(level - 1, ADAPTIVE_LEVEL_MIN, ADAPTIVE_LEVEL_MAX);
       message = level === levelBefore
         ? "The next challenge stays at the gentlest level."
@@ -394,7 +479,9 @@ export function applyAdaptiveChallengeOutcome(candidate, event = {}) {
     failureStreak,
     completedChallenges,
     majorChallengePending,
-    majorChallengeBaseLevel
+    majorChallengeBaseLevel,
+    recoveryLevel,
+    recoveryStrict
   };
   const requestedLevelAfter = adaptiveChallengeLevel(nextState);
   const changed = JSON.stringify(nextState) !== JSON.stringify(state);
@@ -437,13 +524,14 @@ export function applyAdaptiveChallengeOutcome(candidate, event = {}) {
   };
 }
 
-export function rememberAdaptiveTarget(candidate, target) {
+export function rememberAdaptiveTarget(candidate, target, { preserveRecovery = false } = {}) {
   const state = sanitizeAdaptiveDifficultyState(candidate);
   const clean = cleanTarget(target);
   const key = targetKey(clean);
   if (!key) return state;
   return {
     ...state,
+    ...(!preserveRecovery ? { recoveryLevel: null, recoveryStrict: false } : {}),
     recentTargets: [
       ...state.recentTargets.filter((entry) => targetKey(entry) !== key),
       clean
@@ -576,10 +664,27 @@ export function selectAdaptiveChallenge({
   if (!policy.eligible || !Array.isArray(candidates)) return empty;
 
   const recent = new Set(state.recentTargets.map(targetKey));
+  const parsedAvoidTarget = parseAdaptiveAvoidTarget(context?.avoidTarget);
+  const explicitAvoidKey = parsedAvoidTarget.valid
+    ? targetKey(parsedAvoidTarget.target)
+    : "";
+  const inferredFailedKey = state.failureStreak > 0
+    ? targetKey(state.recentTargets.at(-1))
+    : "";
+  const avoidedTargetKey = explicitAvoidKey || inferredFailedKey;
+  const avoidedCandidate = avoidedTargetKey
+    ? candidates
+        .filter((candidate) => candidateIsReachable(candidate))
+        .find((candidate) => targetKey(candidateTarget(candidate)) === avoidedTargetKey)
+    : null;
+  const recoveryLevel = state.recoveryLevel
+    ?? (avoidedCandidate ? estimateAdaptiveChallengeLevel(avoidedCandidate) : profile.requestedLevel);
+  const recoveryStrict = state.recoveryLevel != null ? state.recoveryStrict : true;
   const reachable = candidates
     .map((source, index) => {
       const target = candidateTarget(source);
       if (!target || !candidateIsReachable(source)) return null;
+      if (avoidedTargetKey && targetKey(target) === avoidedTargetKey) return null;
       const level = estimateAdaptiveChallengeLevel(source);
       return {
         source,
@@ -593,10 +698,27 @@ export function selectAdaptiveChallenge({
       };
     })
     .filter(Boolean);
-  if (!reachable.length) return empty;
+  if (!reachable.length) {
+    empty.metadata.reason = avoidedTargetKey
+      ? "no_alternative_reachable_target"
+      : "no_reachable_candidates";
+    return empty;
+  }
 
-  const fresh = reachable.filter((candidate) => !candidate.recent);
-  const pool = fresh.length ? fresh : reachable;
+  const recovering = Boolean(avoidedTargetKey || state.failureStreak > 0);
+  const strictlyEasier = recovering && recoveryStrict
+    ? reachable.filter((candidate) => candidate.level < recoveryLevel)
+    : [];
+  const sameLevel = recovering && recoveryStrict && !strictlyEasier.length
+    ? reachable.filter((candidate) => candidate.level === recoveryLevel)
+    : [];
+  const difficultyPool = strictlyEasier.length
+    ? strictlyEasier
+    : sameLevel.length
+      ? sameLevel
+      : reachable;
+  const fresh = difficultyPool.filter((candidate) => !candidate.recent);
+  const pool = fresh.length ? fresh : difficultyPool;
   pool.sort(compareCandidates);
   const chosen = pool[0];
   const nextState = rememberAdaptiveTarget(state, chosen.target);
@@ -622,7 +744,11 @@ export function selectAdaptiveChallenge({
       routeLength: routeLength(chosen.source),
       pathCount: chosen.paths,
       avoidedRecent: fresh.length > 0,
-      reason: "nearest_reachable_personal_level"
+      avoidedTarget: Boolean(avoidedTargetKey),
+      easedAfterFailure: recovering && strictlyEasier.length > 0,
+      reason: recovering && strictlyEasier.length
+        ? "gentler_recovery_target"
+        : "nearest_reachable_personal_level"
     }
   };
 }

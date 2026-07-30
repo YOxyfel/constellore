@@ -176,7 +176,7 @@ test("the JSON adapter satisfies the storage contract and Exchange quotes hold f
   const storage = new JsonGameStorage(":memory:");
   const store = await new GameStore(":memory:", { storage }).init();
   const player = await store.registerPlayer();
-  assert.deepEqual(store.storageHealth(), { kind: "memory", ready: true, contractVersion: 1, lastError: null, schemaVersion: 10, pendingWrites: false });
+  assert.deepEqual(store.storageHealth(), { kind: "memory", ready: true, commerceSafe: false, contractVersion: 1, lastError: null, schemaVersion: 12, pendingWrites: false });
   const now = Math.floor(1_800_000_000_000 / MARKET_REPRICE_INTERVAL_MS) * MARKET_REPRICE_INTERVAL_MS;
   const first = store.marketSnapshot(player.id, now);
   const samePeriod = store.marketSnapshot(player.id, now + MARKET_REPRICE_INTERVAL_MS - 1);

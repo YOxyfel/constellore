@@ -77,6 +77,18 @@ test("a previously forfeited official challenge is clearly shown as zero-score",
 });
 
 test("Second Orbit is score-free while Explore is presented as persistent Practice", () => {
+  const first = buildMissionBriefing({
+    ...baseGame,
+    mode: "training",
+    modeName: "First Orbit",
+    target: "Mud",
+    scoreEligible: false,
+    rewardEligible: false
+  });
+  assert.equal(first.division.id, "study");
+  assert.equal(first.modeRule, "Make Mud in 1 combination.");
+  assert.doesNotMatch(first.modeRule, /three combinations/i);
+
   const second = buildMissionBriefing({
     ...baseGame,
     mode: "second-orbit",

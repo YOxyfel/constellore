@@ -12,11 +12,14 @@ import {
   ADAPTIVE_RECENT_TARGET_LIMIT,
   adaptiveChallengeLevel,
   adaptiveChallengeProfile,
+  adaptiveDifficultyTag,
   adaptiveModePolicy,
   adaptiveRewardMultiplier,
+  adaptiveRunEntryPolicy,
   applyAdaptiveChallengeOutcome,
   createAdaptiveDifficultyState,
   estimateAdaptiveChallengeLevel,
+  parseAdaptiveAvoidTarget,
   rememberAdaptiveTarget,
   sanitizeAdaptiveDifficultyState,
   selectAdaptiveChallenge
@@ -26,25 +29,34 @@ function finish(state, outcome, mode = "reach") {
   return applyAdaptiveChallengeOutcome(state, { mode, outcome });
 }
 
-test("v2 state starts at level four with an empty three-win cadence", () => {
+test("only genuinely hard realized challenges receive a public tag", () => {
+  assert.equal(adaptiveDifficultyTag(null), "");
+  assert.equal(adaptiveDifficultyTag(7), "");
+  assert.equal(adaptiveDifficultyTag(8), "Difficult");
+  assert.equal(adaptiveDifficultyTag(10), "Difficult");
+});
+
+test("new v2 players start at the gentlest level without changing persisted levels", () => {
   assert.equal(ADAPTIVE_DIFFICULTY_VERSION, 2);
-  assert.equal(ADAPTIVE_LEVEL_START, 4);
+  assert.equal(ADAPTIVE_LEVEL_START, 1);
   assert.equal(ADAPTIVE_COMPLETIONS_PER_LEVEL, 3);
   assert.equal(ADAPTIVE_MAJOR_CHALLENGE_INTERVAL, 10);
   assert.equal(ADAPTIVE_MAJOR_CHALLENGE_BONUS, 3);
   assert.deepEqual(createAdaptiveDifficultyState(), {
     version: 2,
-    level: 4,
+    level: 1,
     failureStreak: 0,
     completedChallenges: 0,
     majorChallengePending: false,
     majorChallengeBaseLevel: null,
+    recoveryLevel: null,
+    recoveryStrict: false,
     recentTargets: []
   });
   assert.deepEqual(adaptiveChallengeProfile(createAdaptiveDifficultyState()), {
-    baseLevel: 4,
-    requestedLevel: 4,
-    effectiveLevel: 4,
+    baseLevel: 1,
+    requestedLevel: 1,
+    effectiveLevel: 1,
     majorChallenge: false,
     surge: false,
     surgePending: false,
@@ -53,6 +65,11 @@ test("v2 state starts at level four with an empty three-win cadence", () => {
     completionsTowardNextLevel: 0,
     completionsUntilNextLevel: 3
   });
+  assert.equal(sanitizeAdaptiveDifficultyState({
+    version: 2,
+    level: 4,
+    completedChallenges: 2
+  }).level, 4);
 });
 
 test("v1 persistence migrates safely without inventing completion history", () => {
@@ -73,6 +90,8 @@ test("v1 persistence migrates safely without inventing completion history", () =
     completedChallenges: 0,
     majorChallengePending: false,
     majorChallengeBaseLevel: null,
+    recoveryLevel: null,
+    recoveryStrict: false,
     recentTargets: ["Forest", "moon", "Star"]
   });
   assert.deepEqual(sanitizeAdaptiveDifficultyState(null), createAdaptiveDifficultyState());
@@ -94,6 +113,8 @@ test("v2 sanitation clamps values and a milestone snapshot is authoritative", ()
     completedChallenges: 12,
     majorChallengePending: true,
     majorChallengeBaseLevel: 6,
+    recoveryLevel: null,
+    recoveryStrict: false,
     recentTargets: []
   });
   assert.equal(adaptiveChallengeLevel({
@@ -415,6 +436,55 @@ test("fixed, shared, daily, custom, and training challenges remain excluded", ()
   }
 });
 
+test("Bronze and Silver pressure requests become personal Reach runs until Gold", () => {
+  for (const rank of [{ id: "bronze", number: 1 }, { id: "silver", number: 2 }]) {
+    for (const mode of ["quick", "moves"]) {
+      const policy = adaptiveRunEntryPolicy({ mode, rank, adaptive: false });
+      assert.equal(policy.personal, true);
+      assert.equal(policy.relaxedForRank, true);
+      assert.equal(policy.mode, "reach");
+      assert.equal(policy.pressureUnlocked, false);
+    }
+  }
+  const gold = adaptiveRunEntryPolicy({
+    mode: "quick",
+    rank: { id: "gold", number: 3 },
+    adaptive: false
+  });
+  assert.equal(gold.personal, false);
+  assert.equal(gold.mode, "quick");
+  assert.equal(gold.pressureUnlocked, true);
+
+  const customBronze = adaptiveRunEntryPolicy({
+    mode: "moves",
+    custom: true,
+    rank: { id: "bronze", number: 1 }
+  });
+  assert.equal(customBronze.relaxedForRank, true, "a custom flag cannot bypass the early-rank relaxation");
+  assert.equal(customBronze.mode, "reach");
+
+  for (const mode of ["daily", "weekly"]) {
+    const fixed = adaptiveRunEntryPolicy({
+      mode,
+      rank: { id: "bronze", number: 1 },
+      adaptive: true
+    });
+    assert.equal(fixed.personal, false);
+    assert.equal(fixed.mode, mode);
+  }
+});
+
+test("avoidTarget parsing is bounded and canonical without accepting non-strings", () => {
+  assert.deepEqual(parseAdaptiveAvoidTarget(undefined), { valid: true, target: "" });
+  assert.deepEqual(parseAdaptiveAvoidTarget("  Forest\nPath  "), {
+    valid: true,
+    target: "Forest Path"
+  });
+  assert.equal(parseAdaptiveAvoidTarget(42).valid, false);
+  assert.equal(parseAdaptiveAvoidTarget("x".repeat(81)).valid, false);
+  assert.equal(parseAdaptiveAvoidTarget("x".repeat(80)).valid, true);
+});
+
 test("adaptive rewards still scale monotonically with selected challenge level", () => {
   const multipliers = Array.from({ length: ADAPTIVE_LEVEL_MAX }, (_, index) =>
     adaptiveRewardMultiplier(index + ADAPTIVE_LEVEL_MIN)
@@ -501,6 +571,101 @@ test("normal selection prefers flexible ties and stays deterministic by seed", (
   }).selected.target;
   assert.equal(targetFor(2718), targetFor(2718));
   assert.ok(new Set(Array.from({ length: 32 }, (_, seed) => targetFor(seed))).size > 1);
+});
+
+test("failure recovery excludes the failed target and chooses a strictly lower level first", () => {
+  const failed = { target: "Forest", difficultyLevel: 5, reachable: true, pathCount: 4 };
+  const same = { target: "Ocean", difficultyLevel: 5, reachable: true, pathCount: 8 };
+  const easier = { target: "Moon", difficultyLevel: 4, reachable: true, pathCount: 2 };
+  const result = selectAdaptiveChallenge({
+    state: {
+      ...createAdaptiveDifficultyState(5),
+      failureStreak: 1,
+      recentTargets: ["Forest"]
+    },
+    candidates: [failed, same, easier],
+    context: { mode: "reach", seed: 17, avoidTarget: "  fOrEsT " }
+  });
+
+  assert.equal(result.selected, easier);
+  assert.equal(result.metadata.candidateLevel, 4);
+  assert.equal(result.metadata.avoidedTarget, true);
+  assert.equal(result.metadata.easedAfterFailure, true);
+  assert.equal(result.metadata.reason, "gentler_recovery_target");
+  assert.equal(result.state.recentTargets.at(-1), "Moon");
+
+  const unavailable = selectAdaptiveChallenge({
+    state: createAdaptiveDifficultyState(5),
+    candidates: [failed],
+    context: { mode: "reach", avoidTarget: "FOREST" }
+  });
+  assert.equal(unavailable.selected, null);
+  assert.equal(unavailable.metadata.reason, "no_alternative_reachable_target");
+});
+
+test("recovery compares against the failed challenge itself, not only the requested level", () => {
+  const failedOutcome = applyAdaptiveChallengeOutcome(createAdaptiveDifficultyState(5), {
+    mode: "reach",
+    outcome: "failed",
+    challengeLevel: 3
+  });
+  assert.equal(failedOutcome.state.level, 4);
+  assert.equal(failedOutcome.state.recoveryLevel, 3);
+  assert.equal(failedOutcome.state.recoveryStrict, true);
+  const recoveryState = rememberAdaptiveTarget(
+    failedOutcome.state,
+    "Forest",
+    { preserveRecovery: true }
+  );
+  const lower = { target: "Mud", difficultyLevel: 2, reachable: true };
+  const equal = { target: "Moon", difficultyLevel: 3, reachable: true };
+  const result = selectAdaptiveChallenge({
+    state: recoveryState,
+    candidates: [
+      { target: "Forest", difficultyLevel: 3, reachable: true },
+      equal,
+      lower
+    ],
+    context: { mode: "reach", avoidTarget: "Forest" }
+  });
+  assert.equal(result.selected, lower);
+  assert.equal(result.metadata.easedAfterFailure, true);
+  assert.equal(result.state.recoveryLevel, null, "allocating the replacement consumes the recovery baseline");
+});
+
+test("a failed Surge returns to a different challenge at the protected base level", () => {
+  const surgeOutcome = applyAdaptiveChallengeOutcome({
+    ...createAdaptiveDifficultyState(6),
+    majorChallengePending: true,
+    majorChallengeBaseLevel: 6
+  }, {
+    mode: "reach",
+    outcome: "failed",
+    surge: true,
+    surgeBaseLevel: 6,
+    challengeLevel: 9
+  });
+  assert.equal(surgeOutcome.state.level, 6);
+  assert.equal(surgeOutcome.state.recoveryLevel, 6);
+  assert.equal(surgeOutcome.state.recoveryStrict, false);
+  const recoveryState = rememberAdaptiveTarget(
+    surgeOutcome.state,
+    "Galaxy",
+    { preserveRecovery: true }
+  );
+  const protectedBase = { target: "Forest", difficultyLevel: 6, reachable: true };
+  const tooEasy = { target: "Mud", difficultyLevel: 5, reachable: true };
+  const result = selectAdaptiveChallenge({
+    state: recoveryState,
+    candidates: [
+      { target: "Galaxy", difficultyLevel: 9, reachable: true },
+      protectedBase,
+      tooEasy
+    ],
+    context: { mode: "reach", avoidTarget: "Galaxy" }
+  });
+  assert.equal(result.selected, protectedBase);
+  assert.equal(result.metadata.easedAfterFailure, false);
 });
 
 test("selection falls back to recent candidates only when all are recent", () => {

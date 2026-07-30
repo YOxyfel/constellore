@@ -17,11 +17,11 @@ export const REMIX_MASTERY_THRESHOLDS = Object.freeze([
   1_100,
   1_900,
   3_000,
-  4_500,
-  6_500,
-  9_000,
-  12_500,
-  17_000
+  4_200,
+  5_600,
+  7_100,
+  8_800,
+  10_600
 ]);
 
 const LEGACY_COMPLETION_THRESHOLDS = Object.freeze([
@@ -107,6 +107,8 @@ const RANK_DEFINITIONS = [
     name: "Bronze",
     masteryPoints: REMIX_MASTERY_THRESHOLDS[0],
     completedChallenges: 0,
+    milestone: "Begin with classic challenges.",
+    milestoneType: "foundation",
     minimumRemixes: 0,
     maximumRemixes: 0,
     unlockedFamilies: []
@@ -116,6 +118,8 @@ const RANK_DEFINITIONS = [
     name: "Silver",
     masteryPoints: REMIX_MASTERY_THRESHOLDS[1],
     completedChallenges: 3,
+    milestone: "Establish a permanent route rank.",
+    milestoneType: "rank",
     minimumRemixes: 0,
     maximumRemixes: 0,
     unlockedFamilies: []
@@ -125,6 +129,8 @@ const RANK_DEFINITIONS = [
     name: "Gold",
     masteryPoints: REMIX_MASTERY_THRESHOLDS[2],
     completedChallenges: 8,
+    milestone: "Unlock Waypoint challenges.",
+    milestoneType: "family-unlock",
     minimumRemixes: 1,
     maximumRemixes: 1,
     unlockedFamilies: ["required_waypoint"]
@@ -134,6 +140,8 @@ const RANK_DEFINITIONS = [
     name: "Diamond",
     masteryPoints: REMIX_MASTERY_THRESHOLDS[3],
     completedChallenges: 15,
+    milestone: "Unlock Blocked Shortcut and variable remix counts.",
+    milestoneType: "family-unlock",
     minimumRemixes: 1,
     maximumRemixes: 2,
     unlockedFamilies: ["required_waypoint", "forbidden_shortcut"]
@@ -143,6 +151,8 @@ const RANK_DEFINITIONS = [
     name: "Emerald",
     masteryPoints: REMIX_MASTERY_THRESHOLDS[4],
     completedChallenges: 25,
+    milestone: "Unlock Master Route challenges.",
+    milestoneType: "family-unlock",
     minimumRemixes: 2,
     maximumRemixes: 2,
     unlockedFamilies: [
@@ -156,6 +166,8 @@ const RANK_DEFINITIONS = [
     name: "Sapphire",
     masteryPoints: REMIX_MASTERY_THRESHOLDS[5],
     completedChallenges: 40,
+    milestone: "Unlock Special Rule and three-remix routes.",
+    milestoneType: "family-unlock",
     minimumRemixes: 2,
     maximumRemixes: 3,
     unlockedFamilies: [
@@ -170,6 +182,8 @@ const RANK_DEFINITIONS = [
     name: "Ruby",
     masteryPoints: REMIX_MASTERY_THRESHOLDS[6],
     completedChallenges: 60,
+    milestone: "Guarantee three simultaneous remix laws.",
+    milestoneType: "difficulty",
     minimumRemixes: 3,
     maximumRemixes: 3,
     unlockedFamilies: [
@@ -184,6 +198,8 @@ const RANK_DEFINITIONS = [
     name: "Master",
     masteryPoints: REMIX_MASTERY_THRESHOLDS[7],
     completedChallenges: 85,
+    milestone: "Unlock Orbit Chain and the complete five-family pool.",
+    milestoneType: "family-unlock",
     minimumRemixes: 3,
     maximumRemixes: 4,
     unlockedFamilies: REMIX_FAMILIES.map((family) => family.id)
@@ -193,6 +209,8 @@ const RANK_DEFINITIONS = [
     name: "Grandmaster",
     masteryPoints: REMIX_MASTERY_THRESHOLDS[8],
     completedChallenges: 115,
+    milestone: "Guarantee four simultaneous remix laws.",
+    milestoneType: "difficulty",
     minimumRemixes: 4,
     maximumRemixes: 4,
     unlockedFamilies: REMIX_FAMILIES.map((family) => family.id)
@@ -202,6 +220,8 @@ const RANK_DEFINITIONS = [
     name: "Mythic",
     masteryPoints: REMIX_MASTERY_THRESHOLDS[9],
     completedChallenges: 150,
+    milestone: "Open the first five-remix routes.",
+    milestoneType: "difficulty",
     minimumRemixes: 4,
     maximumRemixes: 5,
     unlockedFamilies: REMIX_FAMILIES.map((family) => family.id)
@@ -211,6 +231,8 @@ const RANK_DEFINITIONS = [
     name: "Legend",
     masteryPoints: REMIX_MASTERY_THRESHOLDS[10],
     completedChallenges: 190,
+    milestone: "Guarantee the full five-remix challenge.",
+    milestoneType: "mastery",
     minimumRemixes: 5,
     maximumRemixes: 5,
     unlockedFamilies: REMIX_FAMILIES.map((family) => family.id)
@@ -220,6 +242,8 @@ const RANK_DEFINITIONS = [
     name: "Cosmic",
     masteryPoints: REMIX_MASTERY_THRESHOLDS[11],
     completedChallenges: 240,
+    milestone: "Complete the Cosmic capstone across every remix family.",
+    milestoneType: "capstone",
     minimumRemixes: 5,
     maximumRemixes: 5,
     unlockedFamilies: REMIX_FAMILIES.map((family) => family.id)
@@ -233,6 +257,19 @@ export const REMIX_RANKS = Object.freeze(
     number: index + 1,
     unlockedFamilies: Object.freeze([...rank.unlockedFamilies])
   }))
+);
+
+export const REMIX_LATE_RANK_MILESTONES = Object.freeze(
+  REMIX_RANKS
+    .filter((rank) => rank.number >= 8)
+    .map((rank) => Object.freeze({
+      id: rank.id,
+      name: rank.name,
+      number: rank.number,
+      masteryPoints: rank.masteryPoints,
+      milestone: rank.milestone,
+      milestoneType: rank.milestoneType
+    }))
 );
 
 const FAMILY_BY_ID = new Map(REMIX_FAMILIES.map((family) => [family.id, family]));
@@ -583,6 +620,8 @@ export function getRemixRankPresentation(candidate) {
     completedChallenges: rank.completedChallenges,
     minimumRemixes: rank.minimumRemixes,
     maximumRemixes: rank.maximumRemixes,
+    milestone: rank.milestone,
+    milestoneType: rank.milestoneType,
     remixRange: countLabel(rank.minimumRemixes, rank.maximumRemixes),
     unlockedFamilies: families.map((family) => family.id),
     unlockedNames: families.map((family) => family.name),
@@ -594,7 +633,9 @@ export function getRemixRankPresentation(candidate) {
           id: nextRank.id,
           name: nextRank.name,
           masteryPoints: nextRank.masteryPoints,
-          completedChallenges: nextRank.completedChallenges
+          completedChallenges: nextRank.completedChallenges,
+          milestone: nextRank.milestone,
+          milestoneType: nextRank.milestoneType
         }
       : null
   };

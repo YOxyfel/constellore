@@ -17,6 +17,7 @@ const LOCAL_RUNTIME_ASSETS = [
   "adaptive-difficulty.mjs",
   "remix-progression.mjs",
   "remix-readiness.mjs",
+  "path-guard.mjs",
   "route-remixes.mjs",
   "shuffled-start.mjs",
   "local-beta.mjs",

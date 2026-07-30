@@ -1,6 +1,121 @@
 export const PENDING_SCORE_PREFIX = "constellore-pending-score-v1:";
 export const PENDING_SCORE_RETENTION_MS = 7 * 86400000;
 
+export function safeBrowserStorage(scope = globalThis, name = "localStorage") {
+  try { return scope?.[name] || null; }
+  catch { return null; }
+}
+
+export function clearGameStorage(storage, prefixes = ["constellore-", "wordforge-"]) {
+  if (!storage) return 0;
+  const keys = [];
+  try {
+    for (let index = 0; index < storage.length; index += 1) {
+      const key = storage.key(index);
+      if (key && prefixes.some((prefix) => key.startsWith(prefix))) keys.push(key);
+    }
+    for (const key of keys) storage.removeItem(key);
+    return keys.length;
+  } catch {
+    return 0;
+  }
+}
+
+export function revisionMetadata(value) {
+  const source = value && typeof value === "object" && !Array.isArray(value) ? value : {};
+  return {
+    revision: Math.max(0, Math.floor(Number(source.revision) || 0)),
+    writer: String(source.writer || "").slice(0, 80),
+    updatedAt: Math.max(0, Math.floor(Number(source.updatedAt) || 0))
+  };
+}
+
+export function createRevisionedStorageCoordinator({
+  key,
+  channelName,
+  writer,
+  metadataKey = "__localSave",
+  normalize = (value) => value,
+  getCurrent = () => null,
+  onExternal = () => {},
+  scope = globalThis
+}) {
+  const storage = safeBrowserStorage(scope);
+  let channel = null;
+  const read = () => {
+    if (!storage) return null;
+    try {
+      const parsed = JSON.parse(storage.getItem(key) || "null");
+      return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+        ? normalize(parsed)
+        : null;
+    } catch {
+      return null;
+    }
+  };
+  const changedKeys = (current, baseline) => {
+    const keys = new Set([...Object.keys(current || {}), ...Object.keys(baseline || {})]);
+    keys.delete(metadataKey);
+    return [...keys].filter((field) => {
+      try { return JSON.stringify(current?.[field]) !== JSON.stringify(baseline?.[field]); }
+      catch { return true; }
+    });
+  };
+  const notifyIfNewer = () => {
+    const incoming = read();
+    const current = getCurrent();
+    if (revisionMetadata(incoming?.[metadataKey]).revision <= revisionMetadata(current?.[metadataKey]).revision) return;
+    onExternal(incoming);
+  };
+  try {
+    if (typeof scope?.BroadcastChannel === "function") {
+      channel = new scope.BroadcastChannel(channelName);
+      channel.addEventListener("message", (event) => {
+        if (event.data?.type === "revision-saved" && event.data?.writer !== writer) {
+          notifyIfNewer();
+        }
+      });
+    }
+  } catch { /* Storage events remain the fallback. */ }
+  scope?.addEventListener?.("storage", (event) => {
+    if (event.key === key && (!event.storageArea || event.storageArea === storage)) notifyIfNewer();
+  });
+  return {
+    storage,
+    read,
+    save(current, baseline) {
+      const remote = read();
+      const remoteRevision = revisionMetadata(remote?.[metadataKey]).revision;
+      const baselineRevision = revisionMetadata(baseline?.[metadataKey]).revision;
+      let record = current;
+      if (remote && remoteRevision > baselineRevision) {
+        const merged = { ...remote };
+        for (const field of changedKeys(current, baseline)) merged[field] = structuredClone(current[field]);
+        record = normalize(merged);
+      }
+      record[metadataKey] = {
+        revision: Math.max(remoteRevision, revisionMetadata(record[metadataKey]).revision) + 1,
+        writer,
+        updatedAt: Date.now()
+      };
+      try {
+        storage?.setItem(key, JSON.stringify(record));
+        channel?.postMessage?.({
+          type: "revision-saved",
+          revision: record[metadataKey].revision,
+          writer
+        });
+        return { record, baseline: structuredClone(record), persisted: Boolean(storage) };
+      } catch {
+        return { record, baseline, persisted: false };
+      }
+    },
+    dispose() {
+      channel?.close?.();
+    }
+  };
+}
+
 function cleanIdentifier(value, maximum) {
   const text = String(value || "").trim();
   return text && text.length <= maximum && !/[\u0000-\u001f\u007f]/.test(text) ? text : "";

@@ -46,8 +46,7 @@ test("Signature Routes grade completed play, persist comparable bests, and adopt
     "signatureResultGrade",
     "signatureResultTitle",
     "signatureResultScore",
-    "signatureResultMetrics",
-    "signaturePersonalBest"
+    "signatureResultSummary"
   );
 
   const build = sourceBetween("function buildSignatureResult", "function renderSignatureResult");
@@ -169,18 +168,19 @@ test("Community results stay asynchronous, eligibility-gated, and driven by veri
     "communityResultNote",
     "raceCommunityGhost"
   );
-  assert.match(page, /asynchronous routes, never live multiplayer/i);
+  assert.match(page, /asynchronous routes, never the live Scramble match/i);
 
   const render = sourceBetween("function renderCommunityResult", "function continueJourneyFromResult");
   expectAll(render, [
     "buildCommunityResults(community, { playerId: profile.playerId })",
     "state.finished && state.game",
-    "isStaticBeta || state.run?.ranked",
-    'isStaticBeta ? "LOCAL" : "1"',
+    "!isStaticBeta",
+    "state.run?.ranked",
     "community.completedRoutes",
     "community.signatureVarietyPercent",
     "race.hidden = !community.nearby"
   ]);
+  assert.doesNotMatch(render, /THIS BUILD|YOUR PATH|Community sky opens in the online release/, "local practice must not show a large unavailable-community explanation");
   assert.ok(app.includes("renderCommunityResult(result.placement.community || null)"), "ranked results must use the server-provided community aggregate");
   assert.ok(app.includes('track("community_viewed", { source: "community", action: "race" })'), "nearby-route racing must be measured as an explicit action");
   assert.match(styles, /[.]community-result-card\s*\{/);

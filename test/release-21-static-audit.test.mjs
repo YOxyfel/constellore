@@ -7,6 +7,7 @@ import { cosmicEventCatalog } from "../public/cosmic-events.mjs";
 import { generateLocalWorldData, lookupGeneratedCombination } from "../scripts/build-local-world.mjs";
 
 const FEATURE_MODULES = [
+  "reveal-presentation",
   "second-orbit",
   "explore-sandbox",
   "signature-routes",
@@ -15,7 +16,16 @@ const FEATURE_MODULES = [
   "recipe-insight",
   "community-results",
   "cosmic-events",
-  "adaptive-difficulty"
+  "adaptive-difficulty",
+  "home-menu-view",
+  "profile-rank-surface"
+];
+const CIRCUIT_DEPENDENCIES = [
+  "cosmos-circuit",
+  "cosmos-circuit-copy",
+  "circuit-lobby-tabs",
+  "circuit-live-ops",
+  "star-path"
 ];
 
 const readProjectFile = (path) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
@@ -60,18 +70,23 @@ test("static Cosmic Events seed collection starters exactly like the server", as
 });
 
 test("all current feature modules and release artwork are copied, cached, and verified", async () => {
-  const [app, pagesBuild, itchBuild, pagesVerify, itchVerify, onlineWorker, packageText] = await Promise.all([
+  const [app, circuitRuntime, secondaryLoader, pagesBuild, itchBuild, pagesVerify, itchVerify, onlineWorker, packageText, developerRuntime] = await Promise.all([
     readProjectFile("public/app.js"),
+    readProjectFile("public/cosmos-circuit-runtime.mjs"),
+    readProjectFile("public/secondary-surface-loader.mjs"),
     readProjectFile("scripts/build-pages.mjs"),
     readProjectFile("scripts/build-itch.mjs"),
     readProjectFile("scripts/verify-pages-build.mjs"),
     readProjectFile("scripts/verify-itch-build.mjs"),
     readProjectFile("public/service-worker.js"),
-    readProjectFile("package.json")
+    readProjectFile("package.json"),
+    readProjectFile("public/developer-console-runtime.mjs")
   ]);
   const releaseVersionPattern = JSON.parse(packageText).version.replaceAll(".", "[.]");
   assert.ok(
-    pagesBuild.includes('.filter((name) => /^(?:app[.]js|(?:styles|simple-ui)[.]css|.+[.]mjs|'),
+    pagesBuild.includes("const publicRuntimeFiles =")
+      && pagesBuild.includes("cosmetic-preload-bootstrap")
+      && pagesBuild.includes(".+[.]mjs"),
     "Pages must discover every public runtime module"
   );
   assert.ok(
@@ -80,8 +95,9 @@ test("all current feature modules and release artwork are copied, cached, and ve
   );
   assert.ok(
     pagesBuild.includes("const practiceAssets =") && pagesBuild.includes("assets: practiceAssets"),
-    "Pages must pre-cache every copied practice runtime asset"
+    "Pages must build an explicit install shell"
   );
+  assert.match(pagesBuild, /lazyFiles: SECONDARY_SURFACE_FILES/, "Pages must keep optional surfaces out of install and cache them on first use");
 
   for (const module of FEATURE_MODULES) {
     const versioned = new RegExp(`${module}[.]mjs[?]v=${releaseVersionPattern}`);
@@ -89,6 +105,38 @@ test("all current feature modules and release artwork are copied, cached, and ve
     assert.match(onlineWorker, versioned, `${module} must be pre-cached by the hosted worker`);
     assert.match(pagesVerify, new RegExp(`"${module}[.]mjs"`), `${module} must be checked in the Pages artifact`);
     assert.match(itchVerify, new RegExp(`"${module}[.]mjs"`), `${module} must be checked in the itch ZIP`);
+  }
+
+  const circuitRuntimePattern = new RegExp(`cosmos-circuit-runtime[.]mjs[?]v=${releaseVersionPattern}`);
+  assert.doesNotMatch(app, /^import .*cosmos-circuit-runtime/m, "Cosmos Circuit must not enter the static browser graph");
+  assert.match(secondaryLoader, circuitRuntimePattern, "Cosmos Circuit must load through the secondary-surface boundary");
+  assert.match(onlineWorker, circuitRuntimePattern, "Cosmos Circuit must be in the hosted worker's exact lazy-file allowlist");
+  assert.match(onlineWorker, /const LAZY_FILES = new Set/, "The hosted worker must distinguish exact lazy files from its install shell");
+  assert.match(pagesVerify, /"cosmos-circuit-runtime[.]mjs"/, "Cosmos Circuit must be checked in the Pages artifact");
+  assert.match(itchVerify, /"cosmos-circuit-runtime[.]mjs"/, "Cosmos Circuit must be checked in the itch ZIP");
+  for (const module of CIRCUIT_DEPENDENCIES) {
+    const versioned = new RegExp(`${module}[.]mjs[?]v=${releaseVersionPattern}`);
+    assert.match(circuitRuntime, versioned, `${module} must load from the Cosmos Circuit runtime`);
+    assert.match(onlineWorker, versioned, `${module} must be available through the hosted worker's lazy-file allowlist`);
+    assert.match(pagesVerify, new RegExp(`"${module}[.]mjs"`), `${module} must be checked in the Pages artifact`);
+    assert.match(itchVerify, new RegExp(`"${module}[.]mjs"`), `${module} must be checked in the itch ZIP`);
+  }
+  for (const asset of ["cosmos-circuit.css"]) {
+    const versioned = new RegExp(`${asset.replaceAll(".", "[.]")}[?]v=${releaseVersionPattern}`);
+    assert.match(onlineWorker, versioned, `${asset} must be available through the hosted worker's lazy-file allowlist`);
+    assert.match(pagesVerify, new RegExp(`"${asset.replaceAll(".", "[.]")}"`), `${asset} must be checked in the Pages artifact`);
+    assert.match(itchVerify, new RegExp(`"${asset.replaceAll(".", "[.]")}"`), `${asset} must be checked in the itch ZIP`);
+  }
+
+  assert.match(app, new RegExp(`developer-console-runtime[.]mjs[?]v=${releaseVersionPattern}`));
+  assert.match(app, new RegExp(`share-card-runtime[.]mjs[?]v=${releaseVersionPattern}`));
+  assert.match(developerRuntime, new RegExp(`developer-console[.]mjs[?]v=${releaseVersionPattern}`));
+  assert.match(developerRuntime, new RegExp(`developer-console[.]css[?]v=${releaseVersionPattern}`));
+  for (const asset of ["developer-console.mjs", "developer-console-runtime.mjs", "developer-console.css", "share-card-runtime.mjs"]) {
+    const pattern = new RegExp(asset.replaceAll(".", "[.]"));
+    assert.match(onlineWorker, pattern, `${asset} must be pre-cached by the hosted worker`);
+    assert.match(pagesVerify, pattern, `${asset} must be checked in the Pages artifact`);
+    assert.match(itchVerify, pattern, `${asset} must be checked in the itch ZIP`);
   }
 
   assert.match(pagesBuild, /social-card-v3[.]jpg/, "the destination-first social card must be copied into the release tree");

@@ -1,0 +1,113 @@
+.simple-ui .stardust-store {
+  margin-top: 14px;
+  padding: 16px;
+  border: 1px solid color-mix(in srgb, var(--amber) 32%, var(--ui-line));
+  border-radius: 12px;
+  background:
+    radial-gradient(circle at 96% 4%, color-mix(in srgb, var(--amber) 12%, transparent), transparent 34%),
+    color-mix(in srgb, var(--ui-surface) 93%, var(--violet));
+}
+
+.simple-ui .stardust-store > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.simple-ui .stardust-store h3 {
+  margin: 2px 0 0;
+  font-size: 19px;
+}
+
+.simple-ui .stardust-store header small {
+  color: var(--amber);
+  font: 700 11px/1.2 "DM Mono", monospace;
+  letter-spacing: .12em;
+}
+
+.simple-ui .stardust-store header > strong {
+  flex: 0 0 auto;
+  color: var(--amber);
+  font: 700 17px/1.2 "DM Mono", monospace;
+}
+
+.simple-ui .stardust-store > p {
+  margin: 9px 0 12px;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.simple-ui .stardust-store-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.simple-ui .stardust-store-grid article {
+  min-width: 0;
+  padding: 12px;
+  display: grid;
+  gap: 10px;
+  border: 1px solid var(--ui-line);
+  border-radius: 10px;
+  background: rgb(255 255 255 / 3%);
+}
+
+.simple-ui .stardust-store-grid article div {
+  display: grid;
+  gap: 3px;
+}
+
+.simple-ui .stardust-store-grid article small {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.simple-ui .stardust-store-grid button {
+  min-height: 46px;
+  padding: 8px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border: 1px solid color-mix(in srgb, var(--amber) 32%, var(--ui-line));
+  border-radius: 9px;
+  color: var(--text);
+  background: color-mix(in srgb, var(--amber) 8%, transparent);
+  cursor: pointer;
+}
+
+.simple-ui .stardust-store-grid button b {
+  color: var(--muted);
+  font: 600 12px/1 "DM Mono", monospace;
+}
+
+.simple-ui .stardust-store-grid button:disabled {
+  opacity: .56;
+  cursor: not-allowed;
+}
+
+.simple-ui .stardust-store .stardust-store-status {
+  min-height: 1.35em;
+  margin-bottom: 0;
+  color: color-mix(in srgb, var(--amber) 72%, var(--text));
+}
+
+@media (max-width: 520px) {
+  .simple-ui .stardust-store-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (forced-colors: active) {
+  .simple-ui .stardust-store,
+  .simple-ui .stardust-store-grid article,
+  .simple-ui .stardust-store-grid button {
+    border-color: CanvasText;
+    color: CanvasText;
+    background: Canvas;
+  }
+}

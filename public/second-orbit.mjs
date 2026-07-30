@@ -33,6 +33,28 @@ export const SECOND_ORBIT_ROUTE = Object.freeze(ROUTE.map((step) => Object.freez
   spotlightWords: Object.freeze([...step.spotlightWords])
 })));
 
+export function createSecondOrbitGame(universe) {
+  return {
+    mode: "second-orbit",
+    modeName: "Second Orbit \u00b7 Lesson",
+    target: "Mountain",
+    emoji: "\u26F0\uFE0F",
+    starters: ["Earth", "Water", "Fire", "Air"],
+    seed: 202,
+    tier: 1,
+    timeLimit: null,
+    moveLimit: null,
+    law: null,
+    aiEnabled: false,
+    universe,
+    scoreEligible: false,
+    rewardEligible: false,
+    leaderboardEligible: false,
+    ranked: false,
+    training: true
+  };
+}
+
 function wordKey(value) {
   return String(value || "").trim().toLocaleLowerCase();
 }

@@ -1,0 +1,457 @@
+.simple-ui :is(.developer-login-modal, .developer-modal, .developer-vfx-modal) {
+  --modal-accent: var(--atlas-teal);
+}
+
+.simple-ui .developer-login-modal {
+  width: min(430px, calc(100% - 28px));
+  padding: 32px;
+}
+
+.simple-ui .developer-modal {
+  width: min(900px, calc(100% - 28px));
+  padding: 30px;
+}
+
+.simple-ui .developer-vfx-modal {
+  --modal-accent: var(--atlas-gold);
+  width: min(480px, calc(100% - 28px));
+  padding: 34px;
+  text-align: center;
+}
+
+.simple-ui .developer-seal {
+  width: 52px;
+  height: 52px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(105, 216, 204, .4);
+  border-radius: 14px;
+  color: var(--atlas-teal);
+  background: rgba(105, 216, 204, .06);
+  box-shadow: 0 0 28px rgba(105, 216, 204, .1);
+  font: 750 13px/1 "DM Mono", Consolas, monospace;
+  letter-spacing: .1em;
+}
+
+.simple-ui .developer-login-modal > .developer-seal {
+  margin-bottom: 18px;
+}
+
+.simple-ui .developer-login-form {
+  display: grid;
+  gap: 8px;
+  margin-top: 22px;
+}
+
+.simple-ui .developer-login-form label,
+.simple-ui .developer-field > span {
+  color: var(--atlas-ivory);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.simple-ui .developer-login-form input,
+.simple-ui .developer-field select {
+  width: 100%;
+  min-height: 48px;
+  box-sizing: border-box;
+  border: 1px solid rgba(165, 211, 206, .25);
+  border-radius: 10px;
+  padding: 0 13px;
+  color: var(--atlas-ivory);
+  background: rgba(3, 22, 30, .78);
+  font: inherit;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.3;
+  color-scheme: dark;
+}
+
+.simple-ui .developer-login-form input:focus-visible,
+.simple-ui .developer-field select:focus-visible,
+.simple-ui .developer-level-field input:focus-visible {
+  border-color: var(--atlas-teal);
+  outline: 3px solid rgba(105, 216, 204, .2);
+  outline-offset: 1px;
+}
+
+.simple-ui .developer-login-form label:not(:first-child) {
+  margin-top: 5px;
+}
+
+.simple-ui .developer-login-status,
+.simple-ui .developer-status {
+  min-height: 22px;
+  margin: 3px 0 0;
+  color: #f0b0a1;
+  font-size: 15px;
+  line-height: 1.45;
+}
+
+.simple-ui .developer-login-status:empty,
+.simple-ui .developer-status:empty {
+  min-height: 0;
+}
+
+.simple-ui .developer-security-note {
+  display: block;
+  margin-top: 14px;
+  color: var(--atlas-muted);
+  font-size: 13px;
+  line-height: 1.45;
+  text-align: center;
+}
+
+.simple-ui .developer-heading {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 14px;
+  padding-right: 34px;
+}
+
+.simple-ui .developer-heading h2 {
+  margin: 4px 0 7px;
+}
+
+.simple-ui .developer-heading p {
+  max-width: 660px;
+  margin: 0;
+  color: var(--atlas-muted);
+  font-size: 15px;
+  line-height: 1.45;
+}
+
+.simple-ui .developer-lock {
+  min-width: 58px;
+  min-height: 40px;
+  border: 1px solid rgba(165, 211, 206, .18);
+  border-radius: 9px;
+  color: var(--atlas-muted);
+  background: rgba(4, 23, 31, .5);
+  cursor: pointer;
+}
+
+.simple-ui .developer-current {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 22px 0 12px;
+  border: 1px solid rgba(165, 211, 206, .17);
+  border-radius: 12px;
+  background: rgba(3, 21, 29, .38);
+}
+
+.simple-ui .developer-current > span {
+  min-width: 0;
+  padding: 12px 14px;
+  border-right: 1px solid rgba(165, 211, 206, .13);
+}
+
+.simple-ui .developer-current > span:last-child {
+  border-right: 0;
+}
+
+.simple-ui .developer-current small,
+.simple-ui .developer-current strong {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.simple-ui .developer-current small {
+  color: var(--atlas-muted);
+  font: 650 11px/1.25 "DM Mono", Consolas, monospace;
+  letter-spacing: .075em;
+}
+
+.simple-ui .developer-current strong {
+  margin-top: 5px;
+  color: var(--atlas-gold-bright);
+  font-size: 19px;
+}
+
+.simple-ui .developer-section {
+  margin-top: 10px;
+  padding: 15px;
+  border: 1px solid rgba(165, 211, 206, .16);
+  border-radius: 13px;
+  background: rgba(4, 23, 31, .34);
+}
+
+.simple-ui .developer-section > header {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+  margin-bottom: 13px;
+}
+
+.simple-ui .developer-section > header > span {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(105, 216, 204, .24);
+  border-radius: 50%;
+  color: var(--atlas-teal);
+}
+
+.simple-ui .developer-section h3 {
+  margin: 0;
+  color: var(--atlas-ivory);
+  font-size: 18px;
+}
+
+.simple-ui .developer-section header p {
+  margin: 3px 0 0;
+  color: var(--atlas-muted);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.simple-ui .developer-setting-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(160px, 210px);
+  gap: 10px;
+  align-items: end;
+}
+
+.simple-ui .developer-field {
+  min-width: 0;
+  display: grid;
+  gap: 7px;
+}
+
+.simple-ui .developer-field small {
+  min-height: 18px;
+  color: var(--atlas-muted);
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.simple-ui .developer-level-field {
+  margin-top: 5px;
+}
+
+.simple-ui .developer-level-field > span {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.simple-ui .developer-level-field output {
+  color: var(--atlas-gold-bright);
+  font-family: "DM Mono", Consolas, monospace;
+}
+
+.simple-ui .developer-level-field input {
+  width: 100%;
+  min-height: 40px;
+  accent-color: var(--atlas-teal);
+}
+
+.simple-ui .developer-apply {
+  width: 100%;
+  min-height: 48px;
+  margin: 0 0 18px;
+}
+
+.simple-ui .developer-action-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 8px;
+}
+
+.simple-ui .developer-action-grid > button {
+  min-width: 0;
+  min-height: 72px;
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  align-items: center;
+  gap: 2px 10px;
+  padding: 10px 12px;
+  border: 1px solid rgba(165, 211, 206, .18);
+  border-radius: 11px;
+  color: var(--atlas-ivory);
+  background: rgba(6, 30, 39, .72);
+  cursor: pointer;
+  text-align: left;
+}
+
+.simple-ui .developer-action-grid > button > span {
+  grid-row: 1 / 3;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(105, 216, 204, .22);
+  border-radius: 50%;
+  color: var(--atlas-teal);
+}
+
+.simple-ui .developer-action-grid > button b,
+.simple-ui .developer-action-grid > button small {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.simple-ui .developer-action-grid > button b {
+  align-self: end;
+  font-size: 15px;
+}
+
+.simple-ui .developer-action-grid > button small {
+  align-self: start;
+  color: var(--atlas-muted);
+  font-size: 13px;
+  line-height: 1.3;
+}
+
+.simple-ui .developer-action-grid > button:hover:not(:disabled) {
+  border-color: rgba(105, 216, 204, .5);
+  background: rgba(14, 52, 61, .82);
+}
+
+.simple-ui .developer-action-grid > button:disabled {
+  opacity: .42;
+  cursor: not-allowed;
+}
+
+.simple-ui .developer-showcase-grid > button > span {
+  color: var(--atlas-gold-bright);
+  border-color: rgba(241, 202, 120, .28);
+}
+
+.simple-ui .developer-danger-zone {
+  border-color: rgba(236, 146, 125, .24);
+  background: rgba(74, 31, 31, .2);
+}
+
+.simple-ui .developer-danger-zone > header > span {
+  border-color: rgba(236, 146, 125, .3);
+  color: var(--atlas-coral);
+}
+
+.simple-ui .developer-reset-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.simple-ui #resetDeveloperFreshStart {
+  min-height: 46px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  border: 1px solid rgba(236, 146, 125, .32);
+  border-radius: 10px;
+  padding: 0 14px;
+  color: #efb2a4;
+  background: rgba(84, 35, 34, .38);
+  cursor: pointer;
+}
+
+.simple-ui #resetDeveloperFreshStart.is-armed {
+  border-color: rgba(255, 151, 126, .72);
+  color: #ffe0d8;
+  background: rgba(112, 39, 36, .7);
+}
+
+.simple-ui .developer-reset-actions .quiet-action {
+  min-height: 44px;
+  margin: 0;
+}
+
+.simple-ui .developer-status {
+  color: var(--atlas-teal);
+}
+
+.simple-ui .developer-status.error {
+  color: #f0b0a1;
+}
+
+.simple-ui .developer-vfx-modal .result-emoji {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 52px;
+}
+
+.simple-ui .developer-vfx-modal .primary-action {
+  margin-top: 22px;
+}
+
+@media (max-width: 640px) {
+  .simple-ui .developer-modal {
+    width: calc(100% - 16px);
+    max-width: 900px;
+    max-height: calc(100dvh - 16px);
+    padding: 52px 14px 18px;
+  }
+
+  .simple-ui .developer-heading {
+    grid-template-columns: 44px minmax(0, 1fr);
+    padding-right: 0;
+  }
+
+  .simple-ui .developer-heading > .developer-seal {
+    width: 44px;
+    height: 44px;
+  }
+
+  .simple-ui .developer-heading .developer-lock {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+
+  .simple-ui .developer-current {
+    grid-template-columns: 1fr;
+  }
+
+  .simple-ui .developer-current > span {
+    border-right: 0;
+    border-bottom: 1px solid rgba(165, 211, 206, .13);
+  }
+
+  .simple-ui .developer-current > span:last-child {
+    border-bottom: 0;
+  }
+
+  .simple-ui .developer-setting-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .simple-ui .developer-apply {
+    margin: -2px 0 10px;
+  }
+
+  .simple-ui .developer-action-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 520px) {
+  .simple-ui :is(.developer-login-modal, .developer-modal, .developer-vfx-modal) .modal-close {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+  }
+
+  .simple-ui .developer-login-modal,
+  .simple-ui .developer-vfx-modal {
+    width: calc(100% - 16px);
+    max-height: calc(100dvh - 16px);
+    padding: 52px 18px 22px;
+  }
+
+  .simple-ui .developer-reset-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .simple-ui #resetDeveloperFreshStart {
+    width: 100%;
+  }
+}

@@ -17,6 +17,7 @@ async function preparePagesAdapter(directory) {
     "adaptive-difficulty.mjs",
     "remix-progression.mjs",
     "remix-readiness.mjs",
+    "path-guard.mjs",
     "route-remixes.mjs",
     "shuffled-start.mjs"
   ].map((filename) => copyFile(new URL(`../public/${filename}`, import.meta.url), join(directory, filename))));

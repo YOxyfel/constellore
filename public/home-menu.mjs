@@ -1,4 +1,30 @@
-export const HOME_MENU_ADVANCED_WINS = 2;
+export const HOME_MENU_SHARE_WINS = 1;
+export const HOME_MENU_DAILY_WINS = 1;
+export const HOME_MENU_CHOICES_WINS = 2;
+export const HOME_MENU_EXPLORE_WINS = 3;
+export const HOME_MENU_ADVANCED_WINS = 10;
+export const HOME_MENU_DAILY_RANK = 1;
+export const HOME_MENU_CHOICES_RANK = 3;
+export const HOME_MENU_EXPLORE_RANK = 2;
+export const HOME_MENU_ADVENTURES_RANK = 3;
+const ROUTE_RANK_NUMBERS = new Map([
+  ["bronze", 1],
+  ["silver", 2],
+  ["gold", 3],
+  ["diamond", 4],
+  ["emerald", 5],
+  ["sapphire", 6],
+  ["ruby", 7],
+  ["master", 8],
+  ["grandmaster", 9],
+  ["mythic", 10],
+  ["legend", 11],
+  ["cosmic", 12]
+]);
+
+export function pressureModesUnlocked(value) {
+  return normalizeRouteRankNumber(value) >= HOME_MENU_CHOICES_RANK;
+}
 
 function normalizeTraining(value) {
   const source = value && typeof value === "object" && !Array.isArray(value) ? value : {};
@@ -13,49 +39,69 @@ function normalizeWins(value) {
   return Math.max(0, wins);
 }
 
-export function createHomeMenuState({ firstOrbit, secondOrbit, wins, dailyCompleted, todayKey } = {}) {
+function normalizeRouteRankNumber(value) {
+  const rank = value?.rank || value;
+  const direct = Math.floor(Number(rank?.number));
+  if (Number.isFinite(direct) && direct > 0) return Math.min(12, direct);
+  const id = String(rank?.id || rank || "").trim().toLowerCase();
+  return ROUTE_RANK_NUMBERS.get(id) || 1;
+}
+
+function recognizedRouteRankNumber(value) {
+  const rank = value?.rank || value;
+  const direct = Math.floor(Number(rank?.number));
+  if (Number.isFinite(direct) && direct > 0) return Math.min(12, direct);
+  const id = String(rank?.id || rank || "").trim().toLowerCase();
+  return ROUTE_RANK_NUMBERS.get(id) || 0;
+}
+
+export function createHomeMenuState({ firstOrbit, secondOrbit, wins, routeRank, dailyCompleted, todayKey } = {}) {
   const training = normalizeTraining(firstOrbit);
   const bridge = normalizeTraining(secondOrbit);
   const completedWins = normalizeWins(wins);
+  const routeRankNumber = normalizeRouteRankNumber(routeRank);
+  const rankReadyForDaily = recognizedRouteRankNumber(routeRank) >= HOME_MENU_DAILY_RANK;
   // Existing players who already earned a real win are never pushed backward
   // into newly-added onboarding. New players move through both short lessons.
   const bridgeComplete = bridge.completed || completedWins > 0;
   const onboardingComplete = (training.completed && bridgeComplete) || completedWins > 0;
   const progressReady = completedWins > 0;
-  const adventuresReady = completedWins >= HOME_MENU_ADVANCED_WINS;
+  const sharingReady = completedWins >= HOME_MENU_SHARE_WINS;
+  const dailyReady = onboardingComplete
+    && completedWins >= HOME_MENU_DAILY_WINS
+    && rankReadyForDaily;
+  const dailyLocked = !dailyReady;
+  const choicesReady = completedWins >= HOME_MENU_CHOICES_WINS
+    && routeRankNumber >= HOME_MENU_CHOICES_RANK;
+  const exploreReady = completedWins >= HOME_MENU_EXPLORE_WINS
+    && routeRankNumber >= HOME_MENU_EXPLORE_RANK;
+  const adventuresReady = completedWins >= HOME_MENU_ADVANCED_WINS
+    && routeRankNumber >= HOME_MENU_ADVENTURES_RANK;
   const advancedReady = adventuresReady;
-  const dailyAvailable = Boolean(todayKey) && dailyCompleted !== todayKey;
+  const focusMode = !advancedReady;
+  const dailyAvailable = dailyReady && Boolean(todayKey) && dailyCompleted !== todayKey;
 
   let primary;
-  if (!training.completed && completedWins === 0 && !training.seen) {
+  if (!training.completed && completedWins === 0) {
     primary = {
       action: "training",
-      kicker: "RECOMMENDED",
-      title: "Ready to play?",
-      description: "Your first target is Wall. We will show you how.",
-      label: "Play",
-      meta: "Wall",
+      kicker: training.seen ? "ORBIT IN PROGRESS" : "FIRST CONSTELLATION",
+      title: training.seen ? "Return to Mud" : "Make Mud",
+      description: training.seen
+        ? "Your first constellation is waiting."
+        : "Earth + Water. One move. You can’t get lost.",
+      label: training.seen ? "Continue" : "Begin",
+      meta: "Mud · 1 combination",
       secondaryAction: "modes",
       secondaryLabel: "Choose game"
-    };
-  } else if (!training.completed && completedWins === 0) {
-    primary = {
-      action: "reach",
-      kicker: "READY",
-      title: "Make a new target word.",
-      description: "There is no timer and no move limit.",
-      label: "Play",
-      meta: "No timer",
-      secondaryAction: "training",
-      secondaryLabel: "Learn how to play"
     };
   } else if (!bridgeComplete) {
     primary = {
       action: "second-orbit",
-      kicker: "NEXT LESSON",
-      title: "Make Mountain.",
-      description: "Try a short game with one helpful hint.",
-      label: "Play",
+      kicker: "NEXT CONSTELLATION",
+      title: "Make Mountain",
+      description: "A short guided route through your new universe.",
+      label: "Continue",
       meta: "Mountain",
       secondaryAction: "modes",
       secondaryLabel: "Choose game"
@@ -64,9 +110,9 @@ export function createHomeMenuState({ firstOrbit, secondOrbit, wins, dailyComple
     primary = {
       action: "daily",
       kicker: "TODAY'S WORD",
-      title: "Make today’s word.",
-      description: "Everyone gets the same target.",
-      label: "Play",
+      title: "A new word is calling",
+      description: "One shared target. A different path for every player.",
+      label: "Enter",
       meta: "Today’s target",
       secondaryAction: "modes",
       secondaryLabel: "Choose game"
@@ -74,10 +120,10 @@ export function createHomeMenuState({ firstOrbit, secondOrbit, wins, dailyComple
   } else {
     primary = {
       action: "reach",
-      kicker: "READY",
-      title: "Make a new target word.",
-      description: "Play without a timer or move limit.",
-      label: "Play",
+      kicker: "YOUR NEXT ORBIT",
+      title: "Create something impossible",
+      description: "Find the target at your own pace.",
+      label: "Enter",
       meta: "No timer",
       secondaryAction: "modes",
       secondaryLabel: "Choose game"
@@ -88,8 +134,21 @@ export function createHomeMenuState({ firstOrbit, secondOrbit, wins, dailyComple
     stage: !onboardingComplete ? "onboarding" : adventuresReady ? "established" : "core",
     onboardingComplete,
     progressReady,
+    sharingReady,
+    dailyReady,
+    dailyLocked,
+    dailyAvailable,
+    choicesReady,
+    exploreReady,
     adventuresReady,
     advancedReady,
+    focusMode,
+    routeRankNumber,
+    rankReadyForDaily,
+    rankReadyForChoices: routeRankNumber >= HOME_MENU_CHOICES_RANK,
+    rankReadyForExplore: routeRankNumber >= HOME_MENU_EXPLORE_RANK,
+    rankReadyForAdvanced: routeRankNumber >= HOME_MENU_ADVENTURES_RANK,
+    winsUntilAdvanced: Math.max(0, HOME_MENU_ADVANCED_WINS - completedWins),
     primary
   };
 }
