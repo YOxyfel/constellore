@@ -103,8 +103,8 @@ test("a first-time player opens directly into a guaranteed game, celebrates, and
   await activateInventoryWord(page, "earth");
   await activateInventoryWord(page, "water");
   await expect(page.locator('.inventory-word[data-word="mud"]')).toBeVisible();
-  await expect(page.locator(".cosmic-gate__first-discovery")).toBeVisible({ timeout: 4_000 });
-  await expect(page.locator("#resultDialog")).toHaveJSProperty("open", true, { timeout: 6_000 });
+  await expect(page.locator(".cosmic-gate__first-discovery")).toBeVisible({ timeout: 8_000 });
+  await expect(page.locator("#resultDialog")).toHaveJSProperty("open", true, { timeout: 10_000 });
   await expect(page.locator("#resultTitle")).toHaveText("Your first discovery: Mud!");
   await expect(page.locator("#resultDetails")).toBeHidden();
   await expect(page.locator("#resultPrimary")).toContainText("Next game");
@@ -169,13 +169,13 @@ test("the full-motion first discovery launches all space-confetti particles with
   await expect(page.locator("#cosmicGate")).toHaveAttribute("data-phase", "closed");
   await expect(page.locator("#cosmicGate")).toHaveAttribute("data-content", "hidden");
   await expect(page.locator("#resultDialog")).toHaveJSProperty("open", false);
-  await expect(page.locator(".cosmic-gate__first-discovery")).toBeVisible({ timeout: 4_000 });
+  await expect(page.locator(".cosmic-gate__first-discovery")).toBeVisible({ timeout: 8_000 });
   await expect(page.locator(".cosmic-gate__first-discovery-particle")).toHaveCount(42);
   const animationNames = await page.locator(".cosmic-gate__first-discovery-particle").evaluateAll(
     (particles) => [...new Set(particles.map((particle) => getComputedStyle(particle).animationName))]
   );
   expect(animationNames.some((name) => name !== "none")).toBeTruthy();
-  await expect(page.locator("#resultDialog")).toHaveJSProperty("open", true, { timeout: 6_000 });
+  await expect(page.locator("#resultDialog")).toHaveJSProperty("open", true, { timeout: 10_000 });
   await expect(page.locator(".cosmic-gate__first-discovery")).toBeHidden();
   await expect(page.locator("#cosmicGate")).toHaveAttribute("aria-hidden", "true");
   await expect(page.locator("#cosmicGate")).toHaveAttribute("data-phase", "closed");

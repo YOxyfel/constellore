@@ -1,6 +1,10 @@
 import { expect, test } from "@playwright/test";
 import { installSeenIntroFixture } from "./intro-fixture.mjs";
 
+// This spec mocks account identity. Block the PWA worker so reload requests
+// remain observable by Playwright instead of reaching the real test server.
+test.use({ serviceWorkers: "block" });
+
 test.beforeEach(async ({ page }) => {
   await page.route("**/api/player", async (route) => {
     if (route.request().method() !== "GET") {
@@ -166,8 +170,25 @@ test("the player constellation is glanceable before secondary detail is requeste
     return [preferences?.volume, preferences?.musicVolume, preferences?.sfxVolume];
   })).toEqual([.4, .65, .3]);
 
-  await page.goto("/play/", { waitUntil: "domcontentloaded" });
-  await expect(page.locator("#masterVolumePreference")).toHaveValue("0.4");
-  await expect(page.locator("#musicVolumePreference")).toHaveValue("0.65");
-  await expect(page.locator("#sfxVolumePreference")).toHaveValue("0.3");
+  if (testInfo.project.name.includes("webkit")) {
+    await page.reload({ waitUntil: "domcontentloaded" });
+  } else {
+    await page.goto("/play/", { waitUntil: "domcontentloaded" });
+  }
+  await expect.poll(() => page.evaluate(() => {
+    const raw = localStorage.getItem("constellore-profile-v1")
+      || localStorage.getItem("constellore-local-profile-v1");
+    const preferences = JSON.parse(raw || "null")?.feedbackPreferences;
+    return [preferences?.volume, preferences?.musicVolume, preferences?.sfxVolume];
+  })).toEqual([.4, .65, .3]);
+
+  const restoredMenu = page.locator("#hubMenuDialog");
+  const restoredMenuButton = page.locator("#hubMenuButton");
+  await expect(restoredMenuButton).toBeVisible();
+  await restoredMenuButton.click();
+  await expect(restoredMenu).toHaveJSProperty("open", true);
+  await restoredMenu.locator(".profile-preferences > summary").click();
+  await expect(restoredMenu.locator("#masterVolumePreference")).toHaveValue("0.4");
+  await expect(restoredMenu.locator("#musicVolumePreference")).toHaveValue("0.65");
+  await expect(restoredMenu.locator("#sfxVolumePreference")).toHaveValue("0.3");
 });
