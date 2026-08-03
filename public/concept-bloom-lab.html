@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#020d16">
+  <title>Concept Bloom Lab · Constellore Prototype</title>
+  <link rel="stylesheet" href="./concept-bloom-lab.css">
+</head>
+<body data-mobile-panel="build">
+  <a class="skip-link" href="#bloomStage">Skip to the bloom chamber</a>
+  <div class="lab-ambient" aria-hidden="true"></div>
+
+  <header class="lab-header">
+    <div class="lab-title-block">
+      <p class="eyebrow">Constellore systems prototype</p>
+      <h1>Concept Bloom Lab</h1>
+      <p class="lab-subtitle">Build a Moon shelter whose recipe, relationships, and purpose become part of what it means.</p>
+    </div>
+    <div class="lab-header-actions">
+      <div class="lab-flags" aria-label="Prototype conditions">
+        <span>Local only</span>
+        <span>All operations unlocked</span>
+        <span>Memory only</span>
+      </div>
+      <button class="button button--quiet" id="resetLab" type="button" aria-label="Reset challenge">
+        <span class="reset-label">Reset challenge</span>
+        <span class="reset-icon" aria-hidden="true">↺</span>
+      </button>
+    </div>
+  </header>
+
+  <nav class="mobile-tabs" aria-label="Lab controls" role="tablist">
+    <button id="buildTab" type="button" role="tab" data-mobile-tab="build" aria-controls="buildPanel" aria-selected="true">Build</button>
+    <button id="inspectTab" type="button" role="tab" data-mobile-tab="inspect" aria-controls="inspectPanel" aria-selected="false">Inspect</button>
+  </nav>
+
+  <main class="lab-grid" id="mainContent">
+    <section class="lab-panel build-panel" id="buildPanel" data-mobile-panel="build" aria-labelledby="buildTitle">
+      <div class="panel-heading">
+        <p class="eyebrow">01 · Word matter</p>
+        <h2 id="buildTitle">Make the argument</h2>
+      </div>
+
+      <details class="mission-brief" open>
+        <summary>Moon shelter brief</summary>
+        <p>Create a <strong>House</strong>, attach the ideas it needs, declare what it is for, then expose the whole bloom to lunar stress.</p>
+        <ol>
+          <li>Fuse a House. Its route determines its Aspect.</li>
+          <li>Plant Energy, Life, Community, or other components.</li>
+          <li>Connect two nodes with a typed chemical bond.</li>
+          <li>Declare one or more purposes, stress-test, and rewire.</li>
+        </ol>
+      </details>
+
+      <div class="recipe-clues" aria-label="Known House reactions">
+        <button type="button" data-recipe="Wall|Wall">
+          <span>Wall + Wall</span>
+          <strong>Bastion</strong>
+        </button>
+        <button type="button" data-recipe="Room|Room">
+          <span>Room + Room</span>
+          <strong>Hive</strong>
+        </button>
+        <button type="button" data-recipe="Adobe|Construction">
+          <span>Adobe + Construction</span>
+          <strong>Haven</strong>
+        </button>
+      </div>
+
+      <div class="control-group reaction-control" aria-labelledby="reactionTitle">
+        <div class="control-heading">
+          <div>
+            <p class="control-kicker">Reaction well</p>
+            <h3 id="reactionTitle">Choose word matter</h3>
+          </div>
+          <button class="text-button" id="clearReactants" type="button">Clear</button>
+        </div>
+        <div class="reactant-well" id="reactantWell" aria-label="Selected reactants">
+          <button type="button" data-reactant-slot="0" aria-label="First reactant, empty"><span>1</span><strong>Choose</strong></button>
+          <span class="reaction-mark" aria-hidden="true">+</span>
+          <button type="button" data-reactant-slot="1" aria-label="Second reactant, empty"><span>2</span><strong>Choose</strong></button>
+        </div>
+        <div class="word-palette" id="wordPalette" aria-label="Available word matter"></div>
+        <div class="reaction-actions">
+          <button class="button button--primary" id="fuseReactants" type="button" disabled>Fuse pair</button>
+          <button class="button button--secondary" id="plantReactant" type="button" disabled>Plant one as node</button>
+        </div>
+        <p class="microcopy">Clicking the same word twice is allowed. A second House recipe becomes an alternate proof you can bridge to the first.</p>
+      </div>
+
+      <div class="control-group bond-control" aria-labelledby="bondTitle">
+        <div class="control-heading">
+          <div>
+            <p class="control-kicker">Chemical relation</p>
+            <h3 id="bondTitle">Bond two concepts</h3>
+          </div>
+          <button class="text-button" id="cancelBondEdit" type="button" hidden>Cancel edit</button>
+        </div>
+        <p class="pending-statement" id="bondStatement">Select a source node, then a destination node.</p>
+        <div class="bond-type-picker" id="bondTypePicker" role="radiogroup" aria-label="Bond type"></div>
+        <p class="bond-help" id="bondHelp"></p>
+        <div class="quality-preview" id="qualityPreview" data-quality="none">Waiting for two endpoints</div>
+        <div class="bond-actions">
+          <button class="button button--quiet" id="swapEndpoints" type="button" disabled>Swap direction</button>
+          <button class="button button--primary" id="applyBond" type="button" disabled>Create bond</button>
+          <button class="button button--danger" id="removeSelectedNode" type="button" disabled>Remove selected node</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="lab-panel bloom-panel" aria-labelledby="bloomTitle">
+      <div class="panel-heading bloom-heading">
+        <div>
+          <p class="eyebrow">02 · Concept membrane</p>
+          <h2 id="bloomTitle">Bloom chamber</h2>
+        </div>
+        <div class="bloom-legend" aria-label="Bond legend">
+          <span data-type="flow">Flow</span>
+          <span data-type="shell">Shell</span>
+          <span data-type="bridge">Bridge</span>
+        </div>
+      </div>
+
+      <figure class="bloom-stage" id="bloomStage" tabindex="-1" data-state="unformed" aria-labelledby="bloomTitle bloomCaption">
+        <div class="membrane membrane--outer" aria-hidden="true"></div>
+        <div class="membrane membrane--inner" aria-hidden="true"></div>
+        <svg class="bond-map" id="bondMap" viewBox="0 0 1000 700" preserveAspectRatio="none" aria-hidden="true"></svg>
+        <div class="bloom-nodes" id="bloomNodes" role="group" aria-label="Concept nodes"></div>
+        <div class="empty-bloom" id="emptyBloom">
+          <span aria-hidden="true">◌</span>
+          <strong>The membrane is waiting</strong>
+          <p>Fuse one of the House routes to seed its core.</p>
+        </div>
+        <div class="reaction-flash" id="reactionFlash" aria-hidden="true"></div>
+      </figure>
+      <figcaption class="bloom-caption" id="bloomCaption">
+        Node order defines direction: select the source first and the destination second. Weak claims remain playable and are exposed by the readout.
+      </figcaption>
+    </section>
+
+    <aside class="lab-panel inspect-panel" id="inspectPanel" data-mobile-panel="inspect" aria-labelledby="inspectTitle">
+      <div class="panel-heading inspect-heading">
+        <div>
+          <p class="eyebrow">03 · Design readout</p>
+          <h2 id="inspectTitle">Meaning under pressure</h2>
+        </div>
+        <span class="state-badge" id="overallState" data-state="unformed">Unformed</span>
+      </div>
+
+      <section class="readout-section" aria-labelledby="signatureTitle">
+        <div class="control-heading">
+          <div>
+            <p class="control-kicker">Meaning signature</p>
+            <h3 id="signatureTitle">Purpose + Aspect</h3>
+          </div>
+          <strong class="aspect-name" id="aspectName">No Aspect</strong>
+        </div>
+        <fieldset class="purpose-picker" id="purposePicker">
+          <legend>Declare purpose <span>(choose any)</span></legend>
+        </fieldset>
+        <div class="inferred-purpose" id="inferredPurpose">No purpose can be inferred yet.</div>
+      </section>
+
+      <section class="readout-section metric-section" aria-label="Bloom metrics">
+        <div class="metric" data-metric="coherence">
+          <div><span>Coherence</span><strong id="coherenceValue">0</strong></div>
+          <progress id="coherenceMeter" max="100" value="0">0</progress>
+          <p>Do the relationships make a defensible whole?</p>
+        </div>
+        <div class="metric" data-metric="integrity">
+          <div><span>Integrity</span><strong id="integrityValue">0</strong></div>
+          <progress id="integrityMeter" max="100" value="0">0</progress>
+          <p>Can the design fulfil the purposes you claim?</p>
+        </div>
+        <div class="metric" data-metric="capacity">
+          <div><span>Capacity</span><strong id="capacityValue">0 / 8</strong></div>
+          <progress id="capacityMeter" max="8" value="0">0</progress>
+          <p id="capacityNote">Purpose and weak claims consume conceptual capacity.</p>
+        </div>
+      </section>
+
+      <section class="readout-section" aria-labelledby="findingsTitle">
+        <div class="control-heading">
+          <h3 id="findingsTitle">Findings</h3>
+          <span id="findingCount">0</span>
+        </div>
+        <ul class="finding-list" id="findingList"></ul>
+      </section>
+
+      <section class="readout-section" aria-labelledby="bondListTitle">
+        <div class="control-heading">
+          <h3 id="bondListTitle">Bond ledger</h3>
+          <span id="bondCount">0</span>
+        </div>
+        <div class="bond-ledger" id="bondLedger"></div>
+      </section>
+
+      <section class="readout-section stress-section" aria-labelledby="stressTitle">
+        <p class="control-kicker">Environmental proof</p>
+        <h3 id="stressTitle">Moon stress test</h3>
+        <label for="stressSelect">Hazard</label>
+        <select id="stressSelect"></select>
+        <div class="stress-actions">
+          <button class="button button--secondary" id="runStress" type="button">Run selected</button>
+          <button class="button button--quiet" id="runAllStress" type="button">Run all four</button>
+        </div>
+        <div class="stress-results" id="stressResults"></div>
+      </section>
+
+      <button class="button button--commit" id="commitPreview" type="button" disabled>
+        Preview world consequence
+        <small>Lab only · writes nothing</small>
+      </button>
+    </aside>
+  </main>
+
+  <dialog class="commit-dialog" id="commitDialog" aria-labelledby="commitTitle">
+    <div class="commit-scene" id="commitScene" data-aspect="none" aria-hidden="true">
+      <div class="moon-horizon"></div>
+      <div class="shelter-shell">
+        <span></span><span></span><span></span>
+      </div>
+      <div class="scene-network" id="sceneNetwork"></div>
+    </div>
+    <div class="commit-copy">
+      <p class="eyebrow">Worldweave preview · not saved</p>
+      <h2 id="commitTitle">Unresolved shelter</h2>
+      <p id="commitSummary"></p>
+      <dl class="commit-metrics">
+        <div><dt>Aspect</dt><dd id="commitAspect">—</dd></div>
+        <div><dt>State</dt><dd id="commitState">—</dd></div>
+        <div><dt>Coherence</dt><dd id="commitCoherence">—</dd></div>
+        <div><dt>Integrity</dt><dd id="commitIntegrity">—</dd></div>
+      </dl>
+      <div class="commit-stress" id="commitStress"></div>
+      <p class="commit-note">This is a consequence preview inside the isolated lab. It does not touch Moonhaven, ranks, profile data, or the main menu.</p>
+      <div class="commit-actions">
+        <button class="button button--primary" id="returnToBloom" type="button">Return and rewire</button>
+        <button class="button button--quiet" id="freshFromDialog" type="button">Start fresh</button>
+      </div>
+    </div>
+  </dialog>
+
+  <p class="sr-only" id="liveRegion" role="status" aria-live="polite" aria-atomic="true"></p>
+  <script type="module" src="./concept-bloom-lab.mjs"></script>
+</body>
+</html>
