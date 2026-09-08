@@ -504,8 +504,10 @@ test("one procedural texture family owns three co-located decade carriers", () =
     "carrier tint cannot alter brightness while decade weights crossfade");
   assert.deepEqual(diagnostics.gridDecades,
     [diagnostics.gridDecades[0], diagnostics.gridDecades[0] + 1, diagnostics.gridDecades[0] + 2]);
-  assert.equal(diagnostics.gridCellSizes[1] / diagnostics.gridCellSizes[0], 10);
-  assert.equal(diagnostics.gridCellSizes[2] / diagnostics.gridCellSizes[1], 10);
+  assert.ok(Math.abs(diagnostics.gridCellSizes[1] / diagnostics.gridCellSizes[0] - 10) < 1e-12,
+    "adjacent grid carriers must retain a tenfold scale across floating-point runtimes");
+  assert.ok(Math.abs(diagnostics.gridCellSizes[2] / diagnostics.gridCellSizes[1] - 10) < 1e-12,
+    "adjacent grid carriers must retain a tenfold scale across floating-point runtimes");
   assert.ok(Math.abs(diagnostics.gridWeights.reduce((sum, weight) => sum + weight, 0) - 1) < 1e-12);
   const totalCarrierOpacity = view.gridCarriers.reduce((sum, carrier) => sum + carrier.material.opacity, 0);
   assert.deepEqual(view.gridCarriers.map((carrier) => Number((carrier.material.opacity / totalCarrierOpacity).toFixed(12))),

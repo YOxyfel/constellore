@@ -12,9 +12,9 @@
   "screenshots": [
     {
       "file": "board-current.webp",
-      "route": "http://localhost:4193/play/?challenge=1&target=Horizon&seed=73&birthday=off",
-      "type": "Actual current board screenshot",
-      "fixture": "Existing e2e seen-intro fixture plus isolated Silver progression; seeded tutorial completed. Challenge started through current UI. Seven recipes played through actual inventory controls, then Tidy.",
+      "route": "http://127.0.0.1:4194/constellore/play/?challenge=1&target=Horizon&seed=73&birthday=off",
+      "type": "Actual packaged board screenshot",
+      "fixture": "Existing e2e seen-intro fixture plus isolated Silver progression and completed tutorials. Started with only Earth, Water, Fire, and Air discovered. Challenge started through the real briefing button. Seven recipes played through actual inventory controls, then Tools > Tidy; Tools closed before capture.",
       "observedWords": [
         "Mud",
         "Energy",
@@ -25,7 +25,50 @@
         "Cloud"
       ],
       "observedInventory": 11,
-      "limitations": "Source renderer with generated local-practice recipe data; not a live multiplayer session."
+      "limitations": "Isolated fixture supplies prior Silver progression; the seven pictured discoveries were made through normal UI in this session. Browser-local practice, not a live multiplayer session.",
+      "capturedAt": "2026-09-08T08:33:02.357Z",
+      "build": "5.0.0-beta.4+local",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "deviceScaleFactor": 1,
+      "browser": "Playwright Chromium 149.0.7827.55, fresh isolated context, normal motion and game renderer",
+      "runtime": "Unmodified packaged Pages local-practice runtime from dist-pages, served at 127.0.0.1:4194/constellore/play. Normal observatory board renderer and inventory controls; no injected renderer configuration, overlays, or image composition.",
+      "actions": [
+        "Begin Horizon challenge",
+        "Earth + Water = Mud",
+        "Fire + Air = Energy",
+        "Water + Fire = Steam",
+        "Air + Water = Mist",
+        "Earth + Fire = Lava",
+        "Air + Earth = Dust",
+        "Steam + Air = Cloud",
+        "Tools",
+        "Tidy",
+        "Close Tools"
+      ],
+      "pageErrors": 0,
+      "gameApiRequests": 0,
+      "encoding": {
+        "format": "WebP",
+        "width": 1440,
+        "height": 900,
+        "quality": 95,
+        "method": 6,
+        "bytes": 58558,
+        "sha256": "56587a9e24eb86171e1212dbb12156b3880bb2902fe4500e611611c37ee3fe75"
+      },
+      "provenanceScope": "This entry overrides the original September 5 batch capturedAt, build, browser, runtime, and sourceHashes for board-current.webp. The shared original batch context and Moon entry are retained unchanged for the unreplaced Moon capture.",
+      "sourceHashes": {
+        "dist-pages/play/app.js": "6b713ebe3d1f26a65a83ce0bac77e99b99809a159eb3ec7dbc51d8f555359a37",
+        "dist-pages/play/index.html": "fbd0e12a747b208ae66b7f8d4c585a677daa71f9f69e0b8d092522917171fcda",
+        "dist-pages/play/styles.css": "aaa4cec227b9bcc07dcef358fbb9683646ea0fc30637029a03041795bace5b3b",
+        "dist-pages/play/mobile-play-shell.css": "005f4924a5edab2b9769437ad6cc0ec46967c97267c9cd8702a2db7c7684d87c",
+        "dist-pages/play/combining-board.css": "7a38fbce06fc8d553a19771c027c4dbb3f10a366990252d6f9df4d220248ba3c",
+        "dist-pages/play/local-world.mjs": "8089898ce0d1fa0616198a1a86a83a92238b3d5f1dcfc27cdb2ac893a14c26f8",
+        "public/art/website/board-current.webp": "56587a9e24eb86171e1212dbb12156b3880bb2902fe4500e611611c37ee3fe75"
+      }
     },
     {
       "file": "moonhaven-current.webp",
