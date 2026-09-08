@@ -12,16 +12,19 @@ import { assertHomeCosmosAsset, HOME_COSMOS_ASSETS } from "./home-cosmos-assets.
 import { validateAudioPacks } from "./audio-assets.mjs";
 import { validateCosmeticPacks } from "./cosmetic-assets.mjs";
 import { packageMetadata } from "./release-metadata.mjs";
+import { planetHubRuntimeBudget, validatePlanetHubAssets } from "./planet-hub-packaging.mjs";
+import { PLAY_ON_DEMAND_FILES } from "../public/secondary-surface-loader.mjs";
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const pkg = await packageMetadata();
 const read = (path) => readFile(join(root, path), "utf8");
-const [gameHtml, cosmeticPreloadBootstrap, cosmeticCanvas, websiteHtml, worker, manifestSource, releaseSource, privacy, terms, support, license, notices, security, cosmicGateStyles, epicHomeStyles] = await Promise.all([
+const [gameHtml, cosmeticPreloadBootstrap, cosmeticCanvas, websiteHtml, worker, manifestSource, releaseSource, privacy, terms, support, license, notices, security, uiFoundationStyles, manropeLicense, dmMonoLicense, cosmicGateStyles, epicHomeStyles] = await Promise.all([
   read("public/index.html"), read("public/cosmetic-preload-bootstrap.js"), read("public/cosmetic-canvas.mjs"),
   read("Website/index.html"), read("public/service-worker.js"), read("public/manifest.webmanifest"),
   read("public/release.json"),
   read("Website/privacy.html"), read("Website/terms.html"), read("Website/support.html"),
   read("LICENSE.md"), read("THIRD_PARTY_NOTICES.md"), read("SECURITY.md"),
+  read("public/ui-foundation.css"), read("public/fonts/OFL-Manrope.txt"), read("public/fonts/OFL-DM-Mono.txt"),
   read("public/cosmic-gate.css"), read("public/epic-home.css")
 ]);
 const manifest = JSON.parse(manifestSource);
@@ -29,6 +32,8 @@ const release = JSON.parse(releaseSource);
 const audioProvenance = await read("AUDIO_ASSET_PROVENANCE.md");
 await validateAudioPacks(join(root, "public"));
 await validateCosmeticPacks(join(root, "public"));
+await validatePlanetHubAssets(join(root, "public"));
+await planetHubRuntimeBudget(join(root, "public"), { version: pkg.version });
 const celestialAtlasArt = await readFile(join(root, "public", "art", "celestial-atlas-bg-v1.webp"));
 const transitionArtDirectory = join(root, "public", "art", "transitions");
 const transitionArtFiles = (await readdir(transitionArtDirectory)).sort((left, right) => left.localeCompare(right, "en"));
@@ -69,8 +74,18 @@ assert.ok(gameHtml.includes(`data-build-version="${pkg.version}"`), "Run npm run
 assert.ok(gameHtml.includes(`/app.js?v=${pkg.version}`), "The game app asset is not tied to the package release version.");
 assert.ok(gameHtml.includes(`/cosmetic-preload-bootstrap.js?v=${pkg.version}`), "The cosmetic preload bootstrap is not tied to the package release version.");
 assert.ok(cosmeticCanvas.trim(), "The cosmetic canvas runtime is missing or empty.");
+assert.ok(gameHtml.includes(`/ui-foundation.css?v=${pkg.version}`), "The shared UI foundation is not tied to the package release version.");
+assert.match(uiFoundationStyles, /fonts\/Manrope-Variable[.]ttf/, "The shared UI foundation must self-host Manrope.");
+assert.match(uiFoundationStyles, /fonts\/DMMono-Medium[.]ttf/, "The shared UI foundation must self-host DM Mono.");
+assert.match(manropeLicense, /SIL OPEN FONT LICENSE Version 1[.]1/i, "The Manrope license is missing.");
+assert.match(dmMonoLicense, /SIL OPEN FONT LICENSE Version 1[.]1/i, "The DM Mono license is missing.");
 assert.ok(gameHtml.includes(`/styles.css?v=${pkg.version}`), "The game stylesheet is not tied to the package release version.");
 assert.ok(gameHtml.includes(`/simple-ui.css?v=${pkg.version}`), "The simplified game stylesheet is not tied to the package release version.");
+assert.ok(gameHtml.includes(`/mobile-play-shell.css?v=${pkg.version}`), "The mobile play shell stylesheet is not tied to the package release version.");
+assert.ok(gameHtml.includes(`/concept-chemistry.css?v=${pkg.version}`), "The Concept Chemistry stylesheet is not tied to the package release version.");
+assert.ok(gameHtml.includes(`/concept-matter.css?v=${pkg.version}`), "The Concept Matter stylesheet is not tied to the package release version.");
+assert.ok(gameHtml.includes(`/molecular-memory.css?v=${pkg.version}`), "The Molecular Memory stylesheet is not tied to the package release version.");
+assert.ok(gameHtml.includes(`/word-orbit-motion.css?v=${pkg.version}`), "The Bloom motion stylesheet is not tied to the package release version.");
 assert.doesNotMatch(gameHtml, /cosmic-interlude[.]css/, "Cosmic Interlude CSS must not block the game shell.");
 assert.ok(cosmicInterludeStyles.trim(), "The lazy Cosmic Interlude stylesheet is missing or empty.");
 assert.ok(gameHtml.includes(`/cosmic-gate.css?v=${pkg.version}`), "The cinematic gate stylesheet is not tied to the package release version.");
@@ -79,7 +94,20 @@ assert.ok(websiteHtml.includes(`data-build-version="${pkg.version}"`), "Run npm 
 assert.ok(websiteHtml.includes(`website.css?v=${pkg.version}`), "The website stylesheet is not tied to the package release version.");
 assert.ok(websiteHtml.includes(`website.js?v=${pkg.version}`), "The website script is not tied to the package release version.");
 assert.ok(worker.includes(`\${CACHE_PREFIX}${pkg.version}`), "The service-worker cache does not match the package release version.");
+assert.ok(worker.includes(`/ui-foundation.css?v=${pkg.version}`), "The service worker does not cache the shared UI foundation.");
+assert.ok(worker.includes("/fonts/Manrope-Variable.ttf"), "The service worker does not cache Manrope.");
+assert.ok(worker.includes("/fonts/DMMono-Medium.ttf"), "The service worker does not cache DM Mono.");
 assert.ok(worker.includes(`/simple-ui.css?v=${pkg.version}`), "The service worker does not cache the simplified game stylesheet.");
+assert.ok(worker.includes(`/mobile-play-shell.css?v=${pkg.version}`), "The service worker does not cache the mobile play shell stylesheet.");
+assert.ok(worker.includes(`/concept-chemistry.css?v=${pkg.version}`), "The service worker does not cache the Concept Chemistry stylesheet.");
+assert.ok(worker.includes(`/concept-matter.css?v=${pkg.version}`), "The service worker does not cache the Concept Matter stylesheet.");
+assert.ok(worker.includes(`/concept-matter.mjs?v=${pkg.version}`), "The service worker does not cache the Concept Matter domain.");
+assert.ok(worker.includes(`/concept-matter-runtime.mjs?v=${pkg.version}`), "The service worker does not cache the Concept Matter runtime.");
+assert.ok(worker.includes(`/concept-matter-app.mjs?v=${pkg.version}`), "The service worker does not cache the Concept Matter app bridge.");
+assert.ok(worker.includes(`/guided-play-app.mjs?v=${pkg.version}`), "The service worker does not cache the guided-play controller.");
+assert.ok(worker.includes(`/molecular-memory.css?v=${pkg.version}`), "The service worker does not cache the Molecular Memory stylesheet.");
+assert.ok(worker.includes(`/word-orbit-motion.css?v=${pkg.version}`), "The service worker does not cache the Bloom motion stylesheet.");
+assert.ok(worker.includes(`/word-bloom-input-runtime.mjs?v=${pkg.version}`), "The service worker does not cache the Bloom input runtime.");
 assert.ok(worker.includes(`/cosmic-gate.css?v=${pkg.version}`), "The service worker does not cache the cinematic gate stylesheet.");
 assert.ok(worker.includes(`/epic-home.css?v=${pkg.version}`), "The service worker does not cache the home art stylesheet.");
 assert.ok(worker.includes(`/cosmic-gate.mjs?v=${pkg.version}`), "The service worker does not cache the cinematic gate runtime.");
@@ -90,6 +118,28 @@ assert.ok(worker.includes(`/cosmic-quotes.mjs?v=${pkg.version}`), "The service w
 assert.ok(worker.includes(`/hero-recipes.mjs?v=${pkg.version}`), "The service worker does not cache the rotating start-screen recipes.");
 assert.ok(worker.includes(`/home-menu-view.mjs?v=${pkg.version}`), "The service worker does not cache the rank-gated home view.");
 assert.ok(worker.includes(`/profile-rank-surface.mjs?v=${pkg.version}`), "The service worker does not cache the on-demand Route Rank profile.");
+assert.ok(worker.includes(`/arena-rank.mjs?v=${pkg.version}`), "The service worker does not cache the eager Arena Rank presentation.");
+for (const birthdayAsset of [
+  "/art/birthday-voyage/01-toyota-rav4-2002-gray-right-transparent.webp",
+  "/art/birthday-voyage/02-vienna-buildings.webp",
+  "/art/birthday-voyage/03-belgium-brussels-buildings.webp",
+  "/art/birthday-voyage/04-bulgaria-sofia-buildings.webp",
+  "/art/birthday-voyage/05-tokyo-buildings.webp",
+  "/art/birthday-voyage/06-shibuya-buildings.webp",
+  "/art/birthday-voyage/07-earth.webp",
+  "/art/birthday-voyage/08-moon.webp",
+  "/art/birthday-voyage/09-mars.webp",
+  "/art/birthday-voyage/10-kepler-452b.webp",
+  "/art/birthday-voyage/11-lion-right-profile.webp",
+  "/art/birthday-voyage/12-our-cosmos-together.webp",
+  "/art/birthday-voyage/13-rav4-spaceship-right-transparent.webp",
+  "/art/birthday-voyage/14-varna-buildings.webp"
+]) {
+  assert.ok(worker.includes(birthdayAsset), `The birthday voyage offline shell is missing ${birthdayAsset}.`);
+}
+assert.ok(worker.includes('"/cinematic/"'), "Birthday and launch films are not configured for lazy offline caching.");
+assert.match(worker, /async function serveCachedRange/, "The service worker cannot serve the cached lion film to media range requests.");
+assert.doesNotMatch(worker, /headers[.]has\("range"\)\) return;/, "Media range requests must not bypass the offline cache.");
 assert.ok(worker.includes(`/cosmic-interludes.mjs?v=${pkg.version}`), "The service worker does not cache the interlude engine.");
 assert.ok(worker.includes(`/cosmic-interlude-runtime.mjs?v=${pkg.version}`), "The service worker does not cache the interlude runtime.");
 assert.ok(worker.includes(`/cosmic-interlude.css?v=${pkg.version}`), "The service worker does not expose the lazy interlude stylesheet.");
@@ -101,6 +151,7 @@ assert.ok(worker.includes(`/route-remixes.mjs?v=${pkg.version}`), "The service w
 assert.ok(worker.includes(`/shuffled-start.mjs?v=${pkg.version}`), "The service worker does not cache the Shuffled start engine.");
 assert.ok(worker.includes(`/rank-board-art.mjs?v=${pkg.version}`), "The service worker does not cache the rank-art mapping engine.");
 assert.ok(worker.includes(`/rank-board-art-runtime.mjs?v=${pkg.version}`), "The service worker does not cache the rank-art runtime.");
+assert.ok(worker.includes(`/word-semantic-facets.mjs?v=${pkg.version}`), "The service worker does not cache the Bloom semantic facet catalog.");
 assert.ok(worker.includes(`/cosmetic-preload-bootstrap.js?v=${pkg.version}`), "The service worker does not cache the cosmetic preload bootstrap.");
 assert.ok(worker.includes(`/cosmetic-canvas.mjs?v=${pkg.version}`), "The service worker does not cache the cosmetic canvas runtime.");
 assert.ok(worker.includes(`/audio-runtime.mjs?v=${pkg.version}`), "The service worker does not cache the lightweight audio runtime.");
@@ -115,12 +166,36 @@ assert.ok(worker.includes('"/art/ranks/"'), "Rank artwork is not configured for 
 assert.ok(worker.includes('"/art/transitions/"'), "Cinematic artwork is not configured for lazy offline caching.");
 assert.ok(worker.includes('"/art/home/"'), "Home artwork is not configured for lazy offline caching.");
 assert.ok(worker.includes('"/audio/"'), "Audio packs are not configured for lazy offline caching.");
+assert.ok(worker.includes('"/art/planet-hub/"'), "Planet Hub art is not configured as a lazy offline pack.");
+assert.ok(worker.includes('"/vendor/three/"'), "The local Three.js vendor pack is not configured for lazy offline caching.");
 assert.match(worker, /headers[.]has\("range"\)/, "Range media requests must bypass Cache API writes.");
 assert.doesNotMatch(worker, /const SHELL = [^;]+tier-0[1-6]-/, "Rank artwork must not inflate the install shell.");
 const workerShell = worker.match(/const SHELL = ([^;]+);/)?.[1] || "";
 const workerLazyFiles = worker.match(/const LAZY_FILES = new Set\(([^;]+)\);/)?.[1] || "";
+for (const file of [
+  "moon-heart-project.css",
+  "moon-heart-project-runtime.mjs",
+  "moon-heart-project-presentation.mjs",
+  "moon-heart-actions.mjs"
+]) {
+  assert.match(workerLazyFiles, new RegExp(file.replaceAll(".", "[.]")), `${file} is missing from the exact lazy-file cache boundary.`);
+}
+for (const file of ["moon-home-project-entry.mjs", "moon-project-launch.mjs"]) {
+  assert.match(workerLazyFiles, new RegExp(file.replaceAll(".", "[.]")), `${file} is missing from the exact lazy-file cache boundary.`);
+}
+for (const file of PLAY_ON_DEMAND_FILES) {
+  assert.match(workerLazyFiles, new RegExp(file.replaceAll(".", "[.]")), `${file} is missing from the play-on-demand cache boundary.`);
+  assert.doesNotMatch(workerShell, new RegExp(file.replaceAll(".", "[.]")), `${file} must not block the install shell.`);
+}
+assert.match(workerShell, /moon-project-flight[.]css/, "The Home rocket flight deck stylesheet must be available with the shell.");
 assert.match(workerLazyFiles, /cosmic-interlude[.]css/, "Cosmic Interlude CSS is missing from the exact lazy-file cache boundary.");
+assert.match(workerLazyFiles, /cosmetics-observatory-full-page[.]css/, "Full-page Observatory CSS is missing from the exact lazy-file cache boundary.");
+assert.match(workerLazyFiles, /profile-rank-frame[.]css/, "Arena frame preview CSS is missing from the exact lazy-file cache boundary.");
 assert.doesNotMatch(workerShell, /cosmic-interlude[.]css/, "Cosmic Interlude CSS must stay out of the install shell.");
+assert.doesNotMatch(workerShell, /(?:cosmetics-observatory-full-page|profile-rank-frame)[.]css/, "Optional Cosmetic Lab layout and frame CSS must stay out of the install shell.");
+assert.doesNotMatch(workerShell, /moon-heart-(?:project-(?:runtime|presentation)[.]mjs|actions[.]mjs)|moon-heart-project[.]css/, "Moon Heart presentation must stay out of the install shell.");
+assert.match(workerShell, /moon-heart-project[.]mjs/, "The eager Moon Heart evidence domain must be available offline with app.js.");
+assert.match(workerShell, /guided-play-app[.]mjs/, "The guided-play controller must be available offline with app.js.");
 assert.doesNotMatch(workerShell, /art\/transitions\//, "Responsive Cosmic Gate art must stay out of the install shell.");
 assert.doesNotMatch(workerShell, /art\/home\//, "Responsive Home Cosmos art must stay out of the install shell.");
 assert.doesNotMatch(workerShell, /audio\//, "Soundtracks and SFX banks must stay out of the install shell.");
@@ -198,6 +273,10 @@ for (const [name, document] of [["privacy", privacy], ["terms", terms], ["suppor
 }
 assert.match(license, /All rights reserved/i);
 assert.match(notices, /Playwright/);
+assert.match(notices, /Earth[\s\S]*AirStudios[\s\S]*CC BY 4[.]0/i, "Earth CC BY 4.0 credit is missing from third-party notices.");
+assert.match(notices, /Moon[\s\S]*matousekfoto[\s\S]*CC BY 4[.]0/i, "Moon CC BY 4.0 credit is missing from third-party notices.");
+assert.match(notices, /Three[.]js 0[.]185[.]1[\s\S]*MIT License/i, "The local Three.js runtime notice is missing.");
+assert.match(gameHtml, /Earth by[\s\S]*AirStudios[\s\S]*Moon by[\s\S]*matousekfoto[\s\S]*CC BY 4[.]0/i, "The in-game Earth and Moon attribution is missing.");
 assert.match(audioProvenance, /no third-party samples/i);
 assert.match(audioProvenance, /build-audio-assets[.]py/i);
 assert.match(security, /private vulnerability report/i);

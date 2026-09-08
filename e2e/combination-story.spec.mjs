@@ -1,10 +1,6 @@
 import { expect, test } from "@playwright/test";
-import { readFile } from "node:fs/promises";
 
-const releaseVersion = JSON.parse(await readFile(new URL("../package.json", import.meta.url), "utf8")).version;
-const releaseVersionPattern = releaseVersion.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-
-test.skip(({ browserName }) => browserName !== "chromium", "One mobile browser covers the on-demand story presentation.");
+test.skip(({ browserName }) => browserName !== "chromium", "One browser covers the retired presentation contract.");
 
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
@@ -15,8 +11,6 @@ test.beforeEach(async ({ page }) => {
 
 async function enterFirstOrbit(page) {
   const cinematic = page.locator(".first-open-cinematic");
-  await expect(cinematic).toBeVisible();
-  await page.getByRole("button", { name: "Skip introduction" }).click();
   await expect(cinematic).toHaveCount(0);
   await expect(page.locator("#startScreen")).toBeVisible();
   await expect(page.locator("#gameScreen")).toBeHidden();
@@ -26,34 +20,50 @@ async function enterFirstOrbit(page) {
   await expect(primaryOrbit).toBeEnabled();
   await primaryOrbit.click();
   const briefing = page.locator("#missionBriefingDialog");
-  await expect(briefing).toHaveJSProperty("open", true);
-  await briefing.locator("#beginMission").click();
+  await expect(briefing).toHaveJSProperty("open", false);
+  await expect(page.locator("#firstOrbitGuide")).toBeVisible();
   await expect(page.locator("#gameScreen")).toBeVisible();
   await expect(page.locator("#cosmicGate")).toBeHidden();
 }
 
-test("the first combination becomes a visible story foundation before the result", async ({ page }) => {
-  await page.goto("/play/");
+async function choosePlayWord(page, word) {
+  const key = word.toLowerCase();
+  const game = page.locator("#gameScreen");
+  if (await game.getAttribute("data-word-input") !== "bloom") {
+    await page.locator(`.inventory-word[data-word="${key}"]`).click();
+    return;
+  }
+
+  const bloom = page.locator("#constellationBloom");
+  const bubble = page.locator(`#constellationBloomWords [data-word="${key}"]`);
+  await expect.poll(() => bloom.getAttribute("data-transition")).toBe(null);
+  if (await bloom.getAttribute("data-stage") === "closed") {
+    await page.locator("#constellationBloomTrigger").click();
+    await expect(bloom).toHaveAttribute("data-stage", "words");
+  }
+  if (!await bubble.isVisible()) {
+    await page.locator("#constellationBloomSearch").fill(word);
+  }
+  await expect(bubble).toBeVisible();
+  await bubble.click();
+  // A first ingredient keeps the palette open for its partner; a completed
+  // combination closes it. The real result assertions below cover the commit.
+
+}
+
+test("a correct route creates its real result without mounting a duplicate story overlay", async ({ page }) => {
+  await page.goto("/play/?birthday=off");
   await enterFirstOrbit(page);
 
-  await page.locator('.inventory-word[data-word="earth"]').click({ force: true });
-  await page.locator('.inventory-word[data-word="water"]').click({ force: true });
+  await expect(page.locator("#combinationStory")).toHaveCount(0);
+  await expect(page.locator("link[data-combination-story-style]")).toHaveCount(0);
 
-  const story = page.locator("#combinationStory");
-  await expect(story).not.toHaveAttribute("hidden", "");
-  await expect(story).toHaveAttribute("data-story-status", "finale");
-  await expect(story).toHaveAttribute("data-story-total-layers", "1");
-  await expect(story.locator("[data-story-summary]")).toContainText("Mud");
-  await expect(story.locator("[data-story-layer-word]")).toHaveText("Mud");
-  await expect(page.locator("link[data-combination-story-style]")).toHaveAttribute(
-    "href",
-    new RegExp(`/story/combination-story[.]css\\?v=${releaseVersionPattern}$`)
-  );
+  await choosePlayWord(page, "Earth");
+  await choosePlayWord(page, "Water");
 
-  const presentation = await story.evaluate((root) => {
-    const style = getComputedStyle(root);
-    return { position: style.position, pointerEvents: style.pointerEvents, zIndex: style.zIndex };
-  });
-  expect(presentation).toEqual({ position: "absolute", pointerEvents: "none", zIndex: "2" });
+  await expect(page.locator('.board-word[data-word="mud"]')).toHaveCount(1, { timeout: 15_000 });
+  await expect(page.locator('.board-word[data-word="mud"]')).toHaveClass(/route-derived/);
+  await expect(page.locator("#combinationStory")).toHaveCount(0);
+  await expect(page.locator("link[data-combination-story-style]")).toHaveCount(0);
   await expect(page.locator("#resultDialog")).toHaveJSProperty("open", true, { timeout: 8_000 });
 });

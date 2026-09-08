@@ -12,14 +12,14 @@ const TEST_QUOTE = Object.freeze({
   author: "Constellore"
 });
 
-test("launch and level-entry gates reserve readable quote time without slowing dialogs", () => {
-  assert.ok(COSMIC_GATE_TIMINGS.introQuoteHold >= 3000);
-  assert.ok(COSMIC_GATE_TIMINGS.enterQuoteHold >= 2500);
+test("the constellation fold keeps milestone quotes but makes routine entry immediate", () => {
+  assert.ok(COSMIC_GATE_TIMINGS.introQuoteHold >= 2000);
+  assert.ok(COSMIC_GATE_TIMINGS.enterQuoteHold <= 150);
+  assert.ok(COSMIC_GATE_TIMINGS.enterClose + COSMIC_GATE_TIMINGS.enterQuoteHold + COSMIC_GATE_TIMINGS.enterOpen <= 1300);
   assert.ok(COSMIC_GATE_TIMINGS.introOpen > COSMIC_GATE_TIMINGS.doorOpen);
-  assert.ok(COSMIC_GATE_TIMINGS.enterOpen > COSMIC_GATE_TIMINGS.doorOpen);
-  assert.equal(COSMIC_GATE_TIMINGS.dialogClose, 720);
-  assert.equal(COSMIC_GATE_TIMINGS.dialogOpen, 280);
-  assert.equal(COSMIC_GATE_TIMINGS.dialogArrive, 430);
+  assert.ok(COSMIC_GATE_TIMINGS.enterOpen >= 400);
+  assert.ok(COSMIC_GATE_TIMINGS.dialogOpen <= 200);
+  assert.ok(COSMIC_GATE_TIMINGS.dialogArrive <= 350);
   assert.ok(COSMIC_GATE_TIMINGS.firstDiscoveryHold >= COSMIC_GATE_TIMINGS.dialogClose);
   assert.ok(COSMIC_GATE_TIMINGS.firstDiscoveryHold <= 1200);
   assert.ok(COSMIC_GATE_TIMINGS.firstDiscoveryReducedHold <= 300);
@@ -58,7 +58,7 @@ function createTransitionNode() {
   };
 }
 
-function createRoot({ celebration = false, doors = [] } = {}) {
+function createRoot({ celebration = false, veil = null } = {}) {
   const labels = new Map([
     [".cosmic-gate__eyebrow", { textContent: "" }],
     [".cosmic-gate__label", { textContent: "" }],
@@ -108,13 +108,11 @@ function createRoot({ celebration = false, doors = [] } = {}) {
     setAttribute(name, value) { this.attributes.set(name, value); },
     querySelector(selector) {
       if (selector === ".cosmic-gate__first-discovery") return layer;
+      if (selector === ".cosmic-gate__veil") return veil;
       return labels.get(selector) || null;
     },
-    querySelectorAll(selector) {
-      return selector === ".cosmic-gate__door, .cosmic-door" ? doors : [];
-    },
     labels,
-    doors,
+    veil,
     celebrationLayer: layer,
     celebrationField: field,
     celebrationTitle: title
@@ -202,7 +200,7 @@ test("the mandatory first game can dismiss the launch gate synchronously", () =>
   }
 });
 
-test("enter gate closes over the menu, swaps to the board while closed, then reopens", async () => {
+test("the constellation fold covers Home, swaps while opaque, then resolves onto the board", async () => {
   const originalDocument = globalThis.document;
   const originalAnimationFrame = globalThis.requestAnimationFrame;
   const body = { classList: createClassList() };
@@ -243,10 +241,10 @@ test("enter gate closes over the menu, swaps to the board while closed, then reo
 
     assert.equal(swapped, true);
     assert.deepEqual(phases, ["closed", "opening"]);
-    assert.equal(root.labels.get(".cosmic-gate__eyebrow").textContent, "Find Telescope.");
+    assert.equal(root.labels.get(".cosmic-gate__eyebrow").textContent, "WORLDWEAVE");
     assert.equal(root.labels.get(".cosmic-gate__eyebrow").hidden, false);
-    assert.equal(root.labels.get(".cosmic-gate__label").textContent, `“${TEST_QUOTE.text}”`);
-    assert.equal(root.labels.get(".cosmic-gate__copy").textContent, "— Constellore");
+    assert.equal(root.labels.get(".cosmic-gate__label").textContent, "Reality is drawing near");
+    assert.equal(root.labels.get(".cosmic-gate__copy").textContent, "Find Telescope.");
     assert.equal(root.labels.get(".cosmic-gate__copy").hidden, false);
     assert.equal(root.hidden, true);
     assert.equal(root.dataset.phase, "idle");
@@ -256,8 +254,8 @@ test("enter gate closes over the menu, swaps to the board while closed, then reo
     assert.equal(board.inert, true);
     assert.equal(board.hasAttribute("inert"), true);
     assert.deepEqual(transitions, [
-      ["gateClose", { kind: "enter", surface: "board" }],
-      ["gateOpen", { kind: "enter", surface: "board" }]
+      ["gateClose", { kind: "enter", surface: "board", semantic: "foldGather" }],
+      ["gateOpen", { kind: "enter", surface: "board", semantic: "foldResolve" }]
     ]);
   } finally {
     globalThis.document = originalDocument;
@@ -265,7 +263,43 @@ test("enter gate closes over the menu, swaps to the board while closed, then reo
   }
 });
 
-test("enter gate always restores keyboard access when board setup fails", async () => {
+test("the board swap and reveal wait for the fold veil instead of removed door elements", async () => {
+  const originalDocument = globalThis.document;
+  const originalAnimationFrame = globalThis.requestAnimationFrame;
+  const originalGetComputedStyle = globalThis.getComputedStyle;
+  const body = { classList: createClassList() };
+  globalThis.document = { body, querySelector: () => null };
+  globalThis.requestAnimationFrame = (callback) => setTimeout(callback, 0);
+  globalThis.getComputedStyle = () => ({
+    transitionProperty: "transform, opacity",
+    transitionDuration: "560ms, 360ms",
+    transitionDelay: "0ms, 0ms"
+  });
+  try {
+    const veil = createTransitionNode();
+    const root = createRoot({ veil });
+    const order = [];
+    const gate = createCosmicGate({ root, reducedMotion: false, timings: FAST_TIMINGS });
+    const pending = gate.enterBoard(() => order.push(`swap:${root.dataset.phase}`), {
+      afterOpen: () => order.push(`ready:${root.dataset.phase}`)
+    });
+
+    while (root.dataset.phase !== "closing") await new Promise((resolve) => setTimeout(resolve, 0));
+    assert.deepEqual(order, []);
+    veil.dispatch("transitionend");
+    while (root.dataset.phase !== "opening") await new Promise((resolve) => setTimeout(resolve, 0));
+    assert.deepEqual(order, ["swap:closed"]);
+    veil.dispatch("transitionend");
+    assert.equal(await pending, true);
+    assert.deepEqual(order, ["swap:closed", "ready:opening"]);
+  } finally {
+    globalThis.document = originalDocument;
+    globalThis.requestAnimationFrame = originalAnimationFrame;
+    globalThis.getComputedStyle = originalGetComputedStyle;
+  }
+});
+
+test("the constellation fold always restores keyboard access when board setup fails", async () => {
   const originalDocument = globalThis.document;
   const originalAnimationFrame = globalThis.requestAnimationFrame;
   const body = { classList: createClassList() };
@@ -306,7 +340,7 @@ test("enter gate always restores keyboard access when board setup fails", async 
   }
 });
 
-test("pause and result dialogs sit inside a reversible shared cosmic gate", async () => {
+test("pause and result dialogs use local motion without taking over the world fold", async () => {
   const originalDocument = globalThis.document;
   const originalAnimationFrame = globalThis.requestAnimationFrame;
   const body = { classList: createClassList() };
@@ -335,43 +369,30 @@ test("pause and result dialogs sit inside a reversible shared cosmic gate", asyn
     assert.equal(dialog.open, true);
     assert.equal(dialog.dataset.phase, "closed");
     assert.equal(dialog.classList.contains("cosmic-dialog-transition--result"), true);
-    assert.equal(root.hidden, false);
-    assert.equal(root.dataset.kind, "victory");
-    assert.equal(root.dataset.phase, "closed");
-    assert.equal(root.labels.get(".cosmic-gate__copy").textContent, "Telescope discovered");
+    assert.equal(root.hidden, true);
     assert.equal(quoteRequests, 0);
 
     assert.equal(await gate.dismissDialog(dialog, { immediate: true }), true);
     assert.equal(dialog.open, false);
     assert.equal(dialog.classList.contains("cosmic-dialog-transition"), false);
     assert.equal(root.hidden, true);
-    assert.equal(root.dataset.phase, "idle");
+    assert.equal(root.dataset.phase, undefined);
     assert.equal(body.classList.contains("transition-active"), false);
-    assert.deepEqual(transitions, [
-      ["gateClose", { kind: "victory", surface: "dialog" }],
-      ["gateOpen", { kind: "dialog", surface: "dialog" }]
-    ]);
+    assert.deepEqual(transitions, []);
   } finally {
     globalThis.document = originalDocument;
     globalThis.requestAnimationFrame = originalAnimationFrame;
   }
 });
 
-test("a result waits for both real door transitions before opening its dialog", async () => {
+test("a result opens through its bounded dialog animation without waiting for the full-screen fold", async () => {
   const originalDocument = globalThis.document;
   const originalAnimationFrame = globalThis.requestAnimationFrame;
-  const originalGetComputedStyle = globalThis.getComputedStyle;
   const body = { classList: createClassList() };
   globalThis.document = { body, querySelector: () => null };
   globalThis.requestAnimationFrame = (callback) => setTimeout(callback, 0);
-  globalThis.getComputedStyle = () => ({
-    transitionProperty: "transform",
-    transitionDuration: "820ms",
-    transitionDelay: "0ms"
-  });
   try {
-    const doors = [createTransitionNode(), createTransitionNode()];
-    const root = createRoot({ doors });
+    const root = createRoot();
     const dialog = createDialog();
     const gate = createCosmicGate({
       root,
@@ -379,21 +400,12 @@ test("a result waits for both real door transitions before opening its dialog", 
       timings: FAST_TIMINGS
     });
 
-    const pending = gate.presentDialog(dialog, { kind: "victory" });
-    while (root.dataset.phase !== "closing") {
-      await new Promise((resolve) => setTimeout(resolve, 0));
-    }
-    assert.equal(dialog.open, false);
-    doors[0].dispatch("transitionend");
-    await Promise.resolve();
-    assert.equal(dialog.open, false);
-    doors[1].dispatch("transitionend");
-    assert.equal(await pending, true);
+    assert.equal(await gate.presentDialog(dialog, { kind: "victory" }), true);
     assert.equal(dialog.open, true);
+    assert.equal(root.hidden, true);
   } finally {
     globalThis.document = originalDocument;
     globalThis.requestAnimationFrame = originalAnimationFrame;
-    globalThis.getComputedStyle = originalGetComputedStyle;
   }
 });
 
@@ -457,7 +469,7 @@ test("first-discovery celebration is finite, nonduplicating, and keyboard-modal 
   }
 });
 
-test("launch and level-entry quotes rotate without immediately repeating", async () => {
+test("quotes remain milestone language and routine folds use concise destination context", async () => {
   const originalDocument = globalThis.document;
   const originalAnimationFrame = globalThis.requestAnimationFrame;
   const body = { classList: createClassList(["cosmic-intro-pending"]) };
@@ -482,10 +494,12 @@ test("launch and level-entry quotes rotate without immediately repeating", async
 
     assert.equal(await gate.playIntro(), true);
     assert.equal(await gate.enterBoard(() => {}, { label: "Find Moon." }), true);
-    assert.deepEqual(requests, ["", TEST_QUOTE.id]);
-    assert.equal(root.dataset.quoteId, "test-stars");
-    assert.equal(root.labels.get(".cosmic-gate__copy").textContent, "");
-    assert.equal(root.labels.get(".cosmic-gate__copy").hidden, true);
+    assert.deepEqual(requests, [""]);
+    assert.equal(root.dataset.quoteId, TEST_QUOTE.id);
+    assert.equal(root.labels.get(".cosmic-gate__eyebrow").textContent, "WORLDWEAVE");
+    assert.equal(root.labels.get(".cosmic-gate__label").textContent, "Reality is drawing near");
+    assert.equal(root.labels.get(".cosmic-gate__copy").textContent, "Find Moon.");
+    assert.equal(root.labels.get(".cosmic-gate__copy").hidden, false);
   } finally {
     globalThis.document = originalDocument;
     globalThis.requestAnimationFrame = originalAnimationFrame;

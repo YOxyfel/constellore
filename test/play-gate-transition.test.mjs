@@ -24,14 +24,16 @@ test("the main Play path enters the gate instead of opening a pre-level preview"
   assert.match(prepared, /ready:[\s\S]*openMissionBriefing/);
 });
 
-test("training, lessons, and sandbox games also gate before their objective", () => {
+test("the first lesson starts directly while other missions retain their objective gate", () => {
   const primary = sourceBetween("async function beginPrimaryOrbit", "function openModePicker");
   const start = sourceBetween("function startWithGame(game", "function startWithGameNow");
 
-  assert.match(primary, /action === "training"[\s\S]*startFirstOrbit\(\{\s*enterThroughGate:\s*true\s*\}\)/);
+  assert.match(primary, /action === "training"[\s\S]*startFirstOrbit\(\{\s*enterThroughGate:\s*false\s*\}\)/);
   assert.match(start, /cosmicGate[.]enterBoard\(/);
   assert.match(start, /startWithGameNow\([\s\S]*deferTimer:\s*true/);
-  assert.match(start, /afterOpen:\s*\(\)\s*=>\s*openMissionBriefing/);
+  assert.match(start, /const presentBriefing = \(\) =>[\s\S]*openMissionBriefing/);
+  assert.match(start, /afterOpen:\s*presentBriefing/);
+  assert.match(start, /if \(!entered && committed\) presentBriefing\(\)/);
 });
 
 test("the required first game bypasses both launch gates and restores actionable focus", () => {

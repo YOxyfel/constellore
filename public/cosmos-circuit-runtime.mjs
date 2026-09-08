@@ -25,7 +25,7 @@ import {
   sanitizeCrazyPathStipend,
   sanitizeCircuitWallet,
   startCircuitRun
-} from "./cosmos-circuit.mjs?v=5.0.0-beta.1";
+} from "./cosmos-circuit.mjs?v=5.0.0-beta.4";
 import {
   STAR_PATH_XP_RULES,
   claimAllStarPathRewards as claimAllStarPathRewardsDomain,
@@ -37,14 +37,14 @@ import {
   starPathProgress,
   starPathRewardById,
   starPathWordWinXpEvent
-} from "./star-path.mjs?v=5.0.0-beta.1";
+} from "./star-path.mjs?v=5.0.0-beta.4";
 import {
   cosmosCircuitCopy,
   cosmosCircuitLocale,
   cosmosCircuitPassCopy,
   cosmosCircuitPolicyCopy
-} from "./cosmos-circuit-copy.mjs?v=5.0.0-beta.1";
-import { createCircuitLobbyTabs } from "./circuit-lobby-tabs.mjs?v=5.0.0-beta.1";
+} from "./cosmos-circuit-copy.mjs?v=5.0.0-beta.4";
+import { createCircuitLobbyTabs } from "./circuit-lobby-tabs.mjs?v=5.0.0-beta.4";
 import {
   circuitDailyRotation,
   circuitWeeklyRewardById,
@@ -55,7 +55,7 @@ import {
   recordPersonalCircuitResult,
   sanitizeCircuitWeeklyState,
   sanitizePersonalCircuitBoard
-} from "./circuit-live-ops.mjs?v=5.0.0-beta.1";
+} from "./circuit-live-ops.mjs?v=5.0.0-beta.4";
 
 export const COSMOS_CIRCUIT_SAVE_KEY = "constellore-cosmos-circuit-v1";
 const SAVE_KEY = COSMOS_CIRCUIT_SAVE_KEY;

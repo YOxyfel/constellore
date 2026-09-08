@@ -1,54 +1,81 @@
-import { createCtrlHoverController } from "./ctrl-hover.mjs?v=5.0.0-beta.1";
-import { resetAccountProfile } from "./account-profile.mjs?v=5.0.0-beta.1";
-import { createShiftBoardController } from "./shift-board.mjs?v=5.0.0-beta.1";
-import { findOpenSpawn, orderInventory, packOrbit, pickMagneticTarget } from "./frictionless.mjs?v=5.0.0-beta.1";
-import { buildMasteryCollections, lifetimeMasteryProgress, recordRecipeDiscovery, sanitizeRecipeMasteryState, summarizeMasteryCollections } from "./recipe-mastery.mjs?v=5.0.0-beta.1";
-import { QUICK_TIP_LIMIT, assistancePolicy, buildGhost, combineAssistance, ghostSnapshot, ghostTrailPreviewState, grantSenseCharges, lifetimeProgression, reconcileCloudProgression, refillSenseWallet, sanitizeFeedbackPreferences, sanitizeSenseWallet, spendSenseCharge, weeklyRatingPresentation } from "./engagement-features.mjs?v=5.0.0-beta.1";
-import { createFirstOrbitGame, firstOrbitProgress, firstOrbitWrongPairMessage, resolveFirstOrbitCombination, sanitizeFirstOrbitState } from "./first-orbit.mjs?v=5.0.0-beta.1";
-import { firstGameLaunchIntent, firstGameRequired } from "./first-game-experience.mjs?v=5.0.0-beta.1";
-import { createSecondOrbitGame, secondOrbitProgress, sanitizeSecondOrbitState } from "./second-orbit.mjs?v=5.0.0-beta.1";
-import { exploreGame, mergeExploreInventory, sanitizeExploreInventory } from "./explore-sandbox.mjs?v=5.0.0-beta.1";
-import { parseConstelloreChallengeUrl } from "./constellation-card.mjs?v=5.0.0-beta.1";
-import { createShareCardController } from "./share-card-runtime.mjs?v=5.0.0-beta.1";
-import { ALL_COSMETIC_BODY_CLASSES, COSMETIC_ITEMS, DEFAULT_COSMETIC_LOADOUT, collectionForCosmeticLoadout, cosmeticById, cosmeticClasses, earnedBadges, migrateCosmeticLoadout, progressionAuraClass, sanitizeCosmeticLoadout } from "./cosmetic-economy.mjs?v=5.0.0-beta.1";
-import { createAudioRuntime } from "./audio-runtime.mjs?v=5.0.0-beta.1";
-import { createFeedbackPreferencesUi } from "./feedback-preferences-ui.mjs?v=5.0.0-beta.1";
-import { beginCosmeticDragTrail as resetCosmeticDragTrail, measuredNodeAnchor, queueCosmeticFusionBurst as appendCosmeticFusionBurst, recordCosmeticDragTrail as appendCosmeticDragTrail, startCosmosCanvas } from "./cosmetic-canvas.mjs?v=5.0.0-beta.1";
-import { createRecipeFeedbackRequest, recipeFingerprint, sanitizeRecipeRating } from "./recipe-feedback.mjs?v=5.0.0-beta.1";
-import { selectUniverse } from "./universe-director.mjs?v=5.0.0-beta.1";
-import { clearGameStorage, createRevisionedStorageCoordinator, listPendingScoreRecords, removePendingScoreRecord, revisionMetadata, safeBrowserStorage, savePendingScoreRecord } from "./pending-scores.mjs?v=5.0.0-beta.1";
-import { buildMissionBriefing } from "./mission-briefing.mjs?v=5.0.0-beta.1";
-import { advanceVoyageProgress, constellationVoyage, constellationVoyageCatalog, currentVoyageStage, sanitizeVoyageProgress, voyageProgress } from "./constellation-voyages.mjs?v=5.0.0-beta.1";
-import { annotateCosmicEventResult, cosmicEventCollectionProgress, cosmicEventTargets, currentCosmicEvent } from "./cosmic-events.mjs?v=5.0.0-beta.1";
-import { explainRecipeNearMiss, explainSuccessfulRecipe } from "./recipe-insight.mjs?v=5.0.0-beta.1";
-import { buildLivingAtlas, buildRouteProgress } from "./living-atlas.mjs?v=5.0.0-beta.1";
-import { sanitizeAuthoredRouteProgress } from "./route-distance.mjs?v=5.0.0-beta.1";
-import { PATH_GUARD_VERSION, pathGuardEligibility, pathGuardPairKey } from "./path-guard.mjs?v=5.0.0-beta.1";
-import { buildCommunityResults } from "./community-results.mjs?v=5.0.0-beta.1";
-import { comparePersonalBest, createRouteSignature, gradeSignatureRoute, sanitizeRouteSignature } from "./signature-routes.mjs?v=5.0.0-beta.1";
-import { createHomeMenuState, HOME_MENU_ADVANCED_WINS } from "./home-menu.mjs?v=5.0.0-beta.1";
-import { renderProfileRankView, syncHomeMenuView } from "./home-menu-view.mjs?v=5.0.0-beta.1";
-import { createRunIqState, rewardRunIq, runIqApplies, runIqPairKey, runIqRouteContext, sanitizeRunIqState, softenRunIq } from "./run-iq.mjs?v=5.0.0-beta.1";
-import { adaptiveModePolicy, applyAdaptiveChallengeOutcome, createAdaptiveDifficultyState, rememberAdaptiveTarget, sanitizeAdaptiveDifficultyState } from "./adaptive-difficulty.mjs?v=5.0.0-beta.1";
-import { createRemixProgressionState, getPromotionEligibility, getRemixMasteryProgress, getRemixRankPresentation, recordRemixProgressionOutcome, recordRemixPromotionTrialOutcome, sanitizeRemixProgressionState, startRemixPromotionTrial } from "./remix-progression.mjs?v=5.0.0-beta.1";
-import { createRemixReadinessState, getAdaptiveRemixIntensity, recordRemixReadinessOutcome, sanitizeRemixReadinessState } from "./remix-readiness.mjs?v=5.0.0-beta.1";
-import { selectStartStyle } from "./shuffled-start.mjs?v=5.0.0-beta.1";
-import { createRankBoardArtRuntime } from "./rank-board-art-runtime.mjs?v=5.0.0-beta.1";
-import { routeRankChangeMessage, sanitizeRouteOutcomeHashes, sanitizeRouteRankSummary } from "./route-rank-client.mjs?v=5.0.0-beta.1";
-import { createDefaultProfile } from "./default-profile.mjs?v=5.0.0-beta.1";
-import { MASTERY_CATALOG } from "./mastery-catalog.mjs?v=5.0.0-beta.1";
-import { createInitialAppState } from "./initial-app-state.mjs?v=5.0.0-beta.1";
-import { createCombinationReportDelivery, sanitizeCombinationSuggestion, validateCombinationReportEndpoint } from "./combination-report-delivery.mjs?v=5.0.0-beta.1";
-import { buildRevealTree, revealWordKey } from "./reveal-tree.mjs?v=5.0.0-beta.1";
-import { createCosmicGate } from "./cosmic-gate.mjs?v=5.0.0-beta.1";
-import { victoryHandoffHoldMs } from "./victory-handoff.mjs?v=5.0.0-beta.1";
-import { activatedRunClock, enterPreparedRun, isPermanentActivationFailure, isReplayResponseCurrent, shouldRestoreObjective } from "./run-entry.mjs?v=5.0.0-beta.1";
-import { CLIENT_ONLY_RESUME_MODES, activeRunSnapshotIsValid, clientOnlyRestorePayload, createClientRunPersistence, markLaunchCinematicSessionPlayed, selectStartupResumeSnapshot } from "./session-resume.mjs?v=5.0.0-beta.1";
-import "./cosmic-interlude-runtime.mjs?v=5.0.0-beta.1";
-import { drawRevealGraph, renderRevealController, renderRevealPresentation, revealBatchAnnouncement, revealBatchKeys, revealCameraForBatch, revealStageGeometry } from "./reveal-presentation.mjs?v=5.0.0-beta.1";
+import { createCtrlHoverController } from "./ctrl-hover.mjs?v=5.0.0-beta.4";
+import { resetAccountProfile } from "./account-profile.mjs?v=5.0.0-beta.4";
+import { createShiftBoardController } from "./shift-board.mjs?v=5.0.0-beta.4";
+import { findOpenSpawn, fusionResultPlacement, orderInventory, packOrbit, pickMagneticTarget } from "./frictionless.mjs?v=5.0.0-beta.4";
+import { buildMasteryCollections, lifetimeMasteryProgress, recordRecipeDiscovery, sanitizeRecipeMasteryState, summarizeMasteryCollections } from "./recipe-mastery.mjs?v=5.0.0-beta.4";
+import { QUICK_TIP_LIMIT, assistancePolicy, buildGhost, combineAssistance, ghostSnapshot, ghostTrailPreviewState, grantSenseCharges, lifetimeProgression, reconcileCloudProgression, refillSenseWallet, sanitizeFeedbackPreferences, sanitizeSenseWallet, scoreMultiplierAfterNudges, spendSenseCharge, weeklyRatingPresentation } from "./engagement-features.mjs?v=5.0.0-beta.4";
+import { createFirstOrbitGame, firstOrbitProgress, firstOrbitWrongPairMessage, resolveFirstOrbitCombination, sanitizeFirstOrbitState } from "./first-orbit.mjs?v=5.0.0-beta.4";
+import { firstGameLaunchIntent, firstGameRequired } from "./first-game-experience.mjs?v=5.0.0-beta.4";
+import { createSecondOrbitGame, secondOrbitProgress, sanitizeSecondOrbitState } from "./second-orbit.mjs?v=5.0.0-beta.4";
+import { exploreGame, mergeExploreInventory, sanitizeExploreInventory } from "./explore-sandbox.mjs?v=5.0.0-beta.4";
+import { parseConstelloreChallengeUrl } from "./constellation-card.mjs?v=5.0.0-beta.4";
+import { createShareCardController } from "./share-card-runtime.mjs?v=5.0.0-beta.4";
+import { ALL_COSMETIC_BODY_CLASSES, COSMETIC_ITEMS, DEFAULT_COSMETIC_LOADOUT, collectionForCosmeticLoadout, cosmeticById, cosmeticClasses, earnedBadges, migrateCosmeticLoadout, progressionAuraClass, sanitizeCosmeticLoadout } from "./cosmetic-economy.mjs?v=5.0.0-beta.4";
+import { createAudioRuntime } from "./audio-runtime.mjs?v=5.0.0-beta.4";
+import { createFeedbackPreferencesUi } from "./feedback-preferences-ui.mjs?v=5.0.0-beta.4";
+import { beginCosmeticDragTrail as resetCosmeticDragTrail, measuredNodeAnchor, queueCosmeticFusionBurst as appendCosmeticFusionBurst, recordCosmeticDragTrail as appendCosmeticDragTrail, startCosmosCanvas } from "./cosmetic-canvas.mjs?v=5.0.0-beta.4";
+import { createRecipeFeedbackRequest, recipeFingerprint, sanitizeRecipeRating } from "./recipe-feedback.mjs?v=5.0.0-beta.4";
+import { selectUniverse } from "./universe-director.mjs?v=5.0.0-beta.4";
+import { clearGameStorage, createRevisionedStorageCoordinator, listPendingScoreRecords, removePendingScoreRecord, revisionMetadata, safeBrowserStorage, savePendingScoreRecord } from "./pending-scores.mjs?v=5.0.0-beta.4";
+import { buildMissionBriefing } from "./mission-briefing.mjs?v=5.0.0-beta.4";
+import { advanceVoyageProgress, constellationVoyage, constellationVoyageCatalog, currentVoyageStage, sanitizeVoyageProgress, voyageProgress } from "./constellation-voyages.mjs?v=5.0.0-beta.4";
+import { annotateCosmicEventResult, cosmicEventCollectionProgress, cosmicEventTargets, currentCosmicEvent } from "./cosmic-events.mjs?v=5.0.0-beta.4";
+import { explainRecipeNearMiss, explainSuccessfulRecipe } from "./recipe-insight.mjs?v=5.0.0-beta.4";
+import { buildLivingAtlas, buildRouteProgress } from "./living-atlas.mjs?v=5.0.0-beta.4";
+import { sanitizeAuthoredRouteProgress } from "./route-distance.mjs?v=5.0.0-beta.4";
+import { PATH_GUARD_VERSION } from "./path-guard.mjs?v=5.0.0-beta.4";
+import { evaluateConceptChemistryPair } from "./concept-chemistry.mjs?v=5.0.0-beta.4";
+import { createMolecularMemoryRuntime } from "./molecular-memory-runtime.mjs?v=5.0.0-beta.4";
+import { buildCommunityResults } from "./community-results.mjs?v=5.0.0-beta.4";
+import { comparePersonalBest, createRouteSignature, gradeSignatureRoute, sanitizeRouteSignature } from "./signature-routes.mjs?v=5.0.0-beta.4";
+import { createHomeMenuState, HOME_MENU_ADVANCED_WINS } from "./home-menu.mjs?v=5.0.0-beta.4";
+import { getHomeOrbitController, renderProfileRankView, syncHomeMenuView } from "./home-menu-view.mjs?v=5.0.0-beta.4";
+import { createRunIqState, rewardRunIq, runIqApplies, runIqPairKey, runIqRouteContext, sanitizeRunIqState, softenRunIq } from "./run-iq.mjs?v=5.0.0-beta.4";
+import { adaptiveModePolicy, applyAdaptiveChallengeOutcome, createAdaptiveDifficultyState, rememberAdaptiveTarget, sanitizeAdaptiveDifficultyState } from "./adaptive-difficulty.mjs?v=5.0.0-beta.4";
+import { createRemixProgressionState, getPromotionEligibility, getRemixMasteryProgress, getRemixRankPresentation, recordRemixProgressionOutcome, recordRemixPromotionTrialOutcome, sanitizeRemixProgressionState, startRemixPromotionTrial } from "./remix-progression.mjs?v=5.0.0-beta.4";
+import { createRemixReadinessState, getAdaptiveRemixIntensity, recordRemixReadinessOutcome, sanitizeRemixReadinessState } from "./remix-readiness.mjs?v=5.0.0-beta.4";
+import { selectStartStyle } from "./shuffled-start.mjs?v=5.0.0-beta.4";
+import { createRankBoardArtRuntime } from "./rank-board-art-runtime.mjs?v=5.0.0-beta.4";
+import { routeRankChangeMessage, sanitizeRouteOutcomeHashes, sanitizeRouteRankSummary } from "./route-rank-client.mjs?v=5.0.0-beta.4";
+import { createDefaultProfile } from "./default-profile.mjs?v=5.0.0-beta.4";
+import {
+  createWorldweavingState,
+  mergeWorldweavingStates,
+  normalizeWorldweavingContext,
+  sanitizeWorldweavingState
+} from "./worldweaving.mjs?v=5.0.0-beta.4";
+import { createMoonWorldweavingController } from "./moon-worldweaving-controller.mjs?v=5.0.0-beta.4";
+import { normalizeMoonHeartProjectContext } from "./moon-heart-project.mjs?v=5.0.0-beta.4";
+import {
+  mergeExpeditionStates,
+  sanitizeExpeditionState
+} from "./expedition.mjs?v=5.0.0-beta.4";
+import { MASTERY_CATALOG } from "./mastery-catalog.mjs?v=5.0.0-beta.4";
+import { createInitialAppState } from "./initial-app-state.mjs?v=5.0.0-beta.4";
+import { calculatePlayableBounds } from "./mobile-play-chrome.mjs?v=5.0.0-beta.4";
+import { bindMobilePlayShell } from "./mobile-play-shell-runtime.mjs?v=5.0.0-beta.4";
+import { createResponsiveContext } from "./responsive-context.mjs?v=5.0.0-beta.4";
+import { bindStardustSupplyTabs, configureStardustSupplyDialog } from "./stardust-supplies-ui.mjs?v=5.0.0-beta.4";
+import { createWordOrbitRuntime } from "./word-orbit-runtime.mjs?v=5.0.0-beta.4";
+import { createBoardCameraRuntime } from "./board-camera-runtime.mjs?v=5.0.0-beta.4";
+import { createConceptBondRuntime } from "./concept-bond-runtime.mjs?v=5.0.0-beta.4";
+import { createGuidedPlayController, sanitizeRememberedPathGuardPairs } from "./guided-play-app.mjs?v=5.0.0-beta.4";
+import { createPowerupRenderer } from "./powerup-view-runtime.mjs?v=5.0.0-beta.4";
+import { createInventoryRenderer } from "./inventory-view-runtime.mjs?v=5.0.0-beta.4";
+import { createCombinationReportDelivery, sanitizeCombinationSuggestion, validateCombinationReportEndpoint } from "./combination-report-delivery.mjs?v=5.0.0-beta.4";
+import { isTargetRouteStoryStep, restoreTargetRouteStoryEvidence } from "./story/target-route-story.mjs?v=5.0.0-beta.4";
+import { buildRevealTree, revealWordKey } from "./reveal-tree.mjs?v=5.0.0-beta.4";
+import { createCosmicGate } from "./cosmic-gate.mjs?v=5.0.0-beta.4";
+import { victoryHandoffHoldMs } from "./victory-handoff.mjs?v=5.0.0-beta.4";
+import { scrambleArenaLeaguePresentation } from "./arena-rank.mjs?v=5.0.0-beta.4";
+import { activatedRunClock, enterPreparedRun, isPermanentActivationFailure, isReplayResponseCurrent, shouldRestoreObjective } from "./run-entry.mjs?v=5.0.0-beta.4";
+import { CLIENT_ONLY_RESUME_MODES, activeRunSnapshotIsValid, clientOnlyRestorePayload, createClientRunPersistence, selectStartupResumeSnapshot } from "./session-resume.mjs?v=5.0.0-beta.4";
+import "./cosmic-interlude-runtime.mjs?v=5.0.0-beta.4";
+import { drawRevealGraph, renderRevealController, renderRevealPresentation, revealBatchAnnouncement, revealBatchKeys, revealCameraForBatch, revealStageGeometry } from "./reveal-presentation.mjs?v=5.0.0-beta.4";
 
 const starterEmoji = { Earth: "🌍", Water: "💧", Fire: "🔥", Air: "💨" };
 const starterCategory = { Earth: "nature", Water: "force", Fire: "force", Air: "force" };
+const foundationalMeteorWords = new Set(Object.keys(starterEmoji).map((word) => word.toLowerCase()));
 const isStaticBeta = document.body.dataset.runtime === "local-practice";
 const PROFILE_KEY = isStaticBeta ? "constellore-local-profile-v1" : "constellore-profile-v1";
 const LEGACY_PROFILE_KEYS = isStaticBeta ? [] : ["wordforge-profile-v3", "wordforge-profile-v2"];
@@ -60,10 +87,13 @@ const MAX_SHIFT_COPIES_PER_DRAG = 24;
 const MAX_BOARD_HISTORY = 30;
 const MAX_PATH_GUARD_PAIRS = 128;
 const LOCAL_ANALYTICS_KEY = "constellore-local-event-counts-v1";
+const responsiveContext = createResponsiveContext({ documentRef: document, windowRef: window });
 const LOCAL_RECIPE_FEEDBACK_KEY = "constellore-local-recipe-feedback-v1";
 const LOCAL_EXPECTED_PAIRS_KEY = "constellore-local-expected-pairs-v1";
 const LOCAL_EXPECTED_PAIR_OUTBOX_KEY = "constellore-local-expected-pair-outbox-v1";
-const FIRST_OPEN_CINEMATIC_KEY = "constellore-first-open-cinematic-v1";
+const BOARD_PRESENTATION = new URLSearchParams(location.search).get("board") === "legacy"
+  ? "legacy"
+  : "observatory";
 const ANALYTICS_COHORT_KEY = "constellore-analytics-cohort-v1";
 const ANALYTICS_PREFERENCE_KEY = "constellore-analytics-preference-v1";
 const PENDING_RECOVERY_KIT_KEY = "constellore-pending-recovery-kit-v1";
@@ -87,15 +117,17 @@ const defaultProfile = createDefaultProfile({
   cosmeticLoadout: DEFAULT_COSMETIC_LOADOUT,
   voyageProgress: sanitizeVoyageProgress({}),
   routeProgression: createRemixProgressionState(),
-  remixReadiness: createRemixReadinessState()
+  remixReadiness: createRemixReadinessState(),
+  worldweaving: createWorldweavingState()
 });
+defaultProfile.feedbackPreferences = sanitizeFeedbackPreferences(defaultProfile.feedbackPreferences);
+defaultProfile.desktopWordSelector = "inventory";
 
 const state = createInitialAppState({
   adaptiveDifficulty: readAdaptiveDifficulty(),
   runIq: createRunIqState(),
   routeProgress: sanitizeAuthoredRouteProgress(null)
 });
-
 let profile = loadProfile();
 let profileSaveBaseline = structuredClone(profile);
 const profilePersistence = createRevisionedStorageCoordinator({
@@ -125,14 +157,18 @@ let stardustStorePromise = null;
 let stardustStoreRuntime = null;
 let scramblePromise = null;
 let scrambleRuntime = null;
+let moonWorldweavingController = null;
+let moonHomeProjectEntryPromise = null;
 let scrambleHostEpochKey = "";
+let scramblePortalProgression = null;
+let scramblePortalModeLabel = "Target Race";
 let duelIdentity = readDuelIdentity();
 let duelIdentityPromise = null;
 let playerIdentityPromise = null;
 
 function loadSecondarySurfaceModule() {
   if (!secondarySurfaceLoaderPromise) {
-    secondarySurfaceLoaderPromise = import("./secondary-surface-loader.mjs?v=5.0.0-beta.1")
+    secondarySurfaceLoaderPromise = import("./secondary-surface-loader.mjs?v=5.0.0-beta.4")
       .catch((error) => {
         secondarySurfaceLoaderPromise = null;
         throw error;
@@ -145,8 +181,8 @@ function ensureStardustStore() {
   if (stardustStoreRuntime) return Promise.resolve(stardustStoreRuntime);
   if (!stardustStorePromise) {
     stardustStorePromise = Promise.all([
-      loadSecondarySurfaceModule().then((module) => module.loadOptionalStylesheet("stardust-store.css?v=5.0.0-beta.1")),
-      import("./stardust-store-runtime.mjs?v=5.0.0-beta.1")
+      loadSecondarySurfaceModule().then((module) => module.loadOptionalStylesheet("stardust-store.css?v=5.0.0-beta.4")),
+      import("./stardust-store-runtime.mjs?v=5.0.0-beta.4")
     ])
       .then(([, module]) => {
         if (typeof module.createStardustStoreRuntime !== "function") {
@@ -177,8 +213,8 @@ function ensureStardustStore() {
 function ensureScramble() {
   if (scrambleRuntime) return Promise.resolve(scrambleRuntime);
   if (!scramblePromise) {
-    scramblePromise = loadSecondarySurfaceModule()
-      .then((module) => module.createLazyScramble({
+    scramblePromise = Promise.all([ensureConceptMatterApp(), loadSecondarySurfaceModule()])
+      .then(([, module]) => module.createLazyScramble({
         documentRef: document,
         windowRef: window,
         available: duelFeatureAvailable(),
@@ -194,16 +230,21 @@ function ensureScramble() {
           }
         },
         onFinished: finishScrambleMatch,
-        onHome: () => returnHome({ skipForfeit: true }),
+        onHome: () => returnHome({ skipForfeit: true, destination: "arena" }),
         onConnectionChange: (status) => {
           if (status === "reconnecting") showToast("Reconnecting to your rival\u2026", { scope: "global" });
+        },
+        onRatingChange: ({ label, progression } = {}) => {
+          scramblePortalProgression = progression ?? scramblePortalProgression;
+          scramblePortalModeLabel = String(label || scramblePortalModeLabel).slice(0, 40);
+          syncScrambleArenaRank();
         },
         playFeedback,
         track
       }))
       .then((runtime) => {
         if (!runtime || typeof runtime.open !== "function" || typeof runtime.submitAction !== "function") {
-          throw new Error("Constellation Scramble could not be initialized.");
+          throw new Error("Scramble Arena could not be initialized.");
         }
         scrambleRuntime = runtime;
         return runtime;
@@ -216,9 +257,60 @@ function ensureScramble() {
   return scramblePromise;
 }
 
+function moonWorldweaving() {
+  if (!moonWorldweavingController) {
+    moonWorldweavingController = createMoonWorldweavingController({
+      documentRef: document,
+      getProfile: () => profile,
+      getState: () => state,
+      getElements: () => els,
+      loadSecondarySurfaceModule,
+      beginMode,
+      startExplore,
+      mergeExploreInventory,
+      inventoryKey,
+      saveProfile,
+      returnHome,
+      returnJourneyHome: returnMoonJourneyHome,
+      closeHubMenu,
+      resumeTimerIfNeeded,
+      showToast,
+      showSecondarySurfaceFailure,
+      cosmeticOwnershipOptions,
+      isRunActive: () => Boolean(state.game && !state.finished && !els.gameScreen.hidden),
+      track,
+      primaryTrigger: () => $("#homeOrbitTabJourney") || $("#primaryOrbitButton")
+    });
+  }
+  return moonWorldweavingController;
+}
+
+function moonHomeProjectEntry() {
+  if (!moonHomeProjectEntryPromise) {
+    moonHomeProjectEntryPromise = import("./moon-home-project-entry.mjs?v=5.0.0-beta.4")
+      .then(({ createMoonHomeProjectEntry }) => createMoonHomeProjectEntry({
+        documentRef: document,
+        getController: moonWorldweaving,
+        getFeedbackPreferences: () => profile.feedbackPreferences,
+        audio: gameAudio,
+        track,
+        showFailure: showSecondarySurfaceFailure
+      }))
+      .catch((error) => {
+        moonHomeProjectEntryPromise = null;
+        throw error;
+      });
+  }
+  return moonHomeProjectEntryPromise;
+}
+
 async function openScramble({ trigger = document.activeElement, invite = "" } = {}) {
   if (!homeMenuState().onboardingComplete) {
     showToast("Finish the two short opening constellations before entering a live 1v1.", { scope: "global" });
+    return false;
+  }
+  if (!scrambleArenaUnlocked()) {
+    showToast("Scramble Arena unlocks at Silver Route Rank.", { scope: "global" });
     return false;
   }
   if (!duelFeatureAvailable()) {
@@ -233,7 +325,7 @@ async function openScramble({ trigger = document.activeElement, invite = "" } = 
     track("scramble_lobby_opened", { ranked: scrambleRankedUnlocked(), source: invite ? "invite" : "home" });
     return true;
   } catch (error) {
-    showSecondarySurfaceFailure(error, "Constellation Scramble could not be opened.");
+    showSecondarySurfaceFailure(error, "Scramble Arena could not be opened.");
     return false;
   }
 }
@@ -243,7 +335,10 @@ function showSecondarySurfaceFailure(error, fallback) {
 }
 const feedbackPreferencesUi = createFeedbackPreferencesUi({
   get: () => profile.feedbackPreferences,
-  set: (value) => { profile.feedbackPreferences = value; },
+  set: (value) => {
+    profile.feedbackPreferences = value;
+    if (value.fusionAnimation === "off") resetGoldenPairAnimations();
+  },
   save: () => saveProfile({ fields: ["settings"] }),
   audio: gameAudio,
   track
@@ -280,11 +375,27 @@ let runIqFeedbackTimer = null;
 let routeProgressFeedbackTimer = null;
 let rankBoardArtRuntime = null;
 let developerConsolePromise = null;
-let combinationStoryPromise = null;
-let combinationStoryView = null;
-let combinationStoryRevision = 0;
 let goldenPairRuntimePromise = null;
 let goldenPairRuntime = null;
+let cinematicPhaseTimer = null;
+let mobilePlayChrome = null;
+let wordOrbitRuntime = null;
+let boardCameraRuntime = null;
+let conceptBondRuntime = null;
+let molecularMemoryRuntime = null;
+let conceptMatterApp = null;
+let conceptMatterAppPromise = null;
+let guidedPlay = null;
+let renderPowerups = () => {};
+let renderInventory = () => {};
+let combiningBoardRuntime = null;
+let combiningBoardModulesPromise = null;
+let combiningBoardRuntimeFactory = null;
+let combiningBoardSemanticAssigner = null;
+let combiningBoardPaletteReader = null;
+let combiningBoardFusionDescriptor = null;
+let legacyCosmosCanvas = null;
+let boardLayoutFrame = 0;
 let analyticsPreference = readAnalyticsPreference();
 let analyticsCohortId = readAnalyticsCohort();
 const pendingScoreRetryPromises = new Map();
@@ -303,22 +414,29 @@ const billingAdapter = () => globalThis.constelloreBilling || globalThis.wordfor
 const adsAdapter = () => globalThis.constelloreAds || globalThis.wordforgeAds;
 const els = {
   startScreen: $("#startScreen"), gameScreen: $("#gameScreen"), targetMessage: $("#targetMessage"),
-  board: $("#board"), boardItems: $("#boardItems"), boardGuide: $("#boardGuide"), cosmosCanvas: $("#cosmosCanvas"), combinationStory: $("#combinationStory"),
-  tidyBoard: $("#tidyBoard"), resetBoard: $("#resetBoard"), undoBoardAction: $("#undoBoardAction"), redoBoardAction: $("#redoBoardAction"), dropPairPreview: $("#dropPairPreview"),
+  board: $("#board"), boardItems: $("#boardItems"), boardGuide: $("#boardGuide"), boardTopHud: $("#boardTopHud"), cosmosCanvas: $("#cosmosCanvas"),
+  boardCameraControls: $("#boardCameraControls"), boardZoomOut: $("#boardZoomOut"), boardZoomIn: $("#boardZoomIn"), resetBoardView: $("#resetBoardView"), boardZoomValue: $("#boardZoomValue"), boardCameraStatus: $("#boardCameraStatus"),
+  conceptBondLayer: $("#conceptBondLayer"), conceptChemistryStatus: $("#conceptChemistryStatus"),
+  conceptMatterStatus: $("#conceptMatterStatus"), conceptMatterViewToggle: $("#conceptMatterViewToggle"),
+  tidyBoard: $("#tidyBoard"), alignConstellation: $("#alignConstellation"), resetBoard: $("#resetBoard"), undoBoardAction: $("#undoBoardAction"), redoBoardAction: $("#redoBoardAction"), dropPairPreview: $("#dropPairPreview"),
+  mobileToolsToggle: $("#mobileToolsToggle"), mobileToolsPanel: $("#mobileToolsPanel"), mobileAssistToggle: $("#mobileAssistToggle"),
   tapChainStatus: $("#tapChainStatus"), tapChainText: $("#tapChainText"), boardUndo: $("#boardUndo"),
   alchemyNote: $("#alchemyNote"), boardAnnouncement: $("#boardAnnouncement"), wordList: $("#wordList"), collectionCount: $("#collectionCount"),
   expectedPairFeedback: $("#expectedPairFeedback"), expectedPairForm: $("#expectedPairForm"), expectedPairButton: $("#expectedPairButton"),
   expectedPairResult: $("#expectedPairResult"), expectedPairDelivery: $("#expectedPairDelivery"),
   inventorySearch: $("#inventorySearch"), inventorySearchClear: $("#inventorySearchClear"), inventorySearchStatus: $("#inventorySearchStatus"),
+  inventory: document.querySelector(".inventory"), inventoryDrawerToggle: $("#inventoryDrawerToggle"), inventoryDrawerBody: $("#inventoryDrawerBody"),
   modeName: $("#modeName"), targetWord: $("#targetWord"), difficultyPill: $("#difficultyPill"), remixPill: $("#remixPill"), universePill: $("#universePill"), lawPill: $("#lawPill"), movesValue: $("#movesValue"),
   timerHud: $("#timerHud"), timerValue: $("#timerValue"), pathCount: $("#pathCount"),
+  playSoundDisclosure: $("#playSoundDisclosure"), playSoundToggle: $("#playSoundToggle"), playSoundPanel: $("#playSoundPanel"),
   runIqHud: $("#runIqHud"), runIqValue: $("#runIqValue"), runIqDelta: $("#runIqDelta"), runIqStreak: $("#runIqStreak"), runIqBar: $("#runIqBar"), runIqStatus: $("#runIqStatus"),
   runMilestone: $("#runMilestone"), milestoneText: $("#milestoneText"), milestoneBar: $("#milestoneBar"), hintObjective: $("#hintObjective"), hintObjectiveText: $("#hintObjectiveText"), wishState: $("#wishState"),
-  senseButton: $("#senseButton"), senseHudCount: $("#senseHudCount"), senseDialog: $("#senseDialog"),
+  helpNudge: $("#helpNudge"), helpNudgeAction: $("#helpNudgeAction"), helpNudgeCost: $("#helpNudgeCost"), helpNudgeDismiss: $("#helpNudgeDismiss"),
+  senseButton: $("#senseButton"), senseHudCount: $("#senseHudCount"), senseDialog: $("#senseDialog"), stardustDialog: $("#stardustDialog"), boardAssistanceRail: $("#boardAssistanceRail"),
   quickTipShortcut: $("#quickTipShortcut"), quickTipShortcutCount: $("#quickTipShortcutCount"),
   wordGiftShortcut: $("#wordGiftShortcut"), wordGiftShortcutCount: $("#wordGiftShortcutCount"),
-  senseShortcut: $("#senseShortcut"), senseShortcutCount: $("#senseShortcutCount"), powerupShopShortcut: $("#powerupShopShortcut"),
-  quickTipCount: $("#quickTipCount"), useQuickTip: $("#useQuickTip"), quickTipMessage: $("#quickTipMessage"),
+  senseShortcut: $("#senseShortcut"), senseShortcutCount: $("#senseShortcutCount"), revealShortcut: $("#revealShortcut"), revealShortcutCount: $("#revealShortcutCount"), powerupShopShortcut: $("#powerupShopShortcut"),
+  quickTipCount: $("#quickTipCount"), quickTipCost: $("#quickTipCost"), useQuickTip: $("#useQuickTip"), quickTipMessage: $("#quickTipMessage"),
   wordGiftCard: $("#wordGiftCard"), wordGiftState: $("#wordGiftState"), useWordGift: $("#useWordGift"), wordGiftMessage: $("#wordGiftMessage"),
   rivalGhost: $("#rivalGhost"), ghostCallsign: $("#ghostCallsign"), ghostStatus: $("#ghostStatus"), ghostPace: $("#ghostPace"),
   ghostPreview: $("#ghostPreview"), ghostPreviewStatus: $("#ghostPreviewStatus"), ghostPreviewCount: $("#ghostPreviewCount"), ghostPreviewPercent: $("#ghostPreviewPercent"),
@@ -350,14 +468,482 @@ const els = {
   toast: $("#toast"), connectionBadge: $("#connectionBadge")
 };
 
+els.gameScreen.dataset.boardPresentation = BOARD_PRESENTATION;
+document.body.dataset.boardPresentation = BOARD_PRESENTATION;
+
 const cosmicGateRoot = $("#cosmicGate");
+
+function mobilePlayShellActive() {
+  return Boolean(els.gameScreen && els.gameScreen.dataset.playLayout && els.gameScreen.dataset.playLayout !== "wide");
+}
+
+function desktopWordSelectorPreference() {
+  return profile.desktopWordSelector === "bloom" ? "bloom" : "inventory";
+}
+
+function spatialBloomSelectorActive() {
+  if (mobilePlayShellActive()) return true;
+  return desktopWordSelectorPreference() === "bloom"
+    && els.gameScreen?.dataset.boardPresentation === "observatory"
+    && state.mode !== "scramble";
+}
+
+function syncSpatialBloomSelector({ render = false, reason = "preference" } = {}) {
+  const preference = desktopWordSelectorPreference();
+  const activeSelector = spatialBloomSelectorActive() ? "bloom" : "inventory";
+  document.body.dataset.desktopWordSelector = preference;
+  if (els.gameScreen) {
+    els.gameScreen.dataset.desktopWordSelector = preference;
+    els.gameScreen.dataset.wordSelector = activeSelector;
+  }
+  $$('[data-spatial-bloom-preference]').forEach((button) => {
+    const enabled = preference === "bloom";
+    button.setAttribute("aria-pressed", String(enabled));
+    const stateLabel = button.querySelector("small");
+    if (stateLabel) stateLabel.textContent = enabled ? "ON" : "OFF";
+  });
+  if (render && state.game) {
+    renderInventory();
+    schedulePlayableBoardRefresh({ cancelGestures: true, reason });
+  } else {
+    wordOrbitRuntime?.render();
+  }
+}
+
+function playPhaseForState() {
+  if (state.finished) return "result";
+  if (state.reveal?.active || state.reveal?.pending) return "reveal";
+  if (state.mode === "scramble") return "scramble";
+  if (["training", "second-orbit"].includes(state.mode)) return "tutorial";
+  return "normal";
+}
+
+function syncPlayPhase(phase = playPhaseForState()) {
+  if (els.gameScreen) els.gameScreen.dataset.playPhase = phase;
+}
+
+function bindMobilePlayChrome() {
+  if (!els.gameScreen || mobilePlayChrome) return;
+  mobilePlayChrome = bindMobilePlayShell({
+    root: els.gameScreen,
+    onLayoutChange: () => {
+      conceptMatterApp?.close({ restoreFocus: false, reason: "layout" });
+      if (state.game) updateMilestone();
+      syncSpatialBloomSelector();
+      schedulePlayableBoardRefresh({ cancelGestures: true, reason: "layout" });
+    },
+    onInventoryChange: () => wordOrbitRuntime?.render(),
+    onViewportChange: () => schedulePlayableBoardRefresh({ cancelGestures: true, reason: "viewport" }),
+    onBeforeDialog: () => {
+      wordOrbitRuntime?.beforeDialog();
+      closeMolecularMemoryPanels();
+      conceptMatterApp?.close({ restoreFocus: false, reason: "dialog" });
+    },
+    onSurfaceChange: (event) => {
+      if (event?.state?.activeSurface) conceptMatterApp?.close({ restoreFocus: false, reason: "surface" });
+      if (event?.state?.activeSurface) hideHelpNudge();
+    }
+  });
+}
+
+bindMobilePlayChrome();
+
+function wordOrbitView() {
+  const tutorial = learningOrbitActive();
+  const chemistry = conceptChemistryGuideForState();
+  const guidedWords = chemistry.strict && chemistry.valid && !chemistry.complete
+    ? [chemistry.activeWord, chemistry.requiredPartner].filter(Boolean)
+    : [];
+  return {
+    mobile: mobilePlayShellActive(),
+    observatory: spatialBloomSelectorActive(),
+    lensOpen: Boolean(mobilePlayShellActive() && mobilePlayChrome?.state.inventoryExpanded),
+    words: state.words,
+    starters: state.game?.starters || ["Earth", "Water", "Fire", "Air"],
+    recent: recentInventoryWords(),
+    newWords: state.history.filter((step) => step.newDiscovery).map((step) => step.word),
+    spotlightWords: guidedWords.length
+      ? guidedWords
+      : tutorial ? (secondOrbitActive() ? secondOrbitProgress(state.history) : firstOrbitProgress(state.history)).spotlightWords : [],
+    conceptChemistry: chemistry,
+    query: state.inventoryQuery,
+    anchor: state.nodes.find((node) => node.id === state.selectedNodeId)?.item || null,
+    anchorId: state.selectedNodeId,
+    layout: els.gameScreen?.dataset.playLayout || "wide",
+    phase: playPhaseForState(),
+    tutorial,
+    busy: state.busyPairs.size > 0 || state.powerups.busy || state.finished || state.pause.active || state.reveal.active || state.reveal.pending
+  };
+}
+
+function combiningBoardMode() {
+  if (state.reveal?.active || state.reveal?.pending) return "reveal";
+  if (["training", "second-orbit"].includes(state.mode)) return "tutorial";
+  if (state.mode === "scramble") return "scramble";
+  if (state.mode === "explore") return "explore";
+  if (state.mode === "daily") return "daily";
+  if (["moon-project", "worldweaving", "voyage", "event"].includes(state.journeyContext?.kind)) return "project";
+  return "ranked";
+}
+
+function boardCameraSnapshot() {
+  return boardCameraRuntime?.snapshot() || { x: 0, y: 0, zoom: 1 };
+}
+
+function boardWorldToScreenLocal(point) {
+  return boardCameraRuntime?.worldToScreenLocal(point) || { x: Number(point?.x) || 0, y: Number(point?.y) || 0 };
+}
+
+function boardClientToWorld(point) {
+  if (boardCameraRuntime) return boardCameraRuntime.clientToWorld(point);
+  const rect = els.board.getBoundingClientRect();
+  return { x: Number(point?.x ?? point?.clientX) - rect.left, y: Number(point?.y ?? point?.clientY) - rect.top };
+}
+
+function boardLocalRectToWorld(rectangle) {
+  const zoom = boardCameraSnapshot().zoom;
+  const start = boardCameraRuntime?.screenLocalToWorld({ x: rectangle.left, y: rectangle.top }) || { x: rectangle.left, y: rectangle.top };
+  return {
+    left: start.x,
+    top: start.y,
+    width: Math.max(1, Number(rectangle.width) / zoom),
+    height: Math.max(1, Number(rectangle.height) / zoom)
+  };
+}
+
+function boardWorldLayout(boardRect = els.board.getBoundingClientRect(), playable = measuredPlayableBoardLayout(boardRect)) {
+  const topLeft = boardCameraRuntime?.screenLocalToWorld({ x: playable.left, y: playable.top }) || { x: playable.left, y: playable.top };
+  const bottomRight = boardCameraRuntime?.screenLocalToWorld({ x: playable.right, y: playable.bottom }) || { x: playable.right, y: playable.bottom };
+  return {
+    left: Math.min(topLeft.x, bottomRight.x),
+    top: Math.min(topLeft.y, bottomRight.y),
+    right: Math.max(topLeft.x, bottomRight.x),
+    bottom: Math.max(topLeft.y, bottomRight.y),
+    width: Math.abs(bottomRight.x - topLeft.x),
+    height: Math.abs(bottomRight.y - topLeft.y),
+    blockers: (playable.blockers || []).map(boardLocalRectToWorld)
+  };
+}
+
+function boardElementWorldRect(element, boardRect = els.board.getBoundingClientRect()) {
+  const bounds = element.getBoundingClientRect();
+  return boardLocalRectToWorld({
+    left: bounds.left - boardRect.left,
+    top: bounds.top - boardRect.top,
+    width: bounds.width,
+    height: bounds.height
+  });
+}
+
+function combiningBoardHistory() {
+  const bounds = els.board.getBoundingClientRect();
+  const width = Math.max(1, bounds.width);
+  const height = Math.max(1, bounds.height);
+  return state.history.map((step) => {
+    if (step?.anchorCoordinateSpace !== "world-v1" || !step.anchors || typeof step.anchors !== "object") return step;
+    const project = (anchor) => {
+      if (!anchor || !Number.isFinite(Number(anchor.x)) || !Number.isFinite(Number(anchor.y))) return null;
+      const point = boardWorldToScreenLocal(anchor);
+      return { x: point.x / width, y: point.y / height, unclamped: true };
+    };
+    return {
+      ...step,
+      anchors: {
+        ingredientA: project(step.anchors.ingredientA),
+        ingredientB: project(step.anchors.ingredientB),
+        result: project(step.anchors.result)
+      }
+    };
+  });
+}
+
+function combiningBoardView() {
+  const route = state.routeProgress || {};
+  const deviceMemory = Number(navigator.deviceMemory);
+  const lowQuality = mobilePlayShellActive()
+    || Math.min(window.innerWidth || 1280, window.innerHeight || 720) <= 700
+    || (Number.isFinite(deviceMemory) && deviceMemory <= 4);
+  return {
+    mode: combiningBoardMode(),
+    words: state.words,
+    history: combiningBoardHistory(),
+    nodes: state.nodes.map((node) => {
+      const point = boardCameraRuntime?.worldToScreenLocal(node) || node;
+      return { ...node, x: point.x, y: point.y };
+    }),
+    target: state.game?.target || "",
+    activeFacet: wordOrbitRuntime?.state.category || "",
+    quality: lowQuality ? "low" : "standard",
+    combinationVisualSpeed: sanitizeFeedbackPreferences(profile.feedbackPreferences).fusionAnimation,
+    routeProgress: {
+      percent: route.percent,
+      stepsRemaining: route.remaining,
+      completed: route.complete
+    },
+    cosmetics: {
+      colors: combiningBoardPaletteReader?.() || {},
+      ambientAnimation: false
+    }
+  };
+}
+
+function activateLegacyCombiningBoard() {
+  els.gameScreen.dataset.boardRenderer = els.gameScreen.dataset.boardPresentation = document.body.dataset.boardPresentation = "legacy";
+  if (state.game) renderInventory();
+}
+
+function loadCombiningBoardModules() {
+  if (els.gameScreen.dataset.boardPresentation !== "observatory") return Promise.resolve(null);
+  if (!combiningBoardModulesPromise) {
+    combiningBoardModulesPromise = Promise.all([
+      import("./combining-board-domain.mjs?v=5.0.0-beta.4"),
+      import("./combining-board-runtime.mjs?v=5.0.0-beta.4")
+    ]).then(([domain, runtime]) => {
+      combiningBoardSemanticAssigner = domain.assignPrimarySemanticFacets;
+      combiningBoardRuntimeFactory = runtime.createCombiningBoardRuntime;
+      combiningBoardPaletteReader = runtime.readCombiningBoardPalette;
+      combiningBoardFusionDescriptor = runtime.describeCombiningBoardFusion;
+      return Object.freeze({
+        assignPrimarySemanticFacets: combiningBoardSemanticAssigner,
+        createCombiningBoardRuntime: combiningBoardRuntimeFactory
+      });
+    }).catch((error) => {
+      combiningBoardModulesPromise = null;
+      activateLegacyCombiningBoard();
+      console.warn("Observatory modules unavailable; using the legacy board canvas.", error);
+      return null;
+    });
+  }
+  return combiningBoardModulesPromise;
+}
+
+function requestCombiningBoardRuntime() {
+  if (combiningBoardRuntime) return Promise.resolve(combiningBoardRuntime);
+  els.gameScreen.dataset.boardRenderer = "loading";
+  return loadCombiningBoardModules().then((modules) => {
+    if (!modules) return null;
+    const runtime = ensureCombiningBoardRuntime();
+    runtime?.sync(combiningBoardView());
+    return runtime;
+  });
+}
+
+function ensureCombiningBoardRuntime() {
+  if (els.gameScreen.dataset.boardPresentation !== "observatory" || combiningBoardRuntime || !els.cosmosCanvas || !els.board) {
+    return combiningBoardRuntime;
+  }
+  if (typeof combiningBoardRuntimeFactory !== "function") return null;
+  try {
+    combiningBoardRuntime = combiningBoardRuntimeFactory({
+      canvas: els.cosmosCanvas,
+      board: els.board,
+      getSnapshot: combiningBoardView,
+      sceneOptions: {
+        reducedMotion: () => matchMedia("(prefers-reduced-motion: reduce)").matches
+          || document.body.dataset.cosmeticEffects === "reduced",
+        forcedColors: () => matchMedia("(forced-colors: active)").matches
+      }
+    });
+    els.gameScreen.dataset.boardRenderer = "observatory";
+  } catch (error) {
+    combiningBoardRuntime = null;
+    activateLegacyCombiningBoard();
+    console.warn("Observatory renderer unavailable; using the legacy board canvas.", error);
+  }
+  return combiningBoardRuntime;
+}
+
+guidedPlay = createGuidedPlayController({
+  state,
+  elements: els,
+  getProfile: () => profile,
+  pathGuardContextFor,
+  firstOrbitActive,
+  secondOrbitActive,
+  homeOnboardingComplete: () => homeMenuState().onboardingComplete,
+  getRouteRankNumber: () => currentRouteRank()?.rank?.number,
+  scheduleRunSave,
+  scheduleConceptBond: () => conceptBondRuntime?.schedule(),
+  pulseConceptBond: () => conceptBondRuntime?.pulse(),
+  mobilePlayShellActive,
+  relocateBoardNodesForHelpNudge,
+  clearBoardAnnouncement,
+  announceBoardMessage,
+  showAlchemy,
+  playFeedback
+});
+const {
+  pathGuardActiveFor,
+  acceptConceptChemistryGuide,
+  conceptChemistryGuideForState,
+  rememberPathGuardPair,
+  pathGuardPairWasRemembered,
+  publishedGuidanceAssist,
+  nextHelpNudgeScoreMultiplier,
+  scoreMultiplierPercent,
+  helpNudgeCostText,
+  hideHelpNudge,
+  cancelHelpNudge,
+  armHelpNudge,
+  dismissHelpNudge,
+  noteHelpNudgeActivity,
+  showPathGuardFeedback,
+  showConceptChemistryFeedback
+} = guidedPlay;
+syncSpatialBloomSelector();
+wordOrbitRuntime = createWordOrbitRuntime({
+  root: document,
+  getSnapshot: wordOrbitView,
+  onChoose: async (item, context) => {
+    const outcome = await activateTrayItem(item);
+    if (context.source === "lens" && context.anchor) requestAnimationFrame(() => $("#wordOrbitAnchor")?.focus({ preventScroll: true }));
+    return outcome;
+  },
+  onCancelAnchor: () => cancelTapChain({ announce: true }),
+  onCloseLens: ({ reason, restoreFocus }) => {
+    mobilePlayChrome?.setInventoryExpanded(false, { reason });
+    if (restoreFocus) requestAnimationFrame(() => els.inventoryDrawerToggle?.focus({ preventScroll: true }));
+  },
+  onQueryChange: (query) => { state.inventoryQuery = query.trimStart().slice(0, 60); scheduleRunSave(); },
+  onVisibleCount: (count) => { state.inventoryVisibleCount = count; },
+  onActivity: ({ type }) => {
+    if (type === "category") combiningBoardRuntime?.sync(combiningBoardView());
+    conceptBondRuntime?.schedule();
+  }
+});
+wordOrbitRuntime.render();
+boardCameraRuntime = createBoardCameraRuntime({
+  viewport: els.board,
+  world: els.boardItems,
+  zoomOutButton: els.boardZoomOut,
+  zoomInButton: els.boardZoomIn,
+  resetButton: els.resetBoardView,
+  zoomValue: els.boardZoomValue,
+  status: els.boardCameraStatus,
+  enabled: () => Boolean(state.game && !els.gameScreen.hidden && !state.pause.active && !state.reveal.active && !state.reveal.pending && !activeBoardDragCleanup && !activeTrayDragCleanup),
+  onSingleActivation: () => {
+    conceptMatterApp?.close({ restoreFocus: false, reason: "board-dismiss" });
+    wordOrbitRuntime?.dismissFromBoard();
+  },
+  onDoubleActivation: ({ origin, pointerType }) => {
+    wordOrbitRuntime?.relocateFromBoard(origin, { pointerType });
+  },
+  onChange: () => {
+    boardGeometryVersion += 1;
+    wordOrbitRuntime?.render();
+    conceptBondRuntime?.schedule();
+    combiningBoardRuntime?.sync(combiningBoardView());
+    legacyCosmosCanvas?.invalidate();
+    if (state.game) scheduleRunSave();
+  }
+});
+conceptBondRuntime = createConceptBondRuntime({
+  board: els.board,
+  layer: els.conceptBondLayer,
+  status: els.conceptChemistryStatus,
+  getSnapshot: conceptChemistryGuideForState,
+  viewWindow: window
+});
+conceptBondRuntime.sync();
+molecularMemoryRuntime = createMolecularMemoryRuntime({
+  document,
+  boardItems: els.boardItems,
+  onExpanded: () => wordOrbitRuntime?.close()
+});
+function conceptMatterCapabilitiesForState() {
+  return conceptMatterApp?.capabilities() || { inspect: false, peel: false, split: false, twist: false, profile: "locked" };
+}
+
+function conceptMatterRepresentation() {
+  return conceptMatterApp?.representation() || (state.conceptMatter?.representation === "compound" ? "compound" : "compact");
+}
+
+function syncConceptMatter() {
+  conceptMatterApp?.sync();
+}
+
+function ensureConceptMatterApp() {
+  if (conceptMatterApp) return Promise.resolve(conceptMatterApp);
+  if (!conceptMatterAppPromise) {
+    conceptMatterAppPromise = import("./concept-matter-app.mjs?v=5.0.0-beta.4")
+      .then(({ createConceptMatterAppController }) => {
+        conceptMatterApp = createConceptMatterAppController({
+          state,
+          elements: els,
+          getBoardMode: combiningBoardMode,
+          learningOrbitActive,
+          getRouteGuide: conceptChemistryGuideForState,
+          closeMolecularMemoryPanels,
+          closeWordOrbit: () => wordOrbitRuntime?.close(),
+          inventoryKey,
+          boardHistorySnapshot,
+          measureBoardWord,
+          getNodeInstance: nodeMolecularMemoryInstance,
+          destroyMolecularMemory,
+          addNode,
+          renderInventory: (...args) => renderInventory(...args),
+          renderBoard,
+          commitBoardEdit,
+          scheduleRunSave,
+          cancelTapChain,
+          constrainBoardNodes,
+          showAlchemy,
+          playFeedback,
+          track,
+          onBoardGeometryChange: () => { boardGeometryVersion += 1; }
+        });
+        return conceptMatterApp;
+      })
+      .catch((error) => {
+        conceptMatterAppPromise = null;
+        throw error;
+      });
+  }
+  return conceptMatterAppPromise;
+}
+renderPowerups = createPowerupRenderer({
+  $,
+  els,
+  getState: () => state,
+  getProfile: () => profile,
+  learningOrbitActive,
+  clamp,
+  quickTipLimit: QUICK_TIP_LIMIT,
+  scoreMultiplierPercent,
+  nextHelpNudgeScoreMultiplier,
+  helpNudgeCostText,
+  sanitizeSenseWallet,
+  activeArmedPowerup,
+  renderStardustRefills,
+  renderHintObjective
+});
+renderInventory = createInventoryRenderer({
+  document,
+  els,
+  getState: () => state,
+  spatialBloomSelectorActive,
+  getWordOrbitRuntime: () => wordOrbitRuntime,
+  getCombiningBoardRuntime: () => combiningBoardRuntime,
+  combiningBoardView,
+  updateHud,
+  orderInventory,
+  inventoryKey,
+  recentInventoryWords,
+  visualWordCategory,
+  visualWordToken,
+  senseWordActive,
+  firstOrbitWordActive,
+  masteryStarsForWord,
+  escapeHtml,
+  activateTrayItem,
+  startTrayPointerDrag
+});
+
 const cosmicGate = createCosmicGate({
   root: cosmicGateRoot,
   onTransition: (cue) => playFeedback(cue),
   surfaces: [els.startScreen, els.gameScreen]
 });
-// The inline display guard prevents the gate from flashing before CSS loads.
-// Once the controller owns it, `hidden` and the controller's phases take over.
 cosmicGateRoot?.style.removeProperty("display");
 const shareCards = createShareCardController({
   state,
@@ -387,7 +973,7 @@ function ensureCosmeticsObservatoryHost() {
       }))
       .then((host) => {
         if (!host || typeof host.open !== "function") {
-          throw new Error("Cosmetics Observatory could not be initialized.");
+          throw new Error("Cosmetic Lab could not be initialized.");
         }
         cosmeticsObservatoryHost = host;
         return host;
@@ -405,27 +991,122 @@ async function openCosmeticsObservatory(options = {}) {
     const host = await ensureCosmeticsObservatoryHost();
     await host.open(options);
   } catch (error) {
-    showSecondarySurfaceFailure(error, "Cosmetics Observatory could not be opened.");
+    showSecondarySurfaceFailure(error, "Cosmetic Lab could not be opened.");
   }
 }
 
-let launchCinematicOutcome = {
-  played: false,
-  handled: false,
-  menuHandoff: false,
-  playbackRate: 0
-};
 let launchMenuAudioStarted = false;
+let launchMenuHandoffPromise = null;
+let launchMenuReleased = false;
+let homePlanetHubBridgePromise = null;
+
+function ensureHomePlanetHubBridge() {
+  return homePlanetHubBridgePromise ||= import("./planet-hub-host.mjs?v=5.0.0-beta.4")
+      .then(({ createPlanetHubHost }) => createPlanetHubHost({
+        documentRef: document,
+        getProfile: () => profile,
+        getJourney: () => moonWorldweaving().homeProject()?.journey,
+        getOrbitController: () => getHomeOrbitController(document),
+        getRevealState: () => $("#homePlaySplit")?.dataset.homeOrbitReveal || "tutorial",
+        getEffectsLevel: () => sanitizeCosmeticEffects(profile.cosmeticEffects),
+        selectHomeWorld: (worldId) => moonWorldweaving().selectHomeWorld(worldId),
+        showHome: (destination) => returnHome({ skipForfeit: true, destination }),
+        afterWorldChange: () => { renderProfile(); syncProgressiveDisclosure(); },
+        getStartScreen: () => els.startScreen,
+        audioRuntime: gameAudio,
+        track
+      }))
+    .catch(() => homePlanetHubBridgePromise = null);
+}
+
+function ensureHomePlanetHub() {
+  return ensureHomePlanetHubBridge().then((bridge) => bridge?.ensure?.() || null);
+}
+
+function syncHomePlanetHub() {
+  void ensureHomePlanetHubBridge().then((bridge) => bridge?.sync?.());
+}
+
+function returnMoonJourneyHome(options = {}) {
+  return ensureHomePlanetHubBridge().then((bridge) => {
+    if (bridge?.returnJourneyHome) return bridge.returnJourneyHome(options);
+    returnHome({ skipForfeit: true, destination: options.destination || "journey" });
+    return true;
+  });
+}
+
 function releaseLaunchBlackout() {
   cosmicGate.skipIntro();
 }
 function handoffLaunchMenu() {
+  syncProgressiveDisclosure();
+  syncScrambleEntryState();
+  syncHomePlanetHub();
   if (!launchMenuAudioStarted) {
     launchMenuAudioStarted = true;
     gameAudio.setScene("home");
     gameAudio.prime();
   }
-  releaseLaunchBlackout();
+  if (!launchMenuHandoffPromise) {
+    launchMenuHandoffPromise = Promise.resolve()
+      .then(() => moonWorldweaving().prepareHomeJourneyArt())
+      .catch(() => { /* Art decode failure must not strand the launch blackout. */ })
+      .then(() => {
+        if (launchMenuReleased) return;
+        launchMenuReleased = true;
+        releaseLaunchBlackout();
+      });
+  }
+  return launchMenuHandoffPromise;
+}
+
+let birthdayAudioDirector = null;
+function handoffBirthdayVoyage() {
+  let voyageAudio = null;
+  let returnScene = "home";
+  void Promise.all([
+    import("./birthday-voyage.mjs?v=5.0.0-beta.4"),
+    import("./birthday-voyage-audio.mjs?v=5.0.0-beta.4")
+  ])
+    .then(async ([{ launchBirthdayVoyage }, { createBirthdayVoyageAudioDirector }]) => {
+      birthdayAudioDirector?.dispose?.();
+      returnScene = state.finished ? "result" : els.gameScreen?.hidden ? "home" : "run";
+      voyageAudio = createBirthdayVoyageAudioDirector({
+        windowRef: window,
+        documentRef: document,
+        storage: localStorage,
+        getPreferences: () => profile.feedbackPreferences,
+        hostAudio: {
+          duck() {
+            gameAudio.setIntensity(0);
+            gameAudio.setScene("silent");
+          },
+          restore() {
+            gameAudio.setScene(returnScene);
+            if (!document.hidden) gameAudio.prime();
+          }
+        }
+      });
+      birthdayAudioDirector = voyageAudio;
+      const result = await launchBirthdayVoyage({ audioDirector: voyageAudio });
+      if (result?.outcome?.started) {
+        voyageAudio.enter({ root: result.experience?.root });
+      } else {
+        voyageAudio.dispose();
+        if (birthdayAudioDirector === voyageAudio) birthdayAudioDirector = null;
+      }
+      return result;
+    })
+    .catch(() => {
+      voyageAudio?.dispose?.();
+      if (birthdayAudioDirector === voyageAudio) birthdayAudioDirector = null;
+      if (startupBirthdayForceReplay) {
+        showToast("Our birthday memories need one online opening before offline replay. Reconnect once, then try again.", {
+          scope: "global"
+        });
+      }
+      /* The birthday layer is optional and must never block the game. */
+    });
 }
 function startupScrambleInvite(locationRef = location) {
   try {
@@ -446,50 +1127,25 @@ function hasRememberedScrambleMatch() {
   }
 }
 const startupParams = new URLSearchParams(location.search);
+const startupBirthdayForceReplay = new Set(["special", "replay", "guest"])
+  .has(String(startupParams.get("birthday") || "").trim().toLowerCase());
 const startupSharedChallenge = parseConstelloreChallengeUrl(startupParams, todayKey);
 const startupModeIntent = firstGameLaunchIntent(startupParams.get("mode"));
 const startupScrambleInviteCode = startupScrambleInvite();
 const startupScrambleResume = hasRememberedScrambleMatch();
-const startupLaunchIntent = Boolean(startupScrambleInviteCode || startupScrambleResume || startupSharedChallenge || startupModeIntent);
 const startupResumeSnapshot = selectStartupResumeSnapshot({
   snapshot: readActiveRunSnapshot(),
   sharedChallenge: startupSharedChallenge,
   modeIntent: startupModeIntent
 });
 const startupScramblePreemptsResume = Boolean(startupScrambleInviteCode || startupScrambleResume);
-if (!startupResumeSnapshot) {
-  if (!startupScramblePreemptsResume) {
-    try {
-      const { createFirstOpenCinematic } = await import("./cinematic/first-open-cinematic.mjs?v=5.0.0-beta.1");
-      launchCinematicOutcome = await createFirstOpenCinematic({
-        storageKey: FIRST_OPEN_CINEMATIC_KEY,
-        onPlaybackIntent: () => gameAudio.prime({ startMusic: false }),
-        onHandoff: handoffLaunchMenu
-      }).playLaunch();
-    } catch { /* A failed optional film opens the menu without reviving the retired launch gate. */ }
-    handoffLaunchMenu();
-  } else {
-    markLaunchCinematicSessionPlayed();
-    launchCinematicOutcome = {
-      played: false,
-      handled: true,
-      reason: "live-duel",
-      menuHandoff: false,
-      playbackRate: 0
-    };
-    handoffLaunchMenu();
-  }
-} else {
-  markLaunchCinematicSessionPlayed();
-  launchCinematicOutcome = {
-    played: false,
-    handled: true,
-    reason: "active-run",
-    menuHandoff: false,
-    playbackRate: 0
-  };
-  if (startupScrambleInviteCode || startupScrambleResume) handoffLaunchMenu();
-}
+// Ordinary entry opens the home directly. Lessons remain available through Begin;
+// a saved run keeps the launch cover until restoration has completed.
+const startupOpensHome = !startupResumeSnapshot || startupScramblePreemptsResume;
+void ensureHomePlanetHub();
+if (startupOpensHome) void handoffLaunchMenu();
+// Personal replay is reachable only through an explicitly requested birthday URL.
+if (startupBirthdayForceReplay) handoffBirthdayVoyage();
 
 const ctrlHover = createCtrlHoverController({
   getNode: getCtrlHoverNode,
@@ -673,60 +1329,6 @@ function pathGuardContextFor(game = state.game, run = state.run) {
   };
 }
 
-function pathGuardActiveFor(game = state.game, run = state.run) {
-  const mode = String(game?.mode || "").trim().toLowerCase();
-  if (
-    !game
-    || game.adaptive !== true
-    || game.practiceReplay === true
-    || run?.ranked === true
-    || mode !== "reach"
-    || Math.max(
-      Array.isArray(game.remixes?.rules) ? game.remixes.rules.length : 0,
-      Math.trunc(Number(game.remixes?.activeCount) || 0)
-    ) > 0
-  ) return false;
-  return pathGuardEligibility(pathGuardContextFor(game, run)).active;
-}
-
-function sanitizeRememberedPathGuardPairs(value) {
-  const pairs = new Set();
-  if (!Array.isArray(value)) return pairs;
-  for (const candidate of value.slice(-MAX_PATH_GUARD_PAIRS)) {
-    if (typeof candidate !== "string" || candidate.length > 180) continue;
-    try {
-      const parsed = JSON.parse(candidate);
-      if (!Array.isArray(parsed) || parsed.length !== 2) continue;
-      const normalized = pathGuardPairKey(parsed[0], parsed[1]);
-      if (normalized && normalized === candidate) pairs.add(normalized);
-    } catch { /* Invalid saved guidance is ignored. */ }
-  }
-  return pairs;
-}
-
-function rememberPathGuardPair(a, b) {
-  const pairKey = pathGuardPairKey(a, b);
-  if (!pairKey) return { pairKey: "", remembered: false };
-  const remembered = state.pathGuard.blockedPairs.has(pairKey);
-  if (!remembered) {
-    state.pathGuard.blockedPairs.add(pairKey);
-    while (state.pathGuard.blockedPairs.size > MAX_PATH_GUARD_PAIRS) {
-      state.pathGuard.blockedPairs.delete(state.pathGuard.blockedPairs.values().next().value);
-    }
-    scheduleRunSave();
-  }
-  return { pairKey, remembered };
-}
-
-function pathGuardPairWasRemembered(a, b) {
-  const pairKey = pathGuardPairKey(a, b);
-  return Boolean(
-    pathGuardActiveFor()
-    && pairKey
-    && state.pathGuard.blockedPairs.has(pairKey)
-  );
-}
-
 function syncRankBoardArt() {
   const routeRank = currentRouteRank();
   const rankId = routeRank?.rank?.id || "bronze";
@@ -798,7 +1400,10 @@ function startStyleSummary(decision = nextStartStyleDecision()) {
 function syncStartStylePreview() {
   const decision = nextStartStyleDecision();
   const preview = $("#primaryOrbitMeta");
-  if (preview && primaryOrbitState().action !== "training") {
+  const primary = primaryOrbitState();
+  if (preview && primary.action === "worldweaving") {
+    preview.textContent = primary.meta;
+  } else if (preview && primary.action !== "training") {
     preview.textContent = `${currentRouteRank().rank.name} · ${startStyleSummary(decision)}`;
   }
 }
@@ -934,10 +1539,12 @@ function recordAdaptiveOutcome(outcome, { flawless = false } = {}) {
 function normalizeStoredProfile(stored) {
   if (!stored || typeof stored !== "object" || Array.isArray(stored)) return structuredClone(defaultProfile);
   const cosmeticOwnership = sanitizeCosmeticOwnership(stored.cosmeticOwnership);
+  const worldweaving = sanitizeWorldweavingState(stored.worldweaving);
+  const expedition = sanitizeExpeditionState(stored.expedition, { worldweaving });
     const cosmeticAccess = {
       supporter: Boolean(stored.premium) || cosmeticOwnership.supporter || isStaticBeta,
       founder: Boolean(stored.premium) || isStaticBeta,
-      itemIds: cosmeticOwnership.items,
+      itemIds: [...new Set([...cosmeticOwnership.items, ...expedition.salvageCosmeticIds])],
       collectionIds: cosmeticOwnership.collections,
       earnedIds: cosmeticOwnership.earned,
       progress: {
@@ -949,7 +1556,7 @@ function normalizeStoredProfile(stored) {
     return {
       ...structuredClone(defaultProfile),
       ...stored,
-      version: 8,
+      version: 10,
       [PROFILE_SAVE_META_KEY]: revisionMetadata(stored[PROFILE_SAVE_META_KEY]),
       vault: Array.isArray(stored.vault) ? stored.vault : [],
       discovered: Array.isArray(stored.discovered) ? [...new Set([...defaultProfile.discovered, ...stored.discovered])].slice(0, 1000) : [...defaultProfile.discovered],
@@ -957,6 +1564,7 @@ function normalizeStoredProfile(stored) {
       masteryCelebrated: Array.isArray(stored.masteryCelebrated) ? [...new Set(stored.masteryCelebrated.map(String))].slice(0, 20) : [],
       senseWallet: sanitizeSenseWallet(stored.senseWallet),
       feedbackPreferences: sanitizeFeedbackPreferences(stored.feedbackPreferences),
+      desktopWordSelector: stored.desktopWordSelector === "bloom" ? "bloom" : "inventory",
       rivalGhostEnabled: stored.rivalGhostEnabled !== false,
       firstOrbit: sanitizeFirstOrbitState(stored.firstOrbit),
       secondOrbit: sanitizeSecondOrbitState(stored.secondOrbit),
@@ -969,10 +1577,13 @@ function normalizeStoredProfile(stored) {
       cloudPendingFields: Array.isArray(stored.cloudPendingFields)
         ? [...new Set(stored.cloudPendingFields.filter((field) => ["all", "firstOrbit", "mastery", "progression", "settings", "journeys", "signatures"].includes(field)))].slice(0, 8)
         : [],
+      dailyPlayed: /^\d{4}-\d{2}-\d{2}$/.test(String(stored.dailyPlayed || "")) ? String(stored.dailyPlayed) : "",
       weekly: { ...defaultProfile.weekly, ...(stored.weekly || {}) },
       voyageProgress: sanitizeVoyageProgress(stored.voyageProgress),
       selectedVoyageId: sanitizeSelectedVoyage(stored.selectedVoyageId),
       eventProgress: sanitizeEventProgress(stored.eventProgress),
+      worldweaving,
+      expedition,
       signatureBests: sanitizeSignatureBests(stored.signatureBests),
       rewardedRunIds: sanitizeRewardedRunIds(stored.rewardedRunIds),
       routeProgression: sanitizeRemixProgressionState(stored.routeProgression),
@@ -1034,14 +1645,16 @@ function firstSessionUnlocked() {
 }
 
 function homeMenuState() {
-  return createHomeMenuState({
+  const menu = createHomeMenuState({
     firstOrbit: sanitizeFirstOrbitState(profile.firstOrbit),
     secondOrbit: sanitizeSecondOrbitState(profile.secondOrbit),
     wins: profile.wins,
     routeRank: currentRouteRank(),
     dailyCompleted: profile.dailyCompleted,
+    dailyPlayed: profile.dailyPlayed,
     todayKey
   });
+  return moonWorldweaving().decorateHomeMenu(menu);
 }
 
 function primaryOrbitState() {
@@ -1052,16 +1665,16 @@ function syncProgressiveDisclosure() {
   const training = sanitizeFirstOrbitState(profile.firstOrbit);
   const bridge = sanitizeSecondOrbitState(profile.secondOrbit);
   const menu = homeMenuState();
+  syncWorldweavingEntryState();
   syncHomeMenuView({
     menu,
     trainingCompleted: training.completed,
     secondOrbitCompleted: bridge.completed,
     wins: profile.wins,
     routeRank: currentRouteRank(),
-    startStyle: startStyleSummary(),
-    dailyCompleted: profile.dailyCompleted,
-    todayKey
+    startStyle: startStyleSummary()
   });
+  syncHomePlanetHub();
 }
 
 function announceModeScreenViewed() {
@@ -1094,6 +1707,13 @@ function setupWeeklyState() {
 
 function setupDailyState() {
   return profile.dailyCompleted === todayKey;
+}
+
+function markDailyPlayed() {
+  if (profile.dailyPlayed === todayKey) return false;
+  profile.dailyPlayed = todayKey;
+  saveProfile({ cloud: false });
+  return true;
 }
 
 function selectedVoyage() {
@@ -1321,6 +1941,8 @@ function normalizeJourneyContext(raw, game = null) {
     const selected = event.id === raw.eventId && event.weekKey === raw.weekKey ? eventTargetDefinition(event, target) : null;
     return selected ? eventContext(event, selected) : null;
   }
+  if (raw.kind === "worldweaving") return normalizeWorldweavingContext(raw, target);
+  if (raw.kind === "moon-project") return normalizeMoonHeartProjectContext(raw, target);
   return null;
 }
 
@@ -1486,6 +2108,9 @@ function sanitizeCosmeticOwnership(raw) {
 
 function cosmeticOwnershipOptions() {
   const remote = sanitizeCosmeticOwnership(profile.cosmeticOwnership);
+  const salvageItems = Array.isArray(profile.expedition?.salvageCosmeticIds)
+    ? profile.expedition.salvageCosmeticIds
+    : [];
   const routeRank = currentRouteRank()?.rank;
   const localEarnedProgress = isStaticBeta
     ? {
@@ -1498,7 +2123,7 @@ function cosmeticOwnershipOptions() {
   return {
     supporter: founderCosmeticsOwned(),
     founder: founderCosmeticsOwned(),
-    itemIds: remote.items,
+    itemIds: [...new Set([...remote.items, ...salvageItems])],
     collectionIds: remote.collections,
     earnedIds: remote.earned,
     progress: localEarnedProgress
@@ -1564,19 +2189,15 @@ function renderHintObjective() {
   const active = Boolean(text && state.game && state.run && !state.finished && !state.startingRun && !state.reveal.active && !state.reveal.pending);
   els.hintObjective.hidden = !active;
   els.hintObjectiveText.textContent = text;
-}
-
-function resetCombinationStory() {
-  combinationStoryRevision += 1;
-  combinationStoryView?.reset();
-  els.combinationStory.hidden = true;
+  if (mobilePlayShellActive() && state.game) updateMilestone();
 }
 
 function prepareGoldenPairAnimations() {
-  goldenPairRuntimePromise ||= import("./story/golden-fusions/golden-pair-runtime.mjs?v=5.0.0-beta.1")
+  goldenPairRuntimePromise ||= import("./story/golden-fusions/golden-pair-runtime.mjs?v=5.0.0-beta.4")
     .then(({ createGoldenPairRuntime }) => createGoldenPairRuntime({
       board: els.board,
-      reducedMotion: () => matchMedia("(prefers-reduced-motion: reduce)").matches || document.body.dataset.cosmeticEffects === "reduced"
+      reducedMotion: () => matchMedia("(prefers-reduced-motion: reduce)").matches || document.body.dataset.cosmeticEffects === "reduced",
+      fusionAnimation: () => sanitizeFeedbackPreferences(profile.feedbackPreferences).fusionAnimation
     }))
     .then((runtime) => (goldenPairRuntime = runtime))
     .catch((error) => {
@@ -1587,91 +2208,35 @@ function prepareGoldenPairAnimations() {
 }
 
 function resetGoldenPairAnimations() {
+  clearTimeout(cinematicPhaseTimer);
+  cinematicPhaseTimer = null;
   goldenPairRuntime?.cancel();
+  if (els.gameScreen?.dataset.playPhase === "cinematic") syncPlayPhase();
 }
 
-async function playGoldenPairAnimation(a, b, result) {
-  if (document.body.dataset.cosmeticEffects === "off") return false;
+function foundationalMeteorFusion(a, b) {
+  return foundationalMeteorWords.has(String(a?.word || a || "").trim().toLowerCase())
+    && foundationalMeteorWords.has(String(b?.word || b || "").trim().toLowerCase());
+}
+
+async function playGoldenPairAnimation(a, b, result, { major = false } = {}) {
+  if (
+    document.body.dataset.cosmeticEffects === "off"
+    || sanitizeFeedbackPreferences(profile.feedbackPreferences).fusionAnimation === "off"
+  ) return null;
   const generation = state.orbitGeneration;
   const runtime = await prepareGoldenPairAnimations();
-  if (!runtime || generation !== state.orbitGeneration || !state.game || els.resultDialog.open) return false;
-  return runtime.play({ a, b, result })?.played === true;
-}
-
-function renderCombinationStory(failedAttempt = null) {
-  if (!state.game || (!state.history.length && !failedAttempt)) return resetCombinationStory();
-  const revision = ++combinationStoryRevision;
-  const orbitGeneration = state.orbitGeneration;
-  combinationStoryPromise ||= import("./story/combination-story-runtime.mjs?v=5.0.0-beta.1")
-    .then(({ createCombinationStoryRuntime }) => createCombinationStoryRuntime({ root: els.combinationStory }))
-    .catch((error) => {
-      console.warn("Combination story could not load.", error);
-      return null;
-    });
-  void combinationStoryPromise.then((view) => {
-    if (!view || revision !== combinationStoryRevision || orbitGeneration !== state.orbitGeneration || !state.game) return;
-    combinationStoryView = view;
-    view.render({ target: state.game.target, history: state.history, failedAttempt });
-    els.combinationStory.hidden = false;
-  });
-}
-
-function renderPowerups() {
-  const activeRun = Boolean(state.game && state.run && !state.finished && !state.startingRun && !state.reveal.active && !state.reveal.pending && !state.busyPairs.size);
-  const tipsUsed = clamp(Number(state.powerups?.tipsUsed) || 0, 0, QUICK_TIP_LIMIT);
-  const tipsRemaining = QUICK_TIP_LIMIT - tipsUsed;
-  const senseCount = sanitizeSenseWallet(profile.senseWallet).charges;
-  const giftReady = !state.powerups.giftUsed && !state.powerups.giftUnavailable;
-  const armedKind = activeArmedPowerup();
-  els.senseButton.disabled = !activeRun;
-  els.quickTipCount.textContent = `${tipsRemaining} left`;
-  els.useQuickTip.disabled = !activeRun || state.powerups.busy || tipsRemaining <= 0;
-  els.wordGiftState.textContent = state.powerups.giftUsed ? "Used" : state.powerups.giftUnavailable ? "Unavailable" : "1 left";
-  els.wordGiftCard.classList.toggle("is-used", state.powerups.giftUsed);
-  els.wordGiftCard.classList.toggle("is-unavailable", state.powerups.giftUnavailable);
-  els.useWordGift.disabled = !activeRun || state.powerups.busy || state.powerups.giftUsed || state.powerups.giftUnavailable;
-  $("#useSense").disabled = !activeRun || state.powerups.busy || !senseCount;
-
-  els.quickTipShortcutCount.textContent = String(tipsRemaining);
-  els.quickTipShortcut.disabled = !activeRun || state.powerups.busy || tipsRemaining <= 0;
-  els.quickTipShortcut.setAttribute("aria-label", `Read a Route Signal; ${tipsRemaining} remaining; score safe`);
-  els.quickTipShortcut.title = tipsRemaining ? `Read a Route Signal · ${tipsRemaining} remaining · score safe` : "No Route Signals remain this orbit";
-  els.quickTipShortcut.classList.toggle("is-empty", tipsRemaining <= 0);
-
-  els.wordGiftShortcutCount.textContent = armedKind === "gift" ? "!" : state.powerups.giftUsed ? "✓" : giftReady ? "1" : "0";
-  els.wordGiftShortcut.disabled = !activeRun || state.powerups.busy || !giftReady;
-  els.wordGiftShortcut.setAttribute("aria-label", armedKind === "gift"
-    ? "Confirm Word Gift now; this keeps half score in the Open division"
-    : state.powerups.giftUsed
-    ? "Word Gift used; this orbit keeps half score in Open"
-    : state.powerups.giftUnavailable
-      ? "Word Gift unavailable for this orbit"
-      : "Use Word Gift; 1 ready; keeps half score in the Open division");
-  els.wordGiftShortcut.classList.toggle("is-used", state.powerups.giftUsed);
-  els.wordGiftShortcut.classList.toggle("is-empty", state.powerups.giftUnavailable);
-  els.wordGiftShortcut.classList.toggle("is-armed", armedKind === "gift");
-  els.wordGiftShortcut.title = state.powerups.giftUsed
-    ? "Word Gift used · Open · 50% score"
-    : state.powerups.giftUnavailable
-      ? "No undiscovered bridge is available"
-      : "Use Word Gift · Open · keep 50% score";
-
-  els.senseShortcutCount.textContent = armedKind === "sense" ? "!" : String(senseCount);
-  els.senseShortcut.disabled = !activeRun || state.powerups.busy || !senseCount;
-  els.senseShortcut.setAttribute("aria-label", armedKind === "sense"
-    ? "Confirm Star Compass now; this keeps 75% score in the Open division"
-    : `Use Star Compass; ${senseCount} charge${senseCount === 1 ? "" : "s"}; keeps 75% score in the Open division`);
-  els.senseShortcut.classList.toggle("is-empty", senseCount <= 0);
-  els.senseShortcut.classList.toggle("is-armed", armedKind === "sense");
-  els.senseShortcut.title = senseCount ? `Use Star Compass · ${senseCount} charge${senseCount === 1 ? "" : "s"} · keep 75% score` : "No Star Compass charges remain";
-  els.powerupShopShortcut.disabled = !activeRun || state.powerups.busy;
-  els.powerupShopShortcut.setAttribute("aria-label", `Open Cosmic Powerups to buy more Star Compass charges; ${senseCount} currently available`);
-  const standaloneMode = learningOrbitActive() || state.mode === "explore";
-  els.senseHudCount.textContent = state.mode === "explore" ? "OFF" : learningOrbitActive() ? "LESSON" : state.scoringDisabled ? "STUDY" : `${tipsRemaining} SAFE`;
-  els.senseButton.setAttribute("aria-label", standaloneMode
-    ? `${state.mode === "explore" ? "Help is not needed in free play" : "This lesson includes its own hint"}`
-    : `Open help; ${tipsRemaining} hint${tipsRemaining === 1 ? "" : "s"} left`);
-  renderHintObjective();
+  if (!runtime || generation !== state.orbitGeneration || !state.game || els.resultDialog.open) return null;
+  const playback = runtime.play({ a, b, result, major });
+  if (playback?.played === true) {
+    clearTimeout(cinematicPhaseTimer);
+    syncPlayPhase("cinematic");
+    cinematicPhaseTimer = setTimeout(() => {
+      cinematicPhaseTimer = null;
+      if (generation === state.orbitGeneration && els.gameScreen?.dataset.playPhase === "cinematic") syncPlayPhase();
+    }, Math.max(0, Number(playback.duration) || 0));
+  }
+  return playback?.played === true ? playback : null;
 }
 
 function activeArmedPowerup() {
@@ -1697,10 +2262,62 @@ function useSenseShortcut() {
   return activateOpenPowerupShortcut("sense", useConstellationSense);
 }
 
+function assistanceReturnTrigger(fallback) {
+  return els.mobileAssistToggle?.offsetParent !== null && els.mobileAssistToggle ? els.mobileAssistToggle : fallback;
+}
+
+function useRouteSignalShortcut() {
+  if (els.quickTipShortcut?.disabled) return "blocked";
+  const tipsRemaining = Math.max(0, QUICK_TIP_LIMIT - (Number(state.powerups?.tipsUsed) || 0));
+  if (!tipsRemaining) {
+    mobilePlayChrome?.beforeDialog();
+    void openPowerupShop({ focusItem: "route-signal", trigger: assistanceReturnTrigger(els.quickTipShortcut) });
+    return "shop";
+  }
+  mobilePlayChrome?.closeSurface({ restoreFocus: false });
+  void useQuickTip();
+  return "committed";
+}
+
+function useWordGiftRailShortcut() {
+  if (els.wordGiftShortcut?.disabled) return "blocked";
+  const giftReady = !state.powerups?.giftUsed && !state.powerups?.giftUnavailable;
+  if (!giftReady) {
+    mobilePlayChrome?.beforeDialog();
+    void openPowerupShop({ focusItem: "word-gift", trigger: assistanceReturnTrigger(els.wordGiftShortcut) });
+    return "shop";
+  }
+  const outcome = useWordGiftShortcut();
+  if (outcome === "committed") mobilePlayChrome?.closeSurface({ restoreFocus: false });
+  return outcome;
+}
+
+function useSenseRailShortcut() {
+  if (els.senseShortcut?.disabled) return "blocked";
+  const charges = sanitizeSenseWallet(profile.senseWallet).charges;
+  if (!charges) {
+    mobilePlayChrome?.beforeDialog();
+    void openPowerupShop({ focusItem: "star-compass", trigger: assistanceReturnTrigger(els.senseShortcut) });
+    return "shop";
+  }
+  const outcome = useSenseShortcut();
+  if (outcome === "committed") mobilePlayChrome?.closeSurface({ restoreFocus: false });
+  return outcome;
+}
+
+function useRevealRailShortcut() {
+  if (els.revealShortcut?.disabled) return "blocked";
+  mobilePlayChrome?.beforeDialog();
+  openRevealPath({ trigger: assistanceReturnTrigger(els.revealShortcut) });
+  return "dialog";
+}
+
 function activateOpenPowerupShortcut(kind, action) {
-  if (state.scoringDisabled || activeArmedPowerup() === kind) {
+  if (state.powerups.busy || !state.game || state.finished) return "blocked";
+  if (activeArmedPowerup() === kind) {
     clearArmedPowerup({ render: false });
-    return action();
+    void action();
+    return "committed";
   }
   clearArmedPowerup({ render: false });
   armedPowerupShortcut = {
@@ -1713,19 +2330,20 @@ function activateOpenPowerupShortcut(kind, action) {
   const policy = assistancePolicy(kind);
   showAlchemy(`TAP AGAIN · ${label} keeps ${Math.round(policy.scoreMultiplier * 100)}% score in Open.`);
   playFeedback("uiSelect");
+  return "armed";
 }
 
 function resetPowerupControlLabels() {
   els.useWordGift.querySelector("span").textContent = "Add word";
   const senseLabel = $("#useSense span");
-  if (senseLabel) senseLabel.textContent = "Use extra hint";
+  if (senseLabel) senseLabel.textContent = "Use Compass \u00b7 keep 75%";
 }
 
 let profileRankSurface;
 
 async function prepareProfileRankSurface() {
   try {
-    profileRankSurface ||= await import("./profile-rank-surface.mjs?v=5.0.0-beta.1");
+    profileRankSurface ||= await import("./profile-rank-surface.mjs?v=5.0.0-beta.4");
     profileRankSurface.mountProfileRankSurface();
   } catch {
     profileRankSurface = null;
@@ -1773,9 +2391,16 @@ function renderProfile() {
   };
   applyVisibleCosmeticLoadout();
   $(".profile-label").textContent = routeRank.rank.name;
+  $("#profileButton").dataset.rank = routeRank.rank.id;
   $("#profileButton").setAttribute("aria-label", `Open your ${routeRank.rank.name} Route Rank and progress`);
-  $("#profileLevel").textContent = rank.level;
-  $("#profileDust").textContent = profile.stardust;
+  const stardustBalance = Math.max(0, Math.floor(Number(profile.stardust) || 0));
+  const formattedStardust = stardustBalance.toLocaleString("en-US");
+  const compactStardust = new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 1 }).format(stardustBalance);
+  $("#profileDust").textContent = formattedStardust;
+  $("#profileDust").dataset.compact = compactStardust;
+  $("#hubStardust").textContent = formattedStardust;
+  $("#homeStardustWallet").setAttribute("aria-label", `${formattedStardust} Stardust available`);
+  $("#hubStardustWallet").setAttribute("aria-label", `${formattedStardust} Stardust available`);
   $("#universeRank").textContent = rank.name;
   $("#rankProgress").style.width = `${rank.progress}%`;
   $("#lifetimeRankName").textContent = rank.name;
@@ -1794,7 +2419,7 @@ function renderProfile() {
   $("#dailyStreak").textContent = profile.dailyStreak;
   $("#completedOrbits").textContent = profile.wins;
   $("#profileRankTitle").textContent = "Your progress";
-  $("#profileTotalDust").textContent = profile.stardust;
+  $("#profileTotalDust").textContent = formattedStardust;
   $("#profileWords").textContent = profile.discovered.length;
   $("#profileWins").textContent = profile.wins;
   $("#profileStreak").textContent = profile.dailyStreak;
@@ -1844,7 +2469,8 @@ function renderProfile() {
   $("#replaySecondOrbit").disabled = !profile.firstOrbit.completed && profile.wins === 0;
   const senseCount = sanitizeSenseWallet(profile.senseWallet).charges;
   $("#profileSenseCount").textContent = senseCount;
-  $("#senseDialogCount").textContent = senseCount;
+  const legacySenseDialogCount = $("#senseDialogCount");
+  if (legacySenseDialogCount) legacySenseDialogCount.textContent = senseCount;
   const tipsRemaining = Math.max(0, QUICK_TIP_LIMIT - (Number(state.powerups?.tipsUsed) || 0));
   els.senseHudCount.textContent = `${tipsRemaining}`;
   $("#senseEarnNote").textContent = "One charge returns each UTC day for every player.";
@@ -1852,6 +2478,7 @@ function renderProfile() {
   renderStardustStore();
   renderPowerups();
   feedbackPreferencesUi.render();
+  syncSpatialBloomSelector();
   els.rivalGhost.setAttribute("aria-pressed", String(profile.rivalGhostEnabled));
   els.rivalGhost.setAttribute("aria-label", profile.rivalGhostEnabled ? "Hide Rival Ghost pace" : "Show Rival Ghost pace");
   $("#marketBalance").textContent = profile.credits;
@@ -1862,28 +2489,65 @@ function renderProfile() {
   syncStartStylePreview();
   syncRankBoardArt();
   updateWishButton();
+  syncWorldweavingEntryState();
   syncScrambleEntryState();
+}
+
+function syncWorldweavingEntryState() {
+  moonWorldweaving().syncEntryState();
 }
 
 function syncScrambleEntryState() {
   const available = duelFeatureAvailable();
+  const unlocked = scrambleArenaUnlocked();
   const ranked = scrambleRankedUnlocked();
   const homeButton = $("#scrambleHomeButton");
   const menuButton = $("#scrambleMenuButton");
-  if (homeButton) homeButton.disabled = !available;
-  if (menuButton) menuButton.disabled = !available;
-  const status = !available
-    ? "Live 1v1 is unavailable in this build"
+  const portal = $("#scramblePortal");
+  if (homeButton) homeButton.disabled = !available || !unlocked;
+  if (menuButton) menuButton.disabled = !available || !unlocked;
+  const state = !unlocked ? "locked" : !available ? "unavailable" : ranked ? "ranked" : "private-only";
+  if (homeButton) homeButton.dataset.arenaState = state;
+  if (portal) portal.dataset.arenaState = state;
+  if ($("#scramblePortalAccess")) {
+    $("#scramblePortalAccess").textContent = state === "locked"
+      ? "SILVER REQUIRED"
+      : state === "unavailable" ? "OFFLINE"
+      : state === "ranked"
+        ? "RANKED + PRIVATE"
+        : "PRIVATE 1V1";
+  }
+  const status = !unlocked
+    ? "Reach Silver Route Rank to unlock Scramble Arena"
+    : !available ? "Live 1v1 is unavailable in this build"
     : ranked
       ? "Private invites and public ranked matchmaking"
       : "Private invites \u00b7 ranked unlocks after one scored solo win";
   if ($("#scrambleHomeStatus")) $("#scrambleHomeStatus").textContent = status;
   if ($("#scrambleMenuStatus")) $("#scrambleMenuStatus").textContent = status;
+  if ($("#scramblePortalAction")) $("#scramblePortalAction").textContent = unlocked ? "Choose a mode" : "Reach Silver Route Rank";
+  syncScrambleArenaRank();
   scrambleRuntime?.setRankedUnlocked(ranked);
+}
+
+function syncScrambleArenaRank() {
+  const rank = scrambleArenaLeaguePresentation(scramblePortalProgression);
+  const mark = $("#scrambleHomeArenaRankMark");
+  const output = $("#scrambleHomeArenaRank");
+  const mode = $("#scrambleHomeArenaMode");
+  const stakes = $("#scramblePortalStakes");
+  if (mark) mark.textContent = rank.mark;
+  if (output) output.textContent = rank.label;
+  if (mode) mode.textContent = scramblePortalModeLabel;
+  if (stakes) stakes.dataset.arenaRank = rank.id;
 }
 
 function duelFeatureAvailable() {
   return Boolean(DUEL_API_BASE) && config.duels?.enabled !== false;
+}
+
+function scrambleArenaUnlocked() {
+  return homeMenuState().arenaReady;
 }
 
 function scrambleRankedUnlocked() {
@@ -1905,6 +2569,10 @@ function applyServerPlayer(player) {
   profile.freeWishUsed = Boolean(player.freeWishUsed);
   profile.wishAvailable = player.wishAvailable !== false;
   profile.dailyWishUsedDate = player.dailyWishUsedDate || "";
+  if (player.scrambleArena?.progression != null) {
+    scramblePortalProgression = player.scrambleArena.progression;
+    scramblePortalModeLabel = "Target Race";
+  }
   if (Number.isInteger(player.cloudProfileVersion)) profile.cloudProfileVersion = Math.max(0, player.cloudProfileVersion);
   if (player.routeRank) profile.routeRank = sanitizeRouteRankSummary(player.routeRank);
   saveProfile({ cloud: founderActivated, fields: ["progression"] });
@@ -1941,8 +2609,7 @@ function configuredDuelApiBase(value) {
 function sanitizeDuelIdentity(value) {
   const source = value && typeof value === "object" && !Array.isArray(value) ? value : {};
   const playerId = String(source.playerId || source.id || "").trim().slice(0, 96);
-  // Signed cs3 session tokens currently exceed 256 characters. Keep a finite
-  // ceiling without truncating a valid credential into an inevitable 401.
+  // Keep valid signed session tokens intact while retaining a finite ceiling.
   const playerToken = String(source.playerToken || source.token || "").trim().slice(0, 1_024);
   const callsign = String(source.callsign || source.player?.callsign || "").trim().slice(0, 32);
   if (!/^[a-z0-9][a-z0-9._~-]{5,95}$/i.test(playerId) || playerToken.length < 8) return null;
@@ -1992,10 +2659,7 @@ async function ensureDuelIdentity({ forceRegistration = false } = {}) {
   }
   if (duelIdentityPromise) return duelIdentityPromise;
   duelIdentityPromise = (async () => {
-    // The hosted runtime and Duel API share an account service. Coalesce with
-    // the normal boot registration so an immediate lobby click cannot create
-    // two competing anonymous identities. Hybrid static builds deliberately
-    // keep their local solo identity separate from the hosted Duel identity.
+    // Coalesce hosted account registration before an immediate Duel lobby open.
     if (!isStaticBeta && (!profile.playerId || !profile.playerToken || playerIdentityPromise)) {
       await ensurePlayer();
     }
@@ -2176,13 +2840,19 @@ function cloudProfileSnapshot() {
     journeys: {
       selectedVoyageId: sanitizeSelectedVoyage(profile.selectedVoyageId),
       voyageProgress: sanitizeVoyageProgress(profile.voyageProgress),
-      eventProgress: sanitizeEventProgress(profile.eventProgress)
+      eventProgress: sanitizeEventProgress(profile.eventProgress),
+      worldweaving: sanitizeWorldweavingState(profile.worldweaving),
+      expedition: sanitizeExpeditionState(profile.expedition, { worldweaving: profile.worldweaving })
     },
     signatureBests: sanitizeSignatureBests(profile.signatureBests).filter((signature) => signature.scoreEligible)
   };
 }
 
-function resetProfileForAccount(options={}) { profile=resetAccountProfile(defaultProfile, profile, options); }
+function resetProfileForAccount(options={}) {
+  const desktopWordSelector = desktopWordSelectorPreference();
+  profile = resetAccountProfile(defaultProfile, profile, options);
+  profile.desktopWordSelector = desktopWordSelector;
+}
 
 function mergeCloudProfile(remote, { replace = false, preferLocalSettings = false, preferLocalProgression = false, preferLocalJourneys = false, preferLocalSignatures = false } = {}) {
   if (!remote || typeof remote !== "object" || Array.isArray(remote)) return;
@@ -2242,6 +2912,17 @@ function mergeCloudProfile(remote, { replace = false, preferLocalSettings = fals
           words: [...localEvent.words, ...incomingEvent.words],
           rewarded: localEvent.rewarded || incomingEvent.rewarded
         });
+    const localWorldweaving = sanitizeWorldweavingState(profile.worldweaving);
+    const incomingWorldweaving = sanitizeWorldweavingState(remote.journeys.worldweaving);
+    profile.worldweaving = preferLocalJourneys
+      ? localWorldweaving
+      : mergeWorldweavingStates(localWorldweaving, incomingWorldweaving);
+    const localExpedition = sanitizeExpeditionState(profile.expedition, { worldweaving: profile.worldweaving });
+    const incomingExpedition = sanitizeExpeditionState(remote.journeys.expedition, { worldweaving: profile.worldweaving });
+    profile.expedition = mergeExpeditionStates(localExpedition, incomingExpedition, {
+      worldweaving: profile.worldweaving,
+      preferLocal: preferLocalJourneys
+    });
   }
   if (Array.isArray(remote.signatureBests)) {
     if (replace) profile.signatureBests = sanitizeSignatureBests(remote.signatureBests);
@@ -2500,6 +3181,7 @@ async function recoverAccount(event) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ playerId, recoveryCode })
     });
+    const sameAccount = Boolean(profile.playerId && profile.playerId === result.player.id);
     state.cloudGeneration += 1;
     state.cloudController?.abort();
     state.cloudController = null;
@@ -2507,15 +3189,15 @@ async function recoverAccount(event) {
     state.cloudDirty = false;
     clearTimeout(cloudSyncTimer);
     state.cloudReady = false;
-    resetProfileForAccount({ playerId: result.player.id, playerToken: result.playerToken });
+    if (sameAccount) profile.playerToken = result.playerToken;
+    else resetProfileForAccount({ playerId: result.player.id, playerToken: result.playerToken });
     state.runPersistence = null;
     clearActiveRunSnapshot();
     applyServerPlayer(result.player);
     rememberPendingRecoveryKit({ playerId: result.player.id, code: result.recoveryCode, version: result.recoveryVersion });
     await restoreOwnership({ silent: true });
-    if (config.cloudProfileEnabled === true) await syncCloudProfile({ replaceRemote: true });
-    // Cloud restoration may contain an older event snapshot. Apply server event
-    // truth last so account recovery cannot roll progress or reward state back.
+    if (config.cloudProfileEnabled === true) await syncCloudProfile({ replaceRemote: !sameAccount });
+    // Apply server event truth after an older cloud snapshot.
     await refreshCosmicEventState();
     const dailySense = refillDailySense();
     if (dailySense.refilled) saveProfile({ cloud: false });
@@ -2562,7 +3244,7 @@ async function loadConfig() {
 
 async function fetchJson(url, options = {}, timeout = 20000) {
   if (isStaticBeta) {
-    localRuntimePromise ||= import("./local-beta.mjs?v=5.0.0-beta.1");
+    localRuntimePromise ||= import("./local-beta.mjs?v=5.0.0-beta.4");
     const runtime = await localRuntimePromise;
     return runtime.localRequest(url, options);
   }
@@ -2695,8 +3377,22 @@ function learningOrbitActive() {
 function firstOrbitWordActive(itemOrWord) {
   if (!learningOrbitActive() || state.finished) return false;
   const key = inventoryKey(itemOrWord);
+  const chemistry = conceptChemistryGuideForState();
+  if (chemistry.strict && chemistry.valid && !chemistry.complete) {
+    return [chemistry.activeWord, chemistry.requiredPartner]
+      .some((word) => inventoryKey(word) === key);
+  }
   const progress = secondOrbitActive() ? secondOrbitProgress(state.history) : firstOrbitProgress(state.history);
   return progress.spotlightWords.some((word) => inventoryKey(word) === key);
+}
+
+function toggleAriaDescribedByToken(element, token, enabled) {
+  if (!element || !token) return;
+  const tokens = new Set(String(element.getAttribute("aria-describedby") || "").split(/\s+/).filter(Boolean));
+  if (enabled) tokens.add(token);
+  else tokens.delete(token);
+  if (tokens.size) element.setAttribute("aria-describedby", [...tokens].join(" "));
+  else element.removeAttribute("aria-describedby");
 }
 
 function syncFirstOrbitGuide() {
@@ -2715,26 +3411,33 @@ function syncFirstOrbitGuide() {
   $("#skipFirstOrbit").textContent = second ? "Leave" : "Exit";
   $("#firstOrbitStep").textContent = `${progress.index + 1} of ${progress.total}`;
   $("#firstOrbitGuideTitle").textContent = step.title;
-  $("#firstOrbitInstruction").textContent = step.instruction;
+  const selected = state.nodes.find((node) => node.id === state.selectedNodeId && !state.busyPairs.has(node.id) && !node.item.ghost);
+  const selectedWord = selected?.item?.word;
+  const partner = inventoryKey(selectedWord) === inventoryKey(step.a) ? step.b
+    : inventoryKey(selectedWord) === inventoryKey(step.b) ? step.a : "";
+  $("#firstOrbitInstruction").textContent = partner
+    ? `${selectedWord} is ready. Choose ${partner}${inventoryKey(selectedWord) === inventoryKey(partner) ? " again" : ""} to make ${step.word}.`
+    : spatialBloomSelectorActive()
+      ? (second ? `Use Add word to combine ${step.a} + ${step.b}.` : "Tap Add word. Choose Earth, then Water to combine them.")
+      : step.instruction;
   $("#firstOrbitTip").textContent = step.tip;
   $("#firstOrbitProgressBar").style.width = `${progress.percent}%`;
   const progressBar = els.firstOrbitGuide.querySelector("[role='progressbar']");
   progressBar.setAttribute("aria-label", "Lesson progress");
   progressBar.setAttribute("aria-valuemax", String(progress.total));
   progressBar.setAttribute("aria-valuenow", String(progress.index));
-  for (const button of els.wordList.querySelectorAll(".inventory-word")) {
+  for (const button of document.querySelectorAll("#wordList .inventory-word, #wordOrbitList .inventory-word")) {
     const highlighted = firstOrbitWordActive(button.dataset.word);
     button.classList.toggle("tutorial-hot", highlighted);
-    if (highlighted) button.setAttribute("aria-describedby", "firstOrbitInstruction");
-    else button.removeAttribute("aria-describedby");
+    toggleAriaDescribedByToken(button, "firstOrbitInstruction", highlighted);
   }
   for (const button of els.boardItems.querySelectorAll(".board-word")) {
     const node = state.nodes.find((entry) => String(entry.id) === button.dataset.id);
     const highlighted = firstOrbitWordActive(node?.item);
     button.classList.toggle("tutorial-hot", highlighted);
-    if (highlighted) button.setAttribute("aria-describedby", "firstOrbitInstruction");
-    else button.removeAttribute("aria-describedby");
+    toggleAriaDescribedByToken(button, "firstOrbitInstruction", highlighted);
   }
+  conceptBondRuntime?.schedule();
 }
 
 function rememberFirstOrbitSeen() {
@@ -2789,6 +3492,19 @@ async function startSecondOrbit({ enterThroughGate = true } = {}) {
   } finally {
     state.startingRun = false;
   }
+}
+
+async function startRequiredOpeningLesson({ enterThroughGate = false } = {}) {
+  const action = homeMenuState().primary?.action;
+  if (action === "training") {
+    await startFirstOrbit({ enterThroughGate });
+    return true;
+  }
+  if (action === "second-orbit") {
+    await startSecondOrbit({ enterThroughGate });
+    return true;
+  }
+  return false;
 }
 
 async function startExplore({ enterThroughGate = true } = {}) {
@@ -2850,12 +3566,22 @@ function renderMissionRemixes(game) {
 function openMissionBriefing(game, request, trigger = null, context = null) {
   const briefing = buildMissionBriefing(game, { localOnly: isStaticBeta });
   const journeyContext = normalizeJourneyContext(context, game);
-  const journeyKindLabel = journeyContext?.kind === "event" ? "Event" : journeyContext?.kind === "voyage" ? "Story" : "";
+  const journeyKindLabel = journeyContext?.kind === "event"
+    ? "Event"
+    : journeyContext?.kind === "voyage"
+      ? "Story"
+      : journeyContext?.kind === "worldweaving"
+        ? "Moon"
+        : journeyContext?.kind === "moon-project" ? "Great Project" : "";
   const journeyClue = journeyContext?.kind === "event"
     ? "This target is part of this week’s event."
     : journeyContext?.kind === "voyage"
       ? "This target is part of your story."
-      : "";
+      : journeyContext?.kind === "worldweaving"
+        ? "The exact final recipe becomes part of your lunar settlement."
+        : journeyContext?.kind === "moon-project"
+          ? "This verified route becomes durable evidence inside Moonhaven."
+        : "";
   state.pendingMission = {
     game,
     runId: state.run?.id || "",
@@ -2866,9 +3592,16 @@ function openMissionBriefing(game, request, trigger = null, context = null) {
   };
   $("#missionBriefingMode").textContent = journeyKindLabel || briefing.modeLabel;
   $("#missionBriefingEmoji").textContent = briefing.emoji;
-  $("#missionBriefingTarget").textContent = briefing.target;
+  const freePlay = briefing.mode === "explore";
+  $("#missionBriefingTarget").textContent = freePlay ? "Free play" : briefing.target;
+  $("#missionBriefingVerb").hidden = freePlay;
+  $("#missionBriefingEyebrow").textContent = freePlay ? "Your own universe" : "Your goal";
+  $("#missionBriefingScroll").setAttribute("aria-label", freePlay ? "Free play" : "Mission objective");
   $("#missionBriefingClue").textContent = journeyClue || game.clue || "Combine two words to make a new word.";
   $("#missionBriefingRule").textContent = briefing.instruction;
+  const missionConstraint = $("#missionBriefingConstraint");
+  missionConstraint.hidden = !game.timeLimit && !game.moveLimit;
+  missionConstraint.textContent = missionConstraint.hidden ? "" : `${briefing.limitValue} ${briefing.limitDetail}`;
   $("#missionBriefingStart").textContent = briefing.startValue;
   $("#missionBriefingStarters").textContent = briefing.startDetail;
   $("#missionBriefingLimit").textContent = briefing.limitValue;
@@ -2895,7 +3628,7 @@ function openMissionBriefing(game, request, trigger = null, context = null) {
   els.missionAdaptiveNote.classList.toggle("path-guard-note", pathGuardActive);
   els.missionAdaptiveNote.textContent = [
     difficultChallenge ? "Difficult" : "",
-    pathGuardActive ? "Path Guard on" : ""
+    pathGuardActive ? "Pairs that leave the route are blocked. Your words stay on the board and no move is used." : ""
   ].filter(Boolean).join(" · ");
   els.missionAdaptiveNote.setAttribute(
     "aria-label",
@@ -2912,7 +3645,11 @@ function openMissionBriefing(game, request, trigger = null, context = null) {
   $("#missionBriefingModeRule").textContent = briefing.modeRule;
   $("#missionBriefingFairness").textContent = briefing.fairnessNote;
   $("#missionJourneyContext").hidden = !journeyContext;
-  $("#missionJourneyType").textContent = journeyContext?.kind === "event" ? "Event" : "Story";
+  $("#missionJourneyType").textContent = journeyContext?.kind === "event"
+    ? "Event"
+    : journeyContext?.kind === "worldweaving"
+      ? "Worldweaving"
+      : journeyContext?.kind === "moon-project" ? "Great Project" : "Story";
   $("#missionJourneyTitle").textContent = journeyContext?.title || "";
   $("#missionJourneyStory").textContent = journeyContext?.story || "";
   const law = game.law;
@@ -2985,6 +3722,7 @@ async function confirmMissionBriefing() {
     state.remainingSeconds = clock.remainingSeconds;
     state.pendingMission = null;
     if (els.missionBriefingDialog.open) els.missionBriefingDialog.close("start");
+    if (state.game.mode === "daily") markDailyPlayed();
     playFeedback("runStart");
     updateHud();
     scheduleRunSave();
@@ -3048,8 +3786,9 @@ async function beginMode(mode, options = {}) {
   if (mode === "weekly" && profile.weekly.complete) return;
   state.startingRun = true;
   if (state.game) updateHud();
-  const button = document.querySelector(`[data-mode="${mode}"]`);
-  const trigger = options.trigger || button;
+  const fallbackButton = document.querySelector(`[data-mode="${mode}"]`);
+  const trigger = options.trigger || fallbackButton;
+  const button = trigger || fallbackButton;
   const label = button?.classList.contains("mode-action") ? button.querySelector("span") : null;
   const original = label?.textContent;
   if (button) button.disabled = true;
@@ -3061,6 +3800,7 @@ async function beginMode(mode, options = {}) {
       seed: options.seed ?? (mode === "daily" ? Math.floor(Date.now() / 86_400_000) : mode === "weekly" ? currentWeekSeed() : Math.floor(Math.random() * 1_000_000)),
       target: options.target || "",
       stage: mode === "weekly" ? profile.weekly.stage : undefined,
+      ...(options.worldweaving ? { worldweaving: { ...options.worldweaving } } : {}),
       ...adaptiveRequestFor(mode, options)
     }), { context: options.context, trigger });
     state.recoveryTarget = "";
@@ -3130,9 +3870,6 @@ function activeRunPersistence() {
 function buildActiveRunSnapshot({ completed = false } = {}) {
   const persistenceRun = activeRunPersistence();
   if (!state.game || state.mode === "scramble" || !persistenceRun || (state.finished && !completed) || state.reveal.active || state.reveal.pending) return null;
-  const boardRect = els.board.getBoundingClientRect();
-  const width = Math.max(1, boardRect.width);
-  const height = Math.max(1, boardRect.height);
   const bendItem = state.bendItem || state.words.find((item) => ["wish", "market"].includes(item.source));
   return {
     version: 1,
@@ -3175,13 +3912,21 @@ function buildActiveRunSnapshot({ completed = false } = {}) {
       runIq: sanitizeRunIqState(state.runIq)
     },
     visuals: {
+      nodeCoordinateSpace: "world-v1",
+      boardCamera: boardCameraSnapshot(),
       nodes: state.nodes.slice(0, MAX_BOARD_NODES).filter((node) => !node.revealRole && !node.item.ghost).map((node) => ({
         word: node.item.word,
-        x: clamp(node.x / width, 0, 1),
-        y: clamp(node.y / height, 0, 1),
+        x: clamp(Number(node.x) || 0, -1_000_000, 1_000_000),
+        y: clamp(Number(node.y) || 0, -1_000_000, 1_000_000),
         z: Number(node.z) || 0,
-        cosmicTwist: Boolean(node.cosmicTwist)
+        cosmicTwist: Boolean(node.cosmicTwist),
+        routeDerived: Boolean(node.routeDerived),
+        molecularMemoryInstanceId: String(node.molecularMemoryInstanceId || "").slice(0, 180),
+        conceptMatterMatterId: String(node.conceptMatterMatterId || "").slice(0, 180),
+        conceptMatterFragmentToken: String(node.conceptMatterFragmentToken || "").slice(0, 240),
+        conceptMatterOperationId: String(node.conceptMatterOperationId || "").slice(0, 180)
       })),
+      conceptMatter: structuredClone(conceptMatterApp.sanitize(state.conceptMatter)),
       inventoryQuery: state.inventoryQuery,
       inventoryRecency: [...state.inventoryRecency.entries()].sort((left, right) => right[1] - left[1]).slice(0, 500)
     }
@@ -3214,9 +3959,7 @@ function saveCompletedRunSnapshot() {
   if (!snapshot || snapshot.run.clientOnly === true || snapshot.run.ranked !== true) {
     return { activeSaved: false, pendingSaved: false };
   }
-  // The compact, per-run credential is the critical durable copy. Write it
-  // before the larger visual snapshot so a nearly-full store preserves score
-  // recovery even when it cannot preserve the whole board.
+  // Persist the run credential before the optional board snapshot.
   const pendingSaved = rememberPendingScore(snapshot);
   return {
     activeSaved: writeActiveRunSnapshot(snapshot),
@@ -3306,8 +4049,6 @@ async function flushPendingScoreUploads(playerId, playerToken) {
       markPendingScoreUploaded(playerId, pending.runId);
       if (profile.playerId === playerId && profile.playerToken === playerToken) {
         applyServerPlayer(result.player);
-        // A recovered upload may finish long after its result screen closed.
-        // Persist server truth without attaching it to whichever run is open now.
         adoptVerifiedSignature(result.verifiedSignature || result.placement?.entry?.signature, {
           runId: pending.runId,
           updateCurrent: false
@@ -3327,8 +4068,6 @@ async function flushPendingScoreUploads(playerId, playerToken) {
         discarded += 1;
         continue;
       }
-      // Keep every ambiguous failure for the next reconnect. Server-side
-      // submissions are idempotent, so retrying can never duplicate a score.
       break;
     }
   }
@@ -3366,6 +4105,7 @@ function readActiveRunSnapshot() {
 }
 
 async function enterPreparedMission(prepare, { context = null, trigger = null } = {}) {
+  await ensureConceptMatterApp();
   return enterPreparedRun({
     gate: cosmicGate,
     prepare,
@@ -3435,9 +4175,33 @@ function decorateRestoredHistory(rawHistory, extraKnownWords = []) {
       runIqRelevance: ["route", "target", "discovery", "known", "ignored"].includes(step.runIqRelevance) ? step.runIqRelevance : "",
       routeTotal: clamp(Number(step.routeTotal) || 0, 0, 100),
       routeStepsAdvanced: clamp(Number(step.routeStepsAdvanced) || 0, 0, 100),
-      routeCompleted: Boolean(step.routeCompleted)
+      routeCompleted: Boolean(step.routeCompleted),
+      role: ["backbone", "reagent", "free"].includes(step.role) ? step.role : "free",
+      routeStepId: String(step.routeStepId || "").slice(0, 180) || null,
+      recipeId: String(step.recipeId || "").slice(0, 180) || null,
+      createdAt: String(step.createdAt || "").slice(0, 64) || null,
+      aInstanceId: String(step.aInstanceId || "").slice(0, 180) || null,
+      bInstanceId: String(step.bInstanceId || "").slice(0, 180) || null,
+      outputInstanceId: String(step.outputInstanceId || "").slice(0, 180) || null,
+      continuityInputIndex: Number(step.continuityInputIndex) === 1 ? 1 : 0
     };
   }).filter(Boolean);
+}
+
+function restoredWorldHistoryAnchors(step) {
+  if (step?.anchorCoordinateSpace !== "world-v1" || !step.anchors || typeof step.anchors !== "object") return null;
+  const point = (value) => {
+    const x = Number(value?.x);
+    const y = Number(value?.y);
+    if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
+    return { x: clamp(x, -1_000_000, 1_000_000), y: clamp(y, -1_000_000, 1_000_000) };
+  };
+  const anchors = {
+    ingredientA: point(step.anchors.ingredientA),
+    ingredientB: point(step.anchors.ingredientB),
+    result: point(step.anchors.result)
+  };
+  return Object.values(anchors).every(Boolean) ? anchors : null;
 }
 
 function reconcileRestoredMastery(history) {
@@ -3505,6 +4269,18 @@ function hydrateRestoredRun(payload, snapshot) {
     .map((step) => `${inventoryKey(step?.a)}+${inventoryKey(step?.b)}=>${inventoryKey(step?.word)}`);
   const snapshotMatchesHistory = authoritativeHistoryKeys.length === snapshotHistoryKeys.length
     && authoritativeHistoryKeys.every((key, index) => key === snapshotHistoryKeys[index]);
+  if (snapshotMatchesHistory) {
+    state.history = restoreTargetRouteStoryEvidence(state.history, matchingSnapshot.history);
+    state.history = state.history.map((step, index) => {
+      const anchors = restoredWorldHistoryAnchors(matchingSnapshot.history[index]);
+      return anchors ? { ...step, anchorCoordinateSpace: "world-v1", anchors } : step;
+    });
+  }
+  const retainedMatterRepresentation = conceptMatterRepresentation();
+  state.conceptMatter = conceptMatterApp.sanitize({
+    ...(snapshotMatchesRun && snapshotMatchesHistory ? snapshot?.visuals?.conceptMatter : {}),
+    representation: retainedMatterRepresentation
+  });
   const restoredRunIq = progress.runIq || (snapshotMatchesHistory ? matchingSnapshot.runIq : null);
   state.runIq = restoredRunIq
     ? sanitizeRunIqState(restoredRunIq)
@@ -3542,6 +4318,9 @@ function hydrateRestoredRun(payload, snapshot) {
     : []);
   state.inventoryClock = Math.max(0, ...state.inventoryRecency.values());
   const boardRect = els.board.getBoundingClientRect();
+  const playable = measuredPlayableBoardLayout(boardRect);
+  const restoreWorldCoordinates = snapshotMatchesRun && snapshot?.visuals?.nodeCoordinateSpace === "world-v1";
+  boardCameraRuntime?.reset({ reason: "restore-prep" });
   state.nodes = [];
   state.nextId = 1;
   state.topZ = 10;
@@ -3550,13 +4329,29 @@ function hydrateRestoredRun(payload, snapshot) {
     for (const savedNode of snapshot.visuals.nodes.slice(0, MAX_BOARD_NODES)) {
       const item = byWord.get(inventoryKey(savedNode?.word));
       if (!item) continue;
+      const molecularMemoryInstanceId = String(savedNode.molecularMemoryInstanceId || "").slice(0, 180);
+      const restoredSize = conceptMatterApp?.estimateSize({
+        word: item.word,
+        instanceId: molecularMemoryInstanceId,
+        history: state.history,
+        representation: conceptMatterRepresentation()
+      }) || { width: 155, height: 54 };
       state.nodes.push({
         id: state.nextId++,
         item,
-        x: clamp(Number(savedNode.x) * boardRect.width || 8, 8, Math.max(8, boardRect.width - 155)),
-        y: clamp(Number(savedNode.y) * boardRect.height || 8, 8, Math.max(8, boardRect.height - 54)),
+        x: restoreWorldCoordinates
+          ? clamp(Number(savedNode.x) || 0, -1_000_000, 1_000_000 - restoredSize.width)
+          : clamp(Number(savedNode.x) * boardRect.width || playable.left, playable.left, Math.max(playable.left, playable.right - restoredSize.width)),
+        y: restoreWorldCoordinates
+          ? clamp(Number(savedNode.y) || 0, -1_000_000, 1_000_000 - restoredSize.height)
+          : clamp(Number(savedNode.y) * boardRect.height || playable.top, playable.top, Math.max(playable.top, playable.bottom - restoredSize.height)),
         z: ++state.topZ,
-        cosmicTwist: Boolean(savedNode.cosmicTwist)
+        cosmicTwist: Boolean(savedNode.cosmicTwist),
+        routeDerived: Boolean(savedNode.routeDerived),
+        molecularMemoryInstanceId,
+        conceptMatterMatterId: String(savedNode.conceptMatterMatterId || `matter-restored:${persistenceRun?.id || "local"}:${state.nextId}`).slice(0, 180),
+        conceptMatterFragmentToken: String(savedNode.conceptMatterFragmentToken || "").slice(0, 240),
+        conceptMatterOperationId: String(savedNode.conceptMatterOperationId || "").slice(0, 180)
       });
     }
   }
@@ -3566,15 +4361,16 @@ function hydrateRestoredRun(payload, snapshot) {
   const profileSize = profile.discovered.length;
   if (!state.scoringDisabled) profile.discovered = [...new Set([...profile.discovered, ...restoredWords])].slice(0, 1000);
   if (profile.discovered.length !== profileSize) saveProfile({ fields: ["mastery"] });
+  if (restoreWorldCoordinates) boardCameraRuntime?.setCamera(snapshot.visuals.boardCamera, { reason: "restore" });
   renderInventory();
   renderBoard();
-  if (boardNodesOverlap()) tidyOrbit({ silent: true });
+  if (!restoreWorldCoordinates) requestAnimationFrame(() => constrainBoardNodes());
   renderAtlas();
   updateHud();
   updateMilestone(Boolean(progress.completed));
-  renderCombinationStory();
   syncFirstOrbitGuide();
   scheduleRunSave();
+  armHelpNudge({ restart: true });
 }
 
 async function restoreInterruptedRun(snapshot) {
@@ -3587,7 +4383,7 @@ async function restoreInterruptedRun(snapshot) {
         clearActiveRunSnapshot();
         return false;
       }
-      startWithGame(payload.game, payload.run, {
+      await startWithGame(payload.game, payload.run, {
         restored: true,
         context: null,
         deferTimer: false,
@@ -3614,7 +4410,7 @@ async function restoreInterruptedRun(snapshot) {
     applyServerPlayer(payload.player);
     const restoreObjective = shouldRestoreObjective(snapshot, payload.run);
     const restoredEvent = applyAuthoritativeEventPayload(payload);
-    startWithGame(payload.game, payload.run, {
+    await startWithGame(payload.game, payload.run, {
       restored: true,
       context: snapshot.journeyContext,
       deferTimer: restoreObjective
@@ -3662,13 +4458,14 @@ function reusableExploreInventory() {
   return sanitizeExploreInventory(profile.exploreWords, described);
 }
 
-function startWithGame(game, run, {
+async function startWithGame(game, run, {
   restored = false,
   context = null,
   enterThroughGate = false,
   deferTimer = false,
   persistenceRun = null
 } = {}) {
+  await ensureConceptMatterApp();
   const shouldEnterThroughGate = Boolean(enterThroughGate && !restored);
   if (!shouldEnterThroughGate) {
     if (persistenceRun) {
@@ -3681,18 +4478,35 @@ function startWithGame(game, run, {
   const label = game.mode === "explore"
     ? "The board is ready."
     : `Find ${game.target}.`;
+  let committed = false;
+  let briefingPresented = false;
+  const presentBriefing = () => {
+    if (briefingPresented || !committed) return false;
+    briefingPresented = true;
+    openMissionBriefing(game, { mode: game.mode }, null, context);
+    return true;
+  };
   return cosmicGate.enterBoard(
-    () => startWithGameNow(game, run, {
-      restored,
-      context,
-      deferTimer: true,
-      persistenceRun
-    }),
+    () => {
+      startWithGameNow(game, run, {
+        restored,
+        context,
+        deferTimer: true,
+        persistenceRun
+      });
+      committed = true;
+    },
     {
       label,
-      afterOpen: () => openMissionBriefing(game, { mode: game.mode }, null, context)
+      afterOpen: presentBriefing
     }
-  );
+  ).then((entered) => {
+    if (!entered && committed) presentBriefing();
+    return entered;
+  }, (error) => {
+    if (committed) presentBriefing();
+    throw error;
+  });
 }
 
 function hydrateScrambleMatch(projection) {
@@ -3740,6 +4554,7 @@ function finishScrambleMatch() {
   clearActiveRunSnapshot();
   els.gameScreen.classList.remove("orbit-paused");
   els.gameScreen.classList.add("scramble-finished");
+  syncPlayPhase("result");
   gameAudio.setScene("result");
 }
 
@@ -3750,6 +4565,7 @@ function startWithGameNow(game, run, {
   persistenceRun = null
 } = {}) {
   game.universe ||= selectUniverse(game.seed);
+  const retainedMatterRepresentation = conceptMatterRepresentation();
   cancelActiveTrayDrag();
   cancelActiveBoardDrag();
   dismissClearUndo();
@@ -3761,7 +4577,7 @@ function startWithGameNow(game, run, {
   clearSenseGlow();
   resetRecipeFeedback();
   resetExpectedPairFeedback();
-  [els.missionBriefingDialog, els.pauseDialog, els.journeyDialog, els.revealDialog, els.resultDialog, els.leaderboardDialog, els.shareDialog, els.atlasDialog, els.senseDialog, els.wishDialog, els.paywallDialog, els.exchangeDialog, els.marketBuyDialog]
+  [els.missionBriefingDialog, els.pauseDialog, els.journeyDialog, els.revealDialog, els.resultDialog, els.leaderboardDialog, els.shareDialog, els.atlasDialog, els.senseDialog, els.stardustDialog, els.wishDialog, els.paywallDialog, els.exchangeDialog, els.marketBuyDialog]
     .forEach((dialog) => { if (dialog?.open) dialog.close(); });
   state.game = game;
   state.run = run;
@@ -3792,6 +4608,7 @@ function startWithGameNow(game, run, {
   routeProgressFeedbackTimer = null;
   els.runMilestone?.classList.remove("route-closer");
   state.mode = game.mode;
+  if (restored && game.mode === "daily" && run?.activationPending !== true) markDailyPlayed();
   const starterItems = new Map((game.starterItems || []).map((item) => [inventoryKey(item), item]));
   state.words = game.mode === "explore"
     ? reusableExploreInventory()
@@ -3804,9 +4621,14 @@ function startWithGameNow(game, run, {
           source: item?.source || (starterEmoji[word] ? "origin" : "loaned-start")
         };
       });
+  clearMolecularMemories();
+  boardCameraRuntime?.reset({ reason: "new-run" });
   state.nodes = [];
   state.history = [];
-  resetCombinationStory();
+  state.conceptMatter = conceptMatterApp.sanitize({
+    representation: retainedMatterRepresentation,
+    operations: []
+  });
   resetGoldenPairAnimations();
   resetBoardHistory();
   state.trails = [];
@@ -3834,6 +4656,7 @@ function startWithGameNow(game, run, {
     rankId: String(game.remixes?.rank?.id || ""),
     blockedPairs: new Set()
   };
+  acceptConceptChemistryGuide(run?.conceptChemistry);
   state.expectedPairReports = new Set();
   clearArmedPowerup({ render: false });
   resetPowerupControlLabels();
@@ -3861,6 +4684,9 @@ function startWithGameNow(game, run, {
   els.gameScreen.classList.toggle("focus-orbit", state.focusMode);
   els.gameScreen.classList.toggle("first-ranked-orbit", !["training", "second-orbit", "explore", "scramble"].includes(game.mode) && profile.wins === 0);
   els.gameScreen.classList.remove("orbit-paused");
+  syncPlayPhase();
+  mobilePlayChrome?.reset({ collapseInventory: true, restoreFocus: false, reason: "new-run" });
+  wordOrbitRuntime?.reset();
   els.board.scrollTop = 0;
   els.board.scrollLeft = 0;
   els.modeName.textContent = missionModeLabel(game);
@@ -3873,7 +4699,7 @@ function startWithGameNow(game, run, {
   els.universePill.title = ["training", "second-orbit"].includes(game.mode) ? "" : `${game.universe.law.name}: ${game.universe.law.description}`;
   $("#journeyPill").hidden = !state.journeyContext;
   $("#journeyPill").textContent = state.journeyContext
-    ? `${state.journeyContext.icon || "✦"} ${state.journeyContext.kind === "event" ? "EVENT" : "VOYAGE"} · ${state.journeyContext.title}`
+    ? `${state.journeyContext.icon || "✦"} ${state.journeyContext.kind === "event" ? "EVENT" : state.journeyContext.kind === "worldweaving" ? "MOON" : state.journeyContext.kind === "moon-project" ? "PROJECT" : "VOYAGE"} · ${state.journeyContext.title}`
     : "";
   els.timerHud.hidden = !game.timeLimit;
   $("#movesHud").hidden = !game.moveLimit;
@@ -3907,6 +4733,7 @@ function startWithGameNow(game, run, {
     playFeedback("runStart");
     track("run_started", { mode: game.mode, target: game.target, stage: game.stage ?? null, aiEnabled: game.aiEnabled });
   }
+  armHelpNudge({ restart: true });
 }
 
 function pauseMenuAvailable() {
@@ -3926,6 +4753,10 @@ function pauseMenuAvailable() {
   );
 }
 
+function pauseExitLabel() {
+  return state.journeyContext?.kind === "moon-project" ? "Return to The Heart" : "Quit game";
+}
+
 function resetPauseConfirmation({ focus = false } = {}) {
   const previousAction = state.pause.confirmAction;
   state.pause.confirmAction = "";
@@ -3933,7 +4764,7 @@ function resetPauseConfirmation({ focus = false } = {}) {
   $("#pauseRestart").classList.remove("is-confirming");
   $("#pauseExit").classList.remove("is-confirming");
   $("#pauseRestart span").textContent = "Restart";
-  $("#pauseExit").textContent = "Quit game";
+  $("#pauseExit").textContent = pauseExitLabel();
   if (focus && previousAction === "restart") $("#pauseRestart").focus();
 }
 
@@ -3947,7 +4778,7 @@ function confirmPauseRestart() {
   $("#pauseRestart").classList.add("is-confirming");
   $("#pauseExit").classList.remove("is-confirming");
   $("#pauseRestart span").textContent = "Yes, restart";
-  $("#pauseExit").textContent = "Quit game";
+  $("#pauseExit").textContent = pauseExitLabel();
   return false;
 }
 
@@ -3957,7 +4788,12 @@ function populatePauseMenu() {
   const ranked = Boolean(state.run?.ranked && !state.scoringDisabled);
   $("#pauseTitle").textContent = "Game paused";
   $("#pauseTarget").textContent = state.game?.target || "Unknown target";
-  $("#pauseMode").textContent = String(state.game?.modeName || state.mode || "Game");
+  $("#pauseMode").textContent = [
+    String(state.game?.modeName || state.mode || "Game"),
+    state.game?.universe?.name,
+    state.journeyContext?.title,
+    state.pathGuard?.active ? "Guard on" : state.game?.law?.name
+  ].filter(Boolean).join(" \u00b7 ");
   $("#pauseMoves").textContent = String(state.moves);
   $("#pauseDiscoveries").textContent = String(state.newDiscoveries);
   $("#pauseClockLabel").textContent = timed ? "Time left" : "Time";
@@ -3978,6 +4814,7 @@ function openPauseMenu() {
     if (state.busyPairs.size || state.powerups.busy) showToast("Wait for the words to finish combining.");
     return false;
   }
+  mobilePlayChrome?.beforeDialog();
   cancelActiveTrayDrag();
   cancelActiveBoardDrag();
   cancelActivePointerGestures();
@@ -3988,6 +4825,7 @@ function openPauseMenu() {
   flushRunSave();
   stopTimer();
   state.pause.active = true;
+  cancelHelpNudge();
   pauseCloseRestoreFocus = true;
   resetPauseConfirmation();
   populatePauseMenu();
@@ -4017,6 +4855,7 @@ function finishPauseClose() {
     renderBoard();
   }
   if (wasActive) track("run_menu_closed", { mode: state.mode, moves: state.moves });
+  armHelpNudge();
   if (restoreFocus && state.game && !state.finished) requestAnimationFrame(() => $("#pauseRunButton")?.focus({ preventScroll: true }));
 }
 
@@ -4038,10 +4877,22 @@ function handlePauseShortcut(event) {
   const editable = target?.matches?.('input, textarea, select, [contenteditable]:not([contenteditable="false"])') || target?.isContentEditable;
   if (editable && target !== els.inventorySearch) return;
   if (target === els.inventorySearch && state.inventoryQuery) return;
-  if (target === els.inventorySearch) target.blur();
   if (els.pauseDialog.open) {
     event.preventDefault();
     void closePauseMenu();
+    return;
+  }
+  if (mobilePlayChrome?.state.activeSurface) {
+    event.preventDefault();
+    mobilePlayChrome.closeSurface({ restoreFocus: true, reason: "escape" });
+    return;
+  }
+  if (mobilePlayShellActive() && mobilePlayChrome?.state.inventoryExpanded) {
+    event.preventDefault();
+    if (els.inventoryDrawerBody?.contains(document.activeElement)) {
+      els.inventoryDrawerToggle?.focus({ preventScroll: true });
+    }
+    mobilePlayChrome.setInventoryExpanded(false, { reason: "escape" });
     return;
   }
   if (state.selectedNodeId != null) return;
@@ -4098,12 +4949,17 @@ function queueRunForfeit(...args) {
 function quitActiveGame() {
   const priorRun = state.run;
   const priorGame = state.game;
+  const priorJourneyContext = state.journeyContext ? { ...state.journeyContext } : null;
   pauseCloseRestoreFocus = false;
   void queueRunForfeit(priorRun, priorGame, { announce: true });
+  if (priorJourneyContext?.kind === "moon-project") {
+    moonWorldweaving().returnToHeartProject(priorJourneyContext, { skipForfeit: true });
+    return;
+  }
   returnHome({ skipForfeit: true });
 }
 
-function returnHome({ skipForfeit = false } = {}) {
+function returnHome({ skipForfeit = false, destination = "" } = {}) {
   if (state.startingRun) return showToast("The next orbit is still being mapped.");
   if (state.mode === "scramble" && scrambleRuntime?.isActive() && !skipForfeit) {
     scrambleRuntime.requestForfeitConfirmation();
@@ -4115,6 +4971,10 @@ function returnHome({ skipForfeit = false } = {}) {
     return;
   }
   const hadActiveRun = Boolean(state.game);
+  const requestedDestination = ["forge", "journey", "arena"].includes(destination)
+    ? destination
+    : state.mode === "scramble" ? "arena" : "forge";
+  cancelHelpNudge();
   if (state.game && !state.finished && !skipForfeit) void queueRunForfeit(state.run, state.game);
   const showRecoveryAfterExit = Boolean(state.finished && state.recoveryKit?.code && profile.wins > 0);
   pauseCloseRestoreFocus = false;
@@ -4125,7 +4985,6 @@ function returnHome({ skipForfeit = false } = {}) {
   ctrlHover.reset({ abandonPending: true });
   shiftBoard.reset();
   state.orbitGeneration += 1;
-  resetCombinationStory();
   resetGoldenPairAnimations();
   if (state.game && !state.finished && state.history.length) track("run_failed", { mode: state.mode, reason: "abandoned", moves: state.moves });
   stopTimer();
@@ -4137,6 +4996,10 @@ function returnHome({ skipForfeit = false } = {}) {
   stopRivalGhost();
   cancelAnimationFrame(state.cosmosFrame);
   state.cosmosFrame = null;
+  legacyCosmosCanvas = null;
+  clearMolecularMemories();
+  boardCameraRuntime?.reset({ reason: "home" });
+  combiningBoardRuntime?.suspend("home");
   state.game = null;
   state.run = null;
   state.runPersistence = null;
@@ -4147,10 +5010,16 @@ function returnHome({ skipForfeit = false } = {}) {
   state.eventRewardGranted = 0;
   state.pendingMission = null;
   state.nodes = [];
+  state.conceptMatter = conceptMatterApp.sanitize({
+    representation: conceptMatterRepresentation(),
+    operations: []
+  });
   resetBoardHistory();
   resetPowerupControlLabels();
   clearActiveRunSnapshot();
   els.gameScreen.classList.remove("training-orbit", "second-orbit", "explore-orbit", "scramble-orbit", "scramble-finished", "first-ranked-orbit", "orbit-paused");
+  syncPlayPhase("normal");
+  mobilePlayChrome?.reset({ collapseInventory: true, restoreFocus: false, reason: "home" });
   document.body.classList.remove("scramble-active", "scramble-counting-down", "scramble-view-rival");
   scrambleRuntime?.deactivate();
   els.firstOrbitGuide.hidden = true;
@@ -4158,13 +5027,24 @@ function returnHome({ skipForfeit = false } = {}) {
   els.startScreen.hidden = false;
   gameAudio.setScene("home");
   if (hadActiveRun) playFeedback("homeReturn");
-  [els.missionBriefingDialog, els.pauseDialog, els.journeyDialog, els.resultDialog, els.atlasDialog, els.senseDialog, els.shareDialog, els.wishDialog, els.paywallDialog, els.exchangeDialog, els.marketBuyDialog, els.leaderboardDialog, els.revealDialog].forEach((dialog) => { if (dialog?.open) dialog.close(); });
+  [els.missionBriefingDialog, els.pauseDialog, els.journeyDialog, els.resultDialog, els.atlasDialog, els.senseDialog, els.stardustDialog, els.shareDialog, els.wishDialog, els.paywallDialog, els.exchangeDialog, els.marketBuyDialog, els.leaderboardDialog, els.revealDialog].forEach((dialog) => { if (dialog?.open) dialog.close(); });
   renderProfile();
+  const orbit = getHomeOrbitController(document);
+  const destinationSelected = orbit?.select(requestedDestination, {
+    announce: false,
+    source: "return"
+  }) !== false;
+  const activeDestination = destinationSelected ? requestedDestination : "forge";
   if (!isStaticBeta && profile.playerId && profile.playerToken) void refreshCosmicEventState();
   window.scrollTo({ top: 0, behavior: "smooth" });
   announceModeScreenViewed();
   requestAnimationFrame(() => {
-    $("#primaryOrbitButton")?.focus({ preventScroll: true });
+    const focusTarget = activeDestination === "journey"
+      ? (!$("#moonHomeRocket")?.hidden && !$("#moonHomeRocket")?.disabled ? $("#moonHomeRocket") : $("#homeOrbitTabJourney"))
+      : activeDestination === "arena"
+        ? (!$("#scrambleHomeButton")?.disabled ? $("#scrambleHomeButton") : $("#homeOrbitTabArena"))
+        : $("#primaryOrbitButton");
+    focusTarget?.focus({ preventScroll: true });
     if (showRecoveryAfterExit) showRecoveryKit();
   });
 }
@@ -4175,7 +5055,8 @@ async function beginPrimaryOrbit() {
   const action = primaryOrbitState().action;
   button.disabled = true;
   try {
-    if (action === "training") await startFirstOrbit({ enterThroughGate: true });
+    if (action === "training") await startFirstOrbit({ enterThroughGate: false });
+    else if (action === "worldweaving") await moonWorldweaving().open({ trigger: button });
     else await beginMode(action, { trigger: button });
   } finally {
     button.disabled = false;
@@ -4185,13 +5066,10 @@ async function beginPrimaryOrbit() {
 
 function openModePicker() {
   const picker = $("#modePicker");
-  if (!picker || picker.closest("[hidden]") || !homeMenuState().choicesReady) return;
-  picker.scrollIntoView({
-    behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
-    block: "start"
-  });
-  requestAnimationFrame(() => {
-    picker.querySelector('[data-home-mode]:not([hidden]) button')?.focus({ preventScroll: true });
+  if (!picker || !homeMenuState().choicesReady) return;
+  getHomeOrbitController(document)?.openCatalog({
+    trigger: $("#primaryOrbitSecondary"),
+    focus: true
   });
 }
 
@@ -4223,7 +5101,7 @@ function closeHubMenu() {
 function loadDeveloperConsole() {
   if (!isStaticBeta) return Promise.resolve(null);
   if (!developerConsolePromise) {
-    developerConsolePromise = import("./developer-console-runtime.mjs?v=5.0.0-beta.1")
+    developerConsolePromise = import("./developer-console-runtime.mjs?v=5.0.0-beta.4")
       .then(({ createDeveloperConsoleController }) => createDeveloperConsoleController({
         isStaticBeta,
         stopTimer,
@@ -4384,7 +5262,7 @@ async function replayFinishedChallenge() {
     await startWithGame(payload.game, payload.run, { enterThroughGate: true });
     showToast(`Restarted ${payload.game.target} with the same opening and rules. Practice replay: no rank or rewards.`);
   } catch (error) {
-    showToast(error.message || "That challenge could not be restarted.");
+    showToast(error.message || "That target could not be restarted.");
   } finally {
     state.startingRun = false;
     controls.forEach((control) => { control.disabled = false; });
@@ -4520,7 +5398,7 @@ function updateStudyHud() {
   state.pathGuard.active = pathGuardActive;
   state.pathGuard.rankId = String(state.game.remixes?.rank?.id || "");
   const divisionId = exploring ? "practice" : training || study ? "study" : partial ? "open" : state.run?.ranked && !isStaticBeta ? "pure" : "practice";
-  const divisionLabels = { pure: "PURE", open: `OPEN · ${Math.round(state.scoreMultiplier * 100)}%`, practice: "PRACTICE", study: "STUDY · 0 SCORE" };
+  const divisionLabels = { pure: "PURE", open: `OPEN · ${scoreMultiplierPercent(state.scoreMultiplier)}%`, practice: "PRACTICE", study: "STUDY · 0 SCORE" };
   const divisionPill = $("#runDivisionPill");
   divisionPill.className = `run-division-pill ${divisionId}`;
   divisionPill.textContent = divisionLabels[divisionId];
@@ -4546,7 +5424,7 @@ function updateStudyHud() {
     els.lawPill.textContent = "◇ STUDY · 0 SCORE";
   } else if (partial) {
     els.lawPill.hidden = false;
-    els.lawPill.textContent = `◇ OPEN · ${Math.round(state.scoreMultiplier * 100)}% SCORE`;
+    els.lawPill.textContent = `◇ OPEN · ${scoreMultiplierPercent(state.scoreMultiplier)}% SCORE`;
   } else if (pathGuardActive) {
     els.lawPill.hidden = false;
     els.lawPill.textContent = "◇ PATH GUARD · ON";
@@ -4786,6 +5664,7 @@ function acceptRouteProgress(rawProgress) {
 function updateMilestone(won = false) {
   if (!state.game) return;
   if (state.mode === "explore") {
+    els.runMilestone?.classList.remove("has-route-signal");
     const combinations = state.history.length;
     gameAudio.setIntensity(Math.min(.35, combinations * .04));
     els.milestoneBar.style.width = `${Math.min(100, combinations * 8)}%`;
@@ -4802,11 +5681,21 @@ function updateMilestone(won = false) {
   const reached = Boolean(won || model.targetReached);
   gameAudio.setIntensity(reached ? 1 : progress.percent / 100);
   els.milestoneBar.style.width = `${reached ? 100 : progress.percent}%`;
-  els.milestoneText.textContent = reached
+  const mobileHint = mobilePlayShellActive() && !reached
+    ? sanitizeHintObjective(state.powerups?.currentTip)
+    : "";
+  const chemistry = conceptChemistryGuideForState();
+  const chemistryHint = !reached && chemistry.strict && chemistry.valid && !chemistry.complete && chemistry.allowedPair
+    ? `${chemistry.detour?.active ? "Reagent" : "Bond"} · ${chemistry.activeWord} + ${chemistry.requiredPartner} → ${chemistry.expectedProduct}`
+    : "";
+  const activeRouteHint = mobileHint || chemistryHint;
+  els.runMilestone?.classList.toggle("has-route-signal", Boolean(mobileHint));
+  els.runMilestone?.classList.toggle("has-concept-bond", Boolean(chemistryHint));
+  els.milestoneText.textContent = activeRouteHint || (reached
     ? `${state.game.target} reached`
     : progress.remaining > 0
       ? `Closest route to ${state.game.target}`
-      : `${state.game.target} is ready`;
+      : `${state.game.target} is ready`);
   $("#routeStepCount").textContent = reached
     ? "DONE"
     : progress.remaining > 0
@@ -4814,7 +5703,9 @@ function updateMilestone(won = false) {
       : "READY";
   els.runMilestone?.setAttribute(
     "aria-label",
-    reached
+    activeRouteHint
+      ? `${mobileHint ? "Current hint" : "Current Concept Bond"}: ${activeRouteHint}. ${progress.remaining} step${progress.remaining === 1 ? "" : "s"} left.`
+      : reached
       ? `${state.game.target} reached`
       : progress.remaining > 0
         ? `Closest known route to ${state.game.target}: ${progress.remaining} step${progress.remaining === 1 ? "" : "s"} left`
@@ -4848,9 +5739,33 @@ function applySenseGlow(words) {
   state.sense.timer = setTimeout(clearSenseGlow, 10_000);
 }
 
-function openPowerups() {
+function renderStardustRefills() {
+  const tipsRemaining = Math.max(0, QUICK_TIP_LIMIT - (Number(state.powerups?.tipsUsed) || 0));
+  const routeStatus = $("#routeSignalRefillStatus");
+  const giftStatus = $("#wordGiftRefillStatus");
+  const revealStatus = $("#revealRefillStatus");
+  if (routeStatus) routeStatus.textContent = tipsRemaining
+    ? `${tipsRemaining} ready`
+    : "0 · returns next orbit";
+  if (giftStatus) giftStatus.textContent = state.powerups?.giftUsed
+    ? "Used this orbit"
+    : state.powerups?.giftUnavailable
+      ? "No new bridge"
+      : "1 ready";
+  if (revealStatus) revealStatus.textContent = state.reveal.revealed
+    ? "Shown"
+    : state.reveal.active || state.reveal.pending
+      ? "Showing"
+      : "Always ready";
+}
+
+async function openPowerups({ trigger = document.activeElement } = {}) {
   if (!state.game || state.finished) return;
   if (state.startingRun || state.pause.active || state.reveal.active || state.reveal.pending || state.busyPairs.size) return showToast("Wait for the words to finish combining.");
+  const returnTarget = trigger && els.boardAssistanceRail?.contains(trigger)
+    ? assistanceReturnTrigger(trigger)
+    : trigger;
+  mobilePlayChrome?.beforeDialog();
   clearArmedPowerup({ render: false });
   stopTimer();
   els.quickTipMessage.classList.remove("error");
@@ -4867,30 +5782,56 @@ function openPowerups() {
   $("#senseMessage").textContent = "";
   const strongerHelp = document.querySelector(".guidance-stronger");
   if (strongerHelp) strongerHelp.open = false;
+  try {
+    await ensureStardustStore();
+  } catch (error) {
+    showStardustStoreFailure(error, "Help styles could not be prepared.");
+  }
+  if (!state.game || state.finished) return resumeTimerIfNeeded();
   renderProfile();
+  if (els.stardustDialog?.open) els.stardustDialog.close();
+  if (returnTarget?.id) els.senseDialog.dataset.returnFocus = returnTarget.id;
   els.senseDialog.scrollTop = 0;
-  els.senseDialog.showModal();
-  void ensureStardustStore()
-    .then(() => renderStardustStore())
-    .catch((error) => showStardustStoreFailure(error, "Stardust supplies could not be opened."));
+  if (!els.senseDialog.open) els.senseDialog.showModal();
   track("sense_opened", { mode: state.mode, surface: "help" });
 }
 
-function openPowerupShop() {
-  openPowerups();
-  if (!els.senseDialog.open) return;
-  const strongerHelp = document.querySelector(".guidance-stronger");
-  if (strongerHelp) strongerHelp.open = true;
+async function openPowerupShop({ focusItem = "", trigger = null } = {}) {
+  if (!state.game || state.finished) return;
+  if (state.startingRun || state.pause.active || state.reveal.active || state.reveal.pending || state.busyPairs.size) return showToast("Wait for the words to finish combining.");
+  const returnTarget = trigger && els.boardAssistanceRail?.contains(trigger)
+    ? assistanceReturnTrigger(trigger)
+    : trigger;
+  mobilePlayChrome?.beforeDialog();
+  clearArmedPowerup({ render: false });
+  stopTimer();
+  if (els.senseDialog.open) els.senseDialog.close();
+  try {
+    await ensureStardustStore();
+  } catch (error) {
+    showStardustStoreFailure(error, "Stardust supplies could not be opened.");
+    resumeTimerIfNeeded();
+    return;
+  }
+  if (!state.game || state.finished) return resumeTimerIfNeeded();
+  renderProfile();
+  renderStardustRefills();
+  const target = configureStardustSupplyDialog({ documentRef: document, dialog: els.stardustDialog, focusItem });
+  if (returnTarget?.id) els.stardustDialog.dataset.returnFocus = els.senseDialog.contains(returnTarget) ? els.senseButton.id : returnTarget.id;
+  else if (document.activeElement?.id) els.stardustDialog.dataset.returnFocus = document.activeElement.id;
+  els.stardustDialog.scrollTop = 0;
+  if (!els.stardustDialog.open) els.stardustDialog.showModal();
   requestAnimationFrame(() => {
-    const buyButton = $("#buySense");
     const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
-    buyButton.scrollIntoView({ block: "center", behavior: reducedMotion ? "auto" : "smooth" });
-    buyButton.focus({ preventScroll: true });
+    target?.scrollIntoView({ block: "center", behavior: reducedMotion ? "auto" : "smooth" });
+    target?.focus({ preventScroll: true });
   });
+  track("sense_opened", { mode: state.mode, surface: "stardust_supplies", focusItem: focusItem || "overview" });
 }
 
 async function useQuickTip() {
   if (!state.run || state.finished || state.startingRun || state.reveal.active || state.reveal.pending || state.busyPairs.size || state.powerups.busy) return;
+  cancelHelpNudge();
   clearArmedPowerup({ render: false });
   const runId = state.run.id;
   const runToken = state.run.token;
@@ -4910,19 +5851,39 @@ async function useQuickTip() {
       body: JSON.stringify({ runId, runToken, tipIndex })
     });
     if (state.run?.id !== runId || state.orbitGeneration !== orbitGeneration) return;
-    state.powerups.tipsUsed = clamp(Number(tip.used) || 0, 0, QUICK_TIP_LIMIT);
+    const confirmedTipsUsed = clamp(Number(tip.used) || 0, 0, QUICK_TIP_LIMIT);
+    const newlyAccepted = tip.available === true ? Math.max(0, confirmedTipsUsed - tipIndex) : 0;
+    state.powerups.tipsUsed = confirmedTipsUsed;
     if (tip.available) {
       const tipId = `hint-${state.powerups.tipsUsed}`;
       if (!state.powerups.tipIds.includes(tipId)) state.powerups.tipIds.push(tipId);
       state.powerups.tipIds = state.powerups.tipIds.slice(-QUICK_TIP_LIMIT);
       state.powerups.currentTip = sanitizeHintObjective(tip.text);
     }
+    const serverMultiplier = tip.scoreMultiplier == null ? Number.NaN : Number(tip.scoreMultiplier);
+    if (!state.scoringDisabled && (newlyAccepted > 0 || Number.isFinite(serverMultiplier))) {
+      const localMultiplier = newlyAccepted > 0
+        ? scoreMultiplierAfterNudges({ baseMultiplier: state.scoreMultiplier, nudgesUsed: newlyAccepted })
+        : state.scoreMultiplier;
+      state.scoreMultiplier = cappedScoreMultiplier(
+        state.assist,
+        state.scoreMultiplier,
+        localMultiplier,
+        Number.isFinite(serverMultiplier) ? serverMultiplier : null
+      );
+      state.run = {
+        ...state.run,
+        division: confirmedTipsUsed > 0 ? "open" : state.run?.division,
+        scoreMultiplier: state.scoreMultiplier
+      };
+      updateHud();
+    }
     els.quickTipMessage.textContent = tip.text;
     scheduleRunSave();
     if (!els.senseDialog.open) showAlchemy(`HINT · ${tip.text}`);
     if (tip.available) {
       playFeedback("sense");
-      track("quick_tip_used", { mode: state.mode, tipIndex, remaining: tip.remaining, scoreSafe: tip.scoreSafe === true });
+      track("quick_tip_used", { mode: state.mode, tipIndex, remaining: tip.remaining, scoreMultiplier: state.scoreMultiplier });
     }
   } catch (error) {
     if (state.run?.id !== runId || state.orbitGeneration !== orbitGeneration) return;
@@ -4935,6 +5896,7 @@ async function useQuickTip() {
       label.textContent = original;
       renderPowerups();
       resumeTimerIfNeeded();
+      armHelpNudge();
     }
   }
 }
@@ -4999,7 +5961,7 @@ async function useWordGift() {
     if (els.senseDialog.open) els.senseDialog.close();
     placeFromTray(item);
     playFeedback("sense", { analytics: true });
-    showAlchemy(`${item.word} was added · ${Math.round(state.scoreMultiplier * 100)}% points.`);
+    showAlchemy(`${item.word} was added · ${scoreMultiplierPercent(state.scoreMultiplier)}% points.`);
     track("word_gift_used", { mode: state.mode, word: item.word, scoreMultiplier: state.scoreMultiplier });
   } catch (error) {
     if (state.run?.id !== runId || state.orbitGeneration !== orbitGeneration) return;
@@ -5031,6 +5993,11 @@ async function useWordGift() {
 async function useConstellationSense() {
   if (!state.run || state.finished || state.startingRun || state.reveal.active || state.reveal.pending || state.busyPairs.size || state.powerups.busy) return;
   clearArmedPowerup({ render: false });
+  if (learningOrbitActive() || state.mode === "explore" || state.scoringDisabled) {
+    $("#senseMessage").textContent = "Star Compass is saved for scored orbits. Lessons and Study runs keep their own guidance.";
+    renderPowerups();
+    return;
+  }
   const preview = spendSenseCharge(profile.senseWallet);
   if (!preview.spent) {
     $("#senseMessage").textContent = "No Star Compass charges remain. Earn one tomorrow or buy one with Stardust.";
@@ -5038,7 +6005,6 @@ async function useConstellationSense() {
   }
   const button = $("#useSense");
   const label = button.querySelector("span");
-  const original = label.textContent;
   const runId = state.run.id;
   const orbitGeneration = state.orbitGeneration;
   const priorWallet = sanitizeSenseWallet(profile.senseWallet);
@@ -5047,9 +6013,10 @@ async function useConstellationSense() {
   const priorScoreMultiplier = state.scoreMultiplier;
   const priorRun = { ...state.run };
   state.powerups.busy = true;
+  button.dataset.loading = "true";
   button.disabled = true;
   renderPowerups();
-  label.textContent = "Listening to the cosmos…";
+  if (label) label.textContent = "Listening to the cosmos…";
   $("#senseMessage").textContent = "";
   profile.senseWallet = preview.wallet;
   const pendingPolicy = combineAssistance(priorAssist, "sense");
@@ -5090,7 +6057,7 @@ async function useConstellationSense() {
     applySenseGlow(candidates);
     els.senseDialog.close();
     const names = candidates.map((entry) => entry.word).filter(Boolean).join(", ");
-    showAlchemy(names ? `STAR COMPASS · ${names} resonate for ten seconds · ${Math.round(state.scoreMultiplier * 100)}% score.` : `STAR COMPASS · Follow the brightest recent discoveries · ${Math.round(state.scoreMultiplier * 100)}% score.`);
+    showAlchemy(names ? `STAR COMPASS · ${names} resonate for ten seconds · ${scoreMultiplierPercent(state.scoreMultiplier)}% score.` : `STAR COMPASS · Follow the brightest recent discoveries · ${scoreMultiplierPercent(state.scoreMultiplier)}% score.`);
     playFeedback("sense", { analytics: true });
     track("sense_used", { mode: state.mode, words: candidates.length, scoreMultiplier: state.scoreMultiplier });
   } catch (error) {
@@ -5121,9 +6088,10 @@ async function useConstellationSense() {
     }
     if (!els.senseDialog.open) showToast(confirmedBeforeForfeit ? error.message : "Star Compass could not confirm. The Open penalty remains.");
   } finally {
+    delete button.dataset.loading;
     if (state.run?.id === runId && state.orbitGeneration === orbitGeneration) {
       state.powerups.busy = false;
-      label.textContent = original;
+      clearArmedPowerup({ render: false });
       renderProfile();
     }
   }
@@ -5383,85 +6351,39 @@ function touchInventory(itemOrWord, { focus = false } = {}) {
   if (focus) state.inventoryFocusWord = key;
 }
 
-function renderInventory() {
-  const focusedWord = els.wordList.contains(document.activeElement)
-    ? document.activeElement.closest?.(".inventory-word")?.dataset.word || ""
-    : "";
-  const visible = orderInventory(state.words, {
-    starters: state.game?.starters || ["Earth", "Water", "Fire", "Air"],
-    recent: recentInventoryWords(),
-    query: state.inventoryQuery
+function clearMolecularMemories() {
+  conceptMatterApp?.close({ restoreFocus: false, reason: "board-reset" });
+  molecularMemoryRuntime?.clear();
+}
+
+function destroyMolecularMemory(id) {
+  return molecularMemoryRuntime?.destroy(id) || false;
+}
+
+function closeMolecularMemoryPanels(exceptId = "") {
+  molecularMemoryRuntime?.close(exceptId);
+}
+
+function latestMolecularMemoryInstance(word) {
+  return molecularMemoryRuntime?.latestInstance(word, state.history) || "";
+}
+
+function nodeMolecularMemoryInstance(node) {
+  return molecularMemoryRuntime?.instanceFor(node, state.history) || "";
+}
+
+function syncMolecularMemories() {
+  molecularMemoryRuntime?.sync({
+    nodes: state.nodes,
+    history: state.history,
+    active: Boolean(state.game && !state.reveal.active && !state.reveal.pending)
   });
-  state.inventoryVisibleCount = visible.length;
-  const controls = visible.map((item) => {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = `inventory-word${["wish", "market"].includes(item.source) ? " wish" : ""}${item.source === "gift" ? " gift" : ""}${item.source === "twist" ? " twist" : ""}${item.source === "loaned-start" ? " loaned" : ""}${item.ghost ? " reveal-ghost" : ""}${senseWordActive(item) ? " sense-hot" : ""}${firstOrbitWordActive(item) ? " tutorial-hot" : ""}`;
-    button.dataset.word = inventoryKey(item);
-    button.dataset.category = visualWordCategory(item.category);
-    button.dataset.source = visualWordToken(item.source);
-    const revealLocked = state.reveal.active || state.reveal.pending;
-    const unavailable = state.finished || state.pause.active || revealLocked || item.ghost;
-    button.draggable = false;
-    button.disabled = unavailable;
-    const temporaryStart = item.source === "loaned-start";
-    button.setAttribute("aria-label", item.ghost
-      ? `${item.word}, temporary answer word. Not playable.`
-      : unavailable
-        ? `${item.word}. Not available right now.`
-        : temporaryStart
-          ? `Add ${item.word} to the board. This starting word is only for this game.`
-          : `Add ${item.word} to the board. Drop it onto another word to combine.`);
-    if (!unavailable) button.title = temporaryStart
-      ? `${item.word} is a starting word for this game`
-      : `Drag ${item.word} onto a board word to combine`;
-    const tag = item.ghost ? "REVEALED" : item.source === "loaned-start" ? "START" : item.source === "gift" ? "GIFT" : item.source === "twist" ? "TWIST" : item.source === "wish" ? "WISH" : item.source === "market" ? "VAULT" : item.source?.startsWith("ai") ? "AI" : "";
-    const masteryStars = masteryStarsForWord(item.word);
-    button.innerHTML = `<span class="emoji">${escapeHtml(item.emoji)}</span><span class="word">${escapeHtml(item.word)}</span>${tag ? `<span class="source-tag">${tag}</span>` : ""}${masteryStars ? `<span class="mastery-tag" aria-label="${masteryStars} recipe mastery stars">★${masteryStars}</span>` : ""}`;
-    let suppressClickUntil = 0;
-    button.addEventListener("click", (event) => {
-      if (performance.now() < suppressClickUntil) {
-        event.preventDefault();
-        return;
-      }
-      void activateTrayItem(item);
-    });
-    button.addEventListener("pointerdown", (event) => startTrayPointerDrag(event, item, button, () => {
-      suppressClickUntil = performance.now() + 650;
-    }));
-    return button;
-  });
-  if (!visible.length) {
-    const empty = document.createElement("p");
-    empty.className = "inventory-empty";
-    empty.textContent = state.inventoryQuery ? `No discoveries match “${state.inventoryQuery}”.` : "Your discoveries will gather here.";
-    controls.push(empty);
-  }
-  els.wordList.replaceChildren(...controls);
-  document.querySelector(".inventory")?.classList.toggle("has-many-words", state.words.length >= 12);
-  els.inventorySearch.value = state.inventoryQuery;
-  els.inventorySearchClear.hidden = !state.inventoryQuery;
-  els.inventorySearchStatus.textContent = state.inventoryQuery
-    ? `${visible.length} of ${state.words.length} discovered words shown.`
-    : `${state.words.length} discovered words.`;
-  if (focusedWord) {
-    const restoredFocus = [...els.wordList.querySelectorAll(".inventory-word")].find((button) => button.dataset.word === focusedWord);
-    restoredFocus?.focus({ preventScroll: true });
-  }
-  const focusKey = state.inventoryFocusWord;
-  if (focusKey) {
-    const focusElement = [...els.wordList.querySelectorAll(".inventory-word")].find((button) => button.dataset.word === focusKey);
-    if (focusElement) {
-      focusElement.classList.add("new-discovery");
-      requestAnimationFrame(() => focusElement.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" }));
-      setTimeout(() => focusElement.classList.remove("new-discovery"), 1000);
-    }
-    state.inventoryFocusWord = "";
-  }
-  updateHud();
+  syncConceptMatter();
 }
 
 function renderBoard(newId = null) {
+  closeMolecularMemoryPanels();
+  syncMolecularMemories();
   const focusedId = els.boardItems.contains(document.activeElement) ? document.activeElement.closest?.(".board-word")?.dataset.id : "";
   const existing = new Map([...els.boardItems.querySelectorAll(".board-word")].map((element) => [element.dataset.id, element]));
   const ordered = state.nodes.map((node) => {
@@ -5474,6 +6396,7 @@ function renderBoard(newId = null) {
   });
   existing.forEach((element) => element.remove());
   els.boardItems.append(...ordered);
+  syncMolecularMemories();
   boardGeometryVersion += 1;
   els.boardGuide.classList.toggle("hidden", state.nodes.length > 0);
   els.boardGuide.setAttribute("aria-hidden", String(state.nodes.length > 0));
@@ -5482,6 +6405,8 @@ function renderBoard(newId = null) {
   syncSelectedNodeState();
   updateBoardTools();
   syncFirstOrbitGuide();
+  conceptBondRuntime?.schedule();
+  combiningBoardRuntime?.sync(combiningBoardView());
   if (focusedId) requestAnimationFrame(() => els.boardItems.querySelector(`[data-id="${CSS.escape(focusedId)}"]`)?.focus({ preventScroll: true }));
 }
 
@@ -5498,15 +6423,23 @@ function syncSelectedNodeState() {
   }
   els.tapChainStatus.hidden = !selected;
   els.board.classList.toggle("tap-chain-active", Boolean(selected));
-  if (selected) els.tapChainText.textContent = `${selected.item.word} armed · tap another word`;
+  renderInventory.syncSelection?.();
+  const collectionInstruction = document.getElementById("collectionInstruction");
+  if (collectionInstruction) collectionInstruction.textContent = selected
+    ? `${selected.item.word} selected. Choose another word to combine.`
+    : "Choose a word to start. Pick a second to combine.";
+  if (selected) els.tapChainText.textContent = `${selected.item.word} + choose another word`;
   else clearBoardAnnouncement("tap-chain");
+  wordOrbitRuntime?.render();
+  syncFirstOrbitGuide();
+  conceptBondRuntime?.schedule();
 }
 
 function cancelTapChain({ announce = false } = {}) {
   if (state.selectedNodeId == null) return false;
   state.selectedNodeId = null;
   syncSelectedNodeState();
-  if (announce) showAlchemy("Tap chain cancelled.");
+  if (announce) showAlchemy("Word deselected.");
   return true;
 }
 
@@ -5524,7 +6457,8 @@ function boardHistorySnapshot() {
     progressRevision: state.history.length,
     nextId: state.nextId,
     topZ: state.topZ,
-    nodes: structuredClone(state.nodes.filter((node) => !node.revealRole && !node.item.ghost))
+    nodes: structuredClone(state.nodes.filter((node) => !node.revealRole && !node.item.ghost)),
+    conceptMatter: structuredClone(conceptMatterApp.sanitize(state.conceptMatter))
   };
 }
 
@@ -5535,8 +6469,12 @@ function boardHistoryFingerprint(snapshot) {
     Math.round(Number(node.x) * 10) / 10,
     Math.round(Number(node.y) * 10) / 10,
     Number(node.z) || 0,
-    Boolean(node.cosmicTwist)
-  ]));
+    Boolean(node.cosmicTwist),
+    String(node.molecularMemoryInstanceId || ""),
+    String(node.conceptMatterMatterId || ""),
+    String(node.conceptMatterFragmentToken || ""),
+    String(node.conceptMatterOperationId || "")
+  ]).concat([["matter", JSON.stringify(conceptMatterApp.sanitize(snapshot?.conceptMatter || {}))]]));
 }
 
 function boardHistoryMatchesRun(snapshot) {
@@ -5571,6 +6509,10 @@ function restoreBoardHistorySnapshot(snapshot) {
   cancelTapChain();
   dismissClearUndo();
   state.nodes = structuredClone(snapshot.nodes);
+  state.conceptMatter = conceptMatterApp.sanitize({
+    ...snapshot.conceptMatter,
+    representation: snapshot.conceptMatter?.representation || conceptMatterRepresentation()
+  });
   state.nextId = Math.max(Number(snapshot.nextId) || 1, ...state.nodes.map((node) => Number(node.id) + 1).filter(Number.isFinite), 1);
   state.topZ = Math.max(Number(snapshot.topZ) || 10, ...state.nodes.map((node) => Number(node.z)).filter(Number.isFinite), 10);
   renderBoard();
@@ -5609,6 +6551,7 @@ function redoBoardEdit() {
 function updateBoardTools() {
   const boardLocked = !state.game || state.finished || state.startingRun || state.reveal.active || state.reveal.pending || state.busyPairs.size > 0;
   els.tidyBoard.disabled = boardLocked || state.nodes.length < 2;
+  if (els.alignConstellation) els.alignConstellation.disabled = boardLocked || state.nodes.length < 2;
   els.resetBoard.disabled = boardLocked || state.nodes.length === 0;
   els.undoBoardAction.disabled = boardLocked || !boardHistory.past.length;
   els.redoBoardAction.disabled = boardLocked || !boardHistory.future.length;
@@ -5658,7 +6601,7 @@ function rectanglesOverlap(leftValue, rightValue, gap = 0) {
 }
 
 function visibleBoardOverlayRectangles(boardRect = els.board.getBoundingClientRect()) {
-  const candidates = [els.rivalGhost, els.ghostPreview, document.querySelector(".board-quick-tools"), document.querySelector(".run-milestone"), els.hintObjective, els.tapChainStatus, els.boardUndo, els.recipeFeedback, els.expectedPairFeedback, els.alchemyNote, els.firstOrbitGuide];
+  const candidates = [els.rivalGhost, els.ghostPreview, els.boardAssistanceRail, document.querySelector(".board-quick-tools"), els.boardCameraControls, document.querySelector(".run-milestone"), document.querySelector("#constellationBloomTrigger"), els.hintObjective, els.helpNudge, els.tapChainStatus, els.boardUndo, els.recipeFeedback, els.expectedPairFeedback, els.alchemyNote, els.firstOrbitGuide];
   return candidates.map((element) => {
     if (!element || element.hidden) return null;
     if (element === els.alchemyNote && !element.classList.contains("show")) return null;
@@ -5672,23 +6615,98 @@ function visibleBoardOverlayRectangles(boardRect = els.board.getBoundingClientRe
   }).filter(Boolean);
 }
 
-function moveBoardNodeOutsideOverlays(node, element, boardRect, size) {
-  const width = Math.max(1, Number(size?.width) || element?.offsetWidth || 1);
-  const height = Math.max(1, Number(size?.height) || element?.offsetHeight || 1);
-  const overlays = visibleBoardOverlayRectangles(boardRect);
+function boardLocalRectangle(element, boardRect = els.board.getBoundingClientRect()) {
+  if (!element || element.hidden || element.offsetParent === null) return null;
+  const bounds = element.getBoundingClientRect();
+  if (bounds.width < 1 || bounds.height < 1) return null;
+  const left = clamp(bounds.left - boardRect.left, 0, boardRect.width);
+  const top = clamp(bounds.top - boardRect.top, 0, boardRect.height);
+  const right = clamp(bounds.right - boardRect.left, 0, boardRect.width);
+  const bottom = clamp(bounds.bottom - boardRect.top, 0, boardRect.height);
+  return right > left && bottom > top
+    ? { id: element.id || undefined, left, top, right, bottom, width: right - left, height: bottom - top }
+    : null;
+}
+
+function measuredPlayableBoardLayout(boardRect = els.board.getBoundingClientRect()) {
+  const mobile = mobilePlayShellActive();
+  if (!mobile) {
+    return calculatePlayableBounds({
+      boardWidth: boardRect.width,
+      boardHeight: boardRect.height,
+      persistentInsets: { top: 5, right: 5, bottom: 5, left: 5 },
+      blockers: visibleBoardOverlayRectangles(boardRect)
+    });
+  }
+
+  const shortLandscape = els.gameScreen?.dataset.playLayout === "short-landscape";
+  const topChrome = [els.boardTopHud]
+    .map((element) => boardLocalRectangle(element, boardRect))
+    .filter(Boolean)
+    .filter((rectangle) => rectangle.top <= Math.min(96, boardRect.height * .32));
+  const top = shortLandscape
+    ? 8
+    : topChrome.reduce((maximum, rectangle) => Math.max(maximum, rectangle.bottom + 8), 8);
+  const blockerElements = [
+    shortLandscape ? els.boardTopHud : null,
+    learningOrbitActive() ? els.firstOrbitGuide : null,
+    els.mobileAssistToggle,
+    els.boardCameraControls,
+    document.querySelector("#constellationBloomTrigger"),
+    state.mode === "scramble" ? els.rivalGhost : null
+  ];
+  const blockers = blockerElements
+    .map((element) => boardLocalRectangle(element, boardRect))
+    .filter(Boolean);
+  const extreme = shortLandscape;
+  const playable = calculatePlayableBounds({
+    boardWidth: boardRect.width,
+    boardHeight: boardRect.height,
+    persistentInsets: { top, right: 8, bottom: 8, left: 8 },
+    blockers,
+    minimum: extreme ? { width: 240, height: 140 } : { width: 280, height: 220 }
+  });
+  els.board?.setAttribute("data-playable-minimum", playable.meetsMinimum ? "met" : "constrained");
+  return playable;
+}
+
+function schedulePlayableBoardRefresh({ cancelGestures = true, reason = "layout" } = {}) {
+  if (!state.game || els.gameScreen.hidden) return;
+  closeMolecularMemoryPanels();
+  if (cancelGestures) {
+    cancelActivePointerGestures();
+    clearDropTargets();
+    ctrlHover.reset({ abandonPending: true });
+  }
+  cancelAnimationFrame(boardLayoutFrame);
+  boardLayoutFrame = requestAnimationFrame(() => {
+    boardLayoutFrame = 0;
+    boardGeometryVersion += 1;
+    if (!refreshRevealLayoutForViewport()) constrainBoardNodes();
+    startCosmos();
+    if (els.atlasDialog.open) renderAtlas();
+    els.board.dataset.playableReason = reason;
+  });
+}
+
+function moveBoardNodeOutsideOverlays(node, element, boardRect, size, layout = measuredPlayableBoardLayout(boardRect)) {
+  const zoom = boardCameraSnapshot().zoom;
+  const width = Math.max(1, element?.offsetWidth || Number(size?.width) / zoom || 1);
+  const height = Math.max(1, element?.offsetHeight || Number(size?.height) / zoom || 1);
+  const worldLayout = boardWorldLayout(boardRect, layout);
+  const overlays = worldLayout.blockers;
   const current = { left: node.x, top: node.y, width, height };
   if (!overlays.some((overlay) => rectanglesOverlap(current, overlay, 6))) return false;
   const occupied = [...els.boardItems.querySelectorAll(".board-word")]
     .filter((candidate) => candidate !== element)
     .map((candidate) => {
-      const bounds = candidate.getBoundingClientRect();
-      return { left: bounds.left - boardRect.left, top: bounds.top - boardRect.top, width: bounds.width, height: bounds.height };
+      return boardElementWorldRect(candidate, boardRect);
     });
   const open = findOpenSpawn(
     { x: node.x, y: node.y },
     { width, height },
     [...occupied, ...overlays],
-    { left: 5, top: 5, width: Math.max(1, boardRect.width - 10), height: Math.max(1, boardRect.height - 10) },
+    { left: worldLayout.left, top: worldLayout.top, width: Math.max(1, worldLayout.width), height: Math.max(1, worldLayout.height) },
     { gap: 8, step: 12 }
   );
   if (!open) return false;
@@ -5698,6 +6716,42 @@ function moveBoardNodeOutsideOverlays(node, element, boardRect, size) {
   node.y = open.y;
   element.style.setProperty("--x", `${node.x}px`);
   element.style.setProperty("--y", `${node.y}px`);
+  return true;
+}
+
+function relocateBoardNodesForHelpNudge() {
+  if (!els.helpNudge || els.helpNudge.hidden || !state.nodes.length) return true;
+  const boardRect = els.board.getBoundingClientRect();
+  const nudgeBounds = els.helpNudge.getBoundingClientRect();
+  const nudge = {
+    left: nudgeBounds.left - boardRect.left,
+    top: nudgeBounds.top - boardRect.top,
+    width: nudgeBounds.width,
+    height: nudgeBounds.height
+  };
+  if (nudge.width < 1 || nudge.height < 1) return false;
+  let moved = false;
+  for (const node of state.nodes) {
+    const element = els.boardItems.querySelector(`[data-id="${node.id}"]`);
+    if (!element) continue;
+    const bounds = element.getBoundingClientRect();
+    const current = {
+      left: bounds.left - boardRect.left,
+      top: bounds.top - boardRect.top,
+      width: bounds.width,
+      height: bounds.height
+    };
+    if (!rectanglesOverlap(current, nudge, 8)) continue;
+    if (!moveBoardNodeOutsideOverlays(node, element, boardRect, bounds)) {
+      hideHelpNudge();
+      return false;
+    }
+    moved = true;
+  }
+  if (moved) {
+    boardGeometryVersion += 1;
+    scheduleRunSave();
+  }
   return true;
 }
 
@@ -5723,6 +6777,7 @@ function packOrbitAroundOverlays(items, bounds, blockers) {
 
 function tidyOrbit(options = {}) {
   if (els.tidyBoard.disabled) return;
+  closeMolecularMemoryPanels();
   const before = options?.silent ? null : boardHistorySnapshot();
   cancelActiveTrayDrag();
   cancelActiveBoardDrag();
@@ -5730,23 +6785,25 @@ function tidyOrbit(options = {}) {
   shiftBoard.reset();
   cancelTapChain();
   dismissClearUndo();
+  boardCameraRuntime?.reset({ reason: "tidy" });
   const boardRect = els.board.getBoundingClientRect();
+  const playable = measuredPlayableBoardLayout(boardRect);
   const measured = state.nodes.map((node) => {
     const rect = els.boardItems.querySelector(`[data-id="${node.id}"]`)?.getBoundingClientRect();
     return rect ? { id: node.id, width: rect.width, height: rect.height } : null;
   }).filter(Boolean);
   if (measured.length !== state.nodes.length) return showToast("The orbit is still settling. Try again.");
-  const padding = boardRect.width < 500 ? 10 : 18;
-  const top = boardRect.width < 500 ? 64 : 72;
-  const bottom = boardRect.width < 500 ? 70 : 64;
-  const packBounds = {
-    left: padding,
-    top,
-    width: Math.max(1, boardRect.width - padding * 2),
-    height: Math.max(1, boardRect.height - top - bottom),
-    gap: 10
-  };
-  const packed = packOrbitAroundOverlays(measured, packBounds, visibleBoardOverlayRectangles(boardRect));
+  const compactPadding = boardRect.width < 500 ? 10 : 18;
+  const packBounds = mobilePlayShellActive()
+    ? { left: playable.left, top: playable.top, width: Math.max(1, playable.width), height: Math.max(1, playable.height), gap: 10 }
+    : {
+        left: compactPadding,
+        top: boardRect.width < 500 ? 64 : 72,
+        width: Math.max(1, boardRect.width - compactPadding * 2),
+        height: Math.max(1, boardRect.height - (boardRect.width < 500 ? 64 : 72) - (boardRect.width < 500 ? 70 : 64)),
+        gap: 10
+      };
+  const packed = packOrbitAroundOverlays(measured, packBounds, mobilePlayShellActive() ? playable.blockers : visibleBoardOverlayRectangles(boardRect));
   if (!packed) return showToast("These words need a little more room to tidy safely.");
   const byId = new Map(packed.map((entry) => [String(entry.id), entry]));
   for (const node of state.nodes) {
@@ -5789,23 +6846,121 @@ function constrainBoardNodes() {
     refreshRevealLayoutForViewport();
     return;
   }
-  const boardRect = els.board.getBoundingClientRect();
-  for (const node of state.nodes) {
-    const element = els.boardItems.querySelector(`[data-id="${node.id}"]`);
-    if (!element) continue;
-    const rect = element.getBoundingClientRect();
-    node.x = clamp(node.x, 5, Math.max(5, boardRect.width - rect.width - 5));
-    node.y = clamp(node.y, 5, Math.max(5, boardRect.height - rect.height - 5));
-    element.style.setProperty("--x", `${node.x}px`);
-    element.style.setProperty("--y", `${node.y}px`);
-  }
   boardGeometryVersion += 1;
-  if (boardNodesOverlap()) tidyOrbit({ silent: true });
   scheduleRunSave();
 }
 
 function ctrlHoverAvailable() {
   return Boolean(state.game && !els.gameScreen.hidden && !state.finished && !state.startingRun && !state.pause.active && !state.reveal.active && !state.reveal.pending);
+}
+
+async function alignSemanticConstellation() {
+  if (!els.alignConstellation || els.alignConstellation.disabled) return;
+  const modules = await loadCombiningBoardModules();
+  if (!modules || typeof combiningBoardSemanticAssigner !== "function") {
+    showToast("The semantic constellation is unavailable on this device.");
+    return;
+  }
+  const before = boardHistorySnapshot();
+  closeMolecularMemoryPanels();
+  cancelActiveTrayDrag();
+  cancelActiveBoardDrag();
+  ctrlHover.reset();
+  shiftBoard.reset();
+  cancelTapChain();
+  dismissClearUndo();
+  boardCameraRuntime?.reset({ reason: "align" });
+
+  const boardRect = els.board.getBoundingClientRect();
+  const playable = measuredPlayableBoardLayout(boardRect);
+  const assignmentByWord = new Map(combiningBoardSemanticAssigner({
+    words: state.nodes.map((node) => node.item)
+  }).map((assignment) => [assignment.key, assignment.primaryFacetId]));
+  const groups = new Map();
+  for (const node of state.nodes) {
+    const element = els.boardItems.querySelector(`[data-id="${node.id}"]`);
+    if (!element) return showToast("The constellation is still settling. Try again.");
+    const bounds = element.getBoundingClientRect();
+    const facet = assignmentByWord.get(inventoryKey(node.item)) || "other";
+    if (!groups.has(facet)) groups.set(facet, []);
+    groups.get(facet).push({ node, element, width: bounds.width, height: bounds.height });
+  }
+
+  const orderedGroups = [...groups.entries()]
+    .sort(([left], [right]) => left.localeCompare(right, "en"));
+  const packBounds = {
+    left: playable.left,
+    top: playable.top,
+    width: Math.max(1, playable.width),
+    height: Math.max(1, playable.height),
+    gap: mobilePlayShellActive() ? 8 : 11
+  };
+  const blockers = [...playable.blockers];
+  const placements = [];
+  const radiusX = Math.max(48, packBounds.width * .32);
+  const radiusY = Math.max(42, packBounds.height * .27);
+
+  orderedGroups.forEach(([facet, entries], groupIndex) => {
+    const groupAngle = orderedGroups.length === 1
+      ? -Math.PI / 2
+      : -Math.PI / 2 + (groupIndex / orderedGroups.length) * Math.PI * 2;
+    const center = {
+      x: packBounds.left + packBounds.width * .5 + Math.cos(groupAngle) * radiusX,
+      y: packBounds.top + packBounds.height * .52 + Math.sin(groupAngle) * radiusY
+    };
+    entries
+      .sort((left, right) => String(left.node.id).localeCompare(String(right.node.id), "en"))
+      .forEach((entry, index) => {
+        const ring = index === 0 ? 0 : 34 + Math.floor((index - 1) / 6) * 30;
+        const angle = index === 0 ? 0 : ((index - 1) % 6) / 6 * Math.PI * 2;
+        const preferred = {
+          x: center.x + Math.cos(angle) * ring - entry.width / 2,
+          y: center.y + Math.sin(angle) * ring - entry.height / 2
+        };
+        const open = findOpenSpawn(
+          preferred,
+          { width: entry.width, height: entry.height },
+          [...blockers, ...placements],
+          packBounds,
+          { gap: packBounds.gap, step: 12 }
+        );
+        if (!open) return;
+        placements.push({
+          id: String(entry.node.id),
+          facet,
+          x: open.x,
+          y: open.y,
+          width: entry.width,
+          height: entry.height
+        });
+      });
+  });
+
+  if (placements.length !== state.nodes.length) {
+    showToast("These discoveries need a little more room to align safely.");
+    return;
+  }
+  const byId = new Map(placements.map((placement) => [placement.id, placement]));
+  for (const node of state.nodes) {
+    const placement = byId.get(String(node.id));
+    const element = els.boardItems.querySelector(`[data-id="${node.id}"]`);
+    node.x = placement.x;
+    node.y = placement.y;
+    node.z = ++state.topZ;
+    element.dataset.semanticFacet = placement.facet;
+    element.classList.add("tidying");
+    element.style.setProperty("--x", `${node.x}px`);
+    element.style.setProperty("--y", `${node.y}px`);
+    element.style.zIndex = node.z;
+    setTimeout(() => element.classList.remove("tidying"), 420);
+  }
+  boardGeometryVersion += 1;
+  commitBoardEdit(before, "align constellation");
+  scheduleRunSave();
+  combiningBoardRuntime?.sync(combiningBoardView());
+  showAlchemy("Constellation aligned by meaning · score unchanged.");
+  announceBoardMessage("Words aligned into semantic clusters. You can still move any word freely.", "align-constellation");
+  track("board_aligned", { mode: state.mode, words: state.nodes.length, clusters: orderedGroups.length });
 }
 
 function shiftBoardAvailable() {
@@ -5861,6 +7016,7 @@ function removeShiftBoardNode(node) {
   const before = boardHistorySnapshot();
   if (state.selectedNodeId === current.id) state.selectedNodeId = null;
   state.nodes = state.nodes.filter((entry) => entry.id !== current.id);
+  destroyMolecularMemory(current.id);
   els.boardItems.querySelector(`[data-id="${current.id}"]`)?.remove();
   boardGeometryVersion += 1;
   els.boardGuide.classList.toggle("hidden", state.nodes.length > 0);
@@ -5884,25 +7040,34 @@ function duplicateShiftBoardNode(source, point, { copyNumber = 1, size } = {}) {
   }
   dismissClearUndo();
   shiftHistorySnapshot ||= boardHistorySnapshot();
-  const bounds = els.board.getBoundingClientRect();
+  const boardRect = els.board.getBoundingClientRect();
+  const playable = measuredPlayableBoardLayout(boardRect);
+  const worldLayout = boardWorldLayout(boardRect, playable);
   const width = Math.max(1, Number(size?.width) || 1);
   const height = Math.max(1, Number(size?.height) || 1);
   const copy = {
     id: state.nextId++,
     item: current.item,
-    x: clamp(Number(point?.x) || 0, 5, Math.max(5, bounds.width - width - 5)),
-    y: clamp(Number(point?.y) || 0, 5, Math.max(5, bounds.height - height - 5)),
+    x: clamp(Number(point?.x) || 0, worldLayout.left, Math.max(worldLayout.left, worldLayout.right - width)),
+    y: clamp(Number(point?.y) || 0, worldLayout.top, Math.max(worldLayout.top, worldLayout.bottom - height)),
     z: Math.max(1, (Number(current.z) || 2) - 1),
     cosmicTwist: Boolean(current.cosmicTwist),
+    routeDerived: Boolean(current.routeDerived),
+    molecularMemoryInstanceId: nodeMolecularMemoryInstance(current),
+    conceptMatterMatterId: `matter:${state.orbitGeneration}:copy:${state.nextId}:${Date.now().toString(36)}`,
     shiftStamped: true
   };
   state.nodes.push(copy);
-  els.boardItems.append(createBoardNode(copy, true));
+  const copyElement = createBoardNode(copy, true);
+  els.boardItems.append(copyElement);
+  const copyBounds = copyElement.getBoundingClientRect();
+  moveBoardNodeOutsideOverlays(copy, copyElement, boardRect, copyBounds, playable);
   boardGeometryVersion += 1;
   els.boardGuide.classList.add("hidden");
   els.boardGuide.setAttribute("aria-hidden", "true");
   updateBoardTools();
   syncFirstOrbitGuide();
+  syncMolecularMemories();
   scheduleRunSave();
   if (copyNumber === 1) showAlchemy(`SHIFT COPY · ${current.item.word} is leaving a spaced trail. Drop the held word onto any word to fuse.`);
   return true;
@@ -6003,7 +7168,7 @@ function releaseCtrlHover(event) {
 }
 
 function syncBoardNodeElement(button, node, isNew = false) {
-  button.className = `board-word${isNew ? " appear" : ""}${isNew && node.shiftStamped ? " shift-stamped" : ""}${["wish", "market"].includes(node.item.source) ? " wish" : ""}${node.item.source === "gift" ? " gift" : ""}${node.item.source === "twist" || node.cosmicTwist ? " cosmic-twist" : ""}${node.item.ghost ? " reveal-ghost" : ""}${node.revealRole ? ` reveal-${node.revealRole}` : ""}${state.selectedNodeId === node.id ? " keyboard-selected" : ""}${senseWordActive(node.item) ? " sense-hot" : ""}${firstOrbitWordActive(node.item) ? " tutorial-hot" : ""}`;
+  button.className = `board-word${molecularMemoryRuntime?.has(node.id) ? " molecular-memory-host" : ""}${isNew ? " appear" : ""}${isNew && node.shiftStamped ? " shift-stamped" : ""}${["wish", "market"].includes(node.item.source) ? " wish" : ""}${node.item.source === "gift" ? " gift" : ""}${node.item.source === "worldword" || node.item.source === "worldweaving" ? " worldword" : ""}${node.item.source === "twist" || node.cosmicTwist ? " cosmic-twist" : ""}${node.routeDerived ? " route-derived" : ""}${node.item.ghost ? " reveal-ghost" : ""}${node.revealRole ? ` reveal-${node.revealRole}` : ""}${state.selectedNodeId === node.id ? " keyboard-selected" : ""}${senseWordActive(node.item) ? " sense-hot" : ""}${firstOrbitWordActive(node.item) ? " tutorial-hot" : ""}`;
   button.dataset.id = node.id;
   button.dataset.word = inventoryKey(node.item);
   button.dataset.category = visualWordCategory(node.item.category);
@@ -6025,17 +7190,19 @@ function syncBoardNodeElement(button, node, isNew = false) {
   button.style.setProperty("--y", `${node.y}px`);
   button.style.zIndex = node.z;
   const revealedNode = Boolean(node.revealRole || node.item.ghost);
-  const unavailable = state.finished || state.pause.active || state.reveal.active || state.reveal.pending || revealedNode;
-  button.disabled = unavailable;
-  button.setAttribute("aria-label", revealedNode
-    ? `${node.item.word}, revealed constellation word. Not playable.`
-    : unavailable
-      ? `${node.item.word}. Unavailable while this orbit is locked.`
-      : `${node.item.word}${node.item.source === "gift" ? ", Word Gift bridge" : node.item.source === "twist" || node.cosmicTwist ? ", Cosmic Twist discovery" : ""}. Press to arm, then press another word to combine. You can also drag it onto another word. Hold Shift while hovering to remove; grab it first and then hold Shift while dragging to copy.`);
-  button.setAttribute("aria-pressed", String(state.selectedNodeId === node.id));
+  const matterPresentation = conceptMatterApp.describeNode(node, {
+    revealed: revealedNode,
+    mobile: mobilePlayShellActive(),
+    selected: state.selectedNodeId === node.id
+  });
+  button.disabled = matterPresentation.unavailable;
+  button.setAttribute("aria-label", matterPresentation.label);
+  button.setAttribute("aria-pressed", String(matterPresentation.pressed));
+  if (matterPresentation.keyShortcuts) button.setAttribute("aria-keyshortcuts", matterPresentation.keyShortcuts);
+  else button.removeAttribute("aria-keyshortcuts");
   const renderKey = `${node.item.emoji}␟${node.item.word}`;
   if (button.dataset.renderedWord !== renderKey) {
-    button.innerHTML = `<span class="emoji">${escapeHtml(node.item.emoji)}</span><span>${escapeHtml(node.item.word)}</span>`;
+    button.innerHTML = `<span class="emoji">${escapeHtml(node.item.emoji)}</span><span class="board-word-label">${escapeHtml(node.item.word)}</span>`;
     button.dataset.renderedWord = renderKey;
   }
   return button;
@@ -6050,6 +7217,7 @@ function createBoardNode(node, isNew) {
     if (!handleShiftBoardEnter(node, event)) handleCtrlHoverEnter(node, event);
   });
   button.addEventListener("keydown", (event) => {
+    if (conceptMatterApp.handleInspectionKey(event, node.id)) return;
     if (event.key === "Enter" || event.key === " ") {
       event.preventDefault();
       void selectNodeForTap(node);
@@ -6077,7 +7245,7 @@ async function selectNodeForTap(node) {
   syncSelectedNodeState();
   if (!first) return void selectNodeForTap(node);
   const outcome = await combineNodes(first, node);
-  if ((!outcome || outcome.wrongPath) && getCtrlHoverNode(node.id)) {
+  if ((!outcome || outcome.wrongPath) && (mobilePlayShellActive() || getCtrlHoverNode(node.id))) {
     state.selectedNodeId = node.id;
     syncSelectedNodeState();
     els.tapChainText.textContent = `${node.item.word} still armed · try another word`;
@@ -6091,7 +7259,7 @@ async function selectNodeForTap(node) {
 }
 
 async function activateTrayItem(item) {
-  if (state.pause.active) return;
+  if (state.startingRun || state.busyPairs.size || state.powerups.busy || state.finished || state.pause.active || state.reveal.active || state.reveal.pending) return null;
   resetRecipeFeedback();
   resetExpectedPairFeedback();
   const selected = state.nodes.find((node) => node.id === state.selectedNodeId);
@@ -6106,7 +7274,7 @@ async function activateTrayItem(item) {
   state.selectedNodeId = null;
   syncSelectedNodeState();
   const outcome = await combineTrayWithTarget(item, selected);
-  if ((!outcome || outcome.wrongPath) && getCtrlHoverNode(selected.id)) {
+  if ((!outcome || outcome.wrongPath) && (mobilePlayShellActive() || getCtrlHoverNode(selected.id))) {
     state.selectedNodeId = selected.id;
     syncSelectedNodeState();
     els.tapChainText.textContent = `${selected.item.word} still armed · try another word`;
@@ -6123,8 +7291,8 @@ async function activateTrayItem(item) {
 function placeFromTray(item, point, placement = {}) {
   if (state.finished || state.pause.active || state.reveal.active || state.reveal.pending || item.ghost) return;
   const rect = els.board.getBoundingClientRect();
-  const guideRect = learningOrbitActive() && !els.firstOrbitGuide.hidden ? els.firstOrbitGuide.getBoundingClientRect() : null;
-  const safeTop = guideRect ? clamp(guideRect.bottom - rect.top + 9, 7, Math.max(7, rect.height - 55)) : 7;
+  const playable = measuredPlayableBoardLayout(rect);
+  const worldLayout = boardWorldLayout(rect, playable);
   const spread = state.nodes.length % 7;
   const boardPoint = Number.isFinite(Number(placement?.boardPoint?.x)) && Number.isFinite(Number(placement?.boardPoint?.y))
     ? { x: Number(placement.boardPoint.x), y: Number(placement.boardPoint.y) }
@@ -6132,16 +7300,20 @@ function placeFromTray(item, point, placement = {}) {
   const measuredSize = Number(placement?.size?.width) > 0 && Number(placement?.size?.height) > 0
     ? { width: Number(placement.size.width), height: Number(placement.size.height) }
     : null;
-  let x = boardPoint ? boardPoint.x : point ? point.x - rect.left - 55 : rect.width * .46 + (spread - 3) * 22;
-  let y = boardPoint ? boardPoint.y : point ? point.y - rect.top - 22 : Math.max(safeTop, rect.height * .43 + ((state.nodes.length * 31) % 100) - 50);
+  const spawnSize = measuredSize || measureBoardWord(item);
+  const pointerWorld = point ? boardClientToWorld(point) : null;
+  const defaultCenter = boardCameraRuntime?.screenLocalToWorld({
+    x: playable.left + playable.width * .46 + (spread - 3) * 22,
+    y: playable.top + playable.height * .43 + ((state.nodes.length * 31) % 100) - 50
+  }) || { x: playable.left + playable.width * .46, y: playable.top + playable.height * .43 };
+  let x = boardPoint ? boardPoint.x : pointerWorld ? pointerWorld.x - spawnSize.width / 2 : defaultCenter.x - spawnSize.width / 2;
+  let y = boardPoint ? boardPoint.y : pointerWorld ? pointerWorld.y - spawnSize.height / 2 : defaultCenter.y - spawnSize.height / 2;
   if (!point) {
     const occupied = [...els.boardItems.querySelectorAll(".board-word")].map((element) => {
-      const bounds = element.getBoundingClientRect();
-      return { left: bounds.left - rect.left, top: bounds.top - rect.top, width: bounds.width, height: bounds.height };
-    }).concat(visibleBoardOverlayRectangles(rect));
-    const estimatedWidth = clamp(56 + [...String(item.word || "")].length * 8.2, 82, 220);
-    const open = findOpenSpawn({ x, y }, { width: estimatedWidth, height: 44 }, occupied, {
-      left: 7, top: safeTop, width: Math.max(1, rect.width - 14), height: Math.max(1, rect.height - safeTop - 7)
+      return boardElementWorldRect(element, rect);
+    }).concat(worldLayout.blockers);
+    const open = findOpenSpawn({ x, y }, spawnSize, occupied, {
+      left: worldLayout.left, top: worldLayout.top, width: Math.max(1, worldLayout.width), height: Math.max(1, worldLayout.height)
     });
     if (open) ({ x, y } = open);
   }
@@ -6194,33 +7366,50 @@ function rememberPointerPosition(event) {
 function cancelActivePointerGestures() {
   cancelActiveTrayDrag();
   cancelActiveBoardDrag();
+  boardCameraRuntime?.cancelGestures();
   shiftBoard.reset();
 }
 
-function pointInsideBoard(point, cachedRect = null) {
+function pointInsideBoard(point, cachedRect = null, cachedPlayable = null) {
   const rect = cachedRect || els.board.getBoundingClientRect();
-  return point.x >= rect.left && point.x <= rect.right && point.y >= rect.top && point.y <= rect.bottom;
+  const playable = cachedPlayable || measuredPlayableBoardLayout(rect);
+  return point.x >= rect.left + playable.left
+    && point.x <= rect.left + playable.right
+    && point.y >= rect.top + playable.top
+    && point.y <= rect.top + playable.bottom;
 }
 
-function trayShiftBoardPoint(point, size, cachedRect = null) {
+function trayShiftBoardPoint(point, size, cachedRect = null, cachedPlayable = null) {
   const rect = cachedRect || els.board.getBoundingClientRect();
+  const playable = cachedPlayable || measuredPlayableBoardLayout(rect);
+  const worldLayout = boardWorldLayout(rect, playable);
   const width = Math.max(1, Number(size?.width) || 1);
   const height = Math.max(1, Number(size?.height) || 1);
+  const worldPoint = boardClientToWorld(point);
   return {
-    x: clamp(Number(point?.x) - rect.left - width / 2, 5, Math.max(5, rect.width - width - 5)),
-    y: clamp(Number(point?.y) - rect.top - height / 2, 5, Math.max(5, rect.height - height - 5))
+    x: clamp(worldPoint.x - width / 2, worldLayout.left, Math.max(worldLayout.left, worldLayout.right - width)),
+    y: clamp(worldPoint.y - height / 2, worldLayout.top, Math.max(worldLayout.top, worldLayout.bottom - height))
   };
 }
 
 function measureBoardWord(item) {
+  const options = arguments[1] && typeof arguments[1] === "object" ? arguments[1] : {};
+  const instanceId = String(options.instanceId || latestMolecularMemoryInstance(item?.word) || "");
+  const matterSize = conceptMatterApp?.estimateSize({
+    word: item?.word,
+    instanceId,
+    history: state.history,
+    representation: conceptMatterRepresentation()
+  });
+  if (matterSize) return { width: matterSize.width, height: matterSize.height };
   const probe = document.createElement("button");
   probe.type = "button";
   probe.className = "board-word board-word-measure";
   probe.tabIndex = -1;
   probe.setAttribute("aria-hidden", "true");
-  probe.innerHTML = `<span class="emoji">${escapeHtml(item.emoji)}</span><span>${escapeHtml(item.word)}</span>`;
+  probe.innerHTML = `<span class="emoji">${escapeHtml(item.emoji)}</span><span class="board-word-label">${escapeHtml(item.word)}</span>`;
   els.boardItems.append(probe);
-  const bounds = probe.getBoundingClientRect();
+  const bounds = { width: probe.offsetWidth, height: probe.offsetHeight };
   probe.remove();
   return { width: Math.max(1, bounds.width), height: Math.max(1, bounds.height) };
 }
@@ -6239,9 +7428,11 @@ function eligibleDropCandidates(excludeId = null) {
 }
 
 function captureDropGeometry(excludeId = null) {
+  const boardRect = els.board.getBoundingClientRect();
   return {
     version: boardGeometryVersion,
-    boardRect: els.board.getBoundingClientRect(),
+    boardRect,
+    playable: measuredPlayableBoardLayout(boardRect),
     candidates: eligibleDropCandidates(excludeId)
   };
 }
@@ -6311,12 +7502,13 @@ function setDropTarget(resolution, sourceItem, geometry = null) {
   els.dropPairPreview.classList.toggle("ambiguous", resolution.ambiguous);
   els.dropPairPreview.hidden = false;
   els.dropPairPreview.style.setProperty("--preview-x", `${targetRect ? targetRect.left + targetRect.width / 2 - boardRect.left : boardRect.width / 2}px`);
-  els.dropPairPreview.style.setProperty("--preview-y", `${targetRect ? Math.max(62, targetRect.top - boardRect.top - 6) : 78}px`);
+  const previewTop = geometry?.playable?.top ?? 62;
+  els.dropPairPreview.style.setProperty("--preview-y", `${targetRect ? Math.max(previewTop + 6, targetRect.top - boardRect.top - 6) : previewTop + 16}px`);
 }
 
 function dropTrayItem(item, point, pointerType = "mouse", placement = {}) {
   const geometry = refreshDropGeometry(placement.geometry);
-  if (state.finished || state.pause.active || state.reveal.active || state.reveal.pending || item.ghost || !pointInsideBoard(point, geometry.boardRect)) return;
+  if (state.finished || state.pause.active || state.reveal.active || state.reveal.pending || item.ghost || !pointInsideBoard(point, geometry.boardRect, geometry.playable)) return;
   const resolution = resolveDropCandidate({ point, pointerType, geometry });
   if (resolution.ambiguous) {
     showAlchemy("Move closer to choose a word.", true);
@@ -6361,7 +7553,7 @@ function startTrayPointerDrag(event, item, element, suppressClick) {
       shiftPointerInsideBoard = false;
       return;
     }
-    const boardPoint = trayShiftBoardPoint(point, dragSize, dropGeometry.boardRect);
+    const boardPoint = trayShiftBoardPoint(point, dragSize, dropGeometry.boardRect, dropGeometry.playable);
     activeTrayShiftSource.x = boardPoint.x;
     activeTrayShiftSource.y = boardPoint.y;
     if (!shiftPointerInsideBoard) {
@@ -6386,14 +7578,13 @@ function startTrayPointerDrag(event, item, element, suppressClick) {
     const dy = lastPoint.y - startY;
     if (Math.hypot(dx, dy) > 8) moved = true;
     if (!dragging) {
-      const compactSideRail = matchMedia("(max-width: 700px) and (max-height: 500px) and (min-width: 520px)").matches;
-      const mobileTray = !compactSideRail
-        && matchMedia("(max-width: 700px), (max-width: 900px) and (orientation: portrait)").matches;
-      const headingTowardBoard = mobileTray
-        ? dy < -8 && Math.abs(dy) > Math.abs(dx) * .65
-        : dx < -8 && Math.abs(dx) > Math.abs(dy) * .65;
+      const stackedTray = els.gameScreen?.dataset.playLayout === "stacked";
+      const headingTowardBoard = stackedTray
+        ? dy < -10 && Math.abs(dy) > Math.abs(dx) * 1.15
+        : dx < -10 && Math.abs(dx) > Math.abs(dy) * 1.15;
       if (!moved || !headingTowardBoard) return;
       dragging = true;
+      conceptMatterApp?.close({ restoreFocus: false, reason: "tray-drag" });
       resetCosmeticDragTrail(state);
       cancelTapChain();
       dismissClearUndo();
@@ -6409,7 +7600,7 @@ function startTrayPointerDrag(event, item, element, suppressClick) {
       document.body.append(ghost);
       dragSize = measureBoardWord(item);
       dropGeometry = captureDropGeometry();
-      const origin = trayShiftBoardPoint(lastPoint, dragSize, dropGeometry.boardRect);
+      const origin = trayShiftBoardPoint(lastPoint, dragSize, dropGeometry.boardRect, dropGeometry.playable);
       activeTrayShiftSource = {
         id: `tray-shift-${state.orbitGeneration}-${pointerId}`,
         item,
@@ -6431,7 +7622,7 @@ function startTrayPointerDrag(event, item, element, suppressClick) {
     setDropTarget(resolveDropCandidate({ point: lastPoint, pointerType, geometry: dropGeometry }), item, dropGeometry);
   };
 
-  const cleanup = () => {
+  const cleanup = ({ restore = false } = {}) => {
     if (cleaned) return;
     cleaned = true;
     window.removeEventListener("pointermove", update);
@@ -6442,20 +7633,26 @@ function startTrayPointerDrag(event, item, element, suppressClick) {
     ghost?.remove();
     clearDropTargets();
     if (shiftDragStarted) shiftBoard.endDrag();
-    commitShiftBoardHistory();
+    if (restore && shiftHistorySnapshot) {
+      const snapshot = shiftHistorySnapshot;
+      shiftHistorySnapshot = null;
+      restoreBoardHistorySnapshot(snapshot);
+    } else {
+      commitShiftBoardHistory();
+    }
     activeTrayShiftSource = null;
     if (shiftArmedByPointer) shiftBoard.setHeld(false);
-    if (activeTrayDragCleanup === cleanup) activeTrayDragCleanup = null;
+    activeTrayDragCleanup = null;
   };
   const end = (upEvent) => {
     if (upEvent.pointerId !== pointerId) return;
     lastPoint = { x: upEvent.clientX, y: upEvent.clientY };
     if (moved) suppressClick();
     dropGeometry = dragging ? refreshDropGeometry(dropGeometry) : dropGeometry;
-    const shouldDrop = dragging && pointInsideBoard(lastPoint, dropGeometry?.boardRect);
+    const shouldDrop = dragging && pointInsideBoard(lastPoint, dropGeometry?.boardRect, dropGeometry?.playable);
     if (dragging) updateShiftTrail(lastPoint);
     dropGeometry = dragging ? refreshDropGeometry(dropGeometry) : dropGeometry;
-    const placement = shouldDrop && dragSize ? { boardPoint: trayShiftBoardPoint(lastPoint, dragSize), size: dragSize } : {};
+    const placement = shouldDrop && dragSize ? { boardPoint: trayShiftBoardPoint(lastPoint, dragSize, dropGeometry?.boardRect, dropGeometry?.playable), size: dragSize } : {};
     if (shouldDrop) placement.geometry = dropGeometry;
     cleanup();
     if (shouldDrop) dropTrayItem(item, lastPoint, pointerType, placement);
@@ -6463,10 +7660,10 @@ function startTrayPointerDrag(event, item, element, suppressClick) {
   const cancel = (cancelEvent) => {
     if (cancelEvent?.pointerId != null && cancelEvent.pointerId !== pointerId) return;
     if (moved) suppressClick();
-    cleanup();
+    cleanup({ restore: true });
   };
 
-  activeTrayDragCleanup = cleanup;
+  activeTrayDragCleanup = () => cleanup({ restore: true });
   element.setPointerCapture(event.pointerId);
   window.addEventListener("pointermove", update);
   window.addEventListener("pointerup", end);
@@ -6476,22 +7673,42 @@ function startTrayPointerDrag(event, item, element, suppressClick) {
 
 function addNode(item, x, y, options = {}) {
   dismissClearUndo();
-  const bounds = els.board.getBoundingClientRect();
+  const boardRect = els.board.getBoundingClientRect();
+  const playable = measuredPlayableBoardLayout(boardRect);
   const { size, inset: requestedInset, ...nodeOptions } = options;
+  const requestedMatterId = String(nodeOptions.conceptMatterMatterId || "").slice(0, 180);
+  delete nodeOptions.conceptMatterMatterId;
   const allowOutOfBounds = nodeOptions.allowOutOfBounds === true;
   delete nodeOptions.allowOutOfBounds;
-  const width = Number(size?.width) > 0 ? Number(size.width) : 155;
-  const height = Number(size?.height) > 0 ? Number(size.height) : 54;
+  const resolvedMemoryInstanceId = String(nodeOptions.molecularMemoryInstanceId || latestMolecularMemoryInstance(item?.word) || "");
+  const estimatedSize = conceptMatterApp?.estimateSize({
+    word: item?.word,
+    instanceId: resolvedMemoryInstanceId,
+    history: state.history,
+    representation: conceptMatterRepresentation()
+  });
+  const width = Number(size?.width) > 0 ? Number(size.width) : estimatedSize?.width || 155;
+  const height = Number(size?.height) > 0 ? Number(size.height) : estimatedSize?.height || 54;
   const inset = Number.isFinite(Number(requestedInset)) ? clamp(Number(requestedInset), 0, 20) : 8;
+  const nodeId = state.nextId++;
+  const fallback = boardWorldLayout(boardRect, playable);
+  const safeX = Number.isFinite(Number(x)) ? Number(x) : fallback.left + 8;
+  const safeY = Number.isFinite(Number(y)) ? Number(y) : fallback.top + 8;
   const node = {
-    id: state.nextId++, item,
-    x: allowOutOfBounds ? Number(x) || 0 : clamp(x, inset, Math.max(inset, bounds.width - width - inset)),
-    y: allowOutOfBounds ? Number(y) || 0 : clamp(y, inset, Math.max(inset, bounds.height - height - inset)),
+    id: nodeId, item,
+    x: allowOutOfBounds ? safeX : clamp(safeX, -1_000_000 + inset, 1_000_000 - width - inset),
+    y: allowOutOfBounds ? safeY : clamp(safeY, -1_000_000 + inset, 1_000_000 - height - inset),
     z: ++state.topZ,
+    molecularMemoryInstanceId: resolvedMemoryInstanceId,
+    conceptMatterMatterId: requestedMatterId || `matter:${state.orbitGeneration}:${nodeId}:${Date.now().toString(36)}`,
     ...nodeOptions
   };
   state.nodes.push(node);
-  els.boardItems.append(createBoardNode(node, true));
+  const nodeElement = createBoardNode(node, true);
+  els.boardItems.append(nodeElement);
+  if (!allowOutOfBounds && !node.revealRole) {
+    moveBoardNodeOutsideOverlays(node, nodeElement, boardRect, nodeElement.getBoundingClientRect(), playable);
+  }
   boardGeometryVersion += 1;
   els.boardGuide.classList.add("hidden");
   els.boardGuide.setAttribute("aria-hidden", "true");
@@ -6500,8 +7717,13 @@ function addNode(item, x, y, options = {}) {
   syncSelectedNodeState();
   updateBoardTools();
   syncFirstOrbitGuide();
+  if (!node.revealRole && !node.item.ghost) syncMolecularMemories();
   scheduleRunSave();
   return node;
+}
+
+function measuredCombinationAnchor(node, element) {
+  return measuredNodeAnchor(node, element, element ? undefined : measureBoardWord(node.item));
 }
 
 function startNodeDrag(event, node, element) {
@@ -6509,31 +7731,56 @@ function startNodeDrag(event, node, element) {
     event.preventDefault();
     return;
   }
+  if (state.finished && conceptMatterCapabilitiesForState().inspect && !node.revealRole && !node.item.ghost) {
+    event.preventDefault();
+    conceptMatterApp?.inspect(node.id, { pinned: true, focus: event.pointerType !== "mouse", source: "postmatch" });
+    return;
+  }
   if (event.button !== 0 || (!event.isPrimary && event.pointerType !== "mouse") || state.finished || state.pause.active || state.reveal.active || state.reveal.pending || node.revealRole || node.item.ghost || state.busyPairs.has(node.id)) return;
+  molecularMemoryRuntime?.collapse(node.id);
   resetRecipeFeedback();
   event.preventDefault();
   cancelActiveBoardDrag();
   const pointerId = event.pointerId;
   const pointerType = event.pointerType || "mouse";
   const boardRect = els.board.getBoundingClientRect();
+  const playable = measuredPlayableBoardLayout(boardRect);
   const nodeRect = element.getBoundingClientRect();
-  const nodeWidth = nodeRect.width;
-  const nodeHeight = nodeRect.height;
+  const nodeWidth = Math.max(1, element.offsetWidth || nodeRect.width / boardCameraSnapshot().zoom);
+  const nodeHeight = Math.max(1, element.offsetHeight || nodeRect.height / boardCameraSnapshot().zoom);
   let dropGeometry = captureDropGeometry(node.id);
   const startX = event.clientX;
   const startY = event.clientY;
-  const offsetX = event.clientX - nodeRect.left;
-  const offsetY = event.clientY - nodeRect.top;
+  const startWorld = boardClientToWorld(event);
+  const offsetX = startWorld.x - node.x;
+  const offsetY = startWorld.y - node.y;
   const boardBeforeDrag = boardHistorySnapshot();
   let moved = false;
   let highlightFrame = 0;
   let shiftArmedByPointer = false;
+  let holdOpened = false;
+  let holdTimer = 0;
+  let cleaned = false;
   node.z = ++state.topZ;
   element.style.zIndex = node.z;
   element.classList.remove("appear");
   element.setPointerCapture(event.pointerId);
   shiftCopyLimitAnnounced = false;
   shiftBoard.beginDrag(node.id, { x: node.x, y: node.y }, { width: nodeWidth, height: nodeHeight });
+  if (conceptMatterCapabilitiesForState().inspect && conceptMatterApp?.has(node.id)) {
+    holdTimer = window.setTimeout(() => {
+      holdTimer = 0;
+      if (cleaned || moved) return;
+      holdOpened = true;
+      cleanup();
+      try { element.releasePointerCapture?.(pointerId); } catch {}
+      conceptMatterApp?.inspect(node.id, {
+        pinned: true,
+        focus: pointerType !== "mouse",
+        source: pointerType === "touch" ? "touch-hold" : "pointer-hold"
+      });
+    }, conceptMatterApp.holdMs);
+  }
 
   const updatePosition = (moveEvent, highlight = true) => {
     if (moveEvent.pointerId !== pointerId) return;
@@ -6546,16 +7793,26 @@ function startNodeDrag(event, node, element) {
     const point = samples.at(-1) || moveEvent;
     if (!moved && Math.hypot(point.clientX - startX, point.clientY - startY) > dragThreshold(pointerType)) {
       moved = true;
+      if (holdTimer) window.clearTimeout(holdTimer);
+      holdTimer = 0;
+      conceptMatterApp?.close({ restoreFocus: false, reason: "drag" });
       resetCosmeticDragTrail(state);
       element.classList.add("dragging");
       cancelTapChain();
       dismissClearUndo();
     }
     if (!moved) return;
-    node.x = clamp(point.clientX - boardRect.left - offsetX, 5, boardRect.width - nodeWidth - 5);
-    node.y = clamp(point.clientY - boardRect.top - offsetY, 5, boardRect.height - nodeHeight - 5);
+    const worldPoint = boardClientToWorld(point);
+    node.x = clamp(worldPoint.x - offsetX, -1_000_000, 1_000_000 - nodeWidth);
+    node.y = clamp(worldPoint.y - offsetY, -1_000_000, 1_000_000 - nodeHeight);
     element.style.setProperty("--x", `${node.x}px`);
     element.style.setProperty("--y", `${node.y}px`);
+    const screenCenter = boardWorldToScreenLocal({ x: node.x + nodeWidth / 2, y: node.y + nodeHeight / 2 });
+    combiningBoardRuntime?.setDrag({
+      active: true,
+      from: screenCenter,
+      to: { x: point.clientX, y: point.clientY, coordinateSpace: "viewport" }
+    });
     appendCosmeticDragTrail(state, moveEvent, els.board);
     shiftBoard.moveDrag({ x: node.x, y: node.y });
     if (highlight && !highlightFrame) {
@@ -6567,7 +7824,11 @@ function startNodeDrag(event, node, element) {
     }
   };
   const move = (moveEvent) => updatePosition(moveEvent);
-  const cleanup = () => {
+  const cleanup = ({ restore = false } = {}) => {
+    if (cleaned) return;
+    cleaned = true;
+    if (holdTimer) window.clearTimeout(holdTimer);
+    holdTimer = 0;
     if (highlightFrame) cancelAnimationFrame(highlightFrame);
     highlightFrame = 0;
     window.removeEventListener("pointermove", move);
@@ -6575,26 +7836,26 @@ function startNodeDrag(event, node, element) {
     window.removeEventListener("pointercancel", cancel);
     element.removeEventListener("lostpointercapture", cancel);
     element.classList.remove("dragging");
+    combiningBoardRuntime?.setDrag(null);
     clearDropTargets();
     shiftBoard.endDrag();
-    commitShiftBoardHistory();
+    if (restore) {
+      shiftHistorySnapshot = null;
+      restoreBoardHistorySnapshot(boardBeforeDrag);
+    } else {
+      commitShiftBoardHistory();
+    }
     if (shiftArmedByPointer) shiftBoard.setHeld(false);
-    if (activeBoardDragCleanup === cleanup) activeBoardDragCleanup = null;
+    activeBoardDragCleanup = null;
   };
   const end = (upEvent) => {
     if (upEvent.pointerId !== pointerId) return;
+    if (holdOpened) return;
     updatePosition(upEvent, false);
     dropGeometry = refreshDropGeometry(dropGeometry, node.id);
-    const sourceRect = {
-      left: boardRect.left + node.x,
-      top: boardRect.top + node.y,
-      right: boardRect.left + node.x + nodeWidth,
-      bottom: boardRect.top + node.y + nodeHeight,
-      width: nodeWidth,
-      height: nodeHeight
-    };
+    const sourceRect = element.getBoundingClientRect();
     const resolution = moved ? resolveDropCandidate({ point: { x: upEvent.clientX, y: upEvent.clientY }, sourceElement: element, sourceRect, excludeId: node.id, pointerType, geometry: dropGeometry }) : null;
-    if (moved && !resolution?.selected) moveBoardNodeOutsideOverlays(node, element, boardRect, { width: nodeWidth, height: nodeHeight });
+    if (moved && !resolution?.selected) moveBoardNodeOutsideOverlays(node, element, boardRect, { width: nodeWidth, height: nodeHeight }, playable);
     const stampedDuringDrag = Boolean(shiftHistorySnapshot);
     cleanup();
     if (moved && !stampedDuringDrag) commitBoardEdit(boardBeforeDrag, `move ${node.item.word}`);
@@ -6605,9 +7866,9 @@ function startNodeDrag(event, node, element) {
   };
   const cancel = (cancelEvent) => {
     if (cancelEvent?.pointerId != null && cancelEvent.pointerId !== pointerId) return;
-    cleanup();
+    cleanup({ restore: true });
   };
-  activeBoardDragCleanup = cleanup;
+  activeBoardDragCleanup = () => cleanup({ restore: true });
   window.addEventListener("pointermove", move);
   window.addEventListener("pointerup", end);
   window.addEventListener("pointercancel", cancel);
@@ -6615,17 +7876,7 @@ function startNodeDrag(event, node, element) {
 }
 
 function markDropTarget(source, element, pointerType, geometry = null, sourceSize = null) {
-  const boardRect = geometry?.boardRect || els.board.getBoundingClientRect();
-  const width = Number(sourceSize?.width) || element.offsetWidth;
-  const height = Number(sourceSize?.height) || element.offsetHeight;
-  const rect = {
-    left: boardRect.left + source.x,
-    top: boardRect.top + source.y,
-    right: boardRect.left + source.x + width,
-    bottom: boardRect.top + source.y + height,
-    width,
-    height
-  };
+  const rect = element.getBoundingClientRect();
   setDropTarget(resolveDropCandidate({
     point: { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 },
     sourceRect: rect,
@@ -6669,34 +7920,20 @@ function moveLimitEndMessage() {
   return masterRoute ? "Master Route limit reached." : "No moves left.";
 }
 
-function pulsePathGuardNodes(...elements) {
-  for (const element of elements) {
-    if (!element) continue;
-    element.classList.remove("combining", "merging", "rejected");
-    element.classList.add("wrong-path");
-    setTimeout(() => element.classList.remove("wrong-path"), 760);
-  }
-}
-
-function showPathGuardFeedback(a, b, { remembered = false, elements = [] } = {}) {
-  pulsePathGuardNodes(...elements);
-  const message = remembered
-    ? "WRONG PATH · PAIR LOCKED · You already checked this connection. Try a different partner; move unchanged."
-    : `WRONG PATH · PAIR LOCKED · ${a} + ${b} does not follow the guided route to ${state.game?.target || "this target"}. Words kept; move unchanged.`;
-  showAlchemy(message, false, false, {
-    tone: "wrong-path",
-    key: `wrong-path:${pathGuardPairKey(a, b)}`,
-    duration: 3900
-  });
-  playFeedback("uiSelect");
-  return message;
-}
-
 function commitGameOutcome() {
   if (state.finished) return false;
   state.finished = true;
+  cancelHelpNudge();
   stopTimer();
   return true;
+}
+
+function tryConceptMatterReassembly(leftNode, rightNode) {
+  return conceptMatterApp?.tryReassembly(leftNode, rightNode) || null;
+}
+
+function supersedeConceptMatterOperations(...nodes) {
+  return conceptMatterApp?.supersedeOperations(...nodes) || false;
 }
 
 async function combineNodes(a, b) {
@@ -6706,8 +7943,29 @@ async function combineNodes(a, b) {
     showToast(scrambleRuntime?.isCountingDown() ? "Wait for the three-second countdown." : "The live match is reconnecting.", { scope: "global" });
     return;
   }
+  const reassembled = tryConceptMatterReassembly(a, b);
+  if (reassembled) return reassembled;
   if (state.game.moveLimit && state.moves >= state.game.moveLimit) return finishGame(false, moveLimitEndMessage());
-  if (!scrambleActive && pathGuardPairWasRemembered(a.item.word, b.item.word)) {
+  const chemistryGuide = conceptChemistryGuideForState();
+  const chemistryDecision = !scrambleActive
+    ? evaluateConceptChemistryPair(chemistryGuide, { a: a.item.word, b: b.item.word })
+    : { classification: "free", allowed: true, blocked: false };
+  if (chemistryDecision.blocked) {
+    const aElement = els.boardItems.querySelector(`[data-id="${a.id}"]`);
+    const bElement = els.boardItems.querySelector(`[data-id="${b.id}"]`);
+    const message = showConceptChemistryFeedback(a.item.word, b.item.word, chemistryGuide, chemistryDecision, {
+      elements: [aElement, bElement]
+    });
+    if (pathGuardActiveFor()) track("path_guard_blocked", { mode: state.mode, status: "concept-bond" });
+    return {
+      rejected: true,
+      code: "concept_reaction_locked",
+      wrongPath: true,
+      conceptLocked: true,
+      message
+    };
+  }
+  if (!scrambleActive && chemistryDecision.classification === "free" && pathGuardPairWasRemembered(a.item.word, b.item.word)) {
     const aElement = els.boardItems.querySelector(`[data-id="${a.id}"]`);
     const bElement = els.boardItems.querySelector(`[data-id="${b.id}"]`);
     const message = showPathGuardFeedback(a.item.word, b.item.word, {
@@ -6726,6 +7984,8 @@ async function combineNodes(a, b) {
       message
     };
   }
+  closeMolecularMemoryPanels();
+  conceptMatterApp?.close({ restoreFocus: false, reason: "combine" });
   resetExpectedPairFeedback();
   dismissClearUndo();
   const orbitGeneration = state.orbitGeneration;
@@ -6735,8 +7995,6 @@ async function combineNodes(a, b) {
   updateBoardTools();
   const aElement = els.boardItems.querySelector(`[data-id="${a.id}"]`);
   const bElement = els.boardItems.querySelector(`[data-id="${b.id}"]`);
-  const x = (a.x + b.x) / 2;
-  const y = (a.y + b.y) / 2;
   aElement?.classList.remove("appear");
   bElement?.classList.remove("appear");
   aElement?.classList.add("combining");
@@ -6771,6 +8029,9 @@ async function combineNodes(a, b) {
           runToken: state.run?.token
         })
       });
+    }
+    if (!scrambleActive && Object.hasOwn(result || {}, "conceptChemistry")) {
+      acceptConceptChemistryGuide(result.conceptChemistry);
     }
     if (orbitGeneration !== state.orbitGeneration || !state.game || (state.finished && !scrambleActive)) return null;
     aElement?.classList.remove("combining");
@@ -6812,11 +8073,19 @@ async function combineNodes(a, b) {
     touchInventory(known, { focus: newToRun });
     renderInventory();
     if (result.division === "open") {
-      const declaredPolicy = combineAssistance(state.assist, "open");
-      const policy = combineAssistance(declaredPolicy.id, result.assist || "open");
-      state.assist = policy.id;
-      state.scoreMultiplier = cappedScoreMultiplier(state.assist, state.scoreMultiplier, declaredPolicy.scoreMultiplier, policy.scoreMultiplier, result.scoreMultiplier);
-      state.run = { ...state.run, assist: state.assist, assisted: true, division: "open", scoreMultiplier: state.scoreMultiplier };
+      const tipGuided = state.assist === "none"
+        && (result.assist || "none") === "none"
+        && Number(state.powerups?.tipsUsed) > 0;
+      if (tipGuided) {
+        state.scoreMultiplier = cappedScoreMultiplier(state.assist, state.scoreMultiplier, result.scoreMultiplier);
+        state.run = { ...state.run, division: "open", scoreMultiplier: state.scoreMultiplier };
+      } else {
+        const declaredPolicy = combineAssistance(state.assist, "open");
+        const policy = combineAssistance(declaredPolicy.id, result.assist || "open");
+        state.assist = policy.id;
+        state.scoreMultiplier = cappedScoreMultiplier(state.assist, state.scoreMultiplier, declaredPolicy.scoreMultiplier, policy.scoreMultiplier, result.scoreMultiplier);
+        state.run = { ...state.run, assist: state.assist, assisted: true, division: "open", scoreMultiplier: state.scoreMultiplier };
+      }
     }
     if (result.scoringDisabled === true || result.scoreEligible === false) {
       state.scoringDisabled = true;
@@ -6852,7 +8121,24 @@ async function combineNodes(a, b) {
       insight: insight?.text || "",
       contextual: Boolean(journeyMatch || eventAnnotation.context?.collectionMatch),
       context: journeyMatch ? state.journeyContext.kind : eventAnnotation.context?.collectionMatch ? eventAnnotation.context.eventId : "",
-      rarity: result.twisted ? 90 : eventAnnotation.context?.collectionMatch ? 55 : 0
+      rarity: result.twisted ? 90 : eventAnnotation.context?.collectionMatch ? 55 : 0,
+      role: ["backbone", "reagent"].includes(chemistryDecision.classification) ? chemistryDecision.classification : "free",
+      routeStepId: chemistryGuide.allowedPair?.stepId || null,
+      recipeId: chemistryGuide.allowedPair?.recipeId || null,
+      continuityInputIndex: (() => {
+        const continuationWord = chemistryDecision.continuationWord || chemistryGuide.allowedPair?.continuationWord || "";
+        if (continuationWord && inventoryKey(b.item.word) === inventoryKey(continuationWord) && inventoryKey(a.item.word) !== inventoryKey(continuationWord)) return 1;
+        if (continuationWord && inventoryKey(a.item.word) === inventoryKey(continuationWord)) return 0;
+        const aInstanceId = nodeMolecularMemoryInstance(a);
+        const bInstanceId = nodeMolecularMemoryInstance(b);
+        const aDerived = state.history.some((step) => step.outputInstanceId === aInstanceId);
+        const bDerived = state.history.some((step) => step.outputInstanceId === bInstanceId);
+        return bDerived && !aDerived ? 1 : 0;
+      })(),
+      createdAt: new Date().toISOString(),
+      aInstanceId: nodeMolecularMemoryInstance(a),
+      bInstanceId: nodeMolecularMemoryInstance(b),
+      outputInstanceId: `molecule:${state.moves}:${inventoryKey(result.word)}`
     };
     const won = Boolean(!scrambleActive && (result.completed || (secondOrbitActive() && inventoryKey(result.word) === inventoryKey(state.game.target))));
     const outcomeCommitted = won ? commitGameOutcome() : false;
@@ -6900,20 +8186,74 @@ async function combineNodes(a, b) {
     historyStep.routeStepsAdvanced = iqContext.stepsAdvanced;
     historyStep.routeCompleted = iqContext.completed;
     state.history.push(historyStep);
-    if (!scrambleActive) {
-      renderCombinationStory();
-      changeRunIq("success", a.item.word, b.item.word, iqContext);
-    }
+    const outpostCharge = won
+      && !learningOrbitActive()
+      && state.mode !== "explore"
+      && !state.scoringDisabled
+      ? moonWorldweaving().recordRoute(state.history)
+      : null;
+    const routeStoryStep = !scrambleActive && isTargetRouteStoryStep(historyStep);
+    if (!scrambleActive) changeRunIq("success", a.item.word, b.item.word, iqContext);
     const mastery = scrambleActive ? null : recordMasteryStep(historyStep);
-    const aAnchor = measuredNodeAnchor(a, aElement);
-    const bAnchor = measuredNodeAnchor(b, bElement);
+    const aAnchor = measuredCombinationAnchor(a, aElement);
+    const bAnchor = measuredCombinationAnchor(b, bElement);
+    const aScreenAnchor = boardWorldToScreenLocal(aAnchor);
+    const bScreenAnchor = boardWorldToScreenLocal(bAnchor);
+    const derivationPlacement = fusionResultPlacement(aAnchor, bAnchor, measureBoardWord(known));
+    const fusionPresentation = combiningBoardRuntime && combiningBoardFusionDescriptor?.(
+      aScreenAnchor, bScreenAnchor, a.item, b.item, known, newDiscovery,
+      historyStep.routeStepsAdvanced, historyStep.routeCompleted,
+      Boolean(result.twisted), won,
+      sanitizeFeedbackPreferences(profile.feedbackPreferences).fusionAnimation
+    );
+    const fusionEffectsEnabled = Boolean(fusionPresentation && fusionPresentation.effects !== "off");
+    supersedeConceptMatterOperations(a, b);
     state.nodes = state.nodes.filter((node) => node.id !== a.id && node.id !== b.id);
+    destroyMolecularMemory(a.id);
+    destroyMolecularMemory(b.id);
     aElement?.remove();
     bElement?.remove();
     boardGeometryVersion += 1;
-    const resultNode = addNode(known, x, y, { cosmicTwist: Boolean(result.twisted) });
+    const resultNode = addNode(
+      known,
+      derivationPlacement.x,
+      derivationPlacement.y,
+      {
+        cosmicTwist: Boolean(result.twisted),
+        routeDerived: routeStoryStep,
+        molecularMemoryInstanceId: historyStep.outputInstanceId,
+        size: derivationPlacement.size
+      }
+    );
+    syncMolecularMemories();
+    const nextChemistryGuide = conceptChemistryGuideForState();
+    const continueChemistryFromResult = Boolean(
+      spatialBloomSelectorActive()
+      && nextChemistryGuide.strict
+      && nextChemistryGuide.valid
+      && !nextChemistryGuide.complete
+      && inventoryKey(nextChemistryGuide.activeWord) === inventoryKey(known)
+    );
+    if ((mobilePlayShellActive() || continueChemistryFromResult) && !won && (!state.game.moveLimit || state.moves < state.game.moveLimit)) {
+      state.selectedNodeId = resultNode.id;
+      syncSelectedNodeState();
+      announceBoardMessage(
+        continueChemistryFromResult
+          ? `${known.word} created. Its Concept Bond remains active; add ${nextChemistryGuide.requiredPartner}.`
+          : `${known.word} created and anchored. Choose another word.`,
+        "tap-chain"
+      );
+    }
     const resultElement = els.boardItems.querySelector(`[data-id="${resultNode.id}"]`);
     const resultAnchor = measuredNodeAnchor(resultNode, resultElement, measureBoardWord(known));
+    const resultScreenAnchor = boardWorldToScreenLocal(resultAnchor);
+    historyStep.anchorCoordinateSpace = "world-v1";
+    historyStep.anchors = {
+      ingredientA: { x: aAnchor.x, y: aAnchor.y },
+      ingredientB: { x: bAnchor.x, y: bAnchor.y },
+      result: { x: resultAnchor.x, y: resultAnchor.y }
+    };
+    if (fusionEffectsEnabled) resultElement?.classList.add("fusion-materializing");
     state.trails.push({
       ax: aAnchor.x,
       ay: aAnchor.y,
@@ -6924,20 +8264,70 @@ async function combineNodes(a, b) {
     });
     if (state.trails.length > MAX_TRANSIENT_TRAILS) state.trails.splice(0, state.trails.length - MAX_TRANSIENT_TRAILS);
     appendCosmeticFusionBurst(state, resultAnchor.x, resultAnchor.y);
-    const authoredGoldenPair = !result.twisted
-      ? await playGoldenPairAnimation(a.item, b.item, known)
-      : false;
+    const goldenPairPlayback = !result.twisted && !scrambleActive
+      ? await playGoldenPairAnimation(a.item, b.item, known, {
+          major: won || foundationalMeteorFusion(a.item, b.item)
+        })
+      : null;
+    const authoredGoldenPair = goldenPairPlayback?.authored === true;
+    const goldenPairPlayed = goldenPairPlayback?.played === true;
+    const goldenPairDurationMs = Number(goldenPairPlayback?.duration) || 0;
+    const goldenPairReducedMotion = goldenPairPlayback?.reducedMotion === true;
+    if (goldenPairPlayed) {
+      combiningBoardRuntime?.cancelFusion();
+      resultElement?.classList.remove("fusion-materializing");
+    } else if (fusionPresentation) {
+      combiningBoardRuntime?.beginFusion(fusionPresentation);
+      const fusionRelease = combiningBoardRuntime?.commitFusion({
+        ...fusionPresentation,
+        at: resultScreenAnchor
+      });
+      const materializeDelay = Math.max(0, Number(fusionRelease?.scene?.fusion?.durationMs) || 0);
+      if (materializeDelay) setTimeout(() => resultElement?.classList.remove("fusion-materializing"), materializeDelay);
+      else resultElement?.classList.remove("fusion-materializing");
+    }
+    scheduleRunSave();
     const celebrationStartedAt = won ? performance.now() : 0;
     resetBoardHistory();
     const universeLabel = result.universeContext?.label ? ` · ${result.universeContext.label}` : "";
     showAlchemy(result.twisted
       ? `✦ COSMIC TWIST · ${a.item.word} + ${b.item.word} found ${result.emoji} ${result.word} instead of ${result.twist.canonicalWord}. Mix them again for ${result.twist.canonicalWord}.`
       : `${a.item.word} + ${b.item.word} = ${result.emoji} ${result.word}${universeLabel}${insight?.text ? ` · ${insight.text}` : ""}`, false, Boolean(result.twisted));
+    if (outpostCharge?.charged) {
+      const alternate = outpostCharge.multiplier > 1 ? ` · alternate route ×${outpostCharge.multiplier}` : "";
+      queueAlchemyNotice(`MOON OUTPOST · +${outpostCharge.totalMeaning} Meaning${alternate}`, true, false, {
+        key: `moon-outpost:${state.run?.id || state.game?.target || "route"}`,
+        retain: true,
+        maxAge: 10_000
+      });
+    }
+    if (outpostCharge?.project?.recorded) {
+      const project = outpostCharge.project;
+      const label = project.projectCompleted
+        ? "FIRST DAWN"
+        : project.chapterCompleted
+          ? "CHAPTER COMPLETE"
+          : project.corroborated
+            ? "CORROBORATED"
+            : project.perspective ? "NEW PERSPECTIVE" : "FINDING RECORDED";
+      queueAlchemyNotice(`THE HEART · ${label}`, true, false, {
+        key: `moon-heart:${project.milestoneId}:${project.routeKey}`,
+        retain: true,
+        maxAge: 12_000
+      });
+    }
     if (result.completionBlocked && result.remixMessage) {
       queueAlchemyNotice(`TARGET FOUND · ${result.remixMessage}`, true, false, {
         key: `remix:${result.remixMessage}`,
         retain: true,
         maxAge: 10_000
+      });
+    }
+    if (result.completionBlocked && result.worldweavingMessage) {
+      queueAlchemyNotice(`MEANING HAS MEMORY · ${result.worldweavingMessage}`, true, false, {
+        key: `worldweaving:${state.journeyContext?.slotId || inventoryKey(result.word)}`,
+        retain: true,
+        maxAge: 12_000
       });
     }
     let eventDiscovery = null;
@@ -6974,21 +8364,36 @@ async function combineNodes(a, b) {
       firstCompletion,
       outcomeCommitted,
       celebrationStartedAt,
-      authoredGoldenPair
+      authoredGoldenPair,
+      goldenPairPlayed,
+      goldenPairDurationMs,
+      goldenPairReducedMotion
     });
     else if (state.game.moveLimit && state.moves >= state.game.moveLimit) setTimeout(() => finishGame(false, moveLimitEndMessage()), 350);
     return { node: resultNode, completed: won };
   } catch (error) {
     if (orbitGeneration !== state.orbitGeneration || !state.game) return null;
+    if (!scrambleActive && Object.hasOwn(error.payload || {}, "conceptChemistry")) {
+      acceptConceptChemistryGuide(error.payload.conceptChemistry);
+    }
     const wrongPath = !scrambleActive && error.code === "wrong_path";
-    const memory = wrongPath
+    const rejectedChemistryGuide = conceptChemistryGuideForState();
+    const rejectedChemistryDecision = wrongPath
+      ? evaluateConceptChemistryPair(rejectedChemistryGuide, { a: a.item.word, b: b.item.word })
+      : { classification: "free", allowed: true, blocked: false };
+    const conceptLocked = Boolean(wrongPath && rejectedChemistryDecision.blocked);
+    const memory = wrongPath && !conceptLocked
       ? rememberPathGuardPair(a.item.word, b.item.word)
       : { pairKey: "", remembered: false };
     const pathGuardMessage = wrongPath
-      ? showPathGuardFeedback(a.item.word, b.item.word, {
-        remembered: memory.remembered,
-        elements: [aElement, bElement]
-      })
+      ? conceptLocked
+        ? showConceptChemistryFeedback(a.item.word, b.item.word, rejectedChemistryGuide, rejectedChemistryDecision, {
+          elements: [aElement, bElement]
+        })
+        : showPathGuardFeedback(a.item.word, b.item.word, {
+          remembered: memory.remembered,
+          elements: [aElement, bElement]
+        })
       : "";
     if (!wrongPath) {
       for (const element of [aElement, bElement]) {
@@ -7007,9 +8412,6 @@ async function combineNodes(a, b) {
       recipes: authoredInsightCatalog()
     }) : null;
     if (!wrongPath) showAlchemy(nearMiss?.text || error.message, true);
-    if (!scrambleActive && (error.code === "combination_missing" || firstOrbitActive())) {
-      renderCombinationStory({ a: a.item.word, b: b.item.word });
-    }
     if (!scrambleActive && error.code === "combination_missing" && !learningOrbitActive()) {
       changeRunIq("miss", a.item.word, b.item.word);
       scheduleRunSave();
@@ -7029,6 +8431,7 @@ async function combineNodes(a, b) {
         rejected: true,
         code: "wrong_path",
         wrongPath: true,
+        conceptLocked,
         remembered: memory.remembered,
         message: pathGuardMessage
       };
@@ -7041,7 +8444,11 @@ async function combineNodes(a, b) {
     }
     aElement?.classList.remove("combining");
     bElement?.classList.remove("combining");
+    aElement?.classList.remove("merging");
+    bElement?.classList.remove("merging");
     updateBoardTools();
+    wordOrbitRuntime?.render();
+    armHelpNudge();
   }
 }
 
@@ -7281,11 +8688,13 @@ function resetRevealPlayback({ keepConstellation = false } = {}) {
     confirm.querySelector("span").textContent = "Show answer";
   }
   if (!keepConstellation) els.board?.classList.remove("reveal-complete");
+  if (state.game && !state.finished && els.gameScreen?.dataset.playPhase === "reveal") syncPlayPhase();
 }
 
-function openRevealPath() {
+function openRevealPath({ trigger = document.activeElement } = {}) {
   if (!state.game || !state.run || state.startingRun || state.reveal.revealed || state.reveal.active || state.reveal.pending) return;
   if (state.busyPairs.size) return showToast("Wait for the words to finish combining.");
+  mobilePlayChrome?.beforeDialog();
   ctrlHover.reset();
   shiftBoard.reset();
   stopTimer();
@@ -7298,7 +8707,11 @@ function openRevealPath() {
   };
   $("#revealModeWarning").textContent = state.scoringDisabled
     ? "You can watch the answer once."
-    : warnings[state.mode] || "You will get no points for this game.";
+    : warnings[state.mode] || "You can watch the route once, then try a fresh target.";
+  const returnTarget = trigger && els.boardAssistanceRail?.contains(trigger)
+    ? assistanceReturnTrigger(trigger)
+    : trigger;
+  if (returnTarget?.id) els.revealDialog.dataset.returnFocus = returnTarget.id;
   els.revealDialog.showModal();
 }
 
@@ -7653,6 +9066,9 @@ async function playRevealPath(route, { replay = false } = {}) {
   shiftBoard.reset();
   resetRecipeFeedback();
   clearBoardNotices();
+  boardCameraRuntime?.reset({ reason: "reveal" });
+  mobilePlayChrome?.beforeDialog();
+  syncPlayPhase("reveal");
   if (!replay) state.finished = false;
   state.nodes = [];
   resetBoardHistory();
@@ -7768,6 +9184,7 @@ async function playRevealPath(route, { replay = false } = {}) {
   state.reveal.completed = route.length;
   els.board.classList.remove("reveal-active", "reveal-summoning", "reveal-merging", "reveal-resulting", "reveal-paused");
   els.board.classList.add("reveal-complete");
+  syncPlayPhase("result");
   updateRevealController(route.length);
   if (replay) {
     state.reveal.phase = "exiting";
@@ -7870,7 +9287,10 @@ function calculateReward() {
 }
 
 function updateDailyStreak() {
-  if (profile.lastDailyDate === todayKey) return;
+  if (profile.lastDailyDate === todayKey) {
+    profile.dailyCompleted = todayKey;
+    return;
+  }
   const today = Date.parse(`${todayKey}T00:00:00Z`);
   const last = profile.lastDailyDate ? Date.parse(`${profile.lastDailyDate}T00:00:00Z`) : 0;
   const gap = last ? Math.round((today - last) / 86400000) : Infinity;
@@ -7895,7 +9315,7 @@ function buildSignatureResult(won, { training = false, revealed = false } = {}) 
     game: state.game,
     mode: state.mode,
     challengeId: state.game?.challengeId || state.run?.challengeId,
-    assist: state.assist,
+    assist: publishedGuidanceAssist(),
     scoreMultiplier: state.scoreMultiplier,
     scoringDisabled: state.scoringDisabled,
     revealed
@@ -8067,6 +9487,14 @@ function continueJourneyFromResult(view) {
   });
 }
 
+function commitWorldweavingResult() {
+  return moonWorldweaving().commitResult();
+}
+
+function renderWorldweavingResult(outcome) {
+  moonWorldweaving().renderResult(outcome);
+}
+
 function waitForPaints(count = 1) {
   const total = Math.max(1, Math.floor(Number(count) || 1));
   if (document.hidden || typeof requestAnimationFrame !== "function") return wait(0);
@@ -8095,6 +9523,9 @@ async function presentResultAfterCelebration({
   won,
   revealed,
   authoredGoldenPair,
+  goldenPairPlayed,
+  goldenPairDurationMs,
+  goldenPairReducedMotion,
   celebrationStartedAt,
   gate,
   audio
@@ -8108,12 +9539,13 @@ async function presentResultAfterCelebration({
   if (!resultPresentationIsCurrent(snapshot)) return false;
 
   if (won) {
-    const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const reduced = goldenPairReducedMotion === true || matchMedia("(prefers-reduced-motion: reduce)").matches;
     const fullHold = victoryHandoffHoldMs({
       won: true,
       revealed: revealed === true,
-      authoredGoldenPair: authoredGoldenPair === true,
-      reducedMotion: reduced
+      authoredGoldenPair: authoredGoldenPair === true || goldenPairPlayed === true,
+      reducedMotion: reduced,
+      goldenPairDurationMs
     });
     const elapsed = celebrationStartedAt > 0
       ? Math.max(0, performance.now() - celebrationStartedAt)
@@ -8136,7 +9568,10 @@ function finishGame(won, reason = "", {
   firstCompletion = false,
   outcomeCommitted = false,
   celebrationStartedAt = 0,
-  authoredGoldenPair = false
+  authoredGoldenPair = false,
+  goldenPairPlayed = false,
+  goldenPairDurationMs = 0,
+  goldenPairReducedMotion = false
 } = {}) {
   if (state.finished && !outcomeCommitted) return;
   if (els.pauseDialog.open) {
@@ -8154,6 +9589,8 @@ function finishGame(won, reason = "", {
   resetRecipeFeedback();
   clearBoardNotices();
   state.finished = true;
+  mobilePlayChrome?.beforeDialog();
+  syncPlayPhase("result");
   renderHintObjective();
   resetBoardHistory();
   syncFirstOrbitGuide();
@@ -8208,15 +9645,16 @@ function finishGame(won, reason = "", {
   let voyageProgressAdvanced = false;
   const rewardRunId = String(state.run?.id || "").trim();
   const progressionAlreadyGranted = Boolean(rewardRunId && sanitizeRewardedRunIds(profile.rewardedRunIds).includes(rewardRunId));
+  const worldweavingOutcome = won ? commitWorldweavingResult() : null;
   state.resultAction = returnHome;
   $("#rankResultCard").hidden = isStaticBeta || !won || assisted;
   $("#resultLeaderboard").hidden = isStaticBeta || !won || assisted || !state.run?.ranked;
   $("#assistResultCard").hidden = !assisted;
   $("#partialAssistResultCard").hidden = !partialAssist;
   if (partialAssist) {
-    const policy = assistancePolicy(state.assist);
-    $("#partialAssistScore").textContent = `${Math.round(state.scoreMultiplier * 100)}% SCORE`;
-    $("#partialAssistDetail").textContent = `${policy.label} kept this result score-eligible in Open. Stardust and verified score use the same visible reduction.`;
+    const policy = assistancePolicy(publishedGuidanceAssist());
+    $("#partialAssistScore").textContent = `${scoreMultiplierPercent(state.scoreMultiplier)}% SCORE`;
+    $("#partialAssistDetail").textContent = `${policy.label} kept this result score-eligible in Open. Verified score and Stardust use this reduction; Star Credit rewards are reduced too.`;
   }
   if (assisted) $("#assistResultCard small").textContent = training
     ? "Training is never scored and grants no leaderboard place, Stardust, mastery, saved discoveries, streak progress, or rewards."
@@ -8230,7 +9668,6 @@ function finishGame(won, reason = "", {
     reward = calculateReward();
     if (state.mode === "daily") {
       updateDailyStreak();
-      state.resultAction = () => void beginMode("reach");
     }
     if (state.mode === "weekly") {
       profile.weekly.stage += 1;
@@ -8260,11 +9697,16 @@ function finishGame(won, reason = "", {
       }
     } else if (state.journeyContext?.kind === "event") {
       state.resultAction = () => continueJourneyFromResult("event");
+    } else if (state.journeyContext?.kind === "moon-project") {
+      if (worldweavingOutcome?.rewardStardust) {
+        reward.reward += worldweavingOutcome.rewardStardust;
+        reward.reason += ` · First Dawn +${worldweavingOutcome.rewardStardust}`;
+      }
     }
     if (partialAssist) {
       const baseReward = reward.reward;
       reward.reward = Math.max(1, Math.round(baseReward * state.scoreMultiplier));
-      reward.reason += ` · Open ${Math.round(state.scoreMultiplier * 100)}% of ${baseReward}`;
+      reward.reason += ` · Open ${scoreMultiplierPercent(state.scoreMultiplier)}% of ${baseReward}`;
     }
     if (state.eventRewardGranted) {
       reward.reward += state.eventRewardGranted;
@@ -8296,8 +9738,7 @@ function finishGame(won, reason = "", {
           }));
         };
       } else {
-        const nextMode = homeMenuState().dailyAvailable ? "daily" : "reach";
-        state.resultAction = () => void beginMode(nextMode);
+        state.resultAction = () => void beginMode("reach");
       }
     }
   } else if (won && revealed) {
@@ -8329,7 +9770,7 @@ function finishGame(won, reason = "", {
     ? firstTraining ? `One combination · ${formatTime(elapsed)}` : `${state.history.length} combinations · ${formatTime(elapsed)}`
     : revealed
     ? `${state.reveal.route.length} combinations · No points`
-    : `${state.newDiscoveries} words found · ${state.moves} moves${timeStat}${runIqStat}${partialAssist ? ` · ${Math.round(state.scoreMultiplier * 100)}% points` : ""}`;
+    : `${state.newDiscoveries} words found · ${state.moves} moves${timeStat}${runIqStat}${partialAssist ? ` · ${scoreMultiplierPercent(state.scoreMultiplier)}% points` : ""}`;
   const routeResultNotice = state.routeRankNotice?.message
     ? state.routeRankNotice
     : null;
@@ -8354,22 +9795,24 @@ function finishGame(won, reason = "", {
     els.rewardReason.textContent = reward.reason;
   }
   els.resultPrimary.querySelector("span").textContent = training
-    ? firstTraining
+      ? firstTraining
       ? "Next game"
-      : homeMenuState().dailyAvailable ? "Play today’s word" : "Begin Bronze route"
+      : "Begin Bronze route"
     : revealed ? "Watch answer once"
     : won && state.journeyContext?.kind === "voyage" && voyageProgressAdvanced ? "Continue story"
     : won && state.journeyContext?.kind === "event" ? "View event"
-    : won && ["daily", "weekly"].includes(state.mode) ? "Play next level"
+    : won && state.journeyContext?.kind === "moon-project" ? "Return to The Heart"
+    : won && state.mode === "daily" ? "Return home"
+    : won && state.mode === "weekly" ? "Play next level"
     : "Main menu";
   const adaptiveSeries = adaptiveSeriesEligible();
   const easierNext = adaptiveSeries && (!won || revealed);
   if (easierNext) state.recoveryTarget = state.game.target;
   els.resultRetry.dataset.interludeWin = won && !assisted && !partialAssist && !progressionAlreadyGranted && adaptiveRunEligible() ? profile.wins : "";
   els.resultRetry.hidden = training || (revealed ? false : (assisted && !practiceReplay) || (won && (state.mode === "daily" || state.mode === "weekly")));
-  els.resultRetry.textContent = easierNext ? "Try a fresh challenge"
+  els.resultRetry.textContent = easierNext ? "Try a fresh target"
     : revealed ? "Main menu"
-      : adaptiveSeries ? "Next challenge"
+      : adaptiveSeries ? "Next target"
         : won ? "Play again" : "Try again";
   const resultCanReplayTarget = adaptiveSeries
     && !training
@@ -8377,18 +9820,19 @@ function finishGame(won, reason = "", {
     && (!assisted || practiceReplay)
     && !state.journeyContext;
   els.resultReplay.hidden = !resultCanReplayTarget;
-  els.resultReplay.textContent = won ? "Restart challenge" : "Try this challenge again";
+  els.resultReplay.textContent = "Try this target again";
   els.resultRetry.classList.toggle("primary-action", !els.resultRetry.hidden && (!revealed || easierNext));
   els.resultRetry.classList.toggle("secondary-action", !els.resultRetry.hidden && revealed && !easierNext);
   els.resultPrimary.classList.toggle("primary-action", els.resultRetry.hidden || (revealed && !easierNext));
   els.resultPrimary.classList.remove("secondary-action");
   els.resultPrimary.classList.toggle("quiet-action", !els.resultRetry.hidden && (!revealed || easierNext));
   els.resultShare.hidden = !won || training || !homeMenuState().sharingReady;
-  const openRun = !assisted && (state.assist !== "none" || state.wished);
+  const openRun = !assisted && (partialAssist || state.assist !== "none" || state.wished);
   els.resultShare.querySelector("span").textContent = assisted ? "Share Study card" : openRun ? "Share Open card" : "Challenge a friend";
   renderResultRoute();
   $("#resultDetails").hidden = !sanitizeFeedbackPreferences(profile.feedbackPreferences).resultDetails;
   $("#resultDetails").open = false;
+  renderWorldweavingResult(worldweavingOutcome);
   els.resultDialog.classList.toggle("focus-result", state.focusMode);
   if (firstEverCompletion) {
     announceBoardMessage(`First constellation complete. You made ${state.game.target}.`, "first-discovery");
@@ -8397,6 +9841,9 @@ function finishGame(won, reason = "", {
     won,
     revealed,
     authoredGoldenPair,
+    goldenPairPlayed,
+    goldenPairDurationMs,
+    goldenPairReducedMotion,
     celebrationStartedAt,
     gate: {
       kind: won ? "victory" : "result",
@@ -8476,8 +9923,6 @@ async function submitRankedScore() {
     let verifiedAdoption = null;
     if (sameIdentity) {
       applyServerPlayer(result.player);
-      // The authoritative Signature belongs to the submitted run even when the
-      // result dialog has already closed or placement rendering is unavailable.
       verifiedAdoption = adoptVerifiedSignature(result.verifiedSignature, {
         runId: submission.runId,
         updateCurrent: state.run?.id === submission.runId
@@ -8491,7 +9936,7 @@ async function submitRankedScore() {
     const retryExitLabel = state.scoreSubmission.exitLabel;
     state.run = { ...state.run, submitted: true };
     state.scoreSubmission = { runId: submission.runId, activeSaved: false, pendingSaved: false, inFlight: false, exitAction: null, exitLabel: "" };
-    els.resultPrimary.querySelector("span").textContent = retryExitLabel || "Home";
+    els.resultPrimary.querySelector("span").textContent = retryExitLabel || "Return home";
     state.resultAction = retryExitAction || returnHome;
     els.resultPrimary.disabled = false;
     els.resultRetry.hidden = state.mode === "daily" || state.mode === "weekly";
@@ -8928,7 +10373,8 @@ function renderLeaderboard(board) {
 }
 
 function resumeTimerIfNeeded() {
-  if (state.game?.timeLimit && !cosmeticWorldPreviewActive() && !state.finished && !state.startingRun && !state.pause.active && !state.reveal.active && !state.reveal.pending && !cosmicGate.isActive() && !els.gameScreen.hidden && !els.missionBriefingDialog.open && !els.pauseDialog.open && !els.journeyDialog.open && !els.paywallDialog.open && !els.wishDialog.open && !els.atlasDialog.open && !els.senseDialog.open && !els.shareDialog.open && !els.profileDialog.open && !els.exchangeDialog.open && !els.marketBuyDialog.open && !els.leaderboardDialog.open && !els.revealDialog.open && !els.developerLoginDialog.open && !els.developerDialog.open && !els.developerVfxDialog.open && !$("#recoveryDialog").open) startTimer();
+  if (state.game?.timeLimit && !cosmeticWorldPreviewActive() && !state.finished && !state.startingRun && !state.pause.active && !state.reveal.active && !state.reveal.pending && !cosmicGate.isActive() && !els.gameScreen.hidden && !els.missionBriefingDialog.open && !els.pauseDialog.open && !els.journeyDialog.open && !els.paywallDialog.open && !els.wishDialog.open && !els.atlasDialog.open && !els.senseDialog.open && !els.stardustDialog.open && !els.shareDialog.open && !els.profileDialog.open && !els.exchangeDialog.open && !els.marketBuyDialog.open && !els.leaderboardDialog.open && !els.revealDialog.open && !els.developerLoginDialog.open && !els.developerDialog.open && !els.developerVfxDialog.open && !$("#recoveryDialog").open) startTimer();
+  armHelpNudge();
 }
 
 function renderAtlas() {
@@ -9024,12 +10470,31 @@ async function openProfile() {
 }
 
 function startCosmos() {
-  startCosmosCanvas({
+  const observatory = ensureCombiningBoardRuntime();
+  const revealOwnsCanvas = Boolean(state.reveal?.active || state.reveal?.pending);
+  if (els.gameScreen.dataset.boardPresentation === "observatory" && !observatory && !revealOwnsCanvas && !els.gameScreen.hidden) {
+    void requestCombiningBoardRuntime().then((runtime) => {
+      if (runtime && !state.reveal?.active && !state.reveal?.pending && !els.gameScreen.hidden) startCosmos();
+    });
+  }
+  if (observatory && !revealOwnsCanvas && !els.gameScreen.hidden) {
+    cancelAnimationFrame(state.cosmosFrame);
+    state.cosmosFrame = null;
+    legacyCosmosCanvas = null;
+    observatory.resume("home");
+    observatory.resume("reveal-canvas");
+    observatory.resume("legacy-canvas");
+    observatory.sync(combiningBoardView());
+    return;
+  }
+  observatory?.suspend(revealOwnsCanvas ? "reveal-canvas" : "legacy-canvas");
+  legacyCosmosCanvas = startCosmosCanvas({
     state,
     gameScreen: els.gameScreen,
     board: els.board,
     canvas: els.cosmosCanvas,
     cosmeticLoadout: cosmeticsObservatoryHost?.getPreviewLoadout?.() || profile.cosmetics,
+    getBoardCamera: boardCameraSnapshot,
     drawRevealGraph
   });
 }
@@ -9114,6 +10579,7 @@ function displayBoardNotice(notice) {
   boardNoticeNextTimer = null;
   activeBoardNotice = notice;
   els.alchemyNote.textContent = notice.text;
+  els.alchemyNote.dataset.noticeKind = notice.key;
   els.alchemyNote.classList.toggle("error", notice.error);
   els.alchemyNote.classList.toggle("twist", notice.twist);
   els.alchemyNote.classList.toggle("wrong-path", notice.tone === "wrong-path");
@@ -9129,6 +10595,7 @@ function displayBoardNotice(notice) {
       if (next) displayBoardNotice(next);
       else {
         els.alchemyNote.textContent = "";
+        delete els.alchemyNote.dataset.noticeKind;
         clearBoardAnnouncement("board-notice");
       }
     }, 170);
@@ -9161,6 +10628,7 @@ function clearBoardNotices() {
   clearBoardAnnouncement("board-notice");
   if (!els.alchemyNote) return;
   els.alchemyNote.classList.remove("show", "error", "twist", "wrong-path");
+  delete els.alchemyNote.dataset.noticeKind;
   els.alchemyNote.textContent = "";
 }
 
@@ -9212,18 +10680,26 @@ async function loadBuildIdentity() {
   output.title = version && buildId && version !== buildId ? `Version ${version}` : "Constellore build";
 }
 
-function focusExploreLaunch() {
+function focusExploreLaunch(mode = "explore") {
   const hub = $("#exploreHub");
   if (!hub || !homeMenuState().exploreReady) {
     showToast("Explore unlocks at Silver Route Rank after three completed games.", { scope: "global" });
     return false;
   }
+  const opened = getHomeOrbitController(document)?.openCatalog({
+    trigger: $("#homeForgeCatalogToggle"),
+    focus: false
+  });
+  if (!opened) return false;
   const creator = hub.querySelector(".custom-target-disclosure");
-  if (creator) creator.open = true;
+  if (creator) creator.open = mode === "creator";
+  const destination = mode === "creator"
+    ? creator?.querySelector("summary")
+    : hub.querySelector('[data-mode="explore"]');
   hub.classList.add("launch-intent");
   requestAnimationFrame(() => {
-    hub.querySelector(".custom-target-disclosure > summary")?.focus({ preventScroll: true });
-    hub.scrollIntoView({ behavior: "smooth", block: "center" });
+    destination?.scrollIntoView({ behavior: "instant", block: "center" });
+    destination?.focus({ preventScroll: true });
   });
   setTimeout(() => hub.classList.remove("launch-intent"), 2400);
   return true;
@@ -9237,15 +10713,14 @@ async function handleLaunchIntent(params) {
       return false;
     }
     if (profile.dailyCompleted === todayKey) {
-      if (focusExploreLaunch()) {
-        showToast("Today’s shared word is complete. Explore another guaranteed route.", { scope: "global" });
-      }
+      showToast("Today’s shared word is complete. A new one appears tomorrow.", { scope: "global" });
+      requestAnimationFrame(() => $("#primaryOrbitButton")?.focus({ preventScroll: true }));
       return true;
     }
     await beginMode("daily");
     return true;
   }
-  if (mode === "explore" || mode === "creator") return focusExploreLaunch();
+  if (mode === "explore" || mode === "creator") return focusExploreLaunch(mode);
   return false;
 }
 
@@ -9279,7 +10754,7 @@ function wait(milliseconds) { return new Promise((resolve) => setTimeout(resolve
 function clamp(value, min, max) { return Math.min(Math.max(value, min), max); }
 function escapeHtml(value) { return String(value).replace(/[&<>'"]/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;" })[character]); }
 
-$$('[data-mode]').forEach((button) => button.addEventListener("click", () => beginMode(button.dataset.mode)));
+$$('[data-mode]').forEach((button) => button.addEventListener("click", (event) => beginMode(button.dataset.mode, { trigger: event.currentTarget })));
 $("#primaryOrbitButton").addEventListener("click", beginPrimaryOrbit);
 $("#primaryOrbitSecondary").addEventListener("click", beginPrimarySecondary);
 $("#hubMenuButton").addEventListener("click", openHubMenu);
@@ -9318,11 +10793,16 @@ els.tidyBoard.addEventListener("click", () => {
   tidyOrbit();
   if (els.pauseDialog.open) closePauseMenu();
 });
+els.alignConstellation?.addEventListener("click", () => {
+  void alignSemanticConstellation().finally(() => {
+    if (els.pauseDialog.open) closePauseMenu();
+  });
+});
 els.undoBoardAction.addEventListener("click", undoBoardEdit);
 els.redoBoardAction.addEventListener("click", redoBoardEdit);
 $("#undoBoardClear").addEventListener("click", undoBoardClear);
 $("#cancelTapChain").addEventListener("click", () => cancelTapChain({ announce: true }));
-els.senseButton.addEventListener("click", openPowerups);
+els.senseButton.addEventListener("click", (event) => void openPowerups({ trigger: event.currentTarget }));
 els.remixPill?.addEventListener("click", () => {
   const rules = Array.isArray(state.game?.remixes?.rules) ? state.game.remixes.rules : [];
   if (!rules.length) return;
@@ -9335,23 +10815,62 @@ els.remixPill?.addEventListener("click", () => {
   showAlchemy(message, false, true);
   els.boardAnnouncement.textContent = message;
 });
-els.quickTipShortcut.addEventListener("click", useQuickTip);
-els.wordGiftShortcut.addEventListener("click", useWordGiftShortcut);
-els.senseShortcut.addEventListener("click", useSenseShortcut);
-els.powerupShopShortcut.addEventListener("click", openPowerupShop);
+els.quickTipShortcut.addEventListener("click", useRouteSignalShortcut);
+els.wordGiftShortcut.addEventListener("click", useWordGiftRailShortcut);
+els.senseShortcut.addEventListener("click", useSenseRailShortcut);
+els.revealShortcut.addEventListener("click", useRevealRailShortcut);
+els.powerupShopShortcut.addEventListener("click", () => openPowerupShop({ trigger: els.powerupShopShortcut }));
+bindStardustSupplyTabs({ documentRef: document, dialog: els.stardustDialog });
+$("#stardustHelpLink")?.addEventListener("click", () => {
+  if (els.stardustDialog.open) els.stardustDialog.close();
+  requestAnimationFrame(() => void openPowerups());
+});
 els.expectedPairForm.addEventListener("submit", submitExpectedPairFeedback);
 $("#dismissExpectedPair").addEventListener("click", resetExpectedPairFeedback);
 els.useQuickTip.addEventListener("click", useQuickTip);
+els.helpNudgeAction?.addEventListener("click", () => {
+  hideHelpNudge();
+  void useQuickTip();
+});
+els.helpNudgeDismiss?.addEventListener("click", dismissHelpNudge);
+$("#helpNudgesPreference")?.addEventListener("click", () => {
+  if (sanitizeFeedbackPreferences(profile.feedbackPreferences).helpNudges) armHelpNudge({ restart: true });
+  else cancelHelpNudge();
+});
+$$('[data-spatial-bloom-preference]').forEach((button) => button.addEventListener("click", () => {
+  profile.desktopWordSelector = desktopWordSelectorPreference() === "bloom" ? "inventory" : "bloom";
+  saveProfile({ cloud: false, fields: ["settings"] });
+  syncSpatialBloomSelector({ render: true, reason: "word-selector-preference" });
+  track("desktop_word_selector_changed", { selector: profile.desktopWordSelector });
+}));
 els.useWordGift.addEventListener("click", useWordGift);
-$("#useSense").addEventListener("click", useConstellationSense);
+$("#useSense").addEventListener("click", useSenseShortcut);
 $("#buySense").addEventListener("click", () => buyStardustSupply("star-compass"));
 $("#buyStarCompass")?.addEventListener("click", () => void buyStardustSupply("star-compass"));
 $("#buyStreakShield")?.addEventListener("click", () => void buyStardustSupply("streak-shield"));
-els.rivalGhost.addEventListener("click", toggleRivalGhost);
-els.board.addEventListener("pointerdown", (event) => {
-  if (event.target.closest?.(".board-word, .board-quick-tools, .rival-ghost, .ghost-preview, .tap-chain-status, .board-undo, .reveal-controller, .recipe-feedback, .expected-pair-feedback")) return;
-  cancelTapChain();
+document.addEventListener("keydown", (event) => {
+  if (event.defaultPrevented || event.repeat || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+  const assistanceAccess = els.mobileAssistToggle;
+  if (els.gameScreen.hidden || !assistanceAccess || assistanceAccess.offsetParent === null) return;
+  if (document.querySelector("dialog[open]")) return;
+  const active = document.activeElement;
+  if (active?.matches?.("input, textarea, select, [contenteditable='true']")) return;
+  const shortcutByCode = {
+    Digit1: els.quickTipShortcut,
+    Numpad1: els.quickTipShortcut,
+    Digit2: els.senseShortcut,
+    Numpad2: els.senseShortcut,
+    Digit3: els.wordGiftShortcut,
+    Numpad3: els.wordGiftShortcut,
+    Digit4: els.revealShortcut,
+    Numpad4: els.revealShortcut
+  };
+  const shortcut = shortcutByCode[event.code];
+  if (!shortcut || shortcut.disabled) return;
+  event.preventDefault();
+  shortcut.click();
 });
+els.rivalGhost.addEventListener("click", toggleRivalGhost);
 els.inventorySearch.addEventListener("input", (event) => {
   state.inventoryQuery = event.currentTarget.value.trimStart().slice(0, 60);
   renderInventory();
@@ -9384,8 +10903,9 @@ $("#masteryAtlasTab").addEventListener("click", () => selectAtlasTab("mastery"))
   next.focus();
 }));
 $("#revealPathButton").addEventListener("click", () => {
+  const trigger = assistanceReturnTrigger(els.revealPathButton);
   if (els.senseDialog.open) els.senseDialog.close();
-  requestAnimationFrame(openRevealPath);
+  requestAnimationFrame(() => openRevealPath({ trigger }));
 });
 $("#confirmReveal").addEventListener("click", confirmRevealPath);
 $("#revealPause").addEventListener("click", toggleRevealPause);
@@ -9394,6 +10914,67 @@ $("#revealSkip").addEventListener("click", skipRevealAnimation);
 $("#startPremium").addEventListener("click", () => { closeHubMenu(); profile.premium ? openProfile() : openPremium(); });
 [$("#openObservatory"), $("#customizeButton")].forEach((button) => {
   button?.addEventListener("click", () => void openCosmeticsObservatory({ trigger: button }));
+});
+$("#moonWorldweavingMenuButton")?.addEventListener("click", (event) => {
+  void moonWorldweaving().open({ trigger: event.currentTarget });
+});
+const moonHomeRocket = $("#moonHomeRocket");
+for (const eventName of ["pointerenter", "focus"]) {
+  moonHomeRocket?.addEventListener(eventName, () => {
+    void moonHomeProjectEntry().then((entry) => entry.prepare()).catch(() => {});
+  }, { once: true });
+}
+function restoreMoonHomeRocketAfterFailedHandoff() {
+  return ensureHomePlanetHubBridge()
+    .then((bridge) => bridge?.restoreJourneyAfterHandoff?.() || false)
+    .catch(() => false);
+}
+function restoreMoonHomeRocketAfterHandoffResult(result) {
+  return ensureHomePlanetHubBridge()
+    .then((bridge) => bridge?.restoreJourneyAfterHandoffResult?.(result) || false)
+    .catch(() => false);
+}
+moonHomeRocket?.addEventListener("click", (event) => {
+  const trigger = event.currentTarget;
+  void ensureHomePlanetHubBridge()
+    .then((bridge) => bridge?.stageJourneyActivation?.({ trigger }) ?? true)
+    .then(async (proceed) => {
+      if (!proceed) return false;
+      const result = await moonHomeProjectEntry().then((entry) => entry.activate(trigger));
+      await restoreMoonHomeRocketAfterHandoffResult(result);
+      return result;
+    })
+    .catch(async (error) => {
+      await restoreMoonHomeRocketAfterFailedHandoff();
+      const controller = moonWorldweaving();
+      if (controller.homeProject().journey?.actionKind === "launch") {
+        showSecondarySurfaceFailure(error, "The Moon launch could not begin. Try again.");
+        return false;
+      }
+      return controller.openCurrentProject({
+        trigger,
+        origin: { kind: "home", destination: "journey" }
+      });
+    });
+});
+$("#moonHomeProjectVisit")?.addEventListener("click", (event) => {
+  const trigger = event.currentTarget;
+  void ensureHomePlanetHubBridge()
+    .then((bridge) => bridge?.stageJourneyActivation?.({ trigger }) ?? true)
+    .then(async (proceed) => {
+      if (!proceed) return false;
+      const result = await moonWorldweaving().openCurrentProject({
+        trigger,
+        origin: { kind: "home", destination: "journey" }
+      });
+      await restoreMoonHomeRocketAfterHandoffResult(result);
+      return result;
+    })
+    .catch(async (error) => {
+      await restoreMoonHomeRocketAfterFailedHandoff();
+      showSecondarySurfaceFailure(error, "The Moon project could not be opened. Try again.");
+      return false;
+    });
 });
 $("#wishWord").addEventListener("click", openWish);
 $("#checkoutButton").addEventListener("click", checkoutPremium);
@@ -9485,7 +11066,8 @@ els.profileDialog.querySelectorAll(".profile-disclosure").forEach((section) => s
 $$('[data-close]').forEach((button) => button.addEventListener("click", () => {
   if (button.dataset.close === "revealDialog" && state.reveal.pending) return;
   if (button.dataset.close === "resultDialog") {
-    returnHome();
+    if (["worldweaving", "moon-project"].includes(state.journeyContext?.kind) && state.resultAction) state.resultAction();
+    else returnHome();
     return;
   }
   document.getElementById(button.dataset.close).close();
@@ -9503,6 +11085,12 @@ els.pauseDialog.addEventListener("close", () => {
 els.revealDialog.addEventListener("cancel", (event) => {
   if (state.reveal.pending) event.preventDefault();
 });
+els.revealDialog.addEventListener("close", () => {
+  const returnFocus = els.revealDialog.dataset.returnFocus;
+  delete els.revealDialog.dataset.returnFocus;
+  if (!returnFocus || state.reveal.pending || state.reveal.active || els.gameScreen.hidden || document.querySelector("dialog[open]")) return;
+  requestAnimationFrame(() => document.getElementById(returnFocus)?.focus({ preventScroll: true }));
+});
 els.resultDialog.addEventListener("cancel", (event) => {
   event.preventDefault();
   if (state.startingRun) return;
@@ -9510,11 +11098,24 @@ els.resultDialog.addEventListener("cancel", (event) => {
     showToast("Wait for your score to finish saving.");
     return;
   }
-  returnHome();
+  if (["worldweaving", "moon-project"].includes(state.journeyContext?.kind) && state.resultAction) state.resultAction();
+  else returnHome();
 });
 els.resultDialog.addEventListener("close", () => cosmicGate.clearDialog(els.resultDialog));
+els.senseDialog.addEventListener("close", () => {
+  const returnFocus = els.senseDialog.dataset.returnFocus;
+  delete els.senseDialog.dataset.returnFocus;
+  if (!returnFocus || els.gameScreen.hidden || document.querySelector("dialog[open]")) return;
+  requestAnimationFrame(() => document.getElementById(returnFocus)?.focus({ preventScroll: true }));
+});
+els.stardustDialog.addEventListener("close", () => {
+  const returnFocus = els.stardustDialog.dataset.returnFocus;
+  delete els.stardustDialog.dataset.returnFocus;
+  if (!returnFocus || els.gameScreen.hidden || document.querySelector("dialog[open]")) return;
+  requestAnimationFrame(() => document.getElementById(returnFocus)?.focus({ preventScroll: true }));
+});
 $("#recoveryDialog").addEventListener("cancel", (event) => event.preventDefault());
-[els.paywallDialog, els.wishDialog, els.atlasDialog, els.senseDialog, els.shareDialog, els.profileDialog, els.journeyDialog, els.marketBuyDialog, els.leaderboardDialog, els.revealDialog, els.developerLoginDialog, els.developerDialog, els.developerVfxDialog, $("#recoveryDialog")].forEach((dialog) => dialog.addEventListener("close", () => setTimeout(resumeTimerIfNeeded, 0)));
+[els.paywallDialog, els.wishDialog, els.atlasDialog, els.senseDialog, els.stardustDialog, els.shareDialog, els.profileDialog, els.journeyDialog, els.marketBuyDialog, els.leaderboardDialog, els.revealDialog, els.developerLoginDialog, els.developerDialog, els.developerVfxDialog, $("#recoveryDialog")].forEach((dialog) => dialog.addEventListener("close", () => setTimeout(resumeTimerIfNeeded, 0)));
 els.exchangeDialog.addEventListener("close", () => {
   clearInterval(state.marketTimer);
   state.marketTimer = null;
@@ -9523,12 +11124,20 @@ els.exchangeDialog.addEventListener("close", () => {
 window.addEventListener("resize", () => {
   if (els.gameScreen.hidden) return;
   if (cosmeticsObservatoryHost?.resizePreview?.()) return;
-  requestAnimationFrame(() => {
-    if (!refreshRevealLayoutForViewport()) constrainBoardNodes();
-    startCosmos();
-    if (els.atlasDialog.open) renderAtlas();
-  });
+  schedulePlayableBoardRefresh({ cancelGestures: true, reason: "window-resize" });
 });
+document.addEventListener("pointerdown", (event) => {
+  if (event.target?.closest?.("#board, #wordList")) noteHelpNudgeActivity(event);
+}, { capture: true, passive: true });
+document.addEventListener("keydown", (event) => {
+  if (["Shift", "Control", "Alt", "Meta"].includes(event.key)) return;
+  if (event.target?.closest?.("#board, #wordList, #inventorySearch")) noteHelpNudgeActivity(event);
+}, { capture: true });
+const helpNudgeDialogObserver = new MutationObserver(() => {
+  if (document.querySelector("dialog[open]")) cancelHelpNudge();
+  else armHelpNudge();
+});
+document.querySelectorAll("dialog").forEach((dialog) => helpNudgeDialogObserver.observe(dialog, { attributes: true, attributeFilter: ["open"] }));
 document.addEventListener("pointerdown", primeFeedbackAudio, { once: true, passive: true });
 document.addEventListener("keydown", primeFeedbackAudio, { once: true });
 document.addEventListener("constellore:interlude-enter", enterCosmicInterlude);
@@ -9565,6 +11174,7 @@ window.addEventListener("offline", updateConnection);
 document.addEventListener("visibilitychange", () => {
   gameAudio.setSuspended(document.hidden);
   if (document.hidden) {
+    cancelHelpNudge();
     releaseCtrlHover();
     releaseShiftBoard();
     cancelActivePointerGestures();
@@ -9572,6 +11182,7 @@ document.addEventListener("visibilitychange", () => {
   }
   else {
     wakeRevealPlayback();
+    armHelpNudge();
     if (isStaticBeta) void expectedPairDelivery.flush();
   }
 });
@@ -9595,7 +11206,7 @@ async function boot() {
   const scrambleResume = startupScrambleResume || hasRememberedScrambleMatch();
   const launchIntent = Boolean(sharedChallenge || firstGameLaunchIntent(params.get("mode")));
   const scrambleLaunchIntent = Boolean(scrambleInvite || scrambleResume);
-  const launchMenuHandoff = launchCinematicOutcome.menuHandoff === true;
+  const launchMenuHandoff = startupOpensHome;
   const savedRun = startupResumeSnapshot;
   const dailySense = refillDailySense();
   if (dailySense.refilled) saveProfile({ cloud: false });
@@ -9611,21 +11222,22 @@ async function boot() {
   catch { showToast("Leaderboard and Word Exchange need a connection."); }
   if (profile.playerId && profile.playerToken) await refreshCosmicEventState();
   if (profile.playerId && profile.playerToken) await initializeCloudServices();
-  let scrambleHandled = false;
-  if ((scrambleInvite || scrambleResume) && homeMenuState().onboardingComplete) {
+  if (scrambleInvite || scrambleResume) {
     try {
-      const runtime = await ensureScramble();
-      runtime.setRankedUnlocked(scrambleRankedUnlocked());
-      scrambleHandled = scrambleInvite
-        ? await openScramble({ trigger: $("#scrambleHomeButton"), invite: scrambleInvite })
-        : await runtime.resume();
+      if (scrambleInvite) {
+        await openScramble({ trigger: $("#scrambleHomeButton"), invite: scrambleInvite });
+      } else {
+        const runtime = await ensureScramble();
+        runtime.setRankedUnlocked(scrambleRankedUnlocked());
+        await runtime.resume();
+      }
     } catch (error) {
       showSecondarySurfaceFailure(error, "Your live match could not reconnect.");
     }
   }
   announcePendingScoreRecovery(await retryPendingScoreUploads());
   if ("serviceWorker" in navigator && window.top === window.self) {
-    const serviceWorkerUrl = isStaticBeta ? "./service-worker.js?v=5.0.0-beta.1" : "/play/service-worker.js?v=5.0.0-beta.1";
+    const serviceWorkerUrl = isStaticBeta ? "./service-worker.js?v=5.0.0-beta.4" : "/play/service-worker.js?v=5.0.0-beta.4";
     const serviceWorkerScope = isStaticBeta ? "./" : "/play/";
     navigator.serviceWorker.register(serviceWorkerUrl, {
       scope: serviceWorkerScope,
@@ -9640,7 +11252,7 @@ async function boot() {
         }, { once: true });
         registration.waiting.postMessage({
           type: "CONSTELLORE_ACTIVATE_UPDATE",
-          version: "5.0.0-beta.1"
+          version: "5.0.0-beta.4"
         });
       }
     }).catch(() => {});
@@ -9655,7 +11267,9 @@ async function boot() {
     await startFirstOrbit({ enterThroughGate: false });
     firstGameStarted = true;
   } else if (!restored && !firstGameStarted && sharedChallenge) {
-    if (sharedChallenge.mode === "daily" && !homeMenuState().dailyReady) {
+    if (!homeMenuState().onboardingComplete) {
+      firstGameStarted = await startRequiredOpeningLesson({ enterThroughGate: false });
+    } else if (sharedChallenge.mode === "daily" && !homeMenuState().dailyReady) {
       showToast("Today’s Word unlocks after your first scored Bronze win.", { scope: "global" });
       if (firstGameRequired(profile)) {
         await startFirstOrbit({ enterThroughGate: false });

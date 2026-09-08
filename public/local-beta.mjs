@@ -9,7 +9,7 @@ import {
   localRouteTo,
   localSuggestions,
   lookupLocalCombination
-} from "./local-world.mjs?v=5.0.0-beta.1";
+} from "./local-world.mjs?v=5.0.0-beta.4";
 import {
   adaptiveChallengeProfile,
   adaptiveDifficultyTag,
@@ -21,22 +21,22 @@ import {
   rememberAdaptiveTarget,
   sanitizeAdaptiveDifficultyState,
   selectAdaptiveChallenge
-} from "./adaptive-difficulty.mjs?v=5.0.0-beta.1";
+} from "./adaptive-difficulty.mjs?v=5.0.0-beta.4";
 import {
   createRemixProgressionState,
   getPromotionEligibility,
   getRemixRankPresentation,
   sanitizeRemixProgressionState,
   selectChallengeRemixes
-} from "./remix-progression.mjs?v=5.0.0-beta.1";
+} from "./remix-progression.mjs?v=5.0.0-beta.4";
 import {
   sanitizeRemixReadinessState,
   selectAdaptiveRemixPlan
-} from "./remix-readiness.mjs?v=5.0.0-beta.1";
+} from "./remix-readiness.mjs?v=5.0.0-beta.4";
 import {
   CLASSIC_STARTERS,
   createChallengeStartProfile
-} from "./shuffled-start.mjs?v=5.0.0-beta.1";
+} from "./shuffled-start.mjs?v=5.0.0-beta.4";
 import {
   checkRouteRemixBeforeCombination,
   checkRouteRemixCompletion,
@@ -46,12 +46,13 @@ import {
   markRouteRemixAnswerRevealed,
   recordRouteRemixCombination,
   routeRemixProgress
-} from "./route-remixes.mjs?v=5.0.0-beta.1";
-import { cosmicTwistOptions, cosmicTwistSeedFor, selectCosmicTwist } from "./cosmic-twists.mjs?v=5.0.0-beta.1";
-import { QUICK_TIP_LIMIT, assistancePolicy, combineAssistance, rankSenseCandidates, selectRouteNavigationTip, selectWordGift } from "./engagement-features.mjs?v=5.0.0-beta.1";
-import { annotateUniverseResult, selectUniverse, validateUniverseRoute } from "./universe-director.mjs?v=5.0.0-beta.1";
-import { sanitizeRecipeRating } from "./recipe-feedback.mjs?v=5.0.0-beta.1";
-import { PATH_GUARD_VERSION, createPathGuardEvidence, evaluatePathGuard, pathGuardEligibility } from "./path-guard.mjs?v=5.0.0-beta.1";
+} from "./route-remixes.mjs?v=5.0.0-beta.4";
+import { cosmicTwistOptions, cosmicTwistSeedFor, selectCosmicTwist } from "./cosmic-twists.mjs?v=5.0.0-beta.4";
+import { QUICK_TIP_LIMIT, assistancePolicy, combineAssistance, rankSenseCandidates, scoreMultiplierAfterNudges, selectRouteNavigationTip, selectWordGift } from "./engagement-features.mjs?v=5.0.0-beta.4";
+import { annotateUniverseResult, selectUniverse, validateUniverseRoute } from "./universe-director.mjs?v=5.0.0-beta.4";
+import { sanitizeRecipeRating } from "./recipe-feedback.mjs?v=5.0.0-beta.4";
+import { PATH_GUARD_VERSION, createPathGuardEvidence, evaluatePathGuard, pathGuardEligibility } from "./path-guard.mjs?v=5.0.0-beta.4";
+import { createConceptChemistryGuide, evaluateConceptChemistryPair } from "./concept-chemistry.mjs?v=5.0.0-beta.4";
 
 const runs = new Map();
 const missionPreviews = new Map();
@@ -64,6 +65,9 @@ globalThis[privateTipLedgerSymbol] = privateTipLedger;
 const LOCAL_MISSION_PREVIEW_TTL_MS = 15 * 60_000;
 const MAX_RESUME_DISCOVERIES = 1000;
 const MAX_RESUME_HISTORY = 500;
+const resolvedWorldweavingRequests = new WeakMap();
+let loadedWorldweavingTools = null;
+let worldweavingToolsPromise = null;
 const player = {
   id: "local-stargazer",
   callsign: "Local Stargazer",
@@ -99,6 +103,54 @@ function parseBody(options) {
   if (!options?.body) return {};
   try { return JSON.parse(options.body); }
   catch { return fail("That local request could not be read.", "invalid_json", 400); }
+}
+
+async function worldweavingTools() {
+  if (loadedWorldweavingTools) return loadedWorldweavingTools;
+  worldweavingToolsPromise ||= import("./worldweaving.mjs?v=5.0.0-beta.4");
+  loadedWorldweavingTools = await worldweavingToolsPromise;
+  return loadedWorldweavingTools;
+}
+
+async function resolveLocalWorldweavingRequest(request, requestedTarget) {
+  if (!Object.hasOwn(request || {}, "worldweaving") || request.worldweaving == null) return request;
+  if (!hasExactKeys(request.worldweaving, ["worldId", "slotId", "choiceId"])) {
+    fail("Worldweaving requires only worldId, slotId, and choiceId.", "invalid_worldweaving_request", 400);
+  }
+  const target = String(requestedTarget || "").trim();
+  if (!target) fail("Choose the matching Worldweaving target.", "invalid_worldweaving_target", 400);
+  const tools = await worldweavingTools();
+  const objective = tools.worldweavingObjective({ kind: "worldweaving", ...request.worldweaving }, target);
+  if (!objective || String(objective.target).toLowerCase() !== target.toLowerCase()) {
+    fail("That Worldweaving choice does not match this target.", "worldweaving_unavailable", 422);
+  }
+  const prepared = {
+    ...request,
+    mode: "reach",
+    target: objective.target,
+    custom: false,
+    adaptive: false,
+    adaptiveTarget: "",
+    avoidTarget: "",
+    startStyle: null,
+    worldweaving: {
+      worldId: objective.worldId,
+      slotId: objective.slotId,
+      choiceId: objective.choiceId
+    }
+  };
+  resolvedWorldweavingRequests.set(prepared, objective);
+  return prepared;
+}
+
+function localWorldweavingObjective(raw, target = "") {
+  if (!loadedWorldweavingTools || !raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+  return loadedWorldweavingTools.worldweavingObjective({
+    kind: "worldweaving",
+    worldId: raw.worldId,
+    slotId: raw.slotId,
+    choiceId: raw.choiceId
+  }, target);
 }
 
 function validatedLocalAvoidTarget(value) {
@@ -524,20 +576,50 @@ function gameWithLocalStart(game, profile) {
 
 function directedLocalGame(mode, seed, target, stage, adaptiveRequest = null) {
   const request = adaptiveRequest || {};
+  const worldweaving = resolvedWorldweavingRequests.get(request) || null;
+  const effectiveMode = worldweaving ? "reach" : mode;
+  const effectiveTarget = worldweaving ? worldweaving.target : target;
   const fallbackContext = localChallengeContext(request);
   const fallbackPolicy = adaptiveRunEntryPolicy({
-    mode,
+    mode: effectiveMode,
     custom: Boolean(request?.custom),
     shared: Boolean(request?.shared),
     fixed: Boolean(request?.fixed),
     adaptive: request?.adaptive === true,
     rank: fallbackContext.currentRank
   });
-  const game = adaptiveLocalGame(mode, seed, stage, request)
-    || buildLocalGame(fallbackPolicy.mode, seed, target, stage);
+  const game = worldweaving
+    ? buildLocalGame("reach", seed, effectiveTarget, stage)
+    : adaptiveLocalGame(effectiveMode, seed, stage, request)
+      || buildLocalGame(fallbackPolicy.mode, seed, effectiveTarget, stage);
   if (!game) return null;
-  const route = localRouteTo(game.target);
+  const route = worldweaving
+    ? localWorldweavingSolutionRoute(worldweaving)
+    : localRouteTo(game.target);
   if (!Array.isArray(route) || !route.length) return null;
+  if (worldweaving) {
+    const prepared = {
+      ...game,
+      mode: "reach",
+      modeName: "Moon Worldweaving",
+      objectiveVerb: "Weave",
+      challengeId: `practice:worldweaving:${worldweaving.worldId}:${worldweaving.slotId}:${worldweaving.choiceId}:${Math.abs(Number(game.seed) || 0)}`,
+      adaptive: false,
+      ranked: false,
+      scoreEligible: true,
+      rewardEligible: true,
+      leaderboardEligible: false,
+      completionPolicy: "external",
+      worldweavingObjective: structuredClone(worldweaving),
+      routeLength: route.length,
+      universe: selectUniverse(game.seed)
+    };
+    delete prepared.remixes;
+    delete prepared.promotion;
+    delete prepared.startProfile;
+    delete prepared.localChallengeContext;
+    return prepared;
+  }
   const routeContext = game.localChallengeContext
     || localChallengeContext(request, game.adaptiveCompletedChallenges || 0);
   const shouldUseStartProfiles = game.adaptive === true
@@ -599,7 +681,57 @@ function canonicalRouteRecipes(route) {
   }).filter(Boolean);
 }
 
+function localRouteStepKey(step) {
+  const pair = [step?.a, step?.b]
+    .map((word) => String(word || "").trim().toLowerCase())
+    .sort()
+    .join("+");
+  return `${pair}=>${String(step?.word || "").trim().toLowerCase()}`;
+}
+
+function localWorldweavingSolutionRoute(rawObjective) {
+  const objective = localWorldweavingObjective(rawObjective, rawObjective?.target);
+  if (!objective || !loadedWorldweavingTools) return null;
+  const finalA = canonicalLocalWord(objective.recipe.a);
+  const finalB = canonicalLocalWord(objective.recipe.b);
+  const finalResult = finalA && finalB ? lookupLocalCombination(finalA, finalB) : null;
+  const finalRecipe = finalResult ? { a: finalA, b: finalB, ...finalResult } : null;
+  if (!finalRecipe || !loadedWorldweavingTools.recipeMatchesWorldweavingObjective(objective, finalRecipe)) return null;
+
+  const available = new Set(CLASSIC_STARTERS.map((word) => word.toLowerCase()));
+  const seenResults = new Set(available);
+  const route = [];
+  for (const ingredient of [objective.recipe.a, objective.recipe.b]) {
+    const ingredientRoute = canonicalRouteRecipes(localRouteTo(ingredient));
+    if (!Array.isArray(ingredientRoute)) return null;
+    for (const step of ingredientRoute) {
+      const aKey = String(step.a).toLowerCase();
+      const bKey = String(step.b).toLowerCase();
+      if (!available.has(aKey) || !available.has(bKey)) return null;
+      const resultKey = String(step.word).toLowerCase();
+      if (seenResults.has(resultKey)) continue;
+      route.push(step);
+      available.add(resultKey);
+      seenResults.add(resultKey);
+    }
+    if (!available.has(String(ingredient).toLowerCase())) return null;
+  }
+  if (
+    !available.has(String(finalRecipe.a).toLowerCase())
+    || !available.has(String(finalRecipe.b).toLowerCase())
+  ) return null;
+  route.push(finalRecipe);
+  return route;
+}
+
 function verifiedLocalRoute(game) {
+  const worldweaving = localWorldweavingObjective(game?.worldweavingObjective, game?.target);
+  if (worldweaving) {
+    const route = localWorldweavingSolutionRoute(worldweaving);
+    if (!Array.isArray(route) || !route.length) return null;
+    if (game.moveLimit && route.length > game.moveLimit) return null;
+    return route;
+  }
   const canonicalRoute = game ? localRouteTo(game.target) : null;
   if (!Array.isArray(canonicalRoute)) return null;
   const routeStartIndex = game.startProfile == null
@@ -749,6 +881,33 @@ function localRouteProgressFor(route, target, available) {
 }
 
 function localRouteProgressForRun(run) {
+  const worldweaving = localWorldweavingObjective(run?.game?.worldweavingObjective, run?.game?.target);
+  if (worldweaving) {
+    const route = Array.isArray(run?.solutionRoute)
+      ? run.solutionRoute
+      : localWorldweavingSolutionRoute(worldweaving);
+    const receipts = new Map();
+    for (const entry of Array.isArray(run?.history) ? run.history : []) {
+      const key = localRouteStepKey(entry);
+      receipts.set(key, (receipts.get(key) || 0) + 1);
+    }
+    let matched = 0;
+    for (const step of Array.isArray(route) ? route : []) {
+      const key = localRouteStepKey(step);
+      const remaining = receipts.get(key) || 0;
+      if (remaining <= 0) continue;
+      matched += 1;
+      receipts.set(key, remaining - 1);
+    }
+    const total = Array.isArray(route) ? route.length : 0;
+    const complete = Boolean(run?.completed);
+    return {
+      total,
+      remaining: complete ? 0 : Math.max(0, total - matched),
+      complete,
+      percent: complete ? 100 : total ? Math.min(99, Math.round((matched / total) * 100)) : 0
+    };
+  }
   const progress = localRouteProgressFor(
     run.solutionRoute,
     run.game.target,
@@ -786,7 +945,7 @@ function localPathGuardContext(run) {
   };
 }
 
-function localPathGuardEnabled(run) {
+function localPathGuardRunScope(run) {
   const game = run?.game;
   if (
     !run
@@ -799,14 +958,50 @@ function localPathGuardEnabled(run) {
       Math.trunc(Number(game.remixes?.activeCount) || 0)
     ) > 0
   ) return false;
-  return pathGuardEligibility(localPathGuardContext(run)).active;
+  return pathGuardEligibility({ ...localPathGuardContext(run), finished: false }).active;
+}
+
+function localPathGuardEnabled(run) {
+  return Boolean(!run?.completed && localPathGuardRunScope(run));
+}
+
+function localConceptChemistryGuide(run) {
+  const target = String(run?.game?.target || "");
+  try {
+    return createConceptChemistryGuide({
+      route: run?.solutionRoute,
+      history: run?.history,
+      available: run?.available,
+      target,
+      strict: localPathGuardRunScope(run)
+    });
+  } catch {
+    return createConceptChemistryGuide({ target, strict: false });
+  }
 }
 
 function localPathGuardDecision(run, { a, b, result } = {}) {
   const context = localPathGuardContext(run);
-  if (!localPathGuardEnabled(run) || !result?.word) {
+  if (!localPathGuardEnabled(run)) {
     return evaluatePathGuard(context, { a, b }, {});
   }
+  const conceptGuide = localConceptChemistryGuide(run);
+  const conceptDecision = evaluateConceptChemistryPair(conceptGuide, { a, b });
+  if (!conceptDecision.allowed) {
+    return {
+      active: true,
+      blocked: true,
+      action: "reject",
+      reason: conceptDecision.reason,
+      confidence: "authoritative",
+      pairKey: conceptDecision.pairKey,
+      message: conceptDecision.message
+    };
+  }
+  if (conceptGuide.strict !== true || conceptGuide.valid !== true) {
+    return evaluatePathGuard(context, { a, b }, {});
+  }
+  if (!result?.word) return evaluatePathGuard(context, { a, b }, {});
   if (!Array.isArray(run.solutionRoute) || !run.solutionRoute.length) {
     return evaluatePathGuard(context, { a, b }, {});
   }
@@ -845,14 +1040,30 @@ function localWrongPathError(run) {
     pathGuard: {
       version: PATH_GUARD_VERSION,
       rankId: String(run?.game?.remixes?.rank?.id || "")
-    }
+    },
+    conceptChemistry: localConceptChemistryGuide(run)
   };
   return error;
 }
 
+function localRunScoreMultiplier(run) {
+  const policy = assistancePolicy(run?.assist || "none");
+  if (run?.scoringDisabled || policy.study || !policy.scoreEligible) return 0;
+  const tipsUsed = Array.isArray(run?.tipRecords) ? run.tipRecords.length : run?.tipsUsed;
+  return scoreMultiplierAfterNudges({ baseMultiplier: policy.scoreMultiplier, nudgesUsed: tipsUsed });
+}
+
+function localRunDivision(run) {
+  const policy = assistancePolicy(run?.assist || "none");
+  const tipsUsed = Array.isArray(run?.tipRecords) ? run.tipRecords.length : Math.max(0, Number(run?.tipsUsed) || 0);
+  if (run?.scoringDisabled || policy.study) return "study";
+  if (policy.division === "open" || tipsUsed > 0) return "open";
+  return "practice";
+}
+
 function publicRun(run) {
   const scoreEligible = !run.scoringDisabled && run.game?.scoreEligible !== false;
-  const scoreMultiplier = scoreEligible ? assistancePolicy(run.assist).scoreMultiplier : 0;
+  const scoreMultiplier = scoreEligible ? localRunScoreMultiplier(run) : 0;
   const activationPending = Boolean(run.activatedAt == null);
   const startedAt = run.activatedAt || run.startedAt;
   return {
@@ -864,12 +1075,14 @@ function publicRun(run) {
     deadlineAt: activationPending ? null : run.deadlineAt,
     activationPending,
     assist: run.assist,
+    division: localRunDivision(run),
     scoringDisabled: Boolean(run.scoringDisabled),
     scoreEligible,
     scoreMultiplier,
     rewardEligible: scoreEligible && run.game?.rewardEligible !== false,
     leaderboardEligible: false,
     routeProgress: localRouteProgressForRun(run),
+    conceptChemistry: localConceptChemistryGuide(run),
     remixProgress: run.remixRuntime
       ? routeRemixProgress(run.remixRuntime, run.remixProgress)
       : null
@@ -922,7 +1135,8 @@ function publicProgress(run) {
     tipsUsed: Math.min(QUICK_TIP_LIMIT, Array.isArray(run.tipRecords) ? run.tipRecords.length : 0),
     assist: run.assist,
     scoringDisabled: Boolean(run.scoringDisabled),
-    scoreMultiplier: run.scoringDisabled ? 0 : assistancePolicy(run.assist).scoreMultiplier,
+    scoreMultiplier: localRunScoreMultiplier(run),
+    division: localRunDivision(run),
     remixProgress: run.remixRuntime
       ? routeRemixProgress(run.remixRuntime, run.remixProgress)
       : null
@@ -993,14 +1207,15 @@ function persistPrivateTipRecords(run) {
   }
 }
 
-function localTipResponse(record, used, available = Boolean(record)) {
+function localTipResponse(record, used, available = Boolean(record), scoreMultiplier = scoreMultiplierAfterNudges({ nudgesUsed: used })) {
   const count = Math.min(QUICK_TIP_LIMIT, Math.max(0, Number(used) || 0));
   return {
     available: Boolean(available),
     text: String(record?.text || "All three Route Signals have been used for this orbit.").slice(0, 240),
     used: count,
     remaining: Math.max(0, QUICK_TIP_LIMIT - count),
-    scoreSafe: true
+    scoreSafe: false,
+    scoreMultiplier: Math.min(1, Math.max(0, Number(scoreMultiplier) || 0))
   };
 }
 
@@ -1009,9 +1224,9 @@ function useLocalTip(run, tipIndex) {
     fail("Route Signal requires a valid current signal index.", "invalid_tip_index", 400);
   }
   run.tipRecords ||= [];
-  if (tipIndex < run.tipRecords.length) return localTipResponse(run.tipRecords[tipIndex], run.tipRecords.length);
+  if (tipIndex < run.tipRecords.length) return localTipResponse(run.tipRecords[tipIndex], run.tipRecords.length, true, localRunScoreMultiplier(run));
   if (tipIndex > run.tipRecords.length) fail("Route Signal state changed. Refresh this orbit and try again.", "tip_state_mismatch", 409);
-  if (run.tipRecords.length >= QUICK_TIP_LIMIT) return localTipResponse(null, run.tipRecords.length, false);
+  if (run.tipRecords.length >= QUICK_TIP_LIMIT) return localTipResponse(null, run.tipRecords.length, false, localRunScoreMultiplier(run));
   if (run.submitted) fail("This local orbit was already submitted.", "already_submitted", 409);
   if (run.completed) fail("This local orbit is already complete.", "run_complete", 409);
 
@@ -1030,14 +1245,14 @@ function useLocalTip(run, tipIndex) {
   const text = String(selected?.text || "").normalize("NFKC").replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim().slice(0, 240);
   let id = String(selected?.id || "").trim().toLowerCase().slice(0, 80);
   if (!/^[a-z0-9][a-z0-9-]{0,79}$/.test(id) || run.tipRecords.some((record) => record.id === id)) id = `tip-${run.tipRecords.length + 1}`;
-  if (selected?.available === false || !text) return localTipResponse({ text: text || "No spoiler-safe direction is available yet." }, run.tipRecords.length, false);
+  if (selected?.available === false || !text) return localTipResponse({ text: text || "No spoiler-safe direction is available yet." }, run.tipRecords.length, false, localRunScoreMultiplier(run));
   const record = { id, text };
   run.tipRecords.push(record);
   persistPrivateTipRecords(run);
-  return localTipResponse(record, run.tipRecords.length);
+  return localTipResponse(record, run.tipRecords.length, true, localRunScoreMultiplier(run));
 }
 
-function restoreRun(body) {
+async function restoreRun(body) {
   const runId = String(body.runId || "").trim();
   const runToken = String(body.runToken || "").trim();
   if (!runId || !runToken || runId.length > 256 || runToken.length > 256) {
@@ -1084,14 +1299,22 @@ function restoreRun(body) {
     ...(snapshotGame.startProfile ? {
       startStyle: snapshotGame.startProfile.requestedStyle || snapshotGame.startStyle,
       localChallengeContext: snapshotGame.localChallengeContext
+    } : {}),
+    ...(snapshotGame.worldweavingObjective ? {
+      worldweaving: {
+        worldId: snapshotGame.worldweavingObjective.worldId,
+        slotId: snapshotGame.worldweavingObjective.slotId,
+        choiceId: snapshotGame.worldweavingObjective.choiceId
+      }
     } : {})
   };
+  const preparedRestoreRequest = await resolveLocalWorldweavingRequest(restoreRequest, target);
   const game = directedLocalGame(
     mode,
     snapshotGame.seed,
     target,
     snapshotGame.stage,
-    Object.keys(restoreRequest).length ? restoreRequest : null
+    Object.keys(preparedRestoreRequest).length ? preparedRestoreRequest : null
   );
   if (!game || game.target.toLowerCase() !== target.toLowerCase()) {
     fail("The local universe could not reconstruct that orbit.", "resume_invalid", 422);
@@ -1171,13 +1394,17 @@ function restoreRun(body) {
   const moves = Math.max(history.length, boundedInteger(progress.moves, history.length, moveMaximum));
   const tipsUsed = boundedInteger(progress.tipsUsed, 0, QUICK_TIP_LIMIT);
   const targetFound = available.has(game.target.toLowerCase());
+  const worldweaving = localWorldweavingObjective(game.worldweavingObjective, game.target);
+  const exactWorldweavingReceipt = worldweaving
+    ? history.some((entry) => loadedWorldweavingTools.recipeMatchesWorldweavingObjective(worldweaving, entry))
+    : false;
   const remixCompletion = remixRuntime
     ? checkRouteRemixCompletion(remixRuntime, remixProgress, game.target)
     : { complete: true };
   const completed = Boolean(
     progress.completed
     && targetFound
-    && (assistValue === "reveal" || remixCompletion.complete)
+    && (assistValue === "reveal" || (worldweaving ? exactWorldweavingReceipt : remixCompletion.complete))
   );
   const activationPending = Boolean(
     snapshotRun.activationPending
@@ -1238,11 +1465,7 @@ function revealedRun(run) {
     leaderboardEligible: false,
     score: 0,
     ranked: false,
-    routeProgress: localRouteProgressFor(
-      run.solutionRoute,
-      run.game.target,
-      run.available
-    ),
+    routeProgress: localRouteProgressForRun(run),
     localOnly: true
   };
 }
@@ -1285,10 +1508,14 @@ export async function localRequest(url, options = {}) {
   }
 
   if (method === "POST" && path === "/api/run/preview") {
-    body.avoidTarget = validatedLocalAvoidTarget(body.avoidTarget);
+    const requestBody = {
+      ...body,
+      avoidTarget: validatedLocalAvoidTarget(body.avoidTarget)
+    };
     const target = body.target ? canonicalLocalTarget(body.target) : "";
     if (body.target && !target) fail("That target is not mapped in local practice yet.", "local_target_unknown");
-    const game = directedLocalGame(body.mode, body.seed, target, body.stage, body);
+    const preparedRequest = await resolveLocalWorldweavingRequest(requestBody, target);
+    const game = directedLocalGame(preparedRequest.mode, preparedRequest.seed, target, preparedRequest.stage, preparedRequest);
     if (!game) fail("The local universe could not map that orbit.");
     if (!verifiedLocalRoute(game)) fail("The local universe could not verify a route to that target.", "local_route_invalid", 409);
     const missionGame = {
@@ -1302,6 +1529,7 @@ export async function localRequest(url, options = {}) {
     const previewToken = localId("mission-preview");
     missionPreviews.set(previewToken, {
       game: cloneMissionGame(missionGame),
+      fingerprint: localRunEntryChallengeIdentity(missionGame),
       expiresAt: Date.now() + LOCAL_MISSION_PREVIEW_TTL_MS
     });
     return {
@@ -1320,12 +1548,19 @@ export async function localRequest(url, options = {}) {
       pruneMissionPreviews();
       const preview = missionPreviews.get(body.previewToken);
       if (!preview) fail("This mission briefing expired or changed. Review the refreshed mission before starting.", "mission_stale", 409);
+      if (preview.fingerprint !== localRunEntryChallengeIdentity(preview.game)) {
+        fail("This mission briefing expired or changed. Review the refreshed mission before starting.", "mission_stale", 409);
+      }
       game = cloneMissionGame(preview.game);
     } else {
-      body.avoidTarget = validatedLocalAvoidTarget(body.avoidTarget);
+      const requestBody = {
+        ...body,
+        avoidTarget: validatedLocalAvoidTarget(body.avoidTarget)
+      };
       const target = body.target ? canonicalLocalTarget(body.target) : "";
       if (body.target && !target) fail("That target is not mapped in local practice yet.", "local_target_unknown");
-      game = directedLocalGame(body.mode, body.seed, target, body.stage, body);
+      const preparedRequest = await resolveLocalWorldweavingRequest(requestBody, target);
+      game = directedLocalGame(preparedRequest.mode, preparedRequest.seed, target, preparedRequest.stage, preparedRequest);
     }
     if (!game) fail("The local universe could not map that orbit.");
     const solutionRoute = verifiedLocalRoute(game);
@@ -1490,7 +1725,7 @@ export async function localRequest(url, options = {}) {
         400
       );
     }
-    const run = restoreRun(body);
+    const run = await restoreRun(body);
     if (run.activatedAt == null && body.deferActivation !== true) activateLocalRun(run);
     return resumeResponse(run);
   }
@@ -1548,7 +1783,7 @@ export async function localRequest(url, options = {}) {
       assist: run.assist,
       scoringDisabled,
       scoreEligible: !scoringDisabled && policy.scoreEligible,
-      scoreMultiplier: scoringDisabled ? 0 : policy.scoreMultiplier,
+      scoreMultiplier: scoringDisabled ? 0 : localRunScoreMultiplier(run),
       rewardEligible: !scoringDisabled,
       leaderboardEligible: false,
       ranked: false,
@@ -1593,7 +1828,7 @@ export async function localRequest(url, options = {}) {
       assist: run.assist,
       scoringDisabled,
       scoreEligible: !scoringDisabled && policy.scoreEligible,
-      scoreMultiplier: scoringDisabled ? 0 : policy.scoreMultiplier,
+      scoreMultiplier: scoringDisabled ? 0 : localRunScoreMultiplier(run),
       rewardEligible: !scoringDisabled,
       leaderboardEligible: false,
       ranked: false,
@@ -1650,7 +1885,7 @@ export async function localRequest(url, options = {}) {
     }
     const canonicalResult = lookupLocalCombination(a, b);
     if (!canonicalResult) {
-      if (run && localPathGuardEnabled(run)) throw localWrongPathError(run);
+      if (run && localPathGuardDecision(run, { a, b, result: null }).blocked) throw localWrongPathError(run);
       fail("Those ideas are outside this local universe.", "combination_missing");
     }
     if (run?.remixRuntime) {
@@ -1661,7 +1896,10 @@ export async function localRequest(url, options = {}) {
       ? localPathGuardDecision(run, { a, b, result: canonicalResult })
       : { active: false, blocked: false };
     if (pathGuardDecision.blocked) throw localWrongPathError(run);
-    const twist = run && !run.remixRuntime && !pathGuardDecision.active ? selectCosmicTwist({
+    const worldweaving = run
+      ? localWorldweavingObjective(run.game.worldweavingObjective, run.game.target)
+      : null;
+    const twist = run && !worldweaving && !run.remixRuntime && !pathGuardDecision.active ? selectCosmicTwist({
       a,
       b,
       canonicalResult,
@@ -1709,9 +1947,23 @@ export async function localRequest(url, options = {}) {
         publicRemixProgress = routeRemixProgress(run.remixRuntime, run.remixProgress);
       }
       if (result.word.toLowerCase() === run.game.target.toLowerCase()) {
-        remixCompletion = run.remixRuntime
-          ? checkRouteRemixCompletion(run.remixRuntime, run.remixProgress, result.word)
-          : { complete: true, reason: "" };
+        if (worldweaving) {
+          const complete = loadedWorldweavingTools.recipeMatchesWorldweavingObjective(worldweaving, {
+            a,
+            b,
+            word: result.word
+          });
+          remixCompletion = {
+            complete,
+            reason: complete
+              ? ""
+              : `${worldweaving.target} appeared, but this Moon weave needs ${worldweaving.recipe.a} + ${worldweaving.recipe.b}.`
+          };
+        } else {
+          remixCompletion = run.remixRuntime
+            ? checkRouteRemixCompletion(run.remixRuntime, run.remixProgress, result.word)
+            : { complete: true, reason: "" };
+        }
         run.completed ||= remixCompletion.complete;
       }
     }
@@ -1723,11 +1975,15 @@ export async function localRequest(url, options = {}) {
       remixProgress: publicRemixProgress,
       targetMade: Boolean(run && result.word.toLowerCase() === run.game.target.toLowerCase()),
       completionBlocked: Boolean(remixCompletion && !remixCompletion.complete),
-      remixMessage: remixCompletion && !remixCompletion.complete ? remixCompletion.reason : "",
+      worldweavingMessage: worldweaving && remixCompletion && !remixCompletion.complete
+        ? remixCompletion.reason
+        : "",
+      remixMessage: !worldweaving && remixCompletion && !remixCompletion.complete ? remixCompletion.reason : "",
       ...(run ? { routeProgress: localRouteProgressForRun(run) } : {}),
+      ...(run ? { conceptChemistry: localConceptChemistryGuide(run) } : {}),
       ranked: false,
       localOnly: true,
-      division: run?.assist && run.assist !== "none" ? "local-assisted" : "local"
+      division: run ? localRunDivision(run) : "practice"
     };
   }
 
@@ -1744,7 +2000,7 @@ export async function localRequest(url, options = {}) {
     return {
       ...item,
       assist: run.assist,
-      scoreMultiplier: assistancePolicy(run.assist).scoreMultiplier,
+      scoreMultiplier: localRunScoreMultiplier(run),
       player: publicPlayer(),
       routeProgress: localRouteProgressForRun(run),
       localOnly: true

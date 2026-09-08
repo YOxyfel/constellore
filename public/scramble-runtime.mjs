@@ -14,15 +14,21 @@ import {
   scrambleShareText,
   sanitizeScrambleEvent,
   sanitizeScrambleToken
-} from "./scramble.mjs?v=5.0.0-beta.1";
+} from "./scramble.mjs?v=5.0.0-beta.4";
 import {
   SCRAMBLE_DEFAULT_MODE_ID,
   SCRAMBLE_MODES,
   getScrambleModeDefinition,
   normalizeScrambleModeId
-} from "./scramble-arena.mjs?v=5.0.0-beta.1";
-import { goldenPairAnimation } from "./story/golden-fusions/golden-pair-animations.mjs?v=5.0.0-beta.1";
-import { victoryHandoffHoldMs } from "./victory-handoff.mjs?v=5.0.0-beta.1";
+} from "./scramble-arena.mjs?v=5.0.0-beta.4";
+import { scrambleArenaLeaguePresentation } from "./arena-rank.mjs?v=5.0.0-beta.4";
+import {
+  createArenaDuelCard
+} from "./arena-duel-card.mjs?v=5.0.0-beta.4";
+import {
+  profileFrameBySlug
+} from "./profile-frame-catalog.mjs?v=5.0.0-beta.4";
+import { victoryHandoffHoldMs } from "./victory-handoff.mjs?v=5.0.0-beta.4";
 
 const ACTIVE_MATCH_KEY = "constellore-scramble-active-v1";
 const QUEUE_POLL_MS = 1_000;
@@ -143,7 +149,7 @@ function scrambleFormatDefinition(value) {
 }
 
 function formatOptionMarkup(definition) {
-  const availability = definition.preview ? "Preview" : definition.enabled ? "Available" : "Unavailable";
+  const availability = definition.preview ? "Coming soon" : definition.enabled ? "Available" : "Unavailable";
   return `
     <label class="scramble-format-option" data-format-option="${definition.id}">
       <input type="radio" name="scrambleFormat" value="${definition.id}"${definition.id === SCRAMBLE_DEFAULT_MODE_ID ? " checked" : ""}${definition.enabled ? "" : " disabled"}>
@@ -158,20 +164,24 @@ function formatOptionMarkup(definition) {
 function surfaceMarkup() {
   return `
     <dialog class="scramble-dialog" id="scrambleDialog" aria-labelledby="scrambleTitle" aria-describedby="scrambleIntro">
-      <button class="scramble-close" type="button" data-scramble-close aria-label="Close Constellation Scramble">&times;</button>
+      <button class="scramble-close" type="button" data-scramble-close aria-label="Close Scramble Arena">&times;</button>
       <header class="scramble-heading">
         <span class="scramble-emblem" aria-hidden="true">&#10022;</span>
-        <div><small>LIVE OPEN-BOARD DUELS</small><h2 id="scrambleTitle" tabindex="-1">Constellation Scramble</h2></div>
+        <div><small>LIVE OPEN-BOARD 1V1</small><h2 id="scrambleTitle" tabindex="-1">Scramble Arena</h2></div>
       </header>
       <p id="scrambleIntro">Choose how you want to scramble. Every mode keeps both boards open and every pairing visible.</p>
       <fieldset class="scramble-format-picker" id="scrambleFormatPicker">
         <legend>Choose a Scramble mode</legend>
-        <div>${SCRAMBLE_MODES.map(formatOptionMarkup).join("")}</div>
+        <div class="scramble-format-track">${SCRAMBLE_MODES.map(formatOptionMarkup).join("")}</div>
         <p id="scrambleFormatObjective"><strong>Objective:</strong> Create the shared target before your rival.</p>
       </fieldset>
       <p class="scramble-status" id="scrambleLobbyStatus" role="status" aria-live="polite" aria-atomic="true"></p>
+      <div class="scramble-queue-picker" id="scrambleQueuePicker" role="tablist" aria-label="Choose match type">
+        <button type="button" role="tab" id="scrambleQueuePrivate" data-arena-queue="private" aria-selected="true" aria-controls="scramblePrivateCard" tabindex="0"><span aria-hidden="true">&#8734;</span><b>Private</b></button>
+        <button type="button" role="tab" id="scrambleQueueRanked" data-arena-queue="ranked" aria-selected="false" aria-controls="scrambleRankedCard" tabindex="-1"><span aria-hidden="true">&#9889;</span><b>Ranked</b></button>
+      </div>
       <section class="scramble-lobby-grid" id="scrambleLobbyChoices">
-        <article class="scramble-mode-card scramble-private-card">
+        <article class="scramble-mode-card scramble-private-card" id="scramblePrivateCard" data-arena-queue-panel="private" aria-labelledby="scrambleQueuePrivate">
           <span class="scramble-card-mark" aria-hidden="true">&#8734;</span>
           <small>PRIVATE 1V1</small>
           <h3>Invite a friend</h3>
@@ -182,11 +192,12 @@ function surfaceMarkup() {
             <div><input id="scrambleInviteCode" maxlength="160" autocomplete="off" spellcheck="false" placeholder="Invite code" required><button type="submit">Join</button></div>
           </form>
         </article>
-        <article class="scramble-mode-card scramble-ranked-card">
+        <article class="scramble-mode-card scramble-ranked-card" id="scrambleRankedCard" data-arena-queue-panel="ranked" aria-labelledby="scrambleQueueRanked">
           <span class="scramble-card-mark" aria-hidden="true">&#9889;</span>
           <small>PUBLIC RANKED</small>
           <h3>Find a rival</h3>
           <p id="scrambleRankedCopy">Race a public opponent. Wins and losses change only your Target Race Rating.</p>
+          <div class="scramble-arena-rank" id="scrambleArenaRank" data-arena-rank="bronze"><span id="scrambleArenaRankMark" aria-hidden="true">&#9670;</span><strong id="scrambleArenaRankName">Bronze Arena Rank</strong><small id="scrambleArenaRankProgress">500 XP TO SILVER</small></div>
           <div class="scramble-rating"><span id="scrambleRatingLabel">Target Race Rating</span><strong id="scrambleRating">Unplaced</strong></div>
           <button class="scramble-primary" id="scrambleFindRival" type="button">Find rival</button>
           <p class="scramble-ranked-lock" id="scrambleRankedLock" hidden>Complete one scored solo constellation to unlock ranked matchmaking.</p>
@@ -201,10 +212,16 @@ function surfaceMarkup() {
           <label for="scrambleInviteLink">Single-use invitation</label>
           <div><input id="scrambleInviteLink" readonly><button id="scrambleCopyInvite" type="button">Copy link</button></div>
         </div>
-        <div class="scramble-versus" id="scrambleLobbyVersus" hidden>
-          <span><small>YOU</small><strong id="scrambleLobbySelf">STARGAZER</strong><em id="scrambleSelfReady">Not ready</em></span>
+        <div class="scramble-versus" id="scrambleLobbyVersus" hidden aria-label="Arena combatants">
+          <div class="scramble-versus__combatant is-self">
+            <div class="scramble-duel-card-host" id="scrambleLobbySelfCard"></div>
+            <span class="sr-only"><small>YOU</small><strong id="scrambleLobbySelf">STARGAZER</strong><em id="scrambleSelfReady">Not ready</em></span>
+          </div>
           <b aria-hidden="true">VS</b>
-          <span><small>RIVAL</small><strong id="scrambleLobbyRival">CONNECTING</strong><em id="scrambleRivalReady">Not ready</em></span>
+          <div class="scramble-versus__combatant is-rival">
+            <div class="scramble-duel-card-host" id="scrambleLobbyRivalCard"></div>
+            <span class="sr-only"><small>RIVAL</small><strong id="scrambleLobbyRival">CONNECTING</strong><em id="scrambleRivalReady">Not ready</em></span>
+          </div>
         </div>
         <div class="scramble-waiting-actions">
           <button class="scramble-primary" id="scrambleReady" type="button" hidden>Ready</button>
@@ -213,7 +230,7 @@ function surfaceMarkup() {
       </section>
     </dialog>
 
-    <section class="scramble-scorebar" id="scrambleScorebar" aria-label="Constellation Scramble score" hidden>
+    <section class="scramble-scorebar" id="scrambleScorebar" aria-label="Scramble Arena score" hidden>
       <div class="scramble-player-score is-self"><small>YOU</small><strong id="scrambleSelfName">STARGAZER</strong><span id="scrambleSelfModeStats">0 discoveries &middot; 0 attempts</span><em id="scrambleSelfChampion" hidden></em></div>
       <div class="scramble-clock" role="timer" aria-label="Match time remaining"><small id="scrambleScoreMode">TARGET RACE</small><strong id="scrambleClock">05:00</strong><span id="scrambleConnection">Connecting</span></div>
       <div class="scramble-player-score is-rival"><small>RIVAL</small><strong id="scrambleRivalName">CONNECTING</strong><span id="scrambleRivalModeStats">0 discoveries &middot; 0 attempts</span><em id="scrambleRivalChampion" hidden></em></div>
@@ -258,7 +275,12 @@ function surfaceMarkup() {
     </section>
 
     <div class="scramble-countdown" id="scrambleCountdown" role="status" aria-live="assertive" aria-atomic="true" hidden>
-      <small>CONSTELLATION SCRAMBLE</small>
+      <small>OPEN-BOARD 1V1</small>
+      <div class="scramble-countdown__cards" aria-label="Arena combatants">
+        <div class="scramble-duel-card-host" id="scrambleCountdownSelfCard"></div>
+        <b aria-hidden="true">VS</b>
+        <div class="scramble-duel-card-host" id="scrambleCountdownRivalCard"></div>
+      </div>
       <strong id="scrambleCountdownValue">3</strong>
       <span id="scrambleCountdownObjective">Create the shared target before your rival.</span>
     </div>
@@ -281,10 +303,13 @@ function surfaceMarkup() {
     <dialog class="scramble-result-dialog" id="scrambleResultDialog" aria-labelledby="scrambleResultTitle">
       <button class="scramble-close" type="button" data-scramble-result-home aria-label="Return home">&times;</button>
       <span class="scramble-result-orb" id="scrambleResultOrb" aria-hidden="true">&#10022;</span>
-      <small id="scrambleResultKicker">CONSTELLATION SCRAMBLE</small>
+      <small id="scrambleResultKicker">SCRAMBLE ARENA</small>
       <h2 id="scrambleResultTitle" tabindex="-1">Match complete</h2>
       <p id="scrambleResultReason"></p>
       <div class="scramble-result-rating" id="scrambleResultRating">Private match &middot; no rating</div>
+      <section class="scramble-result-combatant" id="scrambleResultCombatant" aria-label="Featured Arena combatant">
+        <div class="scramble-duel-card-host" id="scrambleResultFeaturedCard"></div>
+      </section>
       <div class="scramble-result-stats">
         <section><small id="scrambleResultSelfLabel">YOUR ROUTE</small><strong id="scrambleResultSelfPrimary">0 discoveries</strong><span id="scrambleResultSelfSecondary">0 attempts &middot; 0 echoes</span></section>
         <section><small id="scrambleResultRivalLabel">RIVAL ROUTE</small><strong id="scrambleResultRivalPrimary">0 discoveries</strong><span id="scrambleResultRivalSecondary">0 attempts &middot; 0 echoes</span></section>
@@ -296,7 +321,7 @@ function surfaceMarkup() {
       <div class="scramble-result-actions">
         <button class="scramble-primary" id="scrambleRematch" type="button">Request rematch</button>
         <button id="scrambleShareResult" type="button">Share result</button>
-        <button id="scrambleResultHome" type="button">Home</button>
+        <button id="scrambleResultHome" type="button">Return home</button>
       </div>
       <p id="scrambleResultStatus" role="status" aria-live="polite"></p>
     </dialog>`;
@@ -330,10 +355,19 @@ export function createScrambleRuntime(options = {}) {
   let controlResyncQueued = false;
   let awaitingRematch = false;
   let selectedFormat = SCRAMBLE_DEFAULT_MODE_ID;
+  let selectedQueue = "private";
+  let compactLobbyMedia = null;
   let hostedSagaChapterKey = "";
   let sagaChangeQueued = false;
   let lastSagaMomentKey = "";
   let sagaBoundaryResyncKey = "";
+  const arenaCards = {
+    lobbySelf: null,
+    lobbyRival: null,
+    countdownSelf: null,
+    countdownRival: null,
+    resultFeatured: null
+  };
 
   const byId = (id) => documentRef.getElementById(id);
 
@@ -352,8 +386,33 @@ export function createScrambleRuntime(options = {}) {
     const countdown = byId("scrambleCountdown");
     if (gameScreen && scorebar) gameScreen.insertBefore(scorebar, gameScreen.querySelector(".game-layout"));
     if (gameScreen && countdown) gameScreen.append(countdown);
+    mountArenaCards();
     bindSurface();
     return root;
+  }
+
+  function mountArenaCard(key, hostId, side, featured = false) {
+    const host = byId(hostId);
+    if (!host || arenaCards[key]) return arenaCards[key];
+    const card = createArenaDuelCard({
+      documentRef,
+      side,
+      featured,
+      status: "Waiting",
+      frameSlug: side === "self" ? localFrameSlug() : "",
+      player: {
+        callsign: side === "self" ? options.callsign?.() || "STARGAZER" : "CONNECTING",
+        frameSlug: side === "self" ? localFrameSlug() : ""
+      }
+    });
+    if (card?.element) host.replaceChildren(card.element);
+    arenaCards[key] = card || null;
+    return arenaCards[key];
+  }
+
+  function mountArenaCards() {
+    mountArenaCard("lobbySelf", "scrambleLobbySelfCard", "self");
+    mountArenaCard("lobbyRival", "scrambleLobbyRivalCard", "rival");
   }
 
   function bindSurface() {
@@ -368,6 +427,18 @@ export function createScrambleRuntime(options = {}) {
       void joinInvite(byId("scrambleInviteCode")?.value);
     });
     byId("scrambleFindRival")?.addEventListener("click", joinMatchmaking);
+    for (const button of root.querySelectorAll("[data-arena-queue]")) {
+      button.addEventListener("click", () => setLobbyQueue(button.dataset.arenaQueue));
+      button.addEventListener("keydown", (event) => {
+        if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+        event.preventDefault();
+        const next = ["ArrowRight", "End"].includes(event.key) ? "ranked" : "private";
+        setLobbyQueue(next, { focus: true });
+      });
+    }
+    compactLobbyMedia = windowRef?.matchMedia?.("(max-width: 700px), (max-height: 520px) and (min-width: 520px) and (max-width: 900px)") || null;
+    compactLobbyMedia?.addEventListener?.("change", syncLobbyQueuePresentation);
+    syncLobbyQueuePresentation();
     byId("scrambleFormatPicker")?.addEventListener("change", (event) => {
       const input = event.target?.closest?.('input[name="scrambleFormat"]');
       if (!input || input.disabled || model.id || queueActive) return;
@@ -375,6 +446,11 @@ export function createScrambleRuntime(options = {}) {
       if (nextFormat === selectedFormat) return;
       selectedFormat = nextFormat;
       syncFormatPresentation();
+      input.closest(".scramble-format-option")?.scrollIntoView?.({
+        block: "nearest",
+        inline: "center",
+        behavior: windowRef?.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches ? "auto" : "smooth"
+      });
       void refreshRating();
     });
     byId("scrambleCopyInvite")?.addEventListener("click", copyInvite);
@@ -425,12 +501,96 @@ export function createScrambleRuntime(options = {}) {
     status.classList.toggle("is-error", error);
   }
 
+  function syncLobbyQueuePresentation() {
+    if (!root) return;
+    const compact = compactLobbyMedia?.matches === true;
+    const dialog = byId("scrambleDialog");
+    if (dialog) dialog.dataset.arenaQueue = selectedQueue;
+    for (const button of root.querySelectorAll("[data-arena-queue]")) {
+      const selected = button.dataset.arenaQueue === selectedQueue;
+      button.setAttribute("aria-selected", String(selected));
+      button.tabIndex = selected ? 0 : -1;
+    }
+    for (const panel of root.querySelectorAll("[data-arena-queue-panel]")) {
+      const hidden = compact && panel.dataset.arenaQueuePanel !== selectedQueue;
+      panel.hidden = hidden;
+      panel.inert = hidden;
+      panel.setAttribute("aria-hidden", String(hidden));
+    }
+  }
+
+  function setLobbyQueue(queue, { focus = false } = {}) {
+    const next = queue === "ranked" ? "ranked" : "private";
+    selectedQueue = next;
+    syncLobbyQueuePresentation();
+    if (focus) root?.querySelector(`[data-arena-queue="${next}"]`)?.focus?.({ preventScroll: true });
+  }
+
   function currentSelf() {
     return scramblePlayerPair(model).self;
   }
 
   function currentRival() {
     return scramblePlayerPair(model).rival;
+  }
+
+  function localFrameSlug() {
+    const candidate = typeof options.frameSlug === "function"
+      ? options.frameSlug()
+      : options.frameSlug;
+    return profileFrameBySlug(candidate)?.slug || "";
+  }
+
+  function arenaCardPlayer(player, side = "self") {
+    const isSelf = side === "self";
+    const callsign = String(
+      player?.callsign
+      || (isSelf ? options.callsign?.() : "")
+      || (isSelf ? "STARGAZER" : "CONNECTING")
+    ).trim().slice(0, 48);
+    const frameSlug = profileFrameBySlug(
+      player?.frameSlug || (isSelf ? localFrameSlug() : "")
+    )?.slug || "";
+    const rating = Math.floor(Number(player?.rating?.value ?? player?.rating) || 0);
+    return {
+      ...record(player),
+      callsign,
+      frameSlug,
+      mark: String(player?.mark || callsign.charAt(0) || (isSelf ? "Y" : "R")).slice(0, 2).toUpperCase(),
+      rank: rating > 0 ? `Arena rating ${rating}` : isSelf ? "Your constellation" : "Rival constellation"
+    };
+  }
+
+  function syncArenaCard(card, player, side, status, featured = false) {
+    if (!card?.sync) return;
+    const combatant = arenaCardPlayer(player, side);
+    card.sync({
+      player: combatant,
+      callsign: combatant.callsign,
+      frameSlug: combatant.frameSlug,
+      side,
+      status,
+      featured
+    });
+  }
+
+  function applyArenaFrameAccents() {
+    const scorebar = byId("scrambleScorebar");
+    const accentHosts = [root, scorebar].filter(Boolean);
+    if (!accentHosts.length) return;
+    for (const [side, player] of [
+      ["self", currentSelf()],
+      ["rival", currentRival()]
+    ]) {
+      const entry = profileFrameBySlug(arenaCardPlayer(player, side).frameSlug);
+      const accent = entry?.palette?.[0] || (side === "self" ? "#69e6ff" : "#a886ff");
+      const accentAlt = entry?.palette?.[1] || accent;
+      for (const host of accentHosts) {
+        host.style.setProperty(`--scramble-${side}-frame-accent`, accent);
+        host.style.setProperty(`--scramble-${side}-frame-accent-alt`, accentAlt);
+        host.dataset[`${side}ArenaFrame`] = entry?.slug || "none";
+      }
+    }
   }
 
   function authoritativeFormat() {
@@ -499,7 +659,9 @@ export function createScrambleRuntime(options = {}) {
   function showLobby() {
     ensureSurface();
     syncFormatPresentation();
+    syncLobbyQueuePresentation();
     const dialog = byId("scrambleDialog");
+    if (dialog) dialog.dataset.arenaPhase = model.id || queueActive ? "combatants" : "modes";
     if (!dialog?.open) dialog?.showModal();
     requestAnimationFrame(() => byId("scrambleTitle")?.focus({ preventScroll: true }));
   }
@@ -535,12 +697,12 @@ export function createScrambleRuntime(options = {}) {
     if (!available) lobbyMessage("Live 1v1 needs an online Scramble service. Solo play is still available.", true);
   }
 
-  async function refreshRating() {
+  async function refreshRating({ allowDuringFinishedMatch = false } = {}) {
     if (options.available === false || typeof request !== "function") return;
     const format = selectedFormat;
     try {
       const payload = await request(`/rating?format=${encodeURIComponent(format)}`);
-      if (format !== selectedFormat || model.id) return;
+      if (format !== selectedFormat || model.id && !(allowDuringFinishedMatch && model.status === "finished")) return;
       const arena = record(payload?.scrambleArena || payload?.arena);
       const ratings = record(arena.ratings || payload?.ratings || payload?.modeRatings);
       const rawRating = payload?.modeRating
@@ -555,7 +717,22 @@ export function createScrambleRuntime(options = {}) {
       const label = Number.isFinite(value)
         ? rating.games === 0 || placement === "unplaced" ? "Unplaced" : String(value)
         : placement === "provisional" ? "Provisional" : "Unplaced";
+      const league = scrambleArenaLeaguePresentation(arena.progression);
+      const leagueCard = byId("scrambleArenaRank");
+      if (leagueCard) leagueCard.dataset.arenaRank = league.id;
+      setText(root, "#scrambleArenaRankMark", league.mark);
+      setText(root, "#scrambleArenaRankName", league.label);
+      setText(root, "#scrambleArenaRankProgress", league.next
+        ? `${league.xpRemaining} XP TO ${league.next.name.toUpperCase()}`
+        : "TOP LEAGUE");
       setText(root, "#scrambleRating", label);
+      options.onRatingChange?.({
+        format,
+        label: scrambleFormatDefinition(format).label,
+        rating,
+        progression: arena.progression,
+        league
+      });
     } catch {
       if (format === selectedFormat && !model.id) setText(root, "#scrambleRating", "Unavailable");
     }
@@ -565,9 +742,12 @@ export function createScrambleRuntime(options = {}) {
     if (!root) return;
     syncFormatPresentation();
     const waiting = Boolean(model.id || queueActive);
+    const dialog = byId("scrambleDialog");
+    if (dialog) dialog.dataset.arenaPhase = waiting ? "combatants" : "modes";
     byId("scrambleLobbyChoices").hidden = waiting;
     byId("scrambleWaiting").hidden = !waiting;
     if (!waiting) {
+      syncLobbyQueuePresentation();
       renderAvailability();
       return;
     }
@@ -589,6 +769,19 @@ export function createScrambleRuntime(options = {}) {
     setText(root, "#scrambleLobbyRival", rival?.callsign || "CONNECTING");
     setText(root, "#scrambleSelfReady", self?.ready ? "Ready" : "Not ready");
     setText(root, "#scrambleRivalReady", rival?.ready ? "Ready" : rival ? "Not ready" : "Waiting");
+    syncArenaCard(
+      arenaCards.lobbySelf,
+      self,
+      "self",
+      self?.connected === false ? "disconnected" : self?.ready ? "ready" : "waiting"
+    );
+    syncArenaCard(
+      arenaCards.lobbyRival,
+      rival,
+      "rival",
+      rival?.connected === false ? "disconnected" : rival?.ready ? "ready" : "waiting"
+    );
+    applyArenaFrameAccents();
     const ready = byId("scrambleReady");
     ready.hidden = !self || !rival || queueActive || !["waiting", "countdown"].includes(model.status);
     ready.textContent = self?.ready ? "Not ready" : "Ready";
@@ -853,6 +1046,7 @@ export function createScrambleRuntime(options = {}) {
     const selfPresentation = modePlayerPresentation(self, selfMetrics);
     const rivalPresentation = modePlayerPresentation(rival, rivalMetrics);
     renderSagaTrack();
+    applyArenaFrameAccents();
     setText(root, "#scrambleSelfName", self?.callsign || options.callsign?.() || "STARGAZER");
     setText(root, "#scrambleRivalName", rival?.callsign || "CONNECTING");
     setText(root, "#scrambleRivalBoardTitle", `${rival?.callsign || "Rival"} \u00b7 ${scrambleFormatDefinition(authoritativeFormat()).label}`);
@@ -988,6 +1182,11 @@ export function createScrambleRuntime(options = {}) {
     countdown.hidden = !counting;
     documentRef.body.classList.toggle("scramble-counting-down", counting);
     if (counting) {
+      const countdownSelf = mountArenaCard("countdownSelf", "scrambleCountdownSelfCard", "self");
+      const countdownRival = mountArenaCard("countdownRival", "scrambleCountdownRivalCard", "rival");
+      syncArenaCard(countdownSelf, currentSelf(), "self", "countdown");
+      syncArenaCard(countdownRival, currentRival(), "rival", "countdown");
+      applyArenaFrameAccents();
       const value = Math.max(1, Math.min(SCRAMBLE_COUNTDOWN_SECONDS, untilStart || SCRAMBLE_COUNTDOWN_SECONDS));
       setText(root, "#scrambleCountdownValue", value);
       setText(root, "#scrambleCountdownObjective",
@@ -1043,6 +1242,32 @@ export function createScrambleRuntime(options = {}) {
         ? `${definition.label} Rating \u00b7 unrated match`
         : `${definition.label} Rating ${delta > 0 ? "+" : ""}${delta}`
       : "Private match \u00b7 no rating");
+    const winner = model.winnerId
+      ? [self, rival].find((player) => player?.id === model.winnerId) || null
+      : null;
+    const featuredPlayer = winner || self || rival;
+    const featuredSide = featuredPlayer?.id && featuredPlayer.id === rival?.id ? "rival" : "self";
+    const resultCombatant = byId("scrambleResultCombatant");
+    if (resultCombatant) {
+      resultCombatant.hidden = !featuredPlayer;
+      resultCombatant.dataset.outcome = presentation.tied
+        ? "draw"
+        : featuredSide === "self" ? "self" : "rival";
+    }
+    const resultFeatured = mountArenaCard(
+      "resultFeatured",
+      "scrambleResultFeaturedCard",
+      featuredSide,
+      true
+    );
+    syncArenaCard(
+      resultFeatured,
+      featuredPlayer,
+      featuredSide,
+      winner ? "winner" : "defeated",
+      true
+    );
+    applyArenaFrameAccents();
     setText(root, "#scrambleResultSelfLabel",
       definition.id === "forge-clash" ? "YOUR FORGE" : definition.id === "riddle-saga" ? "YOUR STORY" : "YOUR RUN");
     setText(root, "#scrambleResultRivalLabel",
@@ -1205,7 +1430,9 @@ export function createScrambleRuntime(options = {}) {
 
   async function loadSnapshot(id = model.id) {
     if (!id) return null;
+    const generation = lifecycleGeneration;
     const payload = await request(`/${encodeURIComponent(id)}`);
+    if (generation !== lifecycleGeneration || model.id !== id) return null;
     acceptPayload(payload);
     return payload;
   }
@@ -1248,28 +1475,14 @@ export function createScrambleRuntime(options = {}) {
     const finishGeneration = lifecycleGeneration;
     const finishMatchId = model.id;
     const presentation = scrambleResultPresentation(model);
-    const winningFusion = [...model.events].reverse().find((event) =>
-      event.type === "success"
-      && event.actorId === model.winnerId
-      && event.a
-      && event.b
-      && event.result?.word
-    );
-    const effectsEnabled = documentRef.body?.dataset?.cosmeticEffects !== "off";
-    const authoredGoldenPair = Boolean(
-      presentation.won
-      && effectsEnabled
-      && winningFusion
-      && goldenPairAnimation(winningFusion.a, winningFusion.b, winningFusion.result)
-    );
-    const reducedMotion = documentRef.defaultView
-      ?.matchMedia?.("(prefers-reduced-motion: reduce)")
-      ?.matches === true;
+    // Arena does not mount the solo Golden Pair overlay, so it must not reserve
+    // an invisible cinematic hold even when the winning recipe is authored.
+    const authoredGoldenPair = false;
     const holdMs = victoryHandoffHoldMs({
       won: presentation.won,
       revealed: false,
       authoredGoldenPair,
-      reducedMotion
+      reducedMotion: false
     });
     renderResult();
     options.track?.("scramble_match_finished", {
@@ -1278,6 +1491,7 @@ export function createScrambleRuntime(options = {}) {
       authoredGoldenPair,
       format: authoritativeFormat()
     });
+    void refreshRating({ allowDuringFinishedMatch: true });
     void (async () => {
       if (holdMs > 0) await wait(holdMs);
       if (
@@ -1324,6 +1538,7 @@ export function createScrambleRuntime(options = {}) {
     let buffer = "";
     while (generation === streamGeneration && !signal.aborted) {
       const { value, done } = await reader.read();
+      if (generation !== streamGeneration || signal.aborted) break;
       if (done) break;
       buffer += decoder.decode(value, { stream: true });
       const chunks = buffer.split(/\r?\n\r?\n/);
@@ -1393,7 +1608,11 @@ export function createScrambleRuntime(options = {}) {
     try {
       const payload = await request("/invites", {
         method: "POST",
-        body: { actionId: actionId("invite"), format }
+        body: {
+          actionId: actionId("invite"),
+          format,
+          frameSlug: localFrameSlug()
+        }
       });
       inviteCode = sanitizeScrambleToken(payload?.inviteCode);
       model = createScrambleState();
@@ -1424,7 +1643,11 @@ export function createScrambleRuntime(options = {}) {
     try {
       const payload = await request("/join", {
         method: "POST",
-        body: { inviteCode: code, actionId: actionId("join") }
+        body: {
+          inviteCode: code,
+          actionId: actionId("join"),
+          frameSlug: localFrameSlug()
+        }
       });
       inviteCode = "";
       model = createScrambleState();
@@ -1486,6 +1709,7 @@ export function createScrambleRuntime(options = {}) {
         body: {
           actionId: actionId("queue"),
           format,
+          frameSlug: localFrameSlug(),
           soloWins: Math.max(0, Math.min(100_000, Math.floor(Number(options.soloWins?.()) || 0)))
         }
       });
@@ -1523,20 +1747,23 @@ export function createScrambleRuntime(options = {}) {
 
   async function cancelWaiting() {
     if (queueActive) return cancelMatchmaking();
+    const leavingId = model.id;
     if (model.id) {
       const confirmed = windowRef.confirm?.("Leave this lobby? Your invitation will stop waiting.");
       if (confirmed === false) return;
+    }
+    lifecycleGeneration += 1;
+    stopNetwork();
+    if (leavingId) {
       try {
-        await request(`/${encodeURIComponent(model.id)}/forfeit`, {
+        await request(`/${encodeURIComponent(leavingId)}/forfeit`, {
           method: "POST",
           body: { actionId: actionId("leave") }
         });
       } catch { /* A waiting lobby also expires server-side. */ }
     }
-    stopNetwork();
-    clearRememberedMatch();
-    model = createScrambleState();
-    inviteCode = "";
+    deactivate();
+    byId("scrambleResultDialog")?.close();
     renderLobby();
     lobbyMessage("");
   }
@@ -1637,7 +1864,7 @@ export function createScrambleRuntime(options = {}) {
     const text = scrambleShareText(model, cleanUrl);
     try {
       if (windowRef.navigator?.share) {
-        await windowRef.navigator.share({ title: "Constellation Scramble", text, url: cleanUrl });
+        await windowRef.navigator.share({ title: "Scramble Arena", text, url: cleanUrl });
       } else {
         await windowRef.navigator?.clipboard?.writeText(text);
         setText(root, "#scrambleResultStatus", "Result copied.");
@@ -1862,6 +2089,8 @@ export function createScrambleRuntime(options = {}) {
     },
     destroy() {
       deactivate();
+      compactLobbyMedia?.removeEventListener?.("change", syncLobbyQueuePresentation);
+      compactLobbyMedia = null;
       documentRef?.removeEventListener?.("visibilitychange", handleVisibilityChange);
       windowRef?.removeEventListener?.("pageshow", handleVisibilityChange);
       windowRef?.removeEventListener?.("pagehide", handlePageHide);

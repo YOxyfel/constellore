@@ -33,6 +33,25 @@ function distanceToRect(point, rect) {
   return Math.hypot(dx, dy);
 }
 
+/** Midpoint placement shared by the legacy board and lazy Observatory. */
+export function fusionResultPlacement(a, b, size) {
+  return {
+    x: (a.x + b.x - size.width) / 2,
+    y: (a.y + b.y - size.height) / 2,
+    size
+  };
+}
+
+/** Persists a measured board point without leaking viewport dimensions. */
+export function normalizedCombinationMemoryAnchor(anchor, bounds) {
+  const width = Math.max(1, Number(bounds?.width) || 0);
+  const height = Math.max(1, Number(bounds?.height) || 0);
+  return {
+    x: Math.min(1, Math.max(0, anchor.x / width)),
+    y: Math.min(1, Math.max(0, anchor.y / height))
+  };
+}
+
 /**
  * Picks a direct hit before considering nearby magnetic targets. A sole direct
  * hit is never made ambiguous by a merely nearby chip. Overlapping direct hits

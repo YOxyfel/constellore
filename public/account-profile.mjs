@@ -1,5 +1,5 @@
-import { sanitizeSenseWallet } from "./engagement-features.mjs?v=5.0.0-beta.1";
-import { preserveAnonymousFirstGameProgress } from "./first-game-experience.mjs?v=5.0.0-beta.1";
+import { sanitizeSenseWallet } from "./engagement-features.mjs?v=5.0.0-beta.4";
+import { preserveAnonymousFirstGameProgress } from "./first-game-experience.mjs?v=5.0.0-beta.4";
 
 export function resetAccountProfile(defaultProfile, currentProfile, {
   playerId = currentProfile?.playerId,

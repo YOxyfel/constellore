@@ -1,0 +1,93 @@
+{
+  "schemaVersion": 1,
+  "tools": {
+    "three": "0.185.1",
+    "gltfTransform": "4.4.2",
+    "meshoptimizer": "1.2.0",
+    "pillow": "12.1.0",
+    "ffmpeg": "8.1.1"
+  },
+  "budgets": {
+    "packBytes": 12582912,
+    "planetHubOptionalBytes": 13631488,
+    "portalMp4Bytes": 716800,
+    "optionalDetailBytes": 3200000,
+    "spaceLayers": {
+      "bytes": 524288,
+      "tiers": {
+        "low": {
+          "width": 1024,
+          "height": 512,
+          "quality": 78,
+          "bytes": 131072
+        },
+        "standard": {
+          "width": 2048,
+          "height": 1024,
+          "quality": 82,
+          "bytes": 393216
+        }
+      }
+    },
+    "galaxyTexture": {
+      "bytes": 240000,
+      "tiers": {
+        "low": {
+          "width": 512,
+          "quality": 76,
+          "bytes": 50000
+        },
+        "standard": {
+          "width": 1024,
+          "quality": 82,
+          "bytes": 190000
+        }
+      }
+    },
+    "placeThumbnails": {
+      "width": 960,
+      "height": 96,
+      "tileSize": 96,
+      "quality": 80,
+      "bytes": 65536
+    },
+    "detailTiers": {
+      "low": {
+        "earthTextureWidth": 1024,
+        "sunTextureWidth": 256,
+        "supportTextureWidth": 256,
+        "bytes": 950000
+      },
+      "standard": {
+        "earthTextureWidth": 2048,
+        "sunTextureWidth": 512,
+        "supportTextureWidth": 512,
+        "bytes": 2500000
+      }
+    },
+    "tiers": {
+      "low": {
+        "earthTriangles": 30000,
+        "moonTriangles": 25000,
+        "sunTriangles": 512,
+        "sunTextureSize": 256,
+        "sunBytes": 32768,
+        "landmarkTriangles": 10000,
+        "landmarkTextureSize": 512,
+        "planetTextureSize": 1024,
+        "sceneBytes": 2621440
+      },
+      "standard": {
+        "earthTriangles": 90000,
+        "moonTriangles": 60000,
+        "sunTriangles": 512,
+        "sunTextureSize": 256,
+        "sunBytes": 32768,
+        "landmarkTriangles": 10000,
+        "landmarkTextureSize": 1024,
+        "planetTextureSize": 2048,
+        "sceneBytes": 4718592
+      }
+    }
+  }
+}

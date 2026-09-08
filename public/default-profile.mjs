@@ -1,11 +1,26 @@
+import { createExpeditionState } from "./expedition.mjs?v=5.0.0-beta.4";
+
 export function createDefaultProfile({
   cosmeticLoadout,
   voyageProgress,
   routeProgression,
-  remixReadiness
+  remixReadiness,
+  expedition,
+  worldweaving = {
+    version: 1,
+    worlds: {
+      moon: {
+        anchors: { power: null, shelter: null, signal: null },
+        completion: null,
+        outcomeKey: "",
+        worldword: null
+      }
+    }
+  }
 }) {
+  const expeditionState = expedition ?? createExpeditionState(worldweaving);
   return {
-    version: 8,
+    version: 10,
     playerId: "",
     playerToken: "",
     cloudProfileVersion: 0,
@@ -20,6 +35,7 @@ export function createDefaultProfile({
     dailyStreak: 0,
     lastDailyDate: "",
     dailyCompleted: "",
+    dailyPlayed: "",
     streakShields: 1,
     freeWishUsed: false,
     wishAvailable: true,
@@ -38,6 +54,8 @@ export function createDefaultProfile({
       music: true,
       haptics: true,
       resultDetails: false,
+      helpNudges: true,
+      fusionAnimation: "normal",
       muted: false,
       volume: .75,
       musicVolume: 1,
@@ -51,6 +69,8 @@ export function createDefaultProfile({
     voyageProgress,
     selectedVoyageId: "first-cities",
     eventProgress: { weekKey: "", eventId: "", words: [], rewarded: false },
+    worldweaving: structuredClone(worldweaving),
+    expedition: structuredClone(expeditionState),
     signatureBests: [],
     rewardedRunIds: [],
     routeProgression,

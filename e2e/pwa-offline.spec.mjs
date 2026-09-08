@@ -33,7 +33,9 @@ test.describe("PWA runtime", () => {
     try {
       await page.reload({ waitUntil: "domcontentloaded" });
       await expect(page).toHaveTitle(/Constellore/i);
-      await expect(page.locator("#cosmicGate")).toBeAttached();
+      await expect(page.locator("body")).not.toHaveClass(/cosmic-intro-pending/);
+      await expect(page.locator("#primaryOrbitButton")).toBeVisible();
+      await expect(page.locator("#primaryOrbitButton")).toBeEnabled();
       await expect(page.locator("body")).toHaveAttribute("data-build-version", releaseVersion);
       expect(await page.evaluate(() => Boolean(navigator.serviceWorker.controller))).toBe(true);
     } finally {

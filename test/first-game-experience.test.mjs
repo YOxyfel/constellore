@@ -180,11 +180,11 @@ test("new players reach the menu while an interrupted game restores behind the l
   assert.match(startup, /const startupResumeSnapshot = selectStartupResumeSnapshot\(\{\s*snapshot: readActiveRunSnapshot\(\),\s*sharedChallenge: startupSharedChallenge,\s*modeIntent: startupModeIntent\s*\}\)/);
   assert.ok(
     startup.indexOf("snapshot: readActiveRunSnapshot()")
-      < startup.indexOf('await import("./cinematic/first-open-cinematic.mjs?v='),
-    "an interrupted game must be discovered before the optional film starts"
+      < startup.indexOf("if (startupOpensHome) void handoffLaunchMenu()"),
+    "an interrupted game must be discovered before home is revealed"
   );
   assert.match(boot, /const launchIntent = Boolean\(sharedChallenge \|\| firstGameLaunchIntent\(params[.]get\("mode"\)\)\)/);
-  assert.match(boot, /const launchMenuHandoff = launchCinematicOutcome[.]menuHandoff === true/);
+  assert.match(boot, /const launchMenuHandoff = startupOpensHome/);
   assert.match(boot, /const savedRun = startupResumeSnapshot/);
   assert.match(boot, /firstGameRequired\(profile\) && !launchMenuHandoff && !savedRun && !launchIntent && \(!profile[.]playerId \|\| !profile[.]playerToken \|\| isStaticBeta\)/);
   assert.match(boot, /startFirstOrbit\(\{\s*enterThroughGate:\s*false\s*\}\)/);
@@ -195,6 +195,11 @@ test("new players reach the menu while an interrupted game restores behind the l
     boot.indexOf("await restoreInterruptedRun(savedRun)")
       < boot.indexOf("else if (!restored && !firstGameStarted && sharedChallenge)"),
     "restoration must win before matching challenge and mode launch branches"
+  );
+  assert.match(
+    boot,
+    /else if \(!restored && !firstGameStarted && sharedChallenge\) \{\s*if \(!homeMenuState\(\)[.]onboardingComplete\) \{\s*firstGameStarted = await startRequiredOpeningLesson\(\{ enterThroughGate: false \}\)/,
+    "shared links must keep a new player inside the guided opening lessons"
   );
   assert.match(boot, /const launchHandled = await handleLaunchIntent\(params\)[\s\S]*!launchHandled && !launchMenuHandoff && firstGameRequired\(profile\)/);
   const release = app.slice(app.indexOf("function releaseLaunchBlackout()"), app.indexOf("function handoffLaunchMenu()"));

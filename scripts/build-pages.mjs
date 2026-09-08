@@ -1,3 +1,4 @@
+import { startupModuleFiles } from "./startup-module-files.mjs";
 import { copyFile, cp, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -10,7 +11,28 @@ import { validatePublicDuelApiUrl } from "./public-duel-config.mjs";
 import { validatePublicFeedbackApiUrl } from "./public-feedback-config.mjs";
 import { releaseMetadata, withAssetVersion, writeReleaseMetadata } from "./release-metadata.mjs";
 import { renderServiceWorker } from "./service-worker-source.mjs";
-import { SECONDARY_SURFACE_FILES } from "../public/secondary-surface-loader.mjs";
+import {
+  PAGES_EXCLUDED_PROTOTYPE_FILES,
+  PAGES_MINIFIED_CORE_RUNTIME_FILES
+} from "./pages-runtime-inventory.mjs";
+import {
+  COMBINING_BOARD_CORE_FILES,
+  COMBINING_BOARD_LAZY_FILES,
+  PLAY_ON_DEMAND_FILES,
+  SECONDARY_SURFACE_FILES,
+  VOYAGE_PROJECTION_LAZY_FILES
+} from "../public/secondary-surface-loader.mjs";
+import {
+  assertPlanetHubSourceRuntimeInventory,
+  buildPlanetHubRuntimeBundle,
+  buildPlanetHubRuntimeModule,
+  isPlanetHubBundledSourceFile,
+  isPlanetHubReleaseLazyFile,
+  isPlanetHubReleaseMinifiedFile,
+  isPlanetHubReleaseStyleFile,
+  isPlanetHubRuntimeFile,
+  validatePlanetHubAssets
+} from "./planet-hub-packaging.mjs";
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const output = join(root, "dist-pages");
@@ -22,6 +44,11 @@ const configuredItchUrl = process.env.PUBLIC_ITCH_URL?.trim() || "";
 const configuredFeedbackApiUrl = process.env.PUBLIC_FEEDBACK_API_URL?.trim() || "";
 const configuredDuelApiUrl = process.env.PUBLIC_DUEL_API_URL?.trim() || "";
 const release = await releaseMetadata({ channel: "github-pages", runtime: "local-practice" });
+const PROFILE_FRAME_REVIEW_FILES = new Set([
+  "profile-frame-showcase.css",
+  "profile-frame-showcase.mjs",
+  "profile-frames.html"
+]);
 
 async function listRelativeFiles(directory, base = directory) {
   const files = [];
@@ -125,10 +152,14 @@ const localBetaUrl = new URL("play/", validatedPagesUrl).href;
 const betaUrl = externalBetaUrl || localBetaUrl;
 const safePagesUrl = escapeAttribute(validatedPagesUrl);
 const safeBetaUrl = escapeAttribute(betaUrl);
+const publicEntryUrl = new URL(betaUrl);
+publicEntryUrl.searchParams.set("birthday", "off");
+const safePublicEntryUrl = escapeAttribute(publicEntryUrl.href);
 
 await generateReleaseAssets();
 await validateCosmeticPacks(join(root, "public"));
 await validateAudioPacks(join(root, "public"));
+await validatePlanetHubAssets(join(root, "public"));
 await rm(output, { recursive: true, force: true });
 await mkdir(output, { recursive: true });
 
@@ -137,7 +168,8 @@ html = withAssetVersion(html, release.version)
   .replaceAll("https://yoxyfel.github.io/constellore/", validatedPagesUrl)
   .replace("<head>", `<head>\n  <link rel="canonical" href="${safePagesUrl}">\n  <meta property="og:url" content="${safePagesUrl}">`)
   .replace('data-beta-url="/play/"', `data-beta-url="${safeBetaUrl}"`)
-  .replaceAll('href="/play/"', `href="${safeBetaUrl}"`);
+  .replaceAll('href="/play/"', `href="${safeBetaUrl}"`)
+  .replaceAll('href="/play/?birthday=off"', `href="${safePublicEntryUrl}"`);
 html = setBodyDataAttribute(html, "data-itch-url", itchUrl);
 html = setBodyDataAttribute(html, "data-build-version", release.version);
 html = setBodyDataAttribute(html, "data-build-id", release.buildId);
@@ -187,7 +219,8 @@ for (const policyFile of ["privacy.html", "terms.html", "support.html"]) {
   const canonicalPolicyUrl = new URL(policyFile, validatedPagesUrl).href;
   const policy = withAssetVersion(await readFile(join(root, "Website", policyFile), "utf8"), release.version)
     .replaceAll("https://yoxyfel.github.io/constellore/", validatedPagesUrl)
-    .replaceAll('href="play/"', `href="${safeBetaUrl}"`)
+    .replaceAll('href="play/"', `href="${safePublicEntryUrl}"`)
+    .replaceAll('href="play/?birthday=off"', `href="${safePublicEntryUrl}"`)
     .replace("<head>", `<head>\n  <link rel="canonical" href="${escapeAttribute(canonicalPolicyUrl)}">`);
   await writeFile(join(output, policyFile), policy, "utf8");
 }
@@ -210,10 +243,20 @@ gameHtml = withAssetVersion(gameHtml, release.version)
   .replaceAll('href="/icon.svg"', 'href="./icon.svg"')
   .replaceAll('href="/art/transitions/', 'href="./art/transitions/')
   .replaceAll('href="/art/home/', 'href="./art/home/')
+  .replace(new RegExp(`href="/ui-foundation[.]css[?]v=${release.version.replaceAll(".", "[.]")}"`), `href="./ui-foundation.css?v=${release.version}"`)
   .replace(new RegExp(`href="/styles[.]css[?]v=${release.version.replaceAll(".", "[.]")}"`), `href="./styles.css?v=${release.version}"`)
   .replace(new RegExp(`href="/simple-ui[.]css[?]v=${release.version.replaceAll(".", "[.]")}"`), `href="./simple-ui.css?v=${release.version}"`)
+  .replace(new RegExp(`href="/mobile-play-shell[.]css[?]v=${release.version.replaceAll(".", "[.]")}"`), `href="./mobile-play-shell.css?v=${release.version}"`)
+  .replace(new RegExp(`href="/concept-chemistry[.]css[?]v=${release.version.replaceAll(".", "[.]")}"`), `href="./concept-chemistry.css?v=${release.version}"`)
+  .replace(new RegExp(`href="/concept-matter[.]css[?]v=${release.version.replaceAll(".", "[.]")}"`), `href="./concept-matter.css?v=${release.version}"`)
+  .replace(new RegExp(`href="/molecular-memory[.]css[?]v=${release.version.replaceAll(".", "[.]")}"`), `href="./molecular-memory.css?v=${release.version}"`)
+  .replace(new RegExp(`href="/word-orbit[.]css[?]v=${release.version.replaceAll(".", "[.]")}"`), `href="./word-orbit.css?v=${release.version}"`)
+  .replace(new RegExp(`href="/word-orbit-motion[.]css[?]v=${release.version.replaceAll(".", "[.]")}"`), `href="./word-orbit-motion.css?v=${release.version}"`)
+  .replace(new RegExp(`href="/combining-board[.]css[?]v=${release.version.replaceAll(".", "[.]")}"`), `href="./combining-board.css?v=${release.version}"`)
   .replace(new RegExp(`href="/cosmic-gate[.]css[?]v=${release.version.replaceAll(".", "[.]")}"`), `href="./cosmic-gate.css?v=${release.version}"`)
   .replace(new RegExp(`href="/epic-home[.]css[?]v=${release.version.replaceAll(".", "[.]")}"`), `href="./epic-home.css?v=${release.version}"`)
+  .replace(new RegExp(`href="/planet-hub[.]css[?]v=${release.version.replaceAll(".", "[.]")}"`), `href="./planet-hub.css?v=${release.version}"`)
+  .replace(new RegExp(`href="/moon-project-flight[.]css[?]v=${release.version.replaceAll(".", "[.]")}"`), `href="./moon-project-flight.css?v=${release.version}"`)
   .replace(new RegExp(`href="/cosmetics-observatory[.]css[?]v=${release.version.replaceAll(".", "[.]")}"`), `href="./cosmetics-observatory.css?v=${release.version}"`)
   .replace(new RegExp(`href="/cosmetics[.]css[?]v=${release.version.replaceAll(".", "[.]")}"`), `href="./cosmetics.css?v=${release.version}"`)
   .replace(new RegExp(`href="/cosmos-circuit[.]css[?]v=${release.version.replaceAll(".", "[.]")}"`), `href="./cosmos-circuit.css?v=${release.version}"`)
@@ -234,13 +277,28 @@ await writeReleaseMetadata(join(playOutput, "release.json"), { channel: "github-
 const publicRuntimeFiles = (await readdir(join(root, "public"), { withFileTypes: true }))
   .filter((entry) => entry.isFile())
   .map((entry) => entry.name)
-  .filter((name) => /^(?:(?:app|cosmetic-preload-bootstrap)[.]js|(?:styles|simple-ui|cosmic-gate|epic-home|developer-console|cosmetics|cosmetics-observatory|cosmetic-world-preview|cosmic-interlude|cosmos-circuit|stardust-store|scramble)[.]css|.+[.]mjs|icon(?:-maskable)?(?:-[0-9]+)?[.](?:png|svg))$/.test(name))
+  .filter((name) => /^(?:(?:app|cosmetic-preload-bootstrap)[.]js|(?:ui-foundation|styles|simple-ui|mobile-play-shell|concept-chemistry|concept-matter|molecular-memory|word-orbit|word-orbit-motion|combining-board|cosmic-gate|epic-home|planet-hub|planet-hub-cinematic|moon-project-flight|developer-console|cosmetics|cosmetics-observatory|cosmetics-observatory-full-page|profile-rank-frame|cosmetic-world-preview|cosmic-interlude|cosmos-circuit|stardust-store|scramble|arena-duel-card|birthday-voyage|moon-worldweaving|moon-outpost|moon-heart-project)[.]css|.+[.]mjs|icon(?:-maskable)?(?:-[0-9]+)?[.](?:png|svg))$/.test(name))
+  .filter((name) => !PROFILE_FRAME_REVIEW_FILES.has(name))
+  .filter((name) => !name.startsWith("moon-settlement-"))
+  .filter((name) => !PAGES_EXCLUDED_PROTOTYPE_FILES.includes(name))
   .sort((left, right) => left.localeCompare(right, "en"));
+assertPlanetHubSourceRuntimeInventory(publicRuntimeFiles, "Pages Planet Hub source");
 for (const name of publicRuntimeFiles) {
+  if (isPlanetHubBundledSourceFile(name)) continue;
   const source = join(root, "public", name);
   const destination = join(playOutput, name);
   if (/\.(?:js|mjs)$/.test(name)) {
-    await writeFile(destination, withAssetVersion(await readFile(source, "utf8"), release.version), "utf8");
+    const bundleEntry = name === "planet-hub-runtime.mjs" || name === "planet-hub-host.mjs" || name === "website-atlas-preview.mjs" || name === "planet-hub-space.mjs";
+    const contents = bundleEntry ? "" : await readFile(source, "utf8");
+    const releaseContents = bundleEntry
+      ? await buildPlanetHubRuntimeBundle(source, release.version)
+      : isPlanetHubReleaseMinifiedFile(name)
+        || PAGES_MINIFIED_CORE_RUNTIME_FILES.includes(name)
+        || COMBINING_BOARD_LAZY_FILES.includes(name)
+        || VOYAGE_PROJECTION_LAZY_FILES.includes(name)
+        ? await buildPlanetHubRuntimeModule(contents, release.version)
+        : withAssetVersion(contents, release.version);
+    await writeFile(destination, releaseContents, "utf8");
   } else if (name.endsWith(".css")) {
     await writeFile(destination, minifyCss(await readFile(source, "utf8")), "utf8");
   } else {
@@ -266,9 +324,14 @@ const cinematicOutput = join(playOutput, "cinematic");
 for (const name of await listRelativeFiles(cinematicSource)) {
   const source = join(cinematicSource, name);
   const destination = join(cinematicOutput, name);
+  const releasePath = `cinematic/${name}`;
   await mkdir(dirname(destination), { recursive: true });
   if (/\.(?:js|mjs)$/.test(name)) {
-    await writeFile(destination, withAssetVersion(await readFile(source, "utf8"), release.version), "utf8");
+    const contents = await readFile(source, "utf8");
+    const releaseContents = VOYAGE_PROJECTION_LAZY_FILES.includes(releasePath)
+      ? await buildPlanetHubRuntimeModule(contents, release.version)
+      : withAssetVersion(contents, release.version);
+    await writeFile(destination, releaseContents, "utf8");
   } else if (name.endsWith(".css")) {
     await writeFile(destination, minifyCss(await readFile(source, "utf8")), "utf8");
   } else {
@@ -276,7 +339,15 @@ for (const name of await listRelativeFiles(cinematicSource)) {
   }
 }
 await cp(join(root, "public", "screenshots"), join(playOutput, "screenshots"), { recursive: true, force: true });
-await cp(join(root, "public", "art"), join(playOutput, "art"), { recursive: true, force: true });
+await cp(join(root, "public", "fonts"), join(playOutput, "fonts"), { recursive: true, force: true });
+await cp(join(root, "public", "vendor"), join(playOutput, "vendor"), { recursive: true, force: true });
+// Moon Settlement is an isolated local lab, not the shipped Moon Outpost/Heart.
+await cp(join(root, "public", "art"), join(playOutput, "art"), {
+  recursive: true,
+  force: true,
+  filter: (source) => source !== join(root, "public", "art", "moon-settlement")
+});
+await rm(join(playOutput, "art", "profile-frame-placement-variations.png"), { force: true });
 await cp(join(root, "public", "audio"), join(playOutput, "audio"), { recursive: true, force: true });
 await writeLocalWorldModule(join(playOutput, "local-world.mjs"));
 
@@ -297,16 +368,39 @@ manifest.screenshots = (manifest.screenshots || []).map((screenshot) => ({ ...sc
 await writeFile(join(playOutput, "manifest.webmanifest"), `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
 
 const secondarySurfaceAssets = new Set(SECONDARY_SURFACE_FILES);
+const playOnDemandAssets = new Set(PLAY_ON_DEMAND_FILES);
+for (const name of COMBINING_BOARD_CORE_FILES) {
+  if (!publicRuntimeFiles.includes(name)) throw new Error(`Pages core board asset is not included in the runtime build: ${name}`);
+}
+for (const name of COMBINING_BOARD_LAZY_FILES) {
+  if (!publicRuntimeFiles.includes(name)) throw new Error(`Pages lazy board asset is not included in the runtime build: ${name}`);
+}
+for (const name of VOYAGE_PROJECTION_LAZY_FILES.filter((path) => !path.includes("/"))) {
+  if (!publicRuntimeFiles.includes(name)) throw new Error(`Pages lazy projection asset is not included in the runtime build: ${name}`);
+}
+const planetHubLazyFiles = publicRuntimeFiles
+  .filter((name) => !isPlanetHubBundledSourceFile(name))
+  .filter(isPlanetHubReleaseLazyFile);
+const startupAssets = new Set(await startupModuleFiles(playOutput));
 const practiceAssets = (await listRelativeFiles(playOutput))
-  .filter((name) => (
+  .filter((name) => startupAssets.has(name) || (
     name !== "index.html"
     && name !== "service-worker.js"
+    && !PROFILE_FRAME_REVIEW_FILES.has(name)
     && !secondarySurfaceAssets.has(name)
+    && !playOnDemandAssets.has(name)
+    && !isPlanetHubRuntimeFile(name)
+    && !isPlanetHubReleaseLazyFile(name)
+    && !isPlanetHubReleaseStyleFile(name)
     && !name.startsWith("screenshots/")
     && !name.startsWith("art/ranks/")
     && !name.startsWith("art/transitions/")
     && !name.startsWith("art/home/")
     && !name.startsWith("art/cosmetics/")
+    && !name.startsWith("art/profile-frames/")
+    && !name.startsWith("art/moon-outpost/")
+    && !name.startsWith("art/planet-hub/")
+    && !name.startsWith("vendor/three/")
     && !name.startsWith("audio/")
     && !name.startsWith("story/")
     && !name.startsWith("cinematic/")
@@ -317,9 +411,10 @@ const serviceWorker = renderServiceWorker({
   cachePrefix: "constellore-pages-practice-",
   version: release.version,
   assets: practiceAssets,
-  lazyAssets: ["./art/ranks/", "./art/transitions/", "./art/home/", "./story/", "./cinematic/"],
-  lazyFiles: SECONDARY_SURFACE_FILES.map((name) => `./${name}?v=${release.version}`),
-  lazyPacks: ["./art/cosmetics/", "./audio/"],
+  lazyAssets: ["./art/ranks/", "./art/transitions/", "./art/home/", "./art/profile-frames/", "./art/moon-outpost/", "./story/", "./cinematic/"],
+  lazyFiles: SECONDARY_SURFACE_FILES.concat(PLAY_ON_DEMAND_FILES).map((name) => `./${name}?v=${release.version}`)
+    .concat(planetHubLazyFiles.map((name) => `./${name}?v=${release.version}`)),
+  lazyPacks: ["./art/cosmetics/", "./art/planet-hub/", "./audio/", "./vendor/three/"],
   legacyCaches: ["constellore-shell-v24", "constellore-pages-practice-v27"]
 });
 assertCosmeticPacksAreLazy(serviceWorker);

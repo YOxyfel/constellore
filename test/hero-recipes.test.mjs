@@ -88,9 +88,16 @@ test("game hero keeps a valid no-script fallback and stable, motion-safe styling
   assert.match(page, /Make worlds[\s\S]*out of words[.]/);
   assert.match(page, /Combine two ideas to discover something new[.]/);
   assert.match(page, /id="heroRecipeExample"[\s\S]*EARTH[\s\S]*WATER[\s\S]*MUD/);
+  const recipeMarkup = page.slice(
+    page.indexOf('id="heroRecipeExample"'),
+    page.indexOf("</div>", page.indexOf('id="heroRecipeExample"')) + 6
+  );
+  assert.equal((recipeMarkup.match(/class="recipe-word/g) || []).length, 3);
+  assert.doesNotMatch(recipeMarkup, /<i\b|>\s*(?:[+]|→|&rarr;)\s*</);
   assert.match(page, /hero-recipes[.]mjs[?]v=/);
   assert.match(page, /class="home-vfx" aria-hidden="true"/);
   assert.match(styles, /#startScreen [.]start-copy\s*\{[^}]*align-items:\s*center[^}]*text-align:\s*center/);
   assert.match(styles, /#startScreen [.]recipe-example\s*\{[\s\S]*width:\s*min\(100%,\s*650px\)[\s\S]*grid-template-columns:/);
+  assert.doesNotMatch(styles, /recipe-example\s*>\s*i|recipe-example\s*>\s*:nth-child\((?:4|5)\)/);
   assert.match(styles, /prefers-reduced-motion:\s*reduce[\s\S]*animation-duration:\s*[.]001ms !important/);
 });

@@ -20,7 +20,7 @@ test("Second Orbit is a curated three-fusion route to Mountain", () => {
   ]);
 });
 
-test("unrelated experimentation does not break the next route signal", () => {
+test("legacy unrelated history is ignored while both words in the next bond are signaled", () => {
   const history = [
     { a: "Water", b: "Water", word: "Ocean" },
     { a: "Fire", b: "Earth", word: "Lava" },
@@ -29,7 +29,7 @@ test("unrelated experimentation does not break the next route signal", () => {
   const progress = secondOrbitProgress(history);
   assert.equal(progress.index, 1);
   assert.equal(progress.step.word, "Stone");
-  assert.deepEqual(progress.spotlightWords, ["Lava"]);
+  assert.deepEqual(progress.spotlightWords, ["Lava", "Water"]);
 });
 
 test("Second Orbit state is strictly reduced to booleans", () => {

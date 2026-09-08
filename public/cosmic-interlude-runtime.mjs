@@ -4,13 +4,13 @@ import {
   cosmicInterludeOffer,
   cosmicInterludeView,
   createCosmicInterlude
-} from "./cosmic-interludes.mjs?v=5.0.0-beta.1";
-import { loadOptionalStylesheet } from "./secondary-surface-loader.mjs?v=5.0.0-beta.1";
+} from "./cosmic-interludes.mjs?v=5.0.0-beta.4";
+import { loadOptionalStylesheet } from "./secondary-surface-loader.mjs?v=5.0.0-beta.4";
 
 export const COSMIC_INTERLUDE_STORAGE_KEY = "constellore-cosmic-interludes-v1";
 export const COSMIC_INTERLUDE_ENTER_EVENT = "constellore:interlude-enter";
 
-const COSMIC_INTERLUDE_STYLESHEET = "cosmic-interlude.css?v=5.0.0-beta.1";
+const COSMIC_INTERLUDE_STYLESHEET = "cosmic-interlude.css?v=5.0.0-beta.4";
 const RUNTIME_MARK = Symbol.for("constellore.cosmic-interlude-runtime");
 const MAX_SETTLED_CHALLENGE = 10_000_000;
 const ENDPOINT_HIT_RADIUS = 42;

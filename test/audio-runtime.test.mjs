@@ -306,3 +306,64 @@ test("the silent cinematic prepares Home music and kit previews never overlap mu
     }
   }
 });
+
+test("auxiliary presentation channels share the graph and remain governed by channel preferences", () => {
+  const names = ["AudioContext", "webkitAudioContext", "fetch", "navigator", "document", "matchMedia"];
+  const descriptors = Object.fromEntries(names.map((name) => [name, Object.getOwnPropertyDescriptor(globalThis, name)]));
+  const preferences = {
+    sound: true,
+    music: true,
+    haptics: false,
+    muted: false,
+    volume: 0.8,
+    musicVolume: 0.5,
+    sfxVolume: 0.25
+  };
+  let runtime;
+  try {
+    Object.defineProperty(globalThis, "AudioContext", { configurable: true, value: FakeAudioContext });
+    Object.defineProperty(globalThis, "webkitAudioContext", { configurable: true, value: undefined });
+    Object.defineProperty(globalThis, "fetch", {
+      configurable: true,
+      value: async () => ({ ok: true, arrayBuffer: async () => new ArrayBuffer(16) })
+    });
+    Object.defineProperty(globalThis, "navigator", { configurable: true, value: { connection: { saveData: false } } });
+    Object.defineProperty(globalThis, "document", { configurable: true, value: { hidden: false } });
+    Object.defineProperty(globalThis, "matchMedia", { configurable: true, value: () => ({ matches: false }) });
+
+    runtime = createAudioRuntime({ getPreferences: () => preferences });
+    const activeContext = runtime.prime({ startMusic: false });
+    const music = runtime.createAuxiliaryChannel({ kind: "music", level: 0.5 });
+    const effects = runtime.createAuxiliaryChannel({ kind: "effects", level: 0.6 });
+    assert.equal(music.context, activeContext);
+    assert.equal(effects.context, activeContext);
+    assert.equal(music.input.gain.value, 0.2, "master and music volume govern the music channel");
+    assert.equal(effects.input.gain.value, 0.12, "master and effects volume govern the effects channel");
+
+    preferences.musicVolume = 0.25;
+    preferences.sfxVolume = 0.75;
+    runtime.setPreferences();
+    assert.equal(music.input.gain.value, 0.1);
+    assert.equal(effects.input.gain.value, 0.36);
+
+    preferences.muted = true;
+    runtime.setPreferences();
+    assert.equal(music.input.gain.value, 0);
+    assert.equal(effects.input.gain.value, 0);
+    preferences.muted = false;
+    runtime.setPreferences();
+    runtime.setSuspended(true);
+    assert.equal(music.input.gain.value, 0);
+    assert.equal(effects.input.gain.value, 0);
+    assert.equal(music.close(), true);
+    assert.equal(music.close(), false);
+  } finally {
+    runtime?.dispose();
+    FakeAudioContext.instances.length = 0;
+    for (const name of names) {
+      const descriptor = descriptors[name];
+      if (descriptor) Object.defineProperty(globalThis, name, descriptor);
+      else delete globalThis[name];
+    }
+  }
+});

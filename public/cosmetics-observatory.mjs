@@ -1,19 +1,24 @@
 const OBSERVATORY_TABS = Object.freeze(["collections", "pieces", "owned"]);
+const PROFILE_FRAME_CATEGORY = "profileFrames";
+const PROFILE_FRAME_NONE_ID = "profile-frame-none";
+const BROWSER_TABS = Object.freeze(["collections", "pieces", PROFILE_FRAME_CATEGORY]);
 const EFFECT_MODES = Object.freeze(["full", "reduced", "off"]);
 const PREVIEW_SURFACES = Object.freeze(["board", "home", "gate", "menu", "sound"]);
 const ALLOWED_BADGES = new Set(["Free", "Earned", "Supporter", "Event", "Rank reward", "Purchase only"]);
 const PRESENTATION_SCOPES = new Set(["foundation", "accent", "full-shell"]);
+const COLLECTION_FAMILY_ID_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const FALLBACK_COLLECTION_FAMILY_ID = "other-collections";
 
 const DEFAULT_SLOT_LABELS = Object.freeze({
   wordPlaque: "Word plaques",
   trailSet: "Trails",
   boardFinish: "Board backgrounds & finishes",
   boardScene: "Board backgrounds & finishes",
-  homeScene: "Main-menu backgrounds",
-  gateStyle: "Opening gates",
-  uiFinish: "Menu finishes",
+  homeScene: "Home backgrounds",
+  gateStyle: "Worldweave transitions",
+  uiFinish: "Interface styles",
   soundTheme: "Sound themes",
-  theme: "Menu finishes",
+  theme: "Interface styles",
   board: "Board backgrounds & finishes",
   trail: "Trails",
   sound: "Sound themes"
@@ -24,7 +29,7 @@ const COLLECTION_SLOT_CHIPS = Object.freeze({
   trailSet: "Trail",
   boardFinish: "Board",
   homeScene: "Background",
-  gateStyle: "Gate",
+  gateStyle: "Worldweave",
   uiFinish: "UI",
   soundTheme: "Sound"
 });
@@ -40,6 +45,46 @@ function asText(value, fallback = "") {
 
 function uniqueStrings(values) {
   return [...new Set((Array.isArray(values) ? values : []).map((value) => asText(value)).filter(Boolean))];
+}
+
+function safeCollectionFamilyId(value, fallback = FALLBACK_COLLECTION_FAMILY_ID) {
+  const id = asText(value).toLowerCase();
+  return COLLECTION_FAMILY_ID_PATTERN.test(id) ? id : fallback;
+}
+
+function collectionFamilyLabel(id) {
+  if (id === FALLBACK_COLLECTION_FAMILY_ID) return "Other Collections";
+  return id
+    .split("-")
+    .filter(Boolean)
+    .map((part) => `${part.charAt(0).toUpperCase()}${part.slice(1)}`)
+    .join(" ");
+}
+
+function normalizeCollectionFamily(family, index = 0) {
+  const source = asRecord(family);
+  const id = asText(source.id).toLowerCase();
+  if (!COLLECTION_FAMILY_ID_PATTERN.test(id) || id === FALLBACK_COLLECTION_FAMILY_ID) return null;
+  return Object.freeze({
+    ...source,
+    id,
+    label: asText(source.label, collectionFamilyLabel(id)),
+    kicker: asText(source.kicker),
+    description: asText(source.description, "More complete cosmetic collections."),
+    order: Number.isFinite(Number(source.order)) ? Number(source.order) : index,
+    future: source.future === true
+  });
+}
+
+function fallbackCollectionFamily() {
+  return Object.freeze({
+    id: FALLBACK_COLLECTION_FAMILY_ID,
+    label: "Other Collections",
+    kicker: "More collections",
+    description: "Collections that do not yet belong to a named catalog family.",
+    order: Number.MAX_SAFE_INTEGER,
+    future: false
+  });
 }
 
 function safeBadge(value, entitlement = "") {
@@ -82,8 +127,10 @@ function normalizeItem(item, index = 0) {
     id,
     slot,
     label: asText(source.label ?? source.name, id),
-    description: asText(source.description ?? source.summary, "A presentation-only cosmetic."),
+    description: asText(source.description ?? source.summary, "A look-only cosmetic."),
     collectionId: asText(source.collectionId ?? source.collection),
+    collectionFamily: safeCollectionFamilyId(source.collectionFamily),
+    styleLabel: asText(source.styleLabel),
     badge,
     unlockHint: asText(source.unlockHint ?? source.requirement),
     tone: safeTone(source.tone ?? source.visualTone ?? source.collectionId ?? id),
@@ -106,6 +153,8 @@ function normalizeCollection(collection, index = 0) {
     id,
     label: asText(source.label ?? source.name, id),
     description: asText(source.description ?? source.summary, "A coordinated cosmetic collection."),
+    collectionFamily: safeCollectionFamilyId(source.collectionFamily),
+    styleLabel: asText(source.styleLabel),
     badge,
     tier: asText(source.tier ?? source.presentationTier, badge === "Free" ? "Included" : "Signature"),
     presentation: PRESENTATION_SCOPES.has(requestedPresentation)
@@ -133,12 +182,17 @@ function resolveOwned(resolver, item) {
 }
 
 function sortByOrderThenLabel(a, b) {
-  return (a.order - b.order) || a.label.localeCompare(b.label);
+  const left = asRecord(a);
+  const right = asRecord(b);
+  const leftOrder = Number.isFinite(Number(left.order)) ? Number(left.order) : Number.MAX_SAFE_INTEGER;
+  const rightOrder = Number.isFinite(Number(right.order)) ? Number(right.order) : Number.MAX_SAFE_INTEGER;
+  return (leftOrder - rightOrder)
+    || asText(left.label ?? left.id).localeCompare(asText(right.label ?? right.id));
 }
 
 export function observatoryCollectionValue(collection = {}) {
   const creditPrice = Math.max(0, Math.floor(Number(asRecord(collection).creditPrice) || 0));
-  return creditPrice > 0 ? `${creditPrice.toLocaleString("en-US")} C` : "Included";
+  return creditPrice > 0 ? `${creditPrice.toLocaleString("en-US")} Star Credits` : "Included";
 }
 
 export function observatoryPurchaseStep(armedCollectionId = "", targetCollectionId = "") {
@@ -154,6 +208,7 @@ export function observatoryPurchaseStep(armedCollectionId = "", targetCollection
  * DOM-independent so manifest migrations and ownership rules can be tested in Node.
  */
 export function buildObservatoryModel({
+  collectionFamilies = [],
   collections = [],
   items = [],
   slotOrder = [],
@@ -165,6 +220,18 @@ export function buildObservatoryModel({
   const normalizedCollections = (Array.isArray(collections) ? collections : [])
     .map(normalizeCollection)
     .sort(sortByOrderThenLabel);
+  const familyById = new Map();
+  for (const family of (Array.isArray(collectionFamilies) ? collectionFamilies : [])
+    .map(normalizeCollectionFamily)
+    .filter(Boolean)
+    .sort(sortByOrderThenLabel)) {
+    if (!familyById.has(family.id)) familyById.set(family.id, family);
+  }
+  const needsFallbackFamily = normalizedCollections.some((collection) => !familyById.has(collection.collectionFamily));
+  if (needsFallbackFamily && !familyById.has(FALLBACK_COLLECTION_FAMILY_ID)) {
+    familyById.set(FALLBACK_COLLECTION_FAMILY_ID, fallbackCollectionFamily());
+  }
+  const normalizedFamilies = [...familyById.values()].sort(sortByOrderThenLabel);
   const inferredSlots = normalizedItems.map((item) => item.slot);
   const slots = uniqueStrings([...(Array.isArray(slotOrder) ? slotOrder : []), ...inferredSlots]);
   const current = asRecord(loadout);
@@ -177,7 +244,15 @@ export function buildObservatoryModel({
     const collectionLoadout = deriveCollectionLoadout(collection, ownedItems, slots, safeLoadout);
     const representedItems = Object.values(collectionLoadout).map((id) => itemById.get(id)).filter(Boolean);
     const isOwned = representedItems.length > 0 && representedItems.every((item) => item.owned);
-    return Object.freeze({ ...collection, loadout: Object.freeze(collectionLoadout), owned: isOwned });
+    const collectionFamily = familyById.has(collection.collectionFamily)
+      ? collection.collectionFamily
+      : FALLBACK_COLLECTION_FAMILY_ID;
+    return Object.freeze({
+      ...collection,
+      collectionFamily,
+      loadout: Object.freeze(collectionLoadout),
+      owned: isOwned
+    });
   });
 
   return Object.freeze({
@@ -188,8 +263,56 @@ export function buildObservatoryModel({
     ]))),
     loadout: safeLoadout,
     items: Object.freeze(ownedItems),
+    collectionFamilies: Object.freeze(normalizedFamilies),
     collections: Object.freeze(collectionModels)
   });
+}
+
+/**
+ * Groups a collection view into semantic catalog families. Empty registered
+ * families are intentionally omitted so future shelves appear only when used.
+ */
+export function groupObservatoryCollectionsByFamily(model, collections = null) {
+  const source = asRecord(model);
+  const familyById = new Map();
+  for (const family of (Array.isArray(source.collectionFamilies) ? source.collectionFamilies : [])
+    .map(normalizeCollectionFamily)
+    .filter(Boolean)
+    .sort(sortByOrderThenLabel)) {
+    if (!familyById.has(family.id)) familyById.set(family.id, family);
+  }
+
+  const candidates = (Array.isArray(collections)
+    ? collections
+    : Array.isArray(source.collections) ? source.collections : [])
+    .filter((collection) => collection && typeof collection === "object")
+    .slice()
+    .sort(sortByOrderThenLabel);
+  const needsFallbackFamily = candidates.some((collection) => {
+    const id = safeCollectionFamilyId(collection.collectionFamily);
+    return !familyById.has(id);
+  });
+  if (needsFallbackFamily && !familyById.has(FALLBACK_COLLECTION_FAMILY_ID)) {
+    familyById.set(FALLBACK_COLLECTION_FAMILY_ID, fallbackCollectionFamily());
+  }
+
+  const buckets = new Map([...familyById.keys()].map((id) => [id, []]));
+  for (const collection of candidates) {
+    const requestedId = safeCollectionFamilyId(collection.collectionFamily);
+    const familyId = familyById.has(requestedId) ? requestedId : FALLBACK_COLLECTION_FAMILY_ID;
+    if (!buckets.has(familyId)) buckets.set(familyId, []);
+    buckets.get(familyId).push(collection);
+  }
+
+  return Object.freeze(
+    [...familyById.values()]
+      .sort(sortByOrderThenLabel)
+      .filter((family) => (buckets.get(family.id) || []).length > 0)
+      .map((family) => Object.freeze({
+        ...family,
+        collections: Object.freeze((buckets.get(family.id) || []).slice().sort(sortByOrderThenLabel))
+      }))
+  );
 }
 
 export function deriveCollectionLoadout(collection, items = [], slotOrder = [], fallbackLoadout = {}) {
@@ -265,6 +388,47 @@ export function observatorySelectionState({
     equipped: loadoutsEqual(desired, currentLoadout, slotOrder),
     previewed: loadoutsEqual(desired, previewLoadout, slotOrder),
     canEquip: Boolean(owned) && !loadoutsEqual(desired, currentLoadout, slotOrder)
+  });
+}
+
+/**
+ * Summarizes the equipped presentation and any staged preview without changing
+ * ownership or persistence. This powers the Lab's always-visible loadout rail.
+ */
+export function observatoryLoadoutSummary(model, currentLoadout, stagedLoadout) {
+  const source = asRecord(model);
+  const slots = uniqueStrings(source.slots);
+  const items = Array.isArray(source.items) ? source.items : [];
+  const collections = Array.isArray(source.collections) ? source.collections : [];
+  const equipped = asRecord(currentLoadout ?? source.loadout);
+  const staged = asRecord(stagedLoadout ?? equipped);
+  const itemById = new Map(items.map((item) => [asText(item?.id), item]));
+  const matchingCollection = collections.find((collection) =>
+    loadoutsEqual(collection?.loadout, equipped, slots)
+  );
+  const slotSummaries = slots.map((slot) => {
+    const itemId = asText(equipped[slot]);
+    const stagedItemId = asText(staged[slot], itemId);
+    const item = itemById.get(itemId);
+    const stagedItem = itemById.get(stagedItemId);
+    return Object.freeze({
+      slot,
+      slotLabel: asText(source.slotLabels?.[slot], DEFAULT_SLOT_LABELS[slot] || slot),
+      itemId,
+      itemLabel: asText(item?.label, "Default look"),
+      itemTone: safeTone(item?.tone ?? item?.collectionId ?? itemId),
+      stagedItemId,
+      stagedItemLabel: asText(stagedItem?.label, "Default look"),
+      staged: stagedItemId !== itemId,
+      ownedOptions: items.filter((candidate) => candidate?.slot === slot && candidate?.owned).length
+    });
+  });
+
+  return Object.freeze({
+    collectionId: asText(matchingCollection?.id),
+    label: asText(matchingCollection?.label, "Custom mix"),
+    staged: slotSummaries.some((slot) => slot.staged),
+    slots: Object.freeze(slotSummaries)
   });
 }
 
@@ -405,11 +569,17 @@ function visualKind(value) {
   return VISUAL_KINDS[asText(value)] || "piece";
 }
 
-function applyPreviewImage(node, item) {
-  const assetUrl = observatoryPreviewAssetUrl(item);
+function applyPreviewImage(node, item, size = "sm") {
+  const assetUrl = observatoryPreviewAssetUrl(item, { size });
   if (!assetUrl) return;
   node.classList.add("has-image");
   node.style.setProperty("--observatory-preview-image", `url("${assetUrl}")`);
+  for (const responsiveSize of ["sm", "md", "lg"]) {
+    const responsiveUrl = observatoryPreviewAssetUrl(item, { size: responsiveSize });
+    if (responsiveUrl) {
+      node.style.setProperty(`--observatory-preview-image-${responsiveSize}`, `url("${responsiveUrl}")`);
+    }
+  }
 }
 
 function actionKey(type, id) {
@@ -417,13 +587,13 @@ function actionKey(type, id) {
 }
 
 function focusKeyAfterCommit(meta, fallback = "") {
-  if (meta?.type === "collection" && meta.id) return actionKey("preview-collection", meta.id);
-  if (meta?.type === "piece" && meta.id) return actionKey("preview-piece", meta.id);
+  if (meta?.type === "collection" && meta.id) return actionKey("carousel-option", meta.id);
+  if (meta?.type === "piece" && meta.id) return actionKey("carousel-option", meta.id);
   return fallback || actionKey("close", "observatory");
 }
 
 /**
- * Mounts a modal Cosmetics Observatory without requiring static HTML.
+ * Mounts a full-page Cosmetics Observatory without requiring static HTML.
  *
  * Callbacks:
  * - getLoadout(): current canonical loadout
@@ -437,6 +607,8 @@ function focusKeyAfterCommit(meta, fallback = "") {
  *   preview onto a real app surface while this dialog is suspended
  * - onDismissPreview(meta): tear down an externally presented preview
  * - getEffects(), onEffectsChange(mode)
+ * - profileFrames, getProfileFrame(), createProfileFramePreview(slug, entry)
+ * - onProfileFrameCommit(slug, meta): persist the independent Arena frame
  */
 export function createCosmeticsObservatory(options = {}) {
   if (typeof document === "undefined") {
@@ -447,10 +619,14 @@ export function createCosmeticsObservatory(options = {}) {
   const mount = settings.mount || document.body;
   let dialog = null;
   let activeTab = "collections";
+  let ownedOnly = false;
   let selectedSlot = "";
+  const carouselSelectionByCategory = new Map();
   let baseLoadout = {};
   let previewLoadout = {};
   let previewMeta = null;
+  let equippedProfileFrame = "";
+  let stagedProfileFrame = "";
   let previewMode = false;
   let previewSuspended = false;
   let previewSurface = PREVIEW_SURFACES[0];
@@ -463,6 +639,7 @@ export function createCosmeticsObservatory(options = {}) {
 
   function makeModel() {
     return buildObservatoryModel({
+      collectionFamilies: settings.collectionFamilies,
       collections: settings.collections,
       items: settings.items,
       slotOrder: settings.slotOrder,
@@ -472,9 +649,28 @@ export function createCosmeticsObservatory(options = {}) {
     });
   }
 
+  function profileFrameCatalog() {
+    return (Array.isArray(settings.profileFrames) ? settings.profileFrames : [])
+      .filter((entry) => entry && /^[a-z0-9]+(?:-[a-z0-9]+)*$/u.test(asText(entry.slug)));
+  }
+
+  function configuredProfileFrame(value) {
+    const slug = asText(value);
+    return profileFrameCatalog().some((entry) => entry.slug === slug) ? slug : "";
+  }
+
+  function readConfiguredProfileFrame() {
+    try {
+      return configuredProfileFrame(settings.getProfileFrame?.() ?? settings.profileFrame);
+    } catch {
+      return "";
+    }
+  }
+
   function configuredLoadout(raw) {
     return {
       ...buildObservatoryModel({
+        collectionFamilies: settings.collectionFamilies,
         collections: settings.collections,
         items: settings.items,
         slotOrder: settings.slotOrder,
@@ -581,7 +777,7 @@ export function createCosmeticsObservatory(options = {}) {
       nextFocusKey = focusKeyAfterCommit(meta, focusKey);
       announcement = loadoutsEqual(committedLoadout, candidate)
         ? `${meta.label} equipped.`
-        : "Your available cosmetic loadout was restored.";
+        : "Your available cosmetic look was restored.";
     } catch {
       announcement = "That cosmetic could not be equipped. Your previous look is still active.";
     } finally {
@@ -592,12 +788,48 @@ export function createCosmeticsObservatory(options = {}) {
     }
   }
 
+  async function commitProfileFrame(candidate, meta, focusKey = "") {
+    if (committing) return;
+    clearPurchaseConfirmation();
+    const requestedSlug = configuredProfileFrame(candidate);
+    committing = true;
+    dialog?.setAttribute("aria-busy", "true");
+    dialog?.querySelectorAll("[data-commit-control]").forEach((control) => {
+      control.setAttribute("aria-disabled", "true");
+    });
+    let announcement = "";
+    try {
+      const persisted = await settings.onProfileFrameCommit?.(requestedSlug, meta);
+      equippedProfileFrame = persisted === undefined
+        ? requestedSlug
+        : configuredProfileFrame(persisted);
+      stagedProfileFrame = equippedProfileFrame;
+      previewMeta = null;
+      carouselSelectionByCategory.set(
+        PROFILE_FRAME_CATEGORY,
+        equippedProfileFrame || PROFILE_FRAME_NONE_ID
+      );
+      announcement = equippedProfileFrame
+        ? `${meta.label} equipped for Scramble Arena.`
+        : "The Arena frame was removed.";
+    } catch {
+      stagedProfileFrame = equippedProfileFrame;
+      announcement = "That profile frame could not be equipped. Your previous frame is still active.";
+    } finally {
+      committing = false;
+      dialog?.removeAttribute("aria-busy");
+      render(focusKeyAfterCommit(meta, focusKey));
+      announce(announcement);
+    }
+  }
+
   async function purchase(collection, focusKey = "") {
     if (committing || !collection.creditPrice || typeof settings.onPurchase !== "function") return;
     if (currentBalance() < collection.creditPrice) {
+      const shortfall = collection.creditPrice - currentBalance();
       clearPurchaseConfirmation();
       render(focusKey);
-      announce(`You need ${collection.creditPrice.toLocaleString()} Star Credits to unlock ${collection.label}.`);
+      announce(`You need ${shortfall.toLocaleString()} more Star Credits to unlock ${collection.label}.`);
       return;
     }
     const confirmation = observatoryPurchaseStep(armedPurchaseId, collection.id);
@@ -637,6 +869,7 @@ export function createCosmeticsObservatory(options = {}) {
   function revertTransient() {
     clearPurchaseConfirmation();
     const changed = !loadoutsEqual(previewLoadout, baseLoadout);
+    const frameChanged = stagedProfileFrame !== equippedProfileFrame;
     previewMode = false;
     previewSuspended = false;
     previewSurface = PREVIEW_SURFACES[0];
@@ -644,6 +877,25 @@ export function createCosmeticsObservatory(options = {}) {
     previewLoadout = { ...baseLoadout };
     previewMeta = null;
     if (changed) callPreview(baseLoadout, { reason: "revert", transient: false });
+    stagedProfileFrame = equippedProfileFrame;
+    if (frameChanged) {
+      carouselSelectionByCategory.set(
+        PROFILE_FRAME_CATEGORY,
+        equippedProfileFrame || PROFILE_FRAME_NONE_ID
+      );
+    }
+  }
+
+  function stopProfileFramePreviewMedia(root = dialog) {
+    for (const video of root?.querySelectorAll?.("[data-profile-frame-preview-video]") || []) {
+      try {
+        video.pause?.();
+        video.removeAttribute("src");
+        video.load?.();
+      } catch {
+        // Detached preview media is disposable; the static frame remains available.
+      }
+    }
   }
 
   function close(reason = "close") {
@@ -652,6 +904,7 @@ export function createCosmeticsObservatory(options = {}) {
       announce("Finishing your cosmetic change before closing.");
       return;
     }
+    stopProfileFramePreviewMedia();
     clearPurchaseConfirmation();
     if (previewSuspended) {
       try {
@@ -710,7 +963,7 @@ export function createCosmeticsObservatory(options = {}) {
     return node;
   }
 
-  function collectionCard(collection, model) {
+  function collectionCard(collection, model, headingTag = "h3") {
     const state = observatorySelectionState({
       candidate: collection.loadout,
       currentLoadout: baseLoadout,
@@ -723,6 +976,8 @@ export function createCosmeticsObservatory(options = {}) {
       `cosmetics-observatory__card is-${collection.tone} is-${collection.presentation}`
     );
     card.dataset.collectionId = collection.id;
+    card.dataset.collectionFamily = collection.collectionFamily;
+    if (collection.styleLabel) card.dataset.styleLabel = collection.styleLabel;
     card.dataset.presentation = collection.presentation;
     card.dataset.presentationTier = collection.tier;
     card.dataset.collectionTier = collection.tier;
@@ -750,19 +1005,22 @@ export function createCosmeticsObservatory(options = {}) {
     const eyebrow = element("div", "cosmetics-observatory__card-eyebrow");
     eyebrow.append(badgeNode(collection.badge), statePills(state));
     body.append(eyebrow);
-    const heading = element("h3", "cosmetics-observatory__card-title", collection.label);
+    if (collection.styleLabel) {
+      body.append(element("p", "cosmetics-observatory__card-style", collection.styleLabel));
+    }
+    const heading = element(headingTag, "cosmetics-observatory__card-title", collection.label);
     body.append(heading, element("p", "cosmetics-observatory__card-copy", collection.description));
     const pieceCount = Object.values(collection.loadout).filter(Boolean).length;
     const facts = element("div", "cosmetics-observatory__collection-facts");
     const tierFact = element("span", "cosmetics-observatory__collection-fact is-tier");
     tierFact.append(
-      element("small", "", "Presentation tier"),
+      element("small", "", "Style tier"),
       element("strong", "", collection.tier)
     );
     const kitFact = element("span", "cosmetics-observatory__collection-fact is-kit");
     kitFact.append(
-      element("small", "", "Complete collection"),
-      element("strong", "", `${pieceCount}-piece kit`)
+      element("small", "", "Collection size"),
+      element("strong", "", `${pieceCount} pieces`)
     );
     facts.append(
       tierFact,
@@ -770,7 +1028,7 @@ export function createCosmeticsObservatory(options = {}) {
       element(
         "span",
         "cosmetics-observatory__collection-fact is-background",
-        "Main-menu background included"
+        "Home background included"
       )
     );
     const priceFact = element("span", "cosmetics-observatory__collection-fact is-price");
@@ -809,7 +1067,9 @@ export function createCosmeticsObservatory(options = {}) {
     } else if (collection.creditPrice > 0) {
       if (collection.creditPrice > 0 && typeof settings.onPurchase === "function") {
         const purchaseKey = actionKey("purchase-collection", collection.id);
-        const affordable = currentBalance() >= collection.creditPrice;
+        const balance = currentBalance();
+        const affordable = balance >= collection.creditPrice;
+        const shortfall = Math.max(0, collection.creditPrice - balance);
         const purchaseArmed = armedPurchaseId === collection.id;
         const purchaseValue = observatoryCollectionValue(collection);
         const purchaseButton = markFocusKey(button(
@@ -818,7 +1078,7 @@ export function createCosmeticsObservatory(options = {}) {
             ? `Confirm ${purchaseValue}`
             : affordable
               ? `Unlock for ${purchaseValue}`
-              : `Need ${purchaseValue}`,
+              : `Need ${shortfall.toLocaleString("en-US")} more credits`,
           () => purchase(collection, purchaseKey)
         ), purchaseKey);
         purchaseButton.disabled = !affordable || committing;
@@ -828,7 +1088,9 @@ export function createCosmeticsObservatory(options = {}) {
           "aria-label",
           purchaseArmed
             ? `Confirm purchase of ${collection.label} for ${purchaseValue}`
-            : `Unlock ${collection.label} for ${purchaseValue}`
+            : affordable
+              ? `Unlock ${collection.label} for ${purchaseValue}`
+              : `Need ${shortfall.toLocaleString("en-US")} more Star Credits to unlock ${collection.label}`
         );
         actions.append(purchaseButton);
       }
@@ -917,7 +1179,7 @@ export function createCosmeticsObservatory(options = {}) {
     const labels = {
       board: "Board",
       home: "Home",
-      gate: "Gate",
+      gate: "Constellation Fold",
       menu: "Menu",
       sound: "Sound"
     };
@@ -963,12 +1225,12 @@ export function createCosmeticsObservatory(options = {}) {
     );
     pane.dataset.surface = slot === "homeScene" ? "home" : "gate";
     pane.setAttribute("role", "img");
-    pane.setAttribute("aria-label", `${title} preview: ${asText(item?.label, "default presentation")}`);
-    applyPreviewImage(pane, item);
+    pane.setAttribute("aria-label", `${title} preview: ${asText(item?.label, "default look")}`);
+    applyPreviewImage(pane, item, immersive ? "md" : "sm");
     const label = element("span", "cosmetics-observatory__scene-label");
     label.append(
       element("small", "", title),
-      element("strong", "", asText(item?.label, "Default presentation"))
+      element("strong", "", asText(item?.label, "Default look"))
     );
     pane.append(element("i", "cosmetics-observatory__scene-seam"), label);
     return pane;
@@ -979,11 +1241,11 @@ export function createCosmeticsObservatory(options = {}) {
     const tone = safeTone(item?.tone || selectedTone(model, previewLoadout));
     const panel = element("div", `cosmetics-observatory__menu-preview is-${tone}`);
     panel.setAttribute("role", "img");
-    panel.setAttribute("aria-label", `Menu finish preview: ${asText(item?.label, "default presentation")}`);
+    panel.setAttribute("aria-label", `Interface style preview: ${asText(item?.label, "default look")}`);
     const sample = element("div", "cosmetics-observatory__menu-sample");
     sample.append(
       element("p", "cosmetics-observatory__kicker", "Choose your orbit"),
-      element("h3", "", asText(item?.label, "Default presentation")),
+      element("h3", "", asText(item?.label, "Default look")),
       element("p", "", "Buttons, panels, borders, and highlights use this finish.")
     );
     const actions = element("div", "cosmetics-observatory__menu-actions");
@@ -1006,7 +1268,7 @@ export function createCosmeticsObservatory(options = {}) {
     copy.append(
       element("p", "cosmetics-observatory__kicker", "Sound theme"),
       element("h3", "", asText(item?.label, "Default sound")),
-      element("p", "", "Hear a short presentation-only sample. Your equipped sound returns when previewing ends.")
+      element("p", "", "Hear a short preview-only sample. Your equipped sound returns when previewing ends.")
     );
     panel.append(glyph, copy);
     if (item && typeof settings.onSoundPreview === "function") {
@@ -1022,6 +1284,7 @@ export function createCosmeticsObservatory(options = {}) {
 
   function previewPanel(model, { immersive = false } = {}) {
     const overallTone = selectedTone(model, previewLoadout);
+    const loadoutSummary = observatoryLoadoutSummary(model, previewLoadout, previewLoadout);
     const section = element(
       "section",
       `cosmetics-observatory__preview is-${overallTone}${immersive ? " is-immersive" : ""}`
@@ -1029,17 +1292,23 @@ export function createCosmeticsObservatory(options = {}) {
     section.setAttribute("aria-labelledby", "cosmetics-preview-title");
     const headingRow = element("div", "cosmetics-observatory__preview-heading");
     const titles = element("div");
-    const kicker = element("p", "cosmetics-observatory__kicker", immersive ? "Preview mode" : "Live presentation");
-    const title = element("h2", "", immersive ? asText(previewMeta?.label, "Cosmetic preview") : "Your constellation");
+    const kicker = element("p", "cosmetics-observatory__kicker", immersive ? "Preview mode" : "Live look");
+    const title = element(
+      "h2",
+      "",
+      immersive
+        ? asText(previewMeta?.label, "Cosmetic preview")
+        : asText(previewMeta?.label, loadoutSummary.label)
+    );
     title.id = "cosmetics-preview-title";
     titles.append(kicker, title);
     headingRow.append(titles, element("span", "cosmetics-observatory__preview-rank", "Rank sky · Wayfinder"));
 
     const sceneSplit = element("div", "cosmetics-observatory__scene-split");
-    sceneSplit.setAttribute("aria-label", "Main-menu background and opening gate previews");
+    sceneSplit.setAttribute("aria-label", "Home background and Constellation Fold previews");
     sceneSplit.append(
-      scenePreview(model, "homeScene", "Main-menu background"),
-      scenePreview(model, "gateStyle", "Opening gate")
+      scenePreview(model, "homeScene", "Home background"),
+      scenePreview(model, "gateStyle", "Constellation Fold")
     );
 
     const caption = element(
@@ -1056,8 +1325,8 @@ export function createCosmeticsObservatory(options = {}) {
       panel.id = "cosmetics-preview-surface-panel";
       panel.setAttribute("role", "tabpanel");
       panel.setAttribute("aria-labelledby", `cosmetics-preview-surface-${previewSurface}`);
-      if (previewSurface === "home") panel.append(scenePreview(model, "homeScene", "Main-menu background", { immersive: true }));
-      else if (previewSurface === "gate") panel.append(scenePreview(model, "gateStyle", "Opening gate", { immersive: true }));
+      if (previewSurface === "home") panel.append(scenePreview(model, "homeScene", "Home background", { immersive: true }));
+      else if (previewSurface === "gate") panel.append(scenePreview(model, "gateStyle", "Constellation Fold", { immersive: true }));
       else if (previewSurface === "menu") panel.append(menuPreview(model));
       else if (previewSurface === "sound") panel.append(soundPreview(model));
       else panel.append(boardPreview(model, { immersive: true }));
@@ -1066,6 +1335,61 @@ export function createCosmeticsObservatory(options = {}) {
       section.append(boardPreview(model), sceneSplit);
     }
     section.append(caption);
+    return section;
+  }
+
+  function equippedLoadoutNode(model) {
+    const summary = observatoryLoadoutSummary(model, baseLoadout, previewLoadout);
+    const section = element("section", "cosmetics-observatory__loadout");
+    section.setAttribute("aria-labelledby", "cosmetics-loadout-title");
+    section.dataset.staged = String(summary.staged);
+
+    const header = element("header", "cosmetics-observatory__loadout-heading");
+    const copy = element("div");
+    copy.append(
+      element("p", "cosmetics-observatory__kicker", "Equipped look"),
+      element("h3", "", summary.label)
+    );
+    copy.querySelector("h3").id = "cosmetics-loadout-title";
+    const state = element(
+      "span",
+      `cosmetics-observatory__loadout-state${summary.staged ? " is-staged" : ""}`,
+      summary.staged ? "Preview staged" : "Equipped now"
+    );
+    header.append(copy, state);
+
+    const grid = element("div", "cosmetics-observatory__loadout-grid");
+    grid.setAttribute("aria-label", "Currently equipped cosmetic pieces");
+    for (const slot of summary.slots) {
+      const control = button(
+        `cosmetics-observatory__loadout-slot is-${slot.itemTone}${slot.staged ? " is-staged" : ""}`,
+        "",
+        () => {
+          clearPurchaseConfirmation();
+          activeTab = "pieces";
+          ownedOnly = true;
+          selectedSlot = slot.slot;
+          render(actionKey("slot", slot.slot));
+          announce(`${slot.slotLabel} inventory opened. ${slot.ownedOptions} owned options available.`);
+        }
+      );
+      control.dataset.slot = slot.slot;
+      control.setAttribute(
+        "aria-label",
+        `Change ${slot.slotLabel}. Equipped: ${slot.itemLabel}. ${slot.ownedOptions} owned options.`
+      );
+      control.append(
+        element("small", "", slot.slotLabel),
+        element("strong", "", slot.itemLabel),
+        element(
+          "span",
+          "",
+          slot.staged ? `Preview: ${slot.stagedItemLabel}` : `${slot.ownedOptions} owned · Change`
+        )
+      );
+      grid.append(control);
+    }
+    section.append(header, grid);
     return section;
   }
 
@@ -1098,12 +1422,13 @@ export function createCosmeticsObservatory(options = {}) {
     return fieldset;
   }
 
-  function tabsNode() {
+  function browserToolbar(model) {
+    const toolbar = element("div", "cosmetics-observatory__browser-toolbar");
     const nav = element("div", "cosmetics-observatory__tabs");
     nav.setAttribute("role", "tablist");
     nav.setAttribute("aria-label", "Cosmetics browser");
-    const labels = { collections: "Collections", pieces: "Pieces", owned: "Owned" };
-    for (const tab of OBSERVATORY_TABS) {
+    const labels = { collections: "Collections", pieces: "Pieces" };
+    for (const tab of BROWSER_TABS) {
       const control = button("cosmetics-observatory__tab", labels[tab], () => {
         clearPurchaseConfirmation();
         activeTab = tab;
@@ -1118,7 +1443,754 @@ export function createCosmeticsObservatory(options = {}) {
       markFocusKey(control, actionKey("tab", tab));
       nav.append(control);
     }
-    return nav;
+
+    const ownedCount = model.items.filter((item) => item.owned).length;
+    const ownedToggle = button("cosmetics-observatory__owned-toggle", "", () => {
+      clearPurchaseConfirmation();
+      ownedOnly = !ownedOnly;
+      render(actionKey("filter", "owned"));
+      announce(ownedOnly
+        ? `Showing owned inventory only. ${ownedCount} of ${model.items.length} pieces unlocked.`
+        : "Showing all cosmetics, including locked previews.");
+    });
+    ownedToggle.setAttribute("role", "switch");
+    ownedToggle.setAttribute("aria-checked", String(ownedOnly));
+    ownedToggle.setAttribute(
+      "aria-label",
+      `${ownedOnly ? "Show all cosmetics" : "Show owned cosmetics only"}. ${ownedCount} of ${model.items.length} pieces unlocked.`
+    );
+    markFocusKey(ownedToggle, actionKey("filter", "owned"));
+    ownedToggle.append(
+      element("i", "cosmetics-observatory__owned-toggle-track"),
+      element("span", "", "Owned only"),
+      element("small", "", `${ownedCount}/${model.items.length}`)
+    );
+    toolbar.append(nav, ownedToggle);
+    return toolbar;
+  }
+
+  function activeCarouselCategory(model) {
+    if (activeTab === "collections") return "collections";
+    if (activeTab === PROFILE_FRAME_CATEGORY) return PROFILE_FRAME_CATEGORY;
+    if (model.slots.includes(selectedSlot)) return selectedSlot;
+    selectedSlot = model.slots[0] || "";
+    return selectedSlot || "collections";
+  }
+
+  function carouselCategoryLabel(model, category, { short = false } = {}) {
+    if (category === "collections") return short ? "Kits" : "Collections";
+    if (category === PROFILE_FRAME_CATEGORY) return short ? "Frames" : "Arena frames";
+    const shortLabels = {
+      wordPlaque: "Words",
+      trailSet: "Trails",
+      boardFinish: "Board",
+      boardScene: "Board",
+      homeScene: "Home",
+      gateStyle: "Folds",
+      uiFinish: "Interface",
+      soundTheme: "Sound",
+      theme: "Interface",
+      board: "Board",
+      trail: "Trails",
+      sound: "Sound"
+    };
+    return short ? (shortLabels[category] || model.slotLabels[category] || category) : (model.slotLabels[category] || category);
+  }
+
+  function carouselEntryForCollection(collection, model) {
+    const representative = itemForSlots(
+      model,
+      collection.loadout,
+      ["homeScene", "gateStyle", "boardFinish", "wordPlaque"]
+    );
+    return {
+      type: "collection",
+      id: collection.id,
+      slot: "",
+      label: collection.label,
+      description: collection.description,
+      tone: collection.tone,
+      badge: collection.badge,
+      owned: collection.owned,
+      subject: collection,
+      representative,
+      previewCandidate: { ...collection.loadout },
+      commitCandidate: { ...collection.loadout },
+      meta: { type: "collection", id: collection.id, label: collection.label }
+    };
+  }
+
+  function carouselEntryForItem(item) {
+    return {
+      type: "piece",
+      id: item.id,
+      slot: item.slot,
+      label: item.label,
+      description: item.description,
+      tone: item.tone,
+      badge: item.badge,
+      owned: item.owned,
+      subject: item,
+      representative: item,
+      previewCandidate: calculatePiecePreviewLoadout(baseLoadout, item),
+      commitCandidate: calculatePieceLoadout(baseLoadout, item),
+      meta: { type: "piece", id: item.id, slot: item.slot, label: item.label }
+    };
+  }
+
+  function carouselEntryForProfileFrame(entry) {
+    if (!entry) {
+      return {
+        type: "profile-frame",
+        id: PROFILE_FRAME_NONE_ID,
+        slot: PROFILE_FRAME_CATEGORY,
+        frameSlug: "",
+        label: "No frame",
+        description: "Enter Scramble Arena with a clean, undecorated Duel Card.",
+        tone: "celestial",
+        badge: "Option",
+        owned: true,
+        subject: null,
+        representative: null,
+        meta: { type: "profile-frame", id: PROFILE_FRAME_NONE_ID, slug: "", label: "No frame" }
+      };
+    }
+    return {
+      type: "profile-frame",
+      id: entry.slug,
+      slot: PROFILE_FRAME_CATEGORY,
+      frameSlug: entry.slug,
+      label: asText(entry.name, entry.slug),
+      description: asText(entry.description, "An independent Scramble Arena Duel Card frame."),
+      tone: safeTone(`${entry.slug} ${entry.epithet || ""}`),
+      badge: entry.animated ? "Animated" : "Prototype",
+      owned: true,
+      subject: entry,
+      representative: null,
+      meta: {
+        type: "profile-frame",
+        id: entry.slug,
+        slug: entry.slug,
+        label: asText(entry.name, entry.slug)
+      }
+    };
+  }
+
+  function carouselEntries(model, category = activeCarouselCategory(model), { includeLocked = true } = {}) {
+    if (category === PROFILE_FRAME_CATEGORY) {
+      return [
+        carouselEntryForProfileFrame(null),
+        ...profileFrameCatalog().map(carouselEntryForProfileFrame)
+      ];
+    }
+    if (category === "collections") {
+      return model.collections
+        .filter((collection) => includeLocked || collection.owned)
+        .map((collection) => carouselEntryForCollection(collection, model));
+    }
+    return model.items
+      .filter((item) => item.slot === category && (includeLocked || item.owned))
+      .map(carouselEntryForItem);
+  }
+
+  function carouselEntryIsEquipped(entry, model) {
+    if (!entry) return false;
+    if (entry.type === "profile-frame") {
+      return entry.frameSlug === equippedProfileFrame;
+    }
+    if (entry.type === "collection") {
+      return loadoutsEqual(entry.commitCandidate, baseLoadout, model.slots);
+    }
+    return asText(baseLoadout[entry.slot]) === entry.id;
+  }
+
+  function resolveCarouselSelection(model, entries, category = activeCarouselCategory(model)) {
+    if (!entries.length) {
+      carouselSelectionByCategory.delete(category);
+      return null;
+    }
+    const rememberedId = carouselSelectionByCategory.get(category);
+    let selected = entries.find((entry) => entry.id === rememberedId);
+    if (!selected) selected = entries.find((entry) => carouselEntryIsEquipped(entry, model));
+    if (!selected && category === "collections") {
+      const activeIds = new Set(Object.values(baseLoadout));
+      selected = entries.find((entry) =>
+        Object.values(entry.commitCandidate).filter(Boolean).some((id) => activeIds.has(id))
+      );
+    }
+    if (!selected) selected = entries.find((entry) => entry.owned) || entries[0];
+    carouselSelectionByCategory.set(category, selected.id);
+    return selected;
+  }
+
+  function carouselParentCollection(model, entry) {
+    if (!entry) return null;
+    if (entry.type === "profile-frame") return null;
+    if (entry.type === "collection") return entry.subject;
+    return model.collections.find((collection) => collection.id === entry.subject.collectionId) || null;
+  }
+
+  function carouselAccessState(model, entry, equipped = carouselEntryIsEquipped(entry, model)) {
+    if (equipped) {
+      return {
+        key: "equipped",
+        shortLabel: "Equipped",
+        accessibleLabel: "Equipped."
+      };
+    }
+    if (entry.owned) {
+      return {
+        key: "owned",
+        shortLabel: "Owned",
+        accessibleLabel: "Owned."
+      };
+    }
+
+    const parentCollection = carouselParentCollection(model, entry);
+    const accessSubject = entry.type === "collection" ? entry.subject : (parentCollection || entry.subject);
+    const price = Math.max(0, Math.floor(Number(accessSubject?.creditPrice) || 0));
+    const rankName = asText(accessSubject?.rankUnlock?.name);
+    const acquisition = asText(accessSubject?.acquisition).toLowerCase();
+
+    if (accessSubject?.purchaseOnly === true || acquisition === "purchase-only") {
+      return {
+        key: "purchase",
+        shortLabel: price ? `Purchase only · ${price.toLocaleString("en-US")}` : "Purchase only",
+        accessibleLabel: price
+          ? `Locked. Purchase for ${price.toLocaleString("en-US")} Star Credits.`
+          : "Locked. Purchase only."
+      };
+    }
+    if (rankName || accessSubject?.rankUnlock || acquisition === "purchase-or-rank") {
+      return {
+        key: "rank",
+        shortLabel: `${rankName || "Rank"}${price ? ` · ${price.toLocaleString("en-US")}` : ""}`,
+        accessibleLabel: rankName && price
+          ? `Locked. Unlock at ${rankName} Route Rank or purchase for ${price.toLocaleString("en-US")} Star Credits.`
+          : rankName
+            ? `Locked. Unlock at ${rankName} Route Rank.`
+            : price
+              ? `Locked. Reach the required rank or purchase for ${price.toLocaleString("en-US")} Star Credits.`
+              : "Locked. Reach the required Route Rank."
+      };
+    }
+    if (acquisition === "event" || entry.badge === "Event") {
+      return {
+        key: "event",
+        shortLabel: "Event unlock",
+        accessibleLabel: "Locked. Event unlock."
+      };
+    }
+    return {
+      key: "locked",
+      shortLabel: "Locked",
+      accessibleLabel: "Locked."
+    };
+  }
+
+  function carouselStateIcon(state) {
+    const mark = element("span", `cosmetics-observatory__carousel-state-mark is-${state.key}`);
+    mark.setAttribute("aria-hidden", "true");
+    mark.dataset.ownershipIcon = state.key;
+    const namespace = "http://www.w3.org/2000/svg";
+    const svg = document.createElementNS(namespace, "svg");
+    svg.setAttribute("viewBox", "0 0 24 24");
+    svg.setAttribute("focusable", "false");
+
+    const path = document.createElementNS(namespace, "path");
+    if (state.key === "equipped" || state.key === "owned") {
+      path.setAttribute("d", "M5.5 12.5 9.5 16.5 18.5 7.5");
+    } else if (state.key === "rank") {
+      path.setAttribute("d", "m12 3 2.7 5.5 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1-4.4-4.3 6.1-.9Z");
+    } else if (state.key === "purchase") {
+      path.setAttribute("d", "M12 5v14m3.5-11.5H10a2.5 2.5 0 0 0 0 5h4a2.5 2.5 0 0 1 0 5H8.5");
+    } else if (state.key === "event") {
+      path.setAttribute("d", "M6 5h12v14H6zM8 3v4m8-4v4M6 9h12m-8 4h4");
+    } else {
+      path.setAttribute("d", "M7.5 10V8a4.5 4.5 0 0 1 9 0v2m-10 0h11v9h-11z");
+    }
+    svg.append(path);
+    mark.append(svg);
+    return mark;
+  }
+
+  function announceCarouselEntry(entry, index, total) {
+    const access = entry.type === "profile-frame"
+      ? "available"
+      : entry.owned ? "owned" : "locked";
+    announce(`${entry.label}, ${index + 1} of ${total}, ${access}.`);
+  }
+
+  function stageCarouselEntry(model, entry, focusKey = "", { announceSelection = true } = {}) {
+    if (!entry || committing) return;
+    clearPurchaseConfirmation();
+    const category = activeCarouselCategory(model);
+    carouselSelectionByCategory.set(category, entry.id);
+    if (entry.type === "profile-frame") {
+      const cosmeticChanged = !loadoutsEqual(previewLoadout, baseLoadout, model.slots);
+      if (cosmeticChanged) callPreview(baseLoadout, { reason: "frame-preview", transient: false });
+      previewLoadout = { ...baseLoadout };
+      previewMeta = { ...entry.meta };
+      stagedProfileFrame = entry.frameSlug;
+      previewMode = false;
+      previewReturnFocusKey = focusKey;
+      render(focusKey);
+      if (announceSelection) {
+        const entries = carouselEntries(model);
+        const index = Math.max(0, entries.findIndex((candidate) => candidate.id === entry.id));
+        announceCarouselEntry(entry, index, entries.length);
+      }
+      return;
+    }
+    previewLoadout = { ...entry.previewCandidate };
+    previewMeta = { ...entry.meta };
+    previewMode = false;
+    previewSurface = observatoryPreviewSurface(entry.meta);
+    previewReturnFocusKey = focusKey;
+    callPreview(previewLoadout, { ...entry.meta, transient: true, carousel: true });
+    render(focusKey);
+    if (announceSelection) {
+      const entries = carouselEntries(model);
+      const index = Math.max(0, entries.findIndex((candidate) => candidate.id === entry.id));
+      announceCarouselEntry(entry, index, entries.length);
+    }
+  }
+
+  function selectCarouselIndex(model, index, focusKey = "") {
+    const entries = carouselEntries(model);
+    if (!entries.length) return;
+    const nextIndex = Math.max(0, Math.min(entries.length - 1, index));
+    const current = resolveCarouselSelection(model, entries);
+    if (current?.id === entries[nextIndex].id) {
+      announceCarouselEntry(entries[nextIndex], nextIndex, entries.length);
+      return;
+    }
+    stageCarouselEntry(model, entries[nextIndex], focusKey);
+  }
+
+  function switchCarouselCategory(model, category, focusKey) {
+    clearPurchaseConfirmation();
+    activeTab = category === "collections"
+      ? "collections"
+      : category === PROFILE_FRAME_CATEGORY ? PROFILE_FRAME_CATEGORY : "pieces";
+    selectedSlot = ["collections", PROFILE_FRAME_CATEGORY].includes(category) ? "" : category;
+    const nextModel = makeModel();
+    const entries = carouselEntries(nextModel, category);
+    const selected = resolveCarouselSelection(nextModel, entries, category);
+    if (selected) {
+      stageCarouselEntry(nextModel, selected, focusKey);
+      return;
+    }
+    revertTransient();
+    render(focusKey);
+    announce(`No ${carouselCategoryLabel(nextModel, category).toLowerCase()} are available in this view.`);
+  }
+
+  function carouselCategoryStrip(model) {
+    const strip = element("div", "cosmetics-observatory__category-strip");
+    const track = element("div", "cosmetics-observatory__category-track");
+    track.setAttribute("role", "tablist");
+    track.setAttribute("aria-label", "Cosmetic categories");
+    const activeCategory = activeCarouselCategory(model);
+    const categories = [
+      "collections",
+      ...(profileFrameCatalog().length ? [PROFILE_FRAME_CATEGORY] : []),
+      ...model.slots
+    ];
+
+    for (const category of categories) {
+      const label = carouselCategoryLabel(model, category, { short: true });
+      const count = category === "collections"
+        ? model.collections.length
+        : category === PROFILE_FRAME_CATEGORY
+          ? profileFrameCatalog().length
+          : model.items.filter((item) => item.slot === category).length;
+      const control = button("cosmetics-observatory__category-tab", "", () => {
+        switchCarouselCategory(model, category, actionKey("category", category));
+      });
+      control.id = `cosmetics-category-${category}`;
+      control.dataset.category = category;
+      if (!["collections", PROFILE_FRAME_CATEGORY].includes(category)) control.dataset.slot = category;
+      control.setAttribute("role", "tab");
+      control.setAttribute("aria-selected", String(activeCategory === category));
+      control.setAttribute("aria-controls", "cosmetics-observatory-carousel");
+      control.setAttribute("aria-label", `${carouselCategoryLabel(model, category)}, ${count} choices`);
+      control.tabIndex = activeCategory === category ? 0 : -1;
+      markFocusKey(control, actionKey("category", category));
+      control.append(
+        element("span", "", label),
+        element("small", "", String(count))
+      );
+      track.append(control);
+    }
+
+    const currentEntries = carouselEntries(model);
+    const ownedCount = currentEntries.filter((entry) => entry.owned).length;
+    const allCount = currentEntries.length;
+    const inventorySummary = element("div", "cosmetics-observatory__inventory-summary");
+    inventorySummary.setAttribute(
+      "aria-label",
+      `All ${allCount} choices are shown. ${ownedCount} owned.`
+    );
+    inventorySummary.append(
+      element("span", "is-owned", `${ownedCount} owned`),
+      element("span", "", `${allCount} total`)
+    );
+    const utilities = element("div", "cosmetics-observatory__category-utilities");
+    utilities.append(inventorySummary, effectControls());
+    strip.append(track, utilities);
+    return strip;
+  }
+
+  function profileFrameThumbnailVisual(entry) {
+    const visual = element(
+      "span",
+      `cosmetics-observatory__frame-thumb-visual${entry.frameSlug ? "" : " is-none"}`
+    );
+    const palette = Array.isArray(entry.subject?.palette) ? entry.subject.palette : [];
+    palette.slice(0, 4).forEach((color, index) => {
+      visual.style.setProperty(`--frame-color-${index + 1}`, color);
+    });
+    visual.append(
+      element("i", "is-top"),
+      element("i", "is-left"),
+      element("i", "is-right"),
+      element("span", "", entry.frameSlug ? "ARENA" : "NONE")
+    );
+    return visual;
+  }
+
+  function carouselThumbnail(entry, model, selected) {
+    const equipped = carouselEntryIsEquipped(entry, model);
+    const accessState = carouselAccessState(model, entry, equipped);
+    const control = button(
+      `cosmetics-observatory__carousel-thumb is-${entry.tone}`,
+      "",
+      () => stageCarouselEntry(model, entry, actionKey("carousel-option", entry.id))
+    );
+    control.setAttribute("role", "option");
+    control.setAttribute("aria-selected", String(selected));
+    control.tabIndex = selected ? 0 : -1;
+    control.setAttribute(
+      "aria-label",
+      `${entry.label}. ${accessState.accessibleLabel}`
+    );
+    control.dataset.carouselOptionId = entry.id;
+    control.dataset.owned = String(entry.owned);
+    control.dataset.accessState = accessState.key;
+    if (entry.type === "collection") control.dataset.collectionId = entry.id;
+    else if (entry.type === "profile-frame") control.dataset.profileFrameSlug = entry.frameSlug;
+    else control.dataset.itemId = entry.id;
+    if (equipped) control.dataset.equipped = "true";
+    markFocusKey(control, actionKey("carousel-option", entry.id));
+    control.append(
+      entry.type === "profile-frame"
+        ? profileFrameThumbnailVisual(entry)
+        : visualNode(entry.tone, entry.type === "collection" ? "collection" : entry.slot, entry.representative),
+      carouselStateIcon(accessState)
+    );
+    const copy = element("span", "cosmetics-observatory__carousel-thumb-copy");
+    copy.append(
+      element("strong", "", entry.label),
+      element("small", `is-${accessState.key}`, accessState.shortLabel)
+    );
+    control.append(copy);
+    return control;
+  }
+
+  function carouselPreviewVisual(model, entry) {
+    const visual = element("div", `cosmetics-observatory__carousel-visual is-${entry.tone}`);
+    if (entry.type === "profile-frame") {
+      const mount = element("div", "cosmetics-observatory__profile-frame-preview");
+      let previewNode = null;
+      try {
+        const preview = settings.createProfileFramePreview?.(entry.frameSlug, entry.subject);
+        previewNode = preview?.element || preview;
+      } catch {
+        previewNode = null;
+      }
+      if (previewNode?.nodeType) mount.append(previewNode);
+      else mount.append(profileFrameThumbnailVisual(entry));
+      visual.append(mount);
+    } else if (entry.type === "collection") {
+      visual.append(previewPanel(model));
+    } else if (entry.slot === "homeScene") {
+      visual.append(scenePreview(model, "homeScene", "Home background", { immersive: true }));
+    } else if (entry.slot === "gateStyle") {
+      visual.append(scenePreview(model, "gateStyle", "Constellation Fold", { immersive: true }));
+    } else if (["uiFinish", "theme"].includes(entry.slot)) {
+      visual.append(menuPreview(model));
+    } else if (["soundTheme", "sound"].includes(entry.slot)) {
+      visual.append(soundPreview(model));
+    } else {
+      visual.append(boardPreview(model, { immersive: true }));
+    }
+    return visual;
+  }
+
+  function bindCarouselSwipe(node, model, index, total) {
+    let pointer = null;
+    node.addEventListener("pointerdown", (event) => {
+      if (!event.isPrimary || event.button > 0 || event.target.closest("button, a, input, select, textarea")) return;
+      pointer = { id: event.pointerId, x: event.clientX, y: event.clientY };
+      node.setPointerCapture?.(event.pointerId);
+    });
+    node.addEventListener("pointercancel", () => {
+      pointer = null;
+    });
+    node.addEventListener("pointerup", (event) => {
+      if (!pointer || event.pointerId !== pointer.id) return;
+      const deltaX = event.clientX - pointer.x;
+      const deltaY = event.clientY - pointer.y;
+      pointer = null;
+      if (Math.abs(deltaX) < 42 || Math.abs(deltaX) < Math.abs(deltaY) * 1.25) return;
+      if (deltaX < 0 && index < total - 1) selectCarouselIndex(model, index + 1);
+      else if (deltaX > 0 && index > 0) selectCarouselIndex(model, index - 1);
+    });
+  }
+
+  function carouselFocusedPreview(model, entries, selected) {
+    const index = entries.findIndex((entry) => entry.id === selected.id);
+    const region = element("section", "cosmetics-observatory__carousel-focus");
+    region.setAttribute("aria-label", `${carouselCategoryLabel(model, activeCarouselCategory(model))} preview carousel`);
+    region.setAttribute("aria-roledescription", "carousel");
+
+    const viewport = element("div", "cosmetics-observatory__carousel-viewport");
+    viewport.dataset.carouselViewport = "";
+    viewport.dataset.selectedId = selected.id;
+    viewport.dataset.hasPrevious = String(index > 0);
+    viewport.dataset.hasNext = String(index < entries.length - 1);
+
+    const stage = element("div", "cosmetics-observatory__carousel-stage");
+    stage.dataset.carouselStage = "";
+    stage.dataset.selectedId = selected.id;
+    stage.tabIndex = 0;
+    stage.setAttribute("role", "group");
+    stage.setAttribute("aria-roledescription", "slide");
+    stage.setAttribute("aria-label", `${index + 1} of ${entries.length}: ${selected.label}`);
+    markFocusKey(stage, actionKey("carousel-stage", "active"));
+    stage.append(carouselPreviewVisual(model, selected));
+    bindCarouselSwipe(stage, model, index, entries.length);
+
+    const previous = markFocusKey(button(
+      "cosmetics-observatory__carousel-arrow is-previous",
+      "←",
+      () => {
+        if (index > 0) selectCarouselIndex(model, index - 1, actionKey("carousel-arrow", "previous"));
+      }
+    ), actionKey("carousel-arrow", "previous"));
+    previous.setAttribute("aria-label", `Previous cosmetic${index > 0 ? `: ${entries[index - 1].label}` : ""}`);
+    previous.setAttribute("aria-disabled", String(index === 0));
+
+    const next = markFocusKey(button(
+      "cosmetics-observatory__carousel-arrow is-next",
+      "→",
+      () => {
+        if (index < entries.length - 1) selectCarouselIndex(model, index + 1, actionKey("carousel-arrow", "next"));
+      }
+    ), actionKey("carousel-arrow", "next"));
+    next.setAttribute("aria-label", `Next cosmetic${index < entries.length - 1 ? `: ${entries[index + 1].label}` : ""}`);
+    next.setAttribute("aria-disabled", String(index === entries.length - 1));
+
+    viewport.append(stage, previous, next);
+    const caption = element("div", "cosmetics-observatory__carousel-counter");
+    const captionCopy = element("div");
+    captionCopy.append(
+      element("strong", "", selected.label),
+      element("span", "", selected.type === "profile-frame"
+        ? (carouselEntryIsEquipped(selected, model) ? "Equipped for Scramble Arena" : "Live Duel Card preview")
+        : selected.owned ? "Owned choice" : "Preview available · Locked")
+    );
+    caption.append(
+      captionCopy,
+      element("span", "cosmetics-observatory__carousel-position", `${index + 1} / ${entries.length}`)
+    );
+    region.append(viewport, caption);
+    return region;
+  }
+
+  function carouselDetails(model, entry) {
+    const parentCollection = carouselParentCollection(model, entry);
+    const equipped = carouselEntryIsEquipped(entry, model);
+    const state = {
+      owned: entry.owned,
+      equipped,
+      previewed: entry.type === "profile-frame"
+        ? entry.frameSlug === stagedProfileFrame
+        : loadoutsEqual(entry.previewCandidate, previewLoadout, model.slots)
+    };
+    const aside = element("aside", `cosmetics-observatory__carousel-details is-${entry.tone}`);
+    aside.dataset.selectedId = entry.id;
+    aside.setAttribute("aria-label", "Selected cosmetic details");
+
+    const heading = element("div", "cosmetics-observatory__carousel-details-heading");
+    const eyebrow = element("div", "cosmetics-observatory__card-eyebrow");
+    eyebrow.append(badgeNode(entry.badge), statePills(state));
+    heading.append(
+      eyebrow,
+      element("p", "cosmetics-observatory__carousel-context", entry.type === "collection"
+        ? `${entry.subject.styleLabel || "Complete look"} · ${entry.subject.tier}`
+        : entry.type === "profile-frame"
+          ? `${entry.subject?.epithet || "Clean Arena card"} · Independent frame`
+          : `${model.slotLabels[entry.slot] || entry.slot}${parentCollection ? ` · ${parentCollection.label}` : ""}`),
+      element("h3", "", entry.label),
+      element("p", "", entry.description)
+    );
+    aside.append(heading);
+
+    const facts = element("dl", "cosmetics-observatory__carousel-facts");
+    if (entry.type === "profile-frame") {
+      facts.append(
+        element("dt", "", "Category"),
+        element("dd", "", "Arena frame"),
+        element("dt", "", "Appears on"),
+        element("dd", "", "Scramble Duel Cards")
+      );
+    } else if (entry.type === "collection") {
+      const pieceCount = Object.values(entry.commitCandidate).filter(Boolean).length;
+      facts.append(
+        element("dt", "", "Collection"),
+        element("dd", "", `${pieceCount} coordinated pieces`),
+        element("dt", "", "Value"),
+        element("dd", "", observatoryCollectionValue(entry.subject))
+      );
+    } else {
+      facts.append(
+        element("dt", "", "Category"),
+        element("dd", "", model.slotLabels[entry.slot] || entry.slot),
+        element("dt", "", "Collection"),
+        element("dd", "", parentCollection?.label || "Independent piece")
+      );
+    }
+    facts.append(
+      element("dt", "", "Status"),
+      element("dd", "", equipped ? "Equipped now" : entry.owned ? "Ready to equip" : "Locked · preview only")
+    );
+    aside.append(facts);
+
+    if (!entry.owned && (entry.subject.unlockHint || parentCollection?.unlockHint)) {
+      aside.append(element(
+        "p",
+        "cosmetics-observatory__unlock-hint is-carousel",
+        entry.subject.unlockHint || parentCollection.unlockHint
+      ));
+    }
+
+    const actions = element("div", "cosmetics-observatory__carousel-details-actions");
+    if (entry.type === "profile-frame") {
+      if (entry.frameSlug) {
+        const removeKey = actionKey("frame-remove", entry.id);
+        actions.append(markFocusKey(button(
+          "cosmetics-observatory__button is-quiet",
+          "Preview without a frame",
+          () => {
+            const nextModel = makeModel();
+            const none = carouselEntries(nextModel, PROFILE_FRAME_CATEGORY)
+              .find((candidate) => candidate.id === PROFILE_FRAME_NONE_ID);
+            if (none) stageCarouselEntry(nextModel, none, removeKey);
+          }
+        ), removeKey));
+      } else {
+        actions.append(element(
+          "p",
+          "cosmetics-observatory__frame-note",
+          "The live card is unframed. Equip this option to remove the current border."
+        ));
+      }
+    } else {
+      const previewKey = actionKey("carousel-preview", entry.id);
+      actions.append(markFocusKey(button(
+        "cosmetics-observatory__button is-secondary",
+        "View in game",
+        () => preview(entry.previewCandidate, entry.meta, previewKey)
+      ), previewKey));
+    }
+
+    if (entry.type === "piece" && ["soundTheme", "sound"].includes(entry.slot)) {
+      const sample = button(
+        "cosmetics-observatory__button is-quiet",
+        "Play sample",
+        () => settings.onSoundPreview?.(entry.subject)
+      );
+      sample.setAttribute("aria-label", `Play ${entry.label} sound sample`);
+      actions.append(sample);
+    }
+
+    if (!entry.owned && entry.type === "piece" && parentCollection) {
+      actions.append(button(
+        "cosmetics-observatory__button is-quiet",
+        `See ${parentCollection.label}`,
+        () => {
+          activeTab = "collections";
+          selectedSlot = "";
+          carouselSelectionByCategory.set("collections", parentCollection.id);
+          const nextModel = makeModel();
+          const parentEntry = carouselEntries(nextModel, "collections")
+            .find((candidate) => candidate.id === parentCollection.id);
+          if (parentEntry) stageCarouselEntry(nextModel, parentEntry, actionKey("category", "collections"));
+        }
+      ));
+    }
+
+    const supporterSubject = entry.type === "collection" ? entry.subject : (parentCollection || entry.subject);
+    if (!entry.owned && supporterSubject && typeof settings.onSupporter === "function") {
+      actions.append(button(
+        "cosmetics-observatory__button is-supporter",
+        "Supporter options",
+        () => settings.onSupporter?.(supporterSubject)
+      ));
+    }
+    aside.append(actions);
+    return aside;
+  }
+
+  function carouselPanel(model) {
+    const category = activeCarouselCategory(model);
+    const entries = carouselEntries(model, category);
+    const selected = resolveCarouselSelection(model, entries, category);
+    const panel = element("section", "cosmetics-observatory__carousel");
+    panel.id = "cosmetics-observatory-carousel";
+    panel.dataset.category = category;
+    panel.setAttribute("role", "tabpanel");
+    panel.setAttribute("aria-labelledby", `cosmetics-category-${category}`);
+
+    if (!selected) {
+      panel.append(emptyState(
+        "No owned choices here yet",
+        "Turn off Owned only to preview every available cosmetic."
+      ));
+      return { panel, selected: null };
+    }
+
+    const shelf = element("aside", "cosmetics-observatory__carousel-shelf");
+    const shelfHeading = element("header", "cosmetics-observatory__carousel-shelf-heading");
+    const allEntries = carouselEntries(model, category, { includeLocked: true });
+    const ownedEntries = allEntries.filter((entry) => entry.owned);
+    shelfHeading.append(
+      element("p", "cosmetics-observatory__kicker", "Decoration library"),
+      element("h3", "", `All ${carouselCategoryLabel(model, category, { short: true })}`),
+      element("span", "", `${ownedEntries.length}/${allEntries.length} owned`)
+    );
+    const shelfTrack = element("div", "cosmetics-observatory__carousel-shelf-track");
+    shelfTrack.setAttribute("role", "listbox");
+    shelfTrack.setAttribute(
+      "aria-label",
+      `All ${carouselCategoryLabel(model, category).toLowerCase()}. Owned and locked states are marked on every choice.`
+    );
+    if (allEntries.length) {
+      for (const entry of allEntries) {
+        shelfTrack.append(carouselThumbnail(entry, model, entry.id === selected.id));
+      }
+    } else {
+      shelfTrack.append(element("p", "cosmetics-observatory__carousel-shelf-empty", "No decorations are available in this category yet."));
+    }
+    shelf.append(shelfHeading, shelfTrack);
+    panel.append(
+      shelf,
+      carouselFocusedPreview(model, entries, selected),
+      carouselDetails(model, selected)
+    );
+    return { panel, selected };
   }
 
   function emptyState(title, copy) {
@@ -1131,11 +2203,41 @@ export function createCosmeticsObservatory(options = {}) {
     return empty;
   }
 
-  function collectionGrid(model, collections) {
-    if (!collections.length) return emptyState("No owned collections yet", "Free and earned individual pieces still appear in the Owned view.");
+  function collectionGrid(model, collections, headingTag = "h3") {
     const grid = element("div", "cosmetics-observatory__card-grid is-collections");
-    for (const collection of collections) grid.append(collectionCard(collection, model));
+    for (const collection of collections) grid.append(collectionCard(collection, model, headingTag));
     return grid;
+  }
+
+  function collectionBrowser(model, collections, {
+    emptyTitle = "No collections in this view",
+    emptyCopy = "More complete cosmetic collections will appear here when available."
+  } = {}) {
+    const families = groupObservatoryCollectionsByFamily(model, collections);
+    if (!families.length) return emptyState(emptyTitle, emptyCopy);
+
+    const browser = element("div", "cosmetics-observatory__collection-families");
+    for (const family of families) {
+      const section = element("section", "cosmetics-observatory__collection-family");
+      section.dataset.collectionFamily = family.id;
+      const headingId = `cosmetics-family-${family.id}-${activeTab}`;
+      section.setAttribute("aria-labelledby", headingId);
+
+      const header = element("header", "cosmetics-observatory__family-heading");
+      const copy = element("div", "cosmetics-observatory__family-copy");
+      if (family.kicker) copy.append(element("span", "cosmetics-observatory__family-kicker", family.kicker));
+      const heading = element("h3", "", family.label);
+      heading.id = headingId;
+      copy.append(heading, element("p", "", family.description));
+      const count = family.collections.length;
+      header.append(
+        copy,
+        element("span", "cosmetics-observatory__family-count", `${count} ${count === 1 ? "collection" : "collections"}`)
+      );
+      section.append(header, collectionGrid(model, family.collections, "h4"));
+      browser.append(section);
+    }
+    return browser;
   }
 
   function pieceBrowser(model, items, showSlots = true) {
@@ -1143,12 +2245,26 @@ export function createCosmeticsObservatory(options = {}) {
     if (showSlots) {
       const slots = element("nav", "cosmetics-observatory__slots");
       slots.setAttribute("aria-label", "Cosmetic piece categories");
+      const allControl = button("cosmetics-observatory__slot is-all", "", () => {
+        clearPurchaseConfirmation();
+        selectedSlot = "";
+        render(actionKey("slot", "all"));
+      });
+      setPressed(allControl, !selectedSlot);
+      markFocusKey(allControl, actionKey("slot", "all"));
+      const allCount = element("span", "cosmetics-observatory__slot-count", String(items.length));
+      allCount.setAttribute("aria-label", `${items.length} pieces`);
+      allControl.append(
+        element("span", "", ownedOnly ? "All owned pieces" : "All pieces"),
+        allCount
+      );
+      slots.append(allControl);
       for (const slot of model.slots) {
         const count = items.filter((item) => item.slot === slot).length;
         const control = button("cosmetics-observatory__slot", "", () => {
           clearPurchaseConfirmation();
-          selectedSlot = slot;
-          render(actionKey("slot", slot));
+          selectedSlot = selectedSlot === slot ? "" : slot;
+          render(actionKey("slot", selectedSlot || "all"));
         });
         setPressed(control, selectedSlot === slot);
         markFocusKey(control, actionKey("slot", slot));
@@ -1177,19 +2293,44 @@ export function createCosmeticsObservatory(options = {}) {
     panel.setAttribute("role", "tabpanel");
     panel.setAttribute("aria-labelledby", `cosmetics-tab-${activeTab}`);
 
+    const filterTab = ownedOnly ? "owned" : activeTab;
     if (activeTab === "collections") {
       const intro = element("div", "cosmetics-observatory__section-heading");
       intro.append(
-        element("h2", "", "Complete collections"),
-        element("p", "", "Equip a coordinated look in one action, or preview every detail first.")
+        element("h2", "", ownedOnly ? "Your unlocked collections" : "Complete collections"),
+        element(
+          "p",
+          "",
+          ownedOnly
+            ? "Every collection here is ready to equip in one action."
+            : "Browse by universe, then equip a coordinated look or preview every detail first."
+        )
       );
-      panel.append(intro, collectionGrid(model, filterObservatoryCollections(model, { tab: activeTab })));
-    } else if (activeTab === "pieces") {
+      panel.append(
+        intro,
+        collectionBrowser(model, filterObservatoryCollections(model, { tab: filterTab }), {
+          emptyTitle: "No unlocked collections yet",
+          emptyCopy: "Owned individual pieces remain available in the Pieces inventory."
+        })
+      );
+    } else {
       const intro = element("div", "cosmetics-observatory__section-heading");
       const titleRow = element("div");
       titleRow.append(
-        element("h2", "", selectedSlot ? model.slotLabels[selectedSlot] : "Mix your own constellation"),
-        element("p", "", "Changing a single piece creates a custom collection without affecting gameplay.")
+        element(
+          "h2",
+          "",
+          selectedSlot
+            ? `${ownedOnly ? "Owned " : ""}${model.slotLabels[selectedSlot]}`
+            : ownedOnly ? "Your inventory" : "Mix your own constellation"
+        ),
+        element(
+          "p",
+          "",
+          ownedOnly
+            ? "Equip any unlocked piece below. Every other equipped slot stays exactly as it is."
+            : "Changing a single piece creates a custom collection without affecting gameplay."
+        )
       );
       intro.append(titleRow);
       if (selectedSlot) {
@@ -1199,61 +2340,134 @@ export function createCosmeticsObservatory(options = {}) {
           render();
         }));
       }
-      panel.append(intro, pieceBrowser(model, filterObservatoryItems(model, { tab: activeTab }), true));
-    } else {
-      const ownedCollections = filterObservatoryCollections(model, { tab: activeTab });
-      const ownedItems = filterObservatoryItems(model, { tab: activeTab });
-      const collectionHeading = element("div", "cosmetics-observatory__section-heading");
-      collectionHeading.append(
-        element("h2", "", "Owned collections"),
-        element("p", "", "Everything ready to equip now.")
-      );
-      const pieceHeading = element("div", "cosmetics-observatory__section-heading");
-      pieceHeading.append(element("h2", "", "Owned pieces"));
-      panel.append(
-        collectionHeading,
-        collectionGrid(model, ownedCollections),
-        pieceHeading,
-        pieceBrowser(model, ownedItems, false)
-      );
+      panel.append(intro, pieceBrowser(model, filterObservatoryItems(model, { tab: filterTab }), true));
     }
     return panel;
   }
 
-  function footerNode(model) {
+  function footerNode(model, entry = null) {
     const footer = element("footer", "cosmetics-observatory__footer");
     const summary = element("div", "cosmetics-observatory__footer-summary");
+    if (entry?.type === "profile-frame") {
+      const dirty = stagedProfileFrame !== equippedProfileFrame;
+      const equipped = carouselEntryIsEquipped(entry, model);
+      summary.append(
+        element(
+          "strong",
+          "",
+          dirty ? `${entry.label} selected` : equipped ? `${entry.label} is equipped` : "Arena frame"
+        ),
+        element(
+          "span",
+          "",
+          dirty
+            ? "Live preview only until you equip it."
+            : "This frame appears on your Scramble Arena Duel Card."
+        )
+      );
+      const actions = element("div", "cosmetics-observatory__footer-actions");
+      const cancel = button(
+        "cosmetics-observatory__button is-secondary",
+        dirty ? "Restore equipped" : "Close Lab",
+        () => {
+          if (!dirty) {
+            close("cancel");
+            return;
+          }
+          stagedProfileFrame = equippedProfileFrame;
+          carouselSelectionByCategory.set(
+            PROFILE_FRAME_CATEGORY,
+            equippedProfileFrame || PROFILE_FRAME_NONE_ID
+          );
+          previewMeta = null;
+          render(actionKey("footer", "cancel"));
+          announce("Your equipped Arena frame is restored.");
+        }
+      );
+      markFocusKey(cancel, actionKey("footer", "cancel"));
+      actions.append(cancel);
+
+      const equipKey = actionKey("carousel-primary", entry.id);
+      const equip = button(
+        "cosmetics-observatory__button is-primary is-apply",
+        equipped
+          ? (entry.frameSlug ? "Frame equipped" : "No frame equipped")
+          : (entry.frameSlug ? "Equip frame" : "Remove frame"),
+        () => commitProfileFrame(entry.frameSlug, entry.meta, equipKey)
+      );
+      equip.disabled = equipped || committing;
+      equip.dataset.commitControl = "";
+      markFocusKey(equip, equipKey);
+      actions.append(equip);
+      footer.append(summary, actions);
+      return footer;
+    }
+
     const dirty = !loadoutsEqual(previewLoadout, baseLoadout, model.slots);
-    const previewOwned = observatoryLoadoutIsOwned(model, previewLoadout);
+    const equipped = carouselEntryIsEquipped(entry, model);
+    const parentCollection = carouselParentCollection(model, entry);
     summary.append(
-      element("strong", "", dirty ? `${previewMeta?.label || "Cosmetic"} preview ready` : "No pending changes"),
+      element("strong", "", dirty ? `${entry?.label || previewMeta?.label || "Cosmetic"} selected` : `${entry?.label || "Equipped look"} is active`),
       element("span", "", dirty
-        ? (previewOwned ? "Apply to keep this presentation." : "Locked previews cannot be equipped.")
-        : "Preview any collection or individual piece.")
+        ? (entry?.owned ? "Preview only until you equip it." : "Locked preview · nothing has been purchased.")
+        : "Swipe or use the arrows to explore another look.")
     );
     const actions = element("div", "cosmetics-observatory__footer-actions");
-    const cancelPreview = button("cosmetics-observatory__button is-secondary", dirty ? "Cancel preview" : "Close", () => {
+    const cancelPreview = button("cosmetics-observatory__button is-secondary", dirty ? "Restore equipped" : "Close Lab", () => {
       if (dirty) {
+        carouselSelectionByCategory.delete(activeCarouselCategory(model));
         revertTransient();
         render(actionKey("footer", "cancel"));
-        announce("Preview cancelled. Your equipped presentation is restored.");
+        announce("Your equipped look is restored.");
       } else close("cancel");
     });
     markFocusKey(cancelPreview, actionKey("footer", "cancel"));
     actions.append(cancelPreview);
-    const apply = button(
-      "cosmetics-observatory__button is-primary is-apply",
-      !dirty
-        ? "Select a preview"
-        : previewMeta?.type === "collection"
-          ? "Equip collection"
-          : "Equip piece",
-      () => commit(previewLoadout, previewMeta || { type: "preview", label: "Cosmetic preview" }, actionKey("apply", "preview"))
-    );
-    apply.disabled = !dirty || !previewOwned || committing;
-    apply.dataset.commitControl = "";
-    markFocusKey(apply, actionKey("apply", "preview"));
-    actions.append(apply);
+
+    if (entry?.owned) {
+      const equipKey = actionKey("carousel-primary", entry.id);
+      const equip = button(
+        "cosmetics-observatory__button is-primary is-apply",
+        equipped ? (entry.type === "collection" ? "Collection equipped" : "Piece equipped") : (entry.type === "collection" ? "Equip collection" : "Equip piece"),
+        () => commit(entry.commitCandidate, entry.meta, equipKey)
+      );
+      equip.disabled = equipped || committing;
+      equip.dataset.commitControl = "";
+      markFocusKey(equip, equipKey);
+      actions.append(equip);
+    } else if (parentCollection?.creditPrice > 0 && typeof settings.onPurchase === "function") {
+      const purchaseKey = actionKey("carousel-primary", entry.id);
+      const affordable = currentBalance() >= parentCollection.creditPrice;
+      const shortfall = Math.max(0, parentCollection.creditPrice - currentBalance());
+      const purchaseArmed = armedPurchaseId === parentCollection.id;
+      const purchaseValue = observatoryCollectionValue(parentCollection);
+      const purchaseButton = button(
+        "cosmetics-observatory__button is-primary is-purchase",
+        purchaseArmed
+          ? `Confirm ${purchaseValue}`
+          : affordable
+            ? `Unlock for ${purchaseValue}`
+            : `Need ${shortfall.toLocaleString("en-US")} more credits`,
+        () => purchase(parentCollection, purchaseKey)
+      );
+      purchaseButton.disabled = !affordable || committing;
+      purchaseButton.dataset.purchaseControl = "";
+      purchaseButton.dataset.confirmArmed = String(purchaseArmed);
+      purchaseButton.setAttribute(
+        "aria-label",
+        purchaseArmed
+          ? `Confirm purchase of ${parentCollection.label} for ${purchaseValue}`
+          : affordable
+            ? `Unlock ${parentCollection.label} for ${purchaseValue}`
+            : `Need ${shortfall.toLocaleString("en-US")} more Star Credits to unlock ${parentCollection.label}`
+      );
+      markFocusKey(purchaseButton, purchaseKey);
+      actions.append(purchaseButton);
+    } else {
+      const locked = button("cosmetics-observatory__button is-primary", "Locked · Preview only");
+      locked.disabled = true;
+      actions.append(locked);
+    }
     footer.append(summary, actions);
     return footer;
   }
@@ -1264,7 +2478,7 @@ export function createCosmeticsObservatory(options = {}) {
     if (cancel) {
       revertTransient();
       render(focusKey);
-      announce("Preview cancelled. Your equipped presentation is restored.");
+      announce("Preview cancelled. Your equipped look is restored.");
       return;
     }
     render(focusKey);
@@ -1295,7 +2509,7 @@ export function createCosmeticsObservatory(options = {}) {
     const summary = element("div", "cosmetics-observatory__footer-summary");
     summary.append(
       element("strong", "", `${previewMeta?.label || "Cosmetic"} preview`),
-      element("span", "", "Presentation only · gameplay and navigation are locked.")
+      element("span", "", "Preview only · gameplay and navigation are locked.")
     );
     const actions = element("div", "cosmetics-observatory__footer-actions");
     const cancel = button("cosmetics-observatory__button is-secondary", "Cancel preview", () => {
@@ -1319,26 +2533,44 @@ export function createCosmeticsObservatory(options = {}) {
     dialog.dataset.previewMode = String(previewMode);
     const surface = dialog.querySelector(".cosmetics-observatory__surface");
     if (!surface) return;
+    const scrollState = {
+      surfaceTop: surface.scrollTop,
+      categoryLeft: surface.querySelector(".cosmetics-observatory__category-track")?.scrollLeft || 0,
+      shelfLeft: surface.querySelector(".cosmetics-observatory__carousel-shelf-track")?.scrollLeft || 0,
+      shelfTop: surface.querySelector(".cosmetics-observatory__carousel-shelf-track")?.scrollTop || 0,
+      category: surface.querySelector(".cosmetics-observatory__carousel")?.dataset.category || ""
+    };
+    stopProfileFramePreviewMedia(surface);
     surface.replaceChildren();
 
     const header = element("header", "cosmetics-observatory__header");
-    const titleGroup = element("div");
-    const kicker = element("p", "cosmetics-observatory__kicker", previewMode ? "Presentation only" : "Presentation workshop");
-    const title = element("h1", "", previewMode ? "Cosmetic preview" : "Cosmetics Observatory");
+    const titleGroup = element("div", "cosmetics-observatory__title-group");
+    const kicker = element("p", "cosmetics-observatory__kicker", previewMode ? "Preview only" : "Constellation atelier");
+    const title = element("h2", "", previewMode ? "Cosmetic preview" : "Cosmetic Lab");
     title.id = "cosmetics-observatory-title";
     const lede = element(
       "p",
       "cosmetics-observatory__lede",
       previewMode
         ? "Explore the staged look here. The game and all unrelated actions remain locked until you leave preview mode."
-        : "Shape how your words travel through the cosmos. Every choice is visual or audible only."
+        : "Shape your universe. Explore every crafted decoration, preview it live, then equip the pieces you own."
     );
     lede.id = "cosmetics-observatory-description";
     titleGroup.append(kicker, title, lede);
-    const closeButton = button("cosmetics-observatory__close", "Close", () => close("close-button"));
-    closeButton.setAttribute("aria-label", "Close Cosmetics Observatory");
+    const headerActions = element("div", "cosmetics-observatory__header-actions");
+    if (!previewMode) {
+      const balance = element("p", "cosmetics-observatory__balance");
+      balance.append(
+        element("span", "", "Star Credits"),
+        element("strong", "", currentBalance().toLocaleString("en-US"))
+      );
+      headerActions.append(balance);
+    }
+    const closeButton = button("cosmetics-observatory__close", "\u00d7", () => close("close-button"));
+    closeButton.setAttribute("aria-label", "Close Cosmetic Lab");
     markFocusKey(closeButton, actionKey("close", "observatory"));
-    header.append(titleGroup, closeButton);
+    headerActions.append(closeButton);
+    header.append(titleGroup, headerActions);
 
     const stage = element("div", `cosmetics-observatory__stage${previewMode ? " is-preview-mode" : ""}`);
     if (previewMode) {
@@ -1346,13 +2578,26 @@ export function createCosmeticsObservatory(options = {}) {
       surface.append(header, stage, previewFooterNode());
       surface.scrollTop = 0;
     } else {
-      stage.append(previewPanel(model), effectControls());
-      surface.append(header, stage, tabsNode(), contentPanel(model), footerNode(model));
+      const carousel = carouselPanel(model);
+      surface.append(header, carouselCategoryStrip(model), carousel.panel, footerNode(model, carousel.selected));
+      surface.scrollTop = scrollState.surfaceTop;
+      const categoryTrack = surface.querySelector(".cosmetics-observatory__category-track");
+      if (categoryTrack) categoryTrack.scrollLeft = scrollState.categoryLeft;
+      if (scrollState.category === carousel.panel.dataset.category) {
+        const shelfTrack = surface.querySelector(".cosmetics-observatory__carousel-shelf-track");
+        if (shelfTrack) {
+          shelfTrack.scrollLeft = scrollState.shelfLeft;
+          shelfTrack.scrollTop = scrollState.shelfTop;
+        }
+      }
     }
 
     if (focusKey) {
       const target = [...surface.querySelectorAll("[data-focus-key]")].find((node) => node.dataset.focusKey === focusKey);
-      target?.focus();
+      target?.focus({ preventScroll: true });
+      if (target?.matches(".cosmetics-observatory__category-tab, .cosmetics-observatory__carousel-thumb")) {
+        target.scrollIntoView({ block: "nearest", inline: "nearest" });
+      }
     }
   }
 
@@ -1363,7 +2608,46 @@ export function createCosmeticsObservatory(options = {}) {
         leavePreviewMode();
         return;
       }
+      if (armedPurchaseId) {
+        const focusKey = document.activeElement?.dataset?.focusKey || "";
+        clearPurchaseConfirmation();
+        render(focusKey);
+        announce("Purchase confirmation cancelled.");
+        return;
+      }
       close("escape");
+      return;
+    }
+    const carouselStage = event.target.closest?.("[data-carousel-stage]");
+    if (carouselStage && event.target === carouselStage && ["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) {
+      event.preventDefault();
+      const model = makeModel();
+      const entries = carouselEntries(model);
+      const selected = resolveCarouselSelection(model, entries);
+      const current = Math.max(0, entries.findIndex((entry) => entry.id === selected?.id));
+      let next = current;
+      if (event.key === "ArrowRight") next = Math.min(entries.length - 1, current + 1);
+      if (event.key === "ArrowLeft") next = Math.max(0, current - 1);
+      if (event.key === "Home") next = 0;
+      if (event.key === "End") next = Math.max(0, entries.length - 1);
+      selectCarouselIndex(model, next, actionKey("carousel-stage", "active"));
+      return;
+    }
+    const carouselOption = event.target.closest?.(".cosmetics-observatory__carousel-thumb[role=\"option\"]");
+    if (carouselOption && ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End"].includes(event.key)) {
+      event.preventDefault();
+      const model = makeModel();
+      const listbox = carouselOption.closest('[role="listbox"]');
+      const controls = [...(listbox?.querySelectorAll('.cosmetics-observatory__carousel-thumb[role="option"]') || [])];
+      const current = controls.indexOf(carouselOption);
+      let next = current;
+      if (event.key === "ArrowRight" || event.key === "ArrowDown") next = Math.min(controls.length - 1, current + 1);
+      if (event.key === "ArrowLeft" || event.key === "ArrowUp") next = Math.max(0, current - 1);
+      if (event.key === "Home") next = 0;
+      if (event.key === "End") next = Math.max(0, controls.length - 1);
+      const target = controls[next];
+      const entry = carouselEntries(model).find((candidate) => candidate.id === target?.dataset.carouselOptionId);
+      if (entry) stageCarouselEntry(model, entry, actionKey("carousel-option", entry.id));
       return;
     }
     const previewTab = event.target.closest?.(".cosmetics-observatory__preview-surface");
@@ -1382,7 +2666,8 @@ export function createCosmeticsObservatory(options = {}) {
     const tab = event.target.closest?.('[role="tab"]');
     if (tab && ["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) {
       event.preventDefault();
-      const controls = [...dialog.querySelectorAll('[role="tab"]')];
+      const tablist = tab.closest('[role="tablist"]');
+      const controls = [...(tablist?.querySelectorAll('[role="tab"]') || [])];
       const current = controls.indexOf(tab);
       let next = current;
       if (event.key === "ArrowRight") next = (current + 1) % controls.length;
@@ -1426,6 +2711,7 @@ export function createCosmeticsObservatory(options = {}) {
     dialog.setAttribute("aria-describedby", "cosmetics-observatory-description");
     dialog.setAttribute("aria-modal", "true");
     dialog.setAttribute("aria-hidden", "true");
+    dialog.dataset.presentation = "full-page";
     dialog.tabIndex = -1;
     const surface = element("div", "cosmetics-observatory__surface");
     const live = element("p", "cosmetics-observatory__sr-only");
@@ -1446,12 +2732,16 @@ export function createCosmeticsObservatory(options = {}) {
     ensureDialog();
     clearPurchaseConfirmation();
     returnFocus = trigger || document.activeElement;
-    activeTab = OBSERVATORY_TABS.includes(tab) ? tab : "collections";
+    ownedOnly = tab === "owned";
+    activeTab = BROWSER_TABS.includes(tab) ? tab : "collections";
     const configuredSlots = uniqueStrings(settings.slotOrder);
     selectedSlot = asText(slot, configuredSlots[0] || "");
+    carouselSelectionByCategory.clear();
     baseLoadout = configuredLoadout(asRecord(settings.getLoadout?.() ?? settings.loadout));
     previewLoadout = { ...baseLoadout };
     previewMeta = null;
+    equippedProfileFrame = readConfiguredProfileFrame();
+    stagedProfileFrame = equippedProfileFrame;
     previewMode = false;
     previewSuspended = false;
     previewSurface = PREVIEW_SURFACES[0];
@@ -1464,7 +2754,7 @@ export function createCosmeticsObservatory(options = {}) {
       ? requestAnimationFrame
       : (callback) => setTimeout(callback, 0);
     scheduleFocus(() => firstFocusable(dialog)?.focus());
-    announce("Cosmetics Observatory opened. No gameplay rules are changed here.");
+    announce("Cosmetic Lab opened as a full-page decoration atelier. All owned and locked choices are visible.");
   }
 
   function refresh(next = {}) {
@@ -1473,6 +2763,15 @@ export function createCosmeticsObservatory(options = {}) {
       clearPurchaseConfirmation();
       baseLoadout = configuredLoadout(asRecord(settings.getLoadout?.() ?? baseLoadout));
       if (!previewMeta) previewLoadout = { ...baseLoadout };
+      const frameWasDirty = stagedProfileFrame !== equippedProfileFrame;
+      equippedProfileFrame = readConfiguredProfileFrame();
+      if (!frameWasDirty) stagedProfileFrame = equippedProfileFrame;
+      const model = makeModel();
+      const category = activeCarouselCategory(model);
+      const selectedId = carouselSelectionByCategory.get(category);
+      if (selectedId && !carouselEntries(model, category).some((entry) => entry.id === selectedId)) {
+        carouselSelectionByCategory.delete(category);
+      }
       render();
     }
   }

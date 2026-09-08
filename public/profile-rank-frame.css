@@ -1,0 +1,407 @@
+.cosmetics-observatory__frame-thumb-visual {
+  --frame-color-1: #71b9ff;
+  --frame-color-2: #d8e8ff;
+  --frame-color-3: #715bd8;
+  --frame-color-4: #f2cf83;
+  position: relative;
+  width: 100%;
+  height: 66px;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  border-radius: 7px;
+  background:
+    radial-gradient(circle at 50% 44%, color-mix(in srgb, var(--frame-color-1) 28%, transparent), transparent 40%),
+    linear-gradient(145deg, color-mix(in srgb, var(--frame-color-3) 22%, #111827), #070b14);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--frame-color-2) 22%, transparent);
+}
+
+.cosmetics-observatory__frame-thumb-visual > i {
+  position: absolute;
+  display: block;
+  border: 2px solid var(--frame-color-1);
+  filter: drop-shadow(0 0 5px color-mix(in srgb, var(--frame-color-1) 65%, transparent));
+}
+
+.cosmetics-observatory__frame-thumb-visual > .is-top {
+  top: 7px;
+  left: 21%;
+  width: 58%;
+  height: 13px;
+  border-bottom: 0;
+  border-radius: 50% 50% 0 0;
+}
+
+.cosmetics-observatory__frame-thumb-visual > .is-left,
+.cosmetics-observatory__frame-thumb-visual > .is-right {
+  top: 19%;
+  bottom: 12%;
+  width: 18px;
+  border-block-color: var(--frame-color-4);
+}
+
+.cosmetics-observatory__frame-thumb-visual > .is-left {
+  left: 9px;
+  border-right: 0;
+  border-radius: 50% 0 0 50%;
+}
+
+.cosmetics-observatory__frame-thumb-visual > .is-right {
+  right: 9px;
+  border-left: 0;
+  border-radius: 0 50% 50% 0;
+}
+
+.cosmetics-observatory__frame-thumb-visual > span {
+  color: color-mix(in srgb, var(--frame-color-2) 88%, white);
+  font: 800 .48rem/1 var(--ui-font-label, "DM Mono", Consolas, monospace);
+  letter-spacing: .14em;
+}
+
+.cosmetics-observatory__frame-thumb-visual.is-none {
+  opacity: .72;
+  filter: saturate(.25);
+}
+
+.cosmetics-observatory__profile-frame-preview {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  container-type: size;
+  border-radius: inherit;
+  background:
+    radial-gradient(circle at 50% 42%, color-mix(in srgb, var(--profile-frame-accent, #71b9ff) 13%, transparent), transparent 38%),
+    linear-gradient(160deg, rgba(16, 25, 44, .35), rgba(3, 7, 15, .72));
+}
+
+.cosmetics-observatory__profile-frame-live-preview {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  isolation: isolate;
+}
+
+.cosmetics-observatory__profile-frame-live-preview::after {
+  content: "";
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  background: radial-gradient(circle at 50% 43%, rgba(2, 9, 16, .08) 0 20%, rgba(2, 10, 18, .46) 67%, rgba(1, 7, 13, .74) 100%);
+  pointer-events: none;
+}
+
+.cosmetics-observatory__profile-frame-live-preview > .arena-duel-card {
+  width: min(21rem, 54cqh, calc(100cqw - 3rem));
+  position: relative;
+  z-index: 2;
+}
+
+.cosmetics-observatory__profile-frame-live-preview > .profile-frame-preview-video {
+  --profile-frame-preview-video-opacity: .48;
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  opacity: 0;
+  object-fit: cover;
+  object-position: center;
+  pointer-events: none;
+  transition: opacity 220ms ease-out;
+}
+
+.cosmetics-observatory__profile-frame-live-preview[data-frame="empyrean-ascension"]
+  > .profile-frame-preview-video {
+  --profile-frame-preview-video-opacity: .52;
+  object-position: center 42%;
+  filter: brightness(.54) saturate(.64) contrast(1.04);
+}
+
+.cosmetics-observatory__profile-frame-live-preview[data-frame="infernal-dominion"]
+  > .profile-frame-preview-video {
+  --profile-frame-preview-video-opacity: .58;
+  filter: brightness(.72) saturate(.78) contrast(1.04);
+}
+
+.cosmetics-observatory__profile-frame-live-preview
+  > .profile-frame-preview-video[data-state="ready"] {
+  opacity: var(--profile-frame-preview-video-opacity);
+}
+
+.cosmetics-observatory__profile-frame-live-preview
+  > .profile-frame-preview-video[data-state="missing"] {
+  display: none;
+}
+
+@media (max-width: 700px) {
+  .cosmetics-observatory__profile-frame-live-preview > .arena-duel-card {
+    width: min(12.5rem, 54cqh, calc(100cqw - 1.5rem));
+  }
+}
+
+.cosmetics-observatory .profile-rank-frame-stage {
+  width: min(220px, 72%);
+  max-height: 94%;
+  aspect-ratio: 3 / 4;
+  position: relative;
+  isolation: isolate;
+  flex: 0 0 auto;
+}
+
+.cosmetics-observatory .profile-rank-frame-card {
+  position: absolute;
+  z-index: 1;
+  inset:
+    var(--card-top, 12%)
+    var(--card-right, 10%)
+    var(--card-bottom, 8%)
+    var(--card-left, 10%);
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--profile-frame-accent, #56b8ff) 38%, rgba(255, 255, 255, .12));
+  border-radius: 14px;
+  color: #f6f7fa;
+  background:
+    radial-gradient(circle at 78% 16%, color-mix(in srgb, var(--profile-frame-accent, #56b8ff) 20%, transparent), transparent 35%),
+    linear-gradient(166deg, #242b3d 0 34%, #121a27 34% 100%);
+  box-shadow:
+    inset 0 1px rgba(255, 255, 255, .08),
+    0 14px 30px rgba(0, 0, 0, .35);
+}
+
+.cosmetics-observatory .profile-rank-frame-card__banner {
+  height: 32%;
+  border-bottom: 1px solid rgba(255, 255, 255, .08);
+  background:
+    radial-gradient(circle at 24% 42%, color-mix(in srgb, var(--profile-frame-accent, #56b8ff) 54%, white 4%), transparent 25%),
+    linear-gradient(135deg, #191b36, color-mix(in srgb, var(--profile-frame-accent, #56b8ff) 24%, #171a31));
+}
+
+.cosmetics-observatory .profile-rank-frame-card__banner::after {
+  content: "";
+  position: absolute;
+  inset: 0 0 68%;
+  opacity: .42;
+  background-image:
+    radial-gradient(circle, white 0 .7px, transparent 1px),
+    radial-gradient(circle, white 0 .5px, transparent .9px);
+  background-position: 8px 12px, 31px 27px;
+  background-size: 38px 37px, 47px 43px;
+}
+
+.cosmetics-observatory .profile-rank-frame-card__crest {
+  width: 48px;
+  height: 48px;
+  position: absolute;
+  z-index: 7;
+  top: var(--card-avatar-top, 22%);
+  left: var(--card-content-inset, 12px);
+  display: grid;
+  place-items: center;
+  border: 3px solid #141c29;
+  border-radius: 50%;
+  color: #fff1bf;
+  background: linear-gradient(145deg, color-mix(in srgb, var(--profile-frame-accent, #56b8ff) 64%, #767c91), #171a2c);
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--profile-frame-accent, #56b8ff) 78%, white 8%),
+    0 7px 17px rgba(0, 0, 0, .35);
+}
+
+.cosmetics-observatory .profile-rank-frame-card__crest span {
+  font: 600 21px/1 Georgia, "Times New Roman", serif;
+}
+
+.cosmetics-observatory .profile-rank-frame-card__crest i {
+  width: 11px;
+  height: 11px;
+  position: absolute;
+  right: -1px;
+  bottom: 1px;
+  border: 3px solid #141c29;
+  border-radius: 50%;
+  background: #60cf91;
+}
+
+.cosmetics-observatory .profile-rank-frame-card__identity {
+  position: relative;
+  z-index: 7;
+  padding: 40px var(--card-content-inset, 12px) 0;
+}
+
+.cosmetics-observatory .profile-rank-frame-card__identity > span {
+  display: block;
+  overflow: hidden;
+  color: color-mix(in srgb, var(--profile-frame-accent, #56b8ff) 76%, white 24%);
+  font: 700 6.5px/1.2 Consolas, monospace;
+  letter-spacing: .1em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cosmetics-observatory .profile-rank-frame-card__identity strong {
+  display: block;
+  overflow: hidden;
+  margin-top: 5px;
+  color: #f4f5f8;
+  font-size: 13px;
+  line-height: 1.1;
+  letter-spacing: -.02em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cosmetics-observatory .profile-rank-frame-card__identity small {
+  display: block;
+  margin-top: 4px;
+  color: #aeb7c6;
+  font-size: 7.4px;
+  line-height: 1.4;
+}
+
+.cosmetics-observatory .profile-rank-frame-card__facts {
+  position: relative;
+  z-index: 7;
+  margin: 10px var(--card-content-inset, 12px) 0;
+  padding-top: 8px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 7px;
+  border-top: 1px solid rgba(255, 255, 255, .08);
+}
+
+.cosmetics-observatory .profile-rank-frame-card__facts span {
+  display: grid;
+  color: #8591a4;
+  font-size: 6px;
+  line-height: 1.25;
+}
+
+.cosmetics-observatory .profile-rank-frame-card__facts b {
+  margin-bottom: 2px;
+  color: #f1f3f7;
+  font-size: 11px;
+}
+
+.cosmetics-observatory .profile-rank-frame-stage[data-layout="partial"] .profile-rank-frame-card__crest {
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.cosmetics-observatory .profile-rank-frame-stage[data-layout="partial"] .profile-rank-frame-card__identity {
+  padding-top: 64px;
+  text-align: center;
+}
+
+.cosmetics-observatory .profile-rank-frame-stage[data-layout="partial"] .profile-rank-frame-card__facts span {
+  justify-items: center;
+  text-align: center;
+}
+
+.cosmetics-observatory :is(
+  .profile-rank-frame-art,
+  .profile-rank-frame-art__full,
+  .profile-rank-frame-islands,
+  .profile-rank-frame-island,
+  .profile-rank-frame-island__source
+) {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.cosmetics-observatory .profile-rank-frame-art {
+  z-index: 5;
+  filter:
+    drop-shadow(0 6px 7px rgba(0, 0, 0, .38))
+    drop-shadow(0 13px 18px rgba(0, 0, 0, .24));
+}
+
+.cosmetics-observatory :is(.profile-rank-frame-art__full, .profile-rank-frame-island__source) {
+  display: block;
+  object-fit: contain;
+}
+
+.cosmetics-observatory .profile-rank-frame-art[data-art-layout="partial"] {
+  overflow: visible;
+  filter: none;
+}
+
+.cosmetics-observatory .profile-rank-frame-islands--card-clipped {
+  clip-path: inset(
+    calc(var(--card-top, 4%) + 1px)
+    calc(var(--card-right, 4%) + 1px)
+    calc(var(--card-bottom, 4%) + 1px)
+    calc(var(--card-left, 4%) + 1px)
+    round 14px
+  );
+}
+
+.cosmetics-observatory .profile-rank-frame-island {
+  transform: translate(var(--island-x, 0%), var(--island-y, 0%));
+  filter:
+    drop-shadow(0 6px 7px rgba(0, 0, 0, .4))
+    drop-shadow(0 12px 16px rgba(0, 0, 0, .28));
+}
+
+.cosmetics-observatory .profile-rank-frame-island__source {
+  clip-path: var(
+    --island-clip,
+    inset(
+      var(--island-crop-top, 0%)
+      var(--island-crop-right, 0%)
+      var(--island-crop-bottom, 0%)
+      var(--island-crop-left, 0%)
+    )
+  );
+}
+
+.cosmetics-observatory .profile-rank-frame-stage[data-asset-state="missing"]::after {
+  content: "Frame artwork unavailable";
+  position: absolute;
+  z-index: 8;
+  inset: 16%;
+  display: grid;
+  place-items: center;
+  border: 1px dashed rgba(255, 255, 255, .2);
+  border-radius: 14px;
+  color: var(--observatory-muted);
+  background: rgba(4, 18, 25, .88);
+  font-size: 11px;
+  text-align: center;
+}
+
+.cosmetics-observatory__frame-note {
+  margin: 0;
+  color: var(--observatory-muted);
+  font-size: .7rem;
+  line-height: 1.5;
+}
+
+body[data-cosmetic-effects="reduced"]
+  .cosmetics-observatory__profile-frame-preview
+  .profile-frame-preview-video,
+body[data-cosmetic-effects="off"]
+  .cosmetics-observatory__profile-frame-preview
+  .profile-frame-preview-video {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce), (prefers-reduced-data: reduce) {
+  .cosmetics-observatory__profile-frame-preview .profile-frame-preview-video {
+    display: none;
+    transition: none;
+  }
+}
+
+@media (forced-colors: active) {
+  .cosmetics-observatory__profile-frame-preview .profile-frame-preview-video {
+    display: none;
+  }
+}

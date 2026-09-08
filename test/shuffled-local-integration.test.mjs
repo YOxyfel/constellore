@@ -15,6 +15,7 @@ import { writeLocalWorldModule } from "../scripts/build-local-world.mjs";
 
 const LOCAL_RUNTIME_ASSETS = [
   "adaptive-difficulty.mjs",
+  "concept-chemistry.mjs",
   "remix-progression.mjs",
   "remix-readiness.mjs",
   "path-guard.mjs",
@@ -136,12 +137,14 @@ test("Shuffled local missions use one deterministic suffix for starters, help, R
     runToken: started.run.token,
     tipIndex: 0
   }));
-  assert.equal(tip.scoreSafe, true);
+  assert.equal(tip.scoreSafe, false);
+  assert.equal(tip.scoreMultiplier, .9);
 
   const gift = await runtime.localRequest("/api/run/gift", requestOptions({
     runId: started.run.id,
     runToken: started.run.token
   }));
+  assert.equal(gift.scoreMultiplier, .45, "a nudge keeps ninety percent of the stronger Gift multiplier");
   const suffixBridges = new Set(suffix.slice(0, -1).map((step) => step.word));
   assert.equal(suffixBridges.has(gift.item.word), true);
 

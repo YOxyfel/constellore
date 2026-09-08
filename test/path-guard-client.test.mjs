@@ -6,6 +6,8 @@ import { createInitialAppState } from "../public/initial-app-state.mjs";
 import { pathGuardPairKey } from "../public/path-guard.mjs";
 
 const app = await readFile(new URL("../public/app.js", import.meta.url), "utf8");
+const guidedPlay = await readFile(new URL("../public/guided-play-app.mjs", import.meta.url), "utf8");
+const conceptMatterApp = await readFile(new URL("../public/concept-matter-app.mjs", import.meta.url), "utf8");
 const page = await readFile(new URL("../public/index.html", import.meta.url), "utf8");
 const styles = await readFile(new URL("../public/styles.css", import.meta.url), "utf8");
 
@@ -33,7 +35,7 @@ test("wrong_path uses the non-punitive client branch and remembered pairs bypass
   assert.ok(preflightAt < requestAt, "preflight must run before /api/combine");
 
   const preflight = combine.slice(
-    combine.indexOf("if (!scrambleActive && pathGuardPairWasRemembered"),
+    combine.indexOf("if (!scrambleActive && chemistryDecision.classification === \"free\" && pathGuardPairWasRemembered"),
     busyAt
   );
   assert.match(preflight, /showPathGuardFeedback\([\s\S]*remembered:\s*true/);
@@ -56,7 +58,7 @@ test("wrong_path uses the non-punitive client branch and remembered pairs bypass
   );
   assert.doesNotMatch(rejected, /state[.]moves\s*[+]=|state[.]moves[+][+]|state[.]nodes\s*=/);
 
-  const feedback = sourceBetween(app, "function showPathGuardFeedback", "function commitGameOutcome");
+  const feedback = sourceBetween(guidedPlay, "function showPathGuardFeedback", "function showConceptChemistryFeedback");
   assert.match(feedback, /WRONG PATH/);
   assert.match(feedback, /Words kept; move unchanged[.]/);
   assert.match(feedback, /You already checked this connection/);
@@ -79,24 +81,24 @@ test("Path Guard memory is independent, canonical, bounded, snapshotted, and res
   assert.equal(maximum, 128);
 
   const sanitizer = sourceBetween(
-    app,
-    "function sanitizeRememberedPathGuardPairs",
-    "function rememberPathGuardPair"
+    guidedPlay,
+    "export function sanitizeRememberedPathGuardPairs",
+    "export function createGuidedPlayController"
   );
-  assert.match(sanitizer, /value[.]slice\(-MAX_PATH_GUARD_PAIRS\)/);
+  assert.match(sanitizer, /value[.]slice\(-maximum\)/);
   assert.match(sanitizer, /candidate[.]length > 180/);
   assert.match(sanitizer, /JSON[.]parse\(candidate\)/);
   assert.match(sanitizer, /pathGuardPairKey\(parsed\[0\], parsed\[1\]\)/);
   assert.match(sanitizer, /normalized === candidate/);
 
   const remember = sourceBetween(
-    app,
+    guidedPlay,
     "function rememberPathGuardPair",
     "function pathGuardPairWasRemembered"
   );
   assert.match(remember, /blockedPairs[.]has\(pairKey\)/);
   assert.match(remember, /blockedPairs[.]add\(pairKey\)/);
-  assert.match(remember, /while \(state[.]pathGuard[.]blockedPairs[.]size > MAX_PATH_GUARD_PAIRS\)/);
+  assert.match(remember, /while \(state[.]pathGuard[.]blockedPairs[.]size > maximumRememberedPairs\)/);
   assert.match(
     remember,
     /blockedPairs[.]delete\(state[.]pathGuard[.]blockedPairs[.]values\(\)[.]next\(\)[.]value\)/
@@ -144,7 +146,8 @@ test("wrong-path notice tone is visual-only, announced once, and fully cleaned u
   );
 
   const boardNode = sourceBetween(app, "function syncBoardNodeElement", "function createBoardNode");
-  assert.match(boardNode, /Press to arm, then press another word to combine[.]/);
+  assert.match(conceptMatterApp, /Press to arm, then press another word to combine[.]/);
+  assert.match(conceptMatterApp, /Hold or press I to inspect its molecular bonds[.]/);
   assert.match(boardNode, /setAttribute\("aria-pressed"/);
 });
 

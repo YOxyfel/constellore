@@ -36,7 +36,7 @@ test("every personal non-win queues a fresh target and exact replay stays explic
   assert.match(retry, /avoidTarget:\s*state[.]recoveryTarget/);
   assert.doesNotMatch(retry, /adaptiveTarget:\s*state[.]game[.]target/);
   assert.match(finish, /const easierNext = adaptiveSeries && \(!won \|\| revealed\)/);
-  assert.match(finish, /Try a fresh challenge/);
+  assert.match(finish, /Try a fresh target/);
   assert.match(replay, /"\/api\/run\/replay"/);
   assert.doesNotMatch(replay, /avoidTarget/);
 });

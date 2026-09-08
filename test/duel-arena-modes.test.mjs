@@ -92,7 +92,8 @@ test("public matchmaking isolates queues by format and matches compatible ticket
   });
   const firstStormTicket = await harness.service.joinPublicQueue(firstStormPlayer.id, {
     actionId: "queue_storm_01",
-    format: "wordstorm"
+    format: "wordstorm",
+    frameSlug: "verdant-reliquary"
   });
 
   assert.deepEqual(targetTicket.queue, {
@@ -109,12 +110,20 @@ test("public matchmaking isolates queues by format and matches compatible ticket
 
   const matched = await harness.service.joinPublicQueue(secondStormPlayer.id, {
     actionId: "queue_storm_02",
-    format: "wordstorm"
+    format: "wordstorm",
+    frameSlug: "gravebound-king"
   });
   assert.equal(matched.queue.status, "matched");
   assert.equal(matched.duel.format, "wordstorm");
   assert.equal(matched.duel.durationSeconds, 120);
   assert.equal(harness.store.data.duels[matched.duel.id].participants.length, 2);
+  assert.deepEqual(
+    matched.duel.players.map(({ side, frameSlug }) => ({ side, frameSlug })),
+    [
+      { side: "rival", frameSlug: "verdant-reliquary" },
+      { side: "self", frameSlug: "gravebound-king" }
+    ]
+  );
   assert.deepEqual(
     harness.store.data.duels[matched.duel.id].participants.map((entry) => entry.playerId).sort(),
     [firstStormPlayer.id, secondStormPlayer.id].sort()
@@ -411,7 +420,8 @@ test("rematches preserve the original Scramble format and its authoritative timi
   const harness = await createDuelHarness();
   const [host, rival] = harness.players;
   const duel = await harness.service.createDuel("invite", [host.id, rival.id], {
-    format: "wordstorm"
+    format: "wordstorm",
+    frameSlugs: ["berry-burrow", "lunar-reverie"]
   });
   await harness.service.finishDuel(duel, host.id, "test_finish");
   await harness.service.requestRematch(duel.id, host.id, {
@@ -426,6 +436,10 @@ test("rematches preserve the original Scramble format and its authoritative timi
   assert.equal(accepted.duel.rated, false);
   assert.equal(accepted.duel.format, "wordstorm");
   assert.equal(accepted.duel.durationSeconds, 120);
+  assert.deepEqual(
+    accepted.duel.players.map((player) => player.frameSlug),
+    ["berry-burrow", "lunar-reverie"]
+  );
   assert.deepEqual(accepted.duel.rules, {
     durationSeconds: 120,
     discoveryQuota: 12

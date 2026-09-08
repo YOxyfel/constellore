@@ -35,7 +35,16 @@ export function sanitizeExploreInventory(raw, discovered = []) {
   for (const value of Array.isArray(discovered) ? discovered.slice(0, 1000) : []) {
     const item = cleanItem(value);
     const key = wordKey(item);
-    if (item && key && !items.has(key)) items.set(key, item);
+    if (!item || !key) continue;
+    const existing = items.get(key);
+    if (!existing) items.set(key, item);
+    else if ((existing.emoji === "✦" && item.emoji !== "✦") || (!existing.category && item.category)) {
+      items.set(key, {
+        ...existing,
+        emoji: existing.emoji === "✦" ? item.emoji : existing.emoji,
+        category: existing.category || item.category
+      });
+    }
   }
   return [...items.values()].slice(0, 1000);
 }

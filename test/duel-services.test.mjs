@@ -1,11 +1,13 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
+  DUEL_MINIMUM_ROUTE_RANK,
   DUEL_DISCONNECT_AFTER_MS,
   DUEL_DURATION_MS,
   DUEL_INTERCEPT_MS,
   DUEL_RECONNECT_GRACE_MS
 } from "../duel-services.mjs";
+import { createRemixProgressionState, getRemixRank } from "../public/remix-progression.mjs";
 import {
   createDuelHarness,
   createStartedInvite,
@@ -25,15 +27,71 @@ function assertNoPrivateIdentifiers(payload, harness, extraSecrets = []) {
   }
 }
 
+function setRouteRank(harness, playerId, rankId) {
+  const rank = getRemixRank(rankId);
+  harness.store.data.players[playerId].routeProgression = createRemixProgressionState({
+    rankId: rank.id,
+    masteryPoints: rank.masteryPoints,
+    completedChallenges: rank.completedChallenges
+  });
+}
+
+test("the authoritative Arena gate rejects Bronze invitations, joins, and matchmaking", async () => {
+  const harness = await createDuelHarness();
+  const [bronze, host] = harness.players;
+  setRouteRank(harness, bronze.id, "bronze");
+
+  await assert.rejects(
+    harness.service.createInvite(bronze.id, { actionId: "bronze_invite_lock" }),
+    (error) => error.statusCode === 403
+      && error.serviceCode === "duel_route_rank_locked"
+      && error.details.minimumRouteRank === DUEL_MINIMUM_ROUTE_RANK
+  );
+  const invite = await harness.service.createInvite(host.id, { actionId: "silver_invite_ok" });
+  await assert.rejects(
+    harness.service.joinInvite(bronze.id, {
+      actionId: "bronze_join_lock",
+      inviteCode: invite.inviteCode
+    }),
+    (error) => error.statusCode === 403 && error.serviceCode === "duel_route_rank_locked"
+  );
+  await assert.rejects(
+    harness.service.joinPublicQueue(bronze.id, {
+      actionId: "bronze_queue_lock",
+      soloWins: 99
+    }),
+    (error) => error.statusCode === 403 && error.serviceCode === "duel_route_rank_locked"
+  );
+  await assert.rejects(
+    harness.service.createDuel("rematch", [host.id, bronze.id]),
+    (error) => error.statusCode === 403 && error.serviceCode === "duel_route_rank_locked"
+  );
+  assert.equal(harness.service.hasArenaAccess(bronze.id), false);
+  assert.equal(harness.service.hasArenaAccess(host.id), true);
+  assert.equal(harness.store.data.players[bronze.id].duelEligibility.soloWinAttested, false);
+
+  const finished = await harness.service.createDuel("invite", [host.id, harness.players[2].id]);
+  await harness.service.finishDuel(finished, host.id, "test_finish");
+  setRouteRank(harness, harness.players[2].id, "bronze");
+  await assert.rejects(
+    harness.service.requestRematch(finished.id, harness.players[2].id, { actionId: "bronze_rematch_lock" }),
+    (error) => error.statusCode === 403 && error.serviceCode === "duel_route_rank_locked"
+  );
+  assert.equal(finished.rematchVotes.length, 0);
+  assert.equal(finished.rematchDuelId, "");
+});
+
 test("invite Duels create isolated boards and one immutable shared countdown", async () => {
   const harness = await createDuelHarness();
   const [host, rival] = harness.players;
   const invited = await harness.service.createInvite(host.id, {
-    actionId: "invite_1001"
+    actionId: "invite_1001",
+    frameSlug: "berry-burrow"
   });
   const joined = await harness.service.joinInvite(rival.id, {
     actionId: "join_100001",
-    inviteCode: invited.inviteCode
+    inviteCode: invited.inviteCode,
+    frameSlug: "lunar-reverie"
   });
   const stored = harness.store.data.duels[joined.duel.id];
 
@@ -45,6 +103,13 @@ test("invite Duels create isolated boards and one immutable shared countdown", a
   );
   assert.equal(joined.duel.kind, "invite");
   assert.equal(joined.duel.rated, false);
+  assert.deepEqual(
+    joined.duel.players.map(({ side, frameSlug }) => ({ side, frameSlug })),
+    [
+      { side: "rival", frameSlug: "berry-burrow" },
+      { side: "self", frameSlug: "lunar-reverie" }
+    ]
+  );
 
   const firstReady = await harness.service.ready(joined.duel.id, host.id, {
     actionId: "ready_10001",
@@ -87,6 +152,47 @@ test("invite Duels create isolated boards and one immutable shared countdown", a
     "private-signature"
   ]);
   assertNoPrivateIdentifiers(rivalView, harness, [invited.inviteCode]);
+});
+
+test("a restarted Duel with pruned run state is cancelled without breaking the service tick", async () => {
+  const harness = await createDuelHarness();
+  const { duelId } = await createStartedInvite(harness);
+  const duel = harness.store.data.duels[duelId];
+  const [missing, remaining] = duel.participants;
+
+  assert.equal(duel.status, "active");
+  assert.equal(harness.runs.discard(missing.runId), true);
+
+  await assert.doesNotReject(harness.service.tick());
+  assert.equal(duel.status, "cancelled");
+  assert.equal(duel.rated, false);
+  assert.equal(duel.finishReason, "run_unavailable");
+  assert.equal(duel.winnerPlayerId, "");
+  assert.equal(harness.runs.runs.has(remaining.runId), false);
+  assert.equal(harness.store.data.duelResults.some((entry) => entry.id === duelId), false);
+});
+
+test("Arena frame slugs are allowlisted and invalid player art becomes unframed", async () => {
+  const harness = await createDuelHarness();
+  const [host, rival] = harness.players;
+  const invited = await harness.service.createInvite(host.id, {
+    actionId: "invite_frame_invalid",
+    frameSlug: "../../not-an-arena-frame"
+  });
+  const joined = await harness.service.joinInvite(rival.id, {
+    actionId: "join_frame_valid",
+    inviteCode: invited.inviteCode,
+    frameSlug: "ember-sovereign"
+  });
+
+  assert.deepEqual(
+    joined.duel.players.map((player) => player.frameSlug),
+    ["", "ember-sovereign"]
+  );
+  assert.deepEqual(
+    harness.store.data.duels[joined.duel.id].participants.map((participant) => participant.frameSlug),
+    ["", "ember-sovereign"]
+  );
 });
 
 test("visible boards broadcast First Light, Intercept, and Echo Steal without solo progression", async () => {

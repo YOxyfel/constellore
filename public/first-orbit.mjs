@@ -7,7 +7,7 @@ const ROUTE = [
     category: "nature",
     title: "Make Mud",
     instruction: "Tap Earth, then tap Water.",
-    tip: "Or drag one word onto the other."
+    tip: "Choose two words to combine them. Every discovery becomes a new ingredient."
   }
 ];
 

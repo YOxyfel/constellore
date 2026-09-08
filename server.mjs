@@ -5,7 +5,7 @@ import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { basename, dirname, extname, join, normalize } from "node:path";
 import { fileURLToPath } from "node:url";
-import { ANALYTICS_EVENT_NAMES, CREATIVE_COMMERCE_CATALOG, GameStore, MARKET_CATALOG, RunRegistry, buildChallengeIdentity, effectiveRunStartedAt, isoWeekKey, normalizeRunEntryId, serviceError } from "./game-services.mjs";
+import { ANALYTICS_EVENT_NAMES, CREATIVE_COMMERCE_CATALOG, GameStore, MARKET_CATALOG, RunRegistry, buildChallengeIdentity, effectiveRunStartedAt, isoWeekKey, normalizeRunEntryId, runPublishedDivision, runScoreMultiplier, serviceError } from "./game-services.mjs";
 import { DuelService } from "./duel-services.mjs";
 import { listScrambleModeDefinitions } from "./public/scramble-arena.mjs";
 import { cosmicTwistSeedFor, selectCosmicTwist } from "./public/cosmic-twists.mjs";
@@ -48,12 +48,15 @@ import {
   createAuthoredRouteGraph
 } from "./public/route-distance.mjs";
 import { PATH_GUARD_VERSION, createPathGuardEvidence, evaluatePathGuard, pathGuardEligibility } from "./public/path-guard.mjs";
+import { createConceptChemistryGuide, evaluateConceptChemistryPair } from "./public/concept-chemistry.mjs";
 import { annotateUniverseResult, buildUniverseManifest, selectUniverse, validateUniverseRoute } from "./public/universe-director.mjs";
+import { recipeMatchesWorldweavingObjective, worldweavingObjective } from "./public/worldweaving.mjs";
 import { AiRequestGate, MemoryRateLimiter, safeConcept, safeDiscoveryContext, trustedWriteOrigin } from "./server-safety.mjs";
 import { EXPANDED_RECIPES } from "./content/expanded-recipes.mjs";
 import {
   selectLogicalPairExpansion
 } from "./content/logical-pair-expansion-3-1.mjs";
+import { importMapCspSource } from "./scripts/inline-script-csp.mjs";
 
 const projectRoot = fileURLToPath(new URL(".", import.meta.url));
 const root = join(projectRoot, "public");
@@ -65,6 +68,7 @@ const legacyStorePath = join(projectRoot, "data", "wordforge.json");
 const localStorePath = existsSync(constelloreStorePath) || !existsSync(legacyStorePath) ? constelloreStorePath : legacyStorePath;
 const storePath = process.env.CONSTELLORE_DATA_PATH || process.env.WORDFORGE_DATA_PATH || (isMainModule ? localStorePath : ":memory:");
 const packageMetadata = JSON.parse(await readFile(join(projectRoot, "package.json"), "utf8"));
+export const gameImportMapCspSource = importMapCspSource(await readFile(join(root, "index.html"), "utf8"));
 const gameStore = await new GameStore(storePath).init();
 const runRegistry = new RunRegistry(gameStore);
 await runRegistry.flush();
@@ -1136,6 +1140,95 @@ export function solutionRoute(target, { includeDynamic = false } = {}) {
   return plan ? [...plan.steps.values()].map((step) => ({ ...step })) : null;
 }
 
+function canonicalWorldweavingObjective(raw, target = "") {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+  return worldweavingObjective({
+    kind: "worldweaving",
+    worldId: raw.worldId,
+    slotId: raw.slotId,
+    choiceId: raw.choiceId
+  }, target);
+}
+
+function routeStepKey(step) {
+  const pair = [step?.a, step?.b]
+    .map((word) => String(word || "").trim().toLowerCase())
+    .sort()
+    .join("+");
+  return `${pair}=>${String(step?.word || "").trim().toLowerCase()}`;
+}
+
+// A Worldweaving objective qualifies one exact final recipe, not merely its
+// output word. Build both ingredient plans from the trusted authored graph,
+// merge reusable prerequisites by result word, then append the qualified
+// recipe even when that word appeared earlier as a prerequisite (for example,
+// Wall + Wall -> House before Room + Room -> House).
+function worldweavingSolutionRoute(rawObjective) {
+  const objective = canonicalWorldweavingObjective(rawObjective, rawObjective?.target);
+  if (!objective) return null;
+  const finalRecipe = authoredCombination(objective.recipe.a, objective.recipe.b);
+  if (!finalRecipe || !recipeMatchesWorldweavingObjective(objective, finalRecipe)) return null;
+
+  const available = new Set(STARTERS.map((word) => word.toLowerCase()));
+  const seenResults = new Set(available);
+  const route = [];
+  for (const ingredient of [objective.recipe.a, objective.recipe.b]) {
+    const ingredientRoute = solutionRoute(ingredient, { includeDynamic: false });
+    if (!Array.isArray(ingredientRoute)) return null;
+    for (const proposed of ingredientRoute) {
+      const canonical = authoredCombination(proposed.a, proposed.b);
+      if (!canonical || String(canonical.word).toLowerCase() !== String(proposed.word).toLowerCase()) return null;
+      const aKey = String(canonical.a).toLowerCase();
+      const bKey = String(canonical.b).toLowerCase();
+      if (!available.has(aKey) || !available.has(bKey)) return null;
+      const resultKey = String(canonical.word).toLowerCase();
+      if (seenResults.has(resultKey)) continue;
+      route.push({ ...canonical, category: semanticCategoryFor(canonical.word) || null });
+      available.add(resultKey);
+      seenResults.add(resultKey);
+    }
+    if (!available.has(String(ingredient).toLowerCase())) return null;
+  }
+
+  if (
+    !available.has(String(finalRecipe.a).toLowerCase())
+    || !available.has(String(finalRecipe.b).toLowerCase())
+  ) return null;
+  route.push({ ...finalRecipe, category: semanticCategoryFor(finalRecipe.word) || null });
+  return route;
+}
+
+function worldweavingRouteProgressForRun(run, route) {
+  const cleanRoute = Array.isArray(route) ? route : [];
+  const history = Array.isArray(run?.history) ? run.history : [];
+  const receiptCounts = new Map();
+  for (const entry of history) {
+    const key = routeStepKey(entry);
+    receiptCounts.set(key, (receiptCounts.get(key) || 0) + 1);
+  }
+  let matched = 0;
+  for (const step of cleanRoute) {
+    const key = routeStepKey(step);
+    const remaining = receiptCounts.get(key) || 0;
+    if (remaining <= 0) continue;
+    matched += 1;
+    receiptCounts.set(key, remaining - 1);
+  }
+  const total = cleanRoute.length;
+  const complete = Boolean(run?.completedAt);
+  const remaining = complete ? 0 : Math.max(0, total - matched);
+  return {
+    total,
+    remaining,
+    complete,
+    percent: complete ? 100 : total ? Math.min(99, Math.round((matched / total) * 100)) : 0
+  };
+}
+
+function worldweavingBlockedMessage(objective) {
+  return `${objective.target} appeared, but this Moon weave needs ${objective.recipe.a} + ${objective.recipe.b}.`;
+}
+
 export function authoredRouteProgress(target, available, { total = 0, extraRecipes = [] } = {}) {
   const requestedTotal = Math.max(0, Math.trunc(Number(total) || 0));
   const canonicalTotal = requestedTotal || solutionRoute(target)?.length || 0;
@@ -1149,6 +1242,13 @@ export function authoredRouteProgress(target, available, { total = 0, extraRecip
 }
 
 function routeProgressForRun(run) {
+  const objective = canonicalWorldweavingObjective(run?.game?.worldweavingObjective, run?.game?.target);
+  if (objective) {
+    const route = Array.isArray(run?.solutionRoute)
+      ? run.solutionRoute
+      : worldweavingSolutionRoute(objective);
+    return worldweavingRouteProgressForRun(run, route);
+  }
   const total = Math.max(0, Math.trunc(Number(run?.game?.routeLength) || solutionRoute(run?.game?.target)?.length || 0));
   const starterKeys = new Set((run?.game?.starters || STARTERS).map((word) => String(word).trim().toLowerCase()));
   const discoveredKeys = run?.discovered instanceof Map ? [...run.discovered.keys()] : [];
@@ -1197,7 +1297,7 @@ function pathGuardContextForRun(run) {
   };
 }
 
-function pathGuardEnabledForRun(run) {
+function pathGuardRunScope(run) {
   const game = run?.game;
   if (
     !run
@@ -1211,14 +1311,50 @@ function pathGuardEnabledForRun(run) {
       Math.trunc(Number(game.remixes?.activeCount) || 0)
     ) > 0
   ) return false;
-  return pathGuardEligibility(pathGuardContextForRun(run)).active;
+  return pathGuardEligibility({ ...pathGuardContextForRun(run), finished: false }).active;
+}
+
+function pathGuardEnabledForRun(run) {
+  return Boolean(!run?.completedAt && pathGuardRunScope(run));
+}
+
+function conceptChemistryGuideForRun(run) {
+  const target = String(run?.game?.target || "");
+  try {
+    return createConceptChemistryGuide({
+      route: run?.solutionRoute,
+      history: run?.history,
+      available: run?.discovered,
+      target,
+      strict: pathGuardRunScope(run)
+    });
+  } catch {
+    return createConceptChemistryGuide({ target, strict: false });
+  }
 }
 
 function pathGuardDecisionForRun(run, { a, b, result } = {}) {
   const context = pathGuardContextForRun(run);
-  if (!pathGuardEnabledForRun(run) || !result?.word) {
+  if (!pathGuardEnabledForRun(run)) {
     return evaluatePathGuard(context, { a, b }, {});
   }
+  const conceptGuide = conceptChemistryGuideForRun(run);
+  const conceptDecision = evaluateConceptChemistryPair(conceptGuide, { a, b });
+  if (!conceptDecision.allowed) {
+    return {
+      active: true,
+      blocked: true,
+      action: "reject",
+      reason: conceptDecision.reason,
+      confidence: "authoritative",
+      pairKey: conceptDecision.pairKey,
+      message: conceptDecision.message
+    };
+  }
+  if (conceptGuide.strict !== true || conceptGuide.valid !== true) {
+    return evaluatePathGuard(context, { a, b }, {});
+  }
+  if (!result?.word) return evaluatePathGuard(context, { a, b }, {});
   if (!Array.isArray(run.solutionRoute) || !run.solutionRoute.length) {
     return evaluatePathGuard(context, { a, b }, {});
   }
@@ -1256,7 +1392,8 @@ function pathGuardWrongPathPayload(run) {
     pathGuard: {
       version: PATH_GUARD_VERSION,
       rankId: String(run?.game?.remixes?.rank?.id || "")
-    }
+    },
+    conceptChemistry: conceptChemistryGuideForRun(run)
   };
 }
 
@@ -1439,6 +1576,23 @@ function routeFromSignedStartProfile(game, canonicalRoute) {
 }
 
 function verifiedServerRoute(game, { includeDynamic = false } = {}) {
+  const worldweaving = canonicalWorldweavingObjective(game?.worldweavingObjective, game?.target);
+  if (worldweaving) {
+    const route = worldweavingSolutionRoute(worldweaving);
+    if (!Array.isArray(route) || !route.length) return null;
+    if (game.moveLimit && route.length > game.moveLimit) return null;
+    return {
+      route,
+      validation: {
+        valid: true,
+        reason: "validated",
+        target: worldweaving.target,
+        starters: [...game.starters],
+        route: route.map((step) => ({ ...step })),
+        routeSteps: route.length
+      }
+    };
+  }
   const canonicalRoute = game ? solutionRoute(game.target, { includeDynamic }) : null;
   if (!Array.isArray(canonicalRoute)) return null;
   const route = routeFromSignedStartProfile(game, canonicalRoute);
@@ -2100,8 +2254,10 @@ const mime = {
   ".jpg": "image/jpeg",
   ".jpeg": "image/jpeg",
   ".webp": "image/webp",
+  ".glb": "model/gltf-binary",
   ".ico": "image/x-icon",
   ".mp4": "video/mp4",
+  ".webm": "video/webm",
   ".mp3": "audio/mpeg",
   ".ogg": "audio/ogg",
   ".opus": "audio/ogg; codecs=opus",
@@ -2312,7 +2468,10 @@ function setSecurityHeaders(response) {
   response.setHeader("X-Frame-Options", "SAMEORIGIN");
   // Board coordinates and progress meters use bounded CSS custom properties and
   // element style attributes; scripts remain restricted to same-origin files.
-  response.setHeader("Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self'; frame-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'self'; form-action 'self'");
+  // GLB textures are embedded and GLTFLoader decodes them through short-lived
+  // same-origin blob URLs. Keep the policy narrow while allowing that local
+  // decode path; without it models render as untextured white geometry.
+  response.setHeader("Content-Security-Policy", `default-src 'self'; script-src 'self' '${gameImportMapCspSource}'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob:; connect-src 'self' blob:; media-src 'self'; frame-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'self'; form-action 'self'`);
 }
 
 function structuredLog(level, type, fields = {}) {
@@ -2364,6 +2523,41 @@ function hasOnlyKeys(value, required, allowed) {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value)
     && required.every((key) => Object.hasOwn(value, key))
     && Object.keys(value).every((key) => allowed.includes(key));
+}
+
+function requestedWorldweavingObjective(raw, requestedTarget) {
+  if (raw === undefined || raw === null) return null;
+  if (!hasExactKeys(raw, ["worldId", "slotId", "choiceId"])) {
+    throw serviceError(400, "Worldweaving requires only worldId, slotId, and choiceId.", "invalid_worldweaving_request");
+  }
+  const target = String(requestedTarget || "").trim();
+  if (!target) {
+    throw serviceError(400, "Choose the matching Worldweaving target.", "invalid_worldweaving_target");
+  }
+  const objective = worldweavingObjective({ kind: "worldweaving", ...raw }, target);
+  if (!objective || String(objective.target).toLowerCase() !== target.toLowerCase()) {
+    throw serviceError(422, "That Worldweaving choice does not match this target.", "worldweaving_unavailable");
+  }
+  return objective;
+}
+
+function worldweavingRunRequest(request, objective) {
+  if (!objective) return request;
+  return {
+    ...request,
+    mode: "reach",
+    target: objective.target,
+    custom: false,
+    adaptive: false,
+    adaptiveTarget: "",
+    avoidTarget: "",
+    startStyle: "classic",
+    worldweaving: {
+      worldId: objective.worldId,
+      slotId: objective.slotId,
+      choiceId: objective.choiceId
+    }
+  };
 }
 
 function validatedAdaptiveAvoidTarget(value) {
@@ -2497,6 +2691,38 @@ function officialRunDetails(
   };
 }
 
+function withWorldweavingDetails(details, objective) {
+  if (!objective || !details) return details;
+  const challengeId = `practice:worldweaving:${objective.worldId}:${objective.slotId}:${objective.choiceId}:${Math.abs(Number(details.seed) || 0)}`;
+  const game = {
+    ...details.game,
+    mode: "reach",
+    modeName: "Moon Worldweaving",
+    objectiveVerb: "Weave",
+    challengeId,
+    adaptive: false,
+    ranked: false,
+    scoreEligible: true,
+    rewardEligible: true,
+    leaderboardEligible: false,
+    completionPolicy: "external",
+    worldweavingObjective: structuredClone(objective)
+  };
+  delete game.remixes;
+  delete game.promotion;
+  delete game.startProfile;
+  delete game.localChallengeContext;
+  return {
+    ...details,
+    game,
+    ranked: false,
+    challengeId,
+    adaptiveState: null,
+    adaptiveTarget: "",
+    avoidTarget: ""
+  };
+}
+
 const MISSION_PREVIEW_TTL_MS = 15 * 60_000;
 const MISSION_PREVIEW_TOKEN_LIMIT = 160;
 const missionPreviews = new Map();
@@ -2567,6 +2793,8 @@ function missionBriefingFingerprint(game) {
   return JSON.stringify({
     mode: game.mode,
     modeName: game.modeName,
+    objectiveVerb: game.objectiveVerb || "",
+    worldweavingObjective: game.worldweavingObjective ? structuredClone(game.worldweavingObjective) : null,
     target: game.target,
     emoji: game.emoji,
     clue: game.clue,
@@ -2720,6 +2948,11 @@ function missionPreviewRequest(details, body) {
     recentTargets: details.adaptiveState?.recentTargets || [],
     adaptiveTarget: details.game.adaptive ? String(details.adaptiveTarget || "") : "",
     avoidTarget: details.game.adaptive ? String(details.avoidTarget || "") : "",
+    worldweaving: details.game.worldweavingObjective ? {
+      worldId: details.game.worldweavingObjective.worldId,
+      slotId: details.game.worldweavingObjective.slotId,
+      choiceId: details.game.worldweavingObjective.choiceId
+    } : null,
     startStyle: ["classic", "shuffled"].includes(String(body.startStyle || "").trim().toLowerCase())
       ? String(body.startStyle).trim().toLowerCase()
       : "auto"
@@ -2736,7 +2969,7 @@ function createMissionPreviewToken(playerId, request, game, route = []) {
   }
   const token = `mission_${randomUUID()}`;
   missionPreviews.set(token, {
-    v: 3,
+    v: 4,
     playerId,
     expiresAt: now + MISSION_PREVIEW_TTL_MS,
     request: structuredClone(request),
@@ -2759,13 +2992,15 @@ function readMissionPreviewToken(token, playerId) {
     const payload = missionPreviews.get(token);
     if (!payload) throw new Error("invalid");
     if (!hasExactKeys(payload, ["v", "playerId", "expiresAt", "request", "fingerprint", "route"])) throw new Error("invalid");
-    if (payload.v !== 3 || payload.playerId !== playerId || !Number.isFinite(payload.expiresAt) || payload.expiresAt <= Date.now()) throw new Error("invalid");
-    if (!hasExactKeys(payload.request, ["mode", "seed", "target", "stage", "custom", "adaptive", "adaptiveVersion", "adaptiveLevel", "failureStreak", "adaptiveCompletedChallenges", "adaptiveMajorChallengePending", "adaptiveMajorChallengeBaseLevel", "recentTargets", "adaptiveTarget", "avoidTarget", "startStyle"])
+    if (payload.v !== 4 || payload.playerId !== playerId || !Number.isFinite(payload.expiresAt) || payload.expiresAt <= Date.now()) throw new Error("invalid");
+    if (!hasExactKeys(payload.request, ["mode", "seed", "target", "stage", "custom", "adaptive", "adaptiveVersion", "adaptiveLevel", "failureStreak", "adaptiveCompletedChallenges", "adaptiveMajorChallengePending", "adaptiveMajorChallengeBaseLevel", "recentTargets", "adaptiveTarget", "avoidTarget", "worldweaving", "startStyle"])
       || typeof payload.fingerprint !== "string"
       || typeof payload.request.avoidTarget !== "string"
       || payload.request.avoidTarget.length > 80
       || !Array.isArray(payload.request.recentTargets)
       || payload.request.recentTargets.length > 8
+      || (payload.request.worldweaving !== null
+        && !hasExactKeys(payload.request.worldweaving, ["worldId", "slotId", "choiceId"]))
       || !Array.isArray(payload.route)
       || payload.route.length > 9) throw new Error("invalid");
     return structuredClone(payload);
@@ -2776,7 +3011,7 @@ function readMissionPreviewToken(token, playerId) {
 
 function publicRun(run, token) {
   const scoreEligible = !run.scoringDisabled && run.game?.scoreEligible !== false;
-  const scoreMultiplier = scoreEligible ? assistancePolicy(run.assist).scoreMultiplier : 0;
+  const scoreMultiplier = scoreEligible ? runScoreMultiplier(run) : 0;
   const activationPending = Boolean(run.activatedAt == null);
   const startedAt = effectiveRunStartedAt(run);
   return {
@@ -2789,6 +3024,7 @@ function publicRun(run, token) {
     rewardEligible: Boolean(scoreEligible && run.game?.rewardEligible !== false),
     leaderboardEligible: Boolean(run.ranked && scoreEligible && run.game?.leaderboardEligible !== false),
     assist: run.assist,
+    division: runPublishedDivision(run),
     challengeId: run.challengeId,
     challengeKey: run.challengeBaseIdentity?.key || null,
     challenge: run.challengeBaseIdentity?.descriptor || null,
@@ -2796,10 +3032,16 @@ function publicRun(run, token) {
     deadlineAt: run.game.timeLimit && !activationPending ? new Date(startedAt + run.game.timeLimit * 1000).toISOString() : null,
     activationPending,
     routeProgress: routeProgressForRun(run),
+    conceptChemistry: conceptChemistryGuideForRun(run),
     remixProgress: run.remixRuntime
       ? routeRemixProgress(run.remixRuntime, run.remixProgress)
       : null
   };
+}
+
+function challengeCreditReward(run) {
+  const maximum = run?.game?.mode === "daily" ? 10 : run?.game?.mode === "weekly" ? 8 : 4;
+  return Math.max(0, Math.floor(maximum * runScoreMultiplier(run) + Number.EPSILON));
 }
 
 function configuredAppOrigins(request) {
@@ -3149,8 +3391,8 @@ export const server = createServer(async (request, response) => {
       if (rateLimited(request, 20, "duel-invite")) return sendJson(response, 429, { error: "Too many Duel invitations.", code: "duel_rate_limited" });
       const player = requirePlayer(request);
       const body = await jsonBody(request, 1_024);
-      if (!hasOnlyKeys(body, ["actionId"], ["actionId", "format", "target", "seed"])) {
-        throw serviceError(400, "Scramble invitations require an action ID and optional mode, target, or seed.", "invalid_duel_invite");
+      if (!hasOnlyKeys(body, ["actionId"], ["actionId", "format", "target", "seed", "frameSlug"])) {
+        throw serviceError(400, "Scramble invitations require an action ID and optional mode, target, seed, or Arena frame.", "invalid_duel_invite");
       }
       return sendJson(response, 201, await duelService.createInvite(player.id, body));
     }
@@ -3159,8 +3401,8 @@ export const server = createServer(async (request, response) => {
       if (rateLimited(request, 60, "duel-join")) return sendJson(response, 429, { error: "Too many Duel join attempts.", code: "duel_rate_limited" });
       const player = requirePlayer(request);
       const body = await jsonBody(request, 1_024);
-      if (!hasExactKeys(body, ["actionId", "inviteCode"])) {
-        throw serviceError(400, "Joining a Duel requires only an invite code and action ID.", "invalid_duel_join");
+      if (!hasOnlyKeys(body, ["actionId", "inviteCode"], ["actionId", "inviteCode", "frameSlug"])) {
+        throw serviceError(400, "Joining a Duel requires an invite code, action ID, and optional Arena frame.", "invalid_duel_join");
       }
       return sendJson(response, 200, await duelService.joinInvite(player.id, body));
     }
@@ -3183,13 +3425,13 @@ export const server = createServer(async (request, response) => {
       if (rateLimited(request, 30, `duel-queue:${player.id}`)) return sendJson(response, 429, { error: "The matchmaking controls need a moment.", code: "duel_rate_limited" });
       const body = await jsonBody(request, 512);
       if (
-        !hasOnlyKeys(body, ["actionId"], ["actionId", "format", "soloWins"])
+        !hasOnlyKeys(body, ["actionId"], ["actionId", "format", "soloWins", "frameSlug"])
         || (
           Object.hasOwn(body, "soloWins")
           && (!Number.isInteger(body.soloWins) || body.soloWins < 0 || body.soloWins > 100_000)
         )
       ) {
-        throw serviceError(400, "Matchmaking requires an action ID, optional mode, and an optional bounded solo-win count.", "invalid_duel_matchmaking");
+        throw serviceError(400, "Matchmaking requires an action ID, optional mode, bounded solo-win count, and Arena frame.", "invalid_duel_matchmaking");
       }
       return sendJson(response, 200, await duelService.joinPublicQueue(player.id, body));
     }
@@ -3441,7 +3683,7 @@ export const server = createServer(async (request, response) => {
         competitive: false,
         scoringDisabled: Boolean(run.scoringDisabled || policy.study),
         scoreEligible: !run.scoringDisabled && policy.scoreEligible,
-        scoreMultiplier: run.scoringDisabled ? 0 : policy.scoreMultiplier,
+        scoreMultiplier: run.scoringDisabled ? 0 : runScoreMultiplier(run),
         routeProgress: routeProgressForRun(run)
       });
     }
@@ -3487,24 +3729,31 @@ export const server = createServer(async (request, response) => {
       if (rateLimited(request, 160, "run-preview")) return sendJson(response, 429, { error: "Too many missions mapped." });
       const player = requirePlayer(request);
       const body = await jsonBody(request);
-      body.avoidTarget = validatedAdaptiveAvoidTarget(body.avoidTarget);
-      const mode = ["reach", "quick", "moves", "daily", "weekly", "challenge"].includes(body.mode) ? body.mode : "reach";
+      const worldweaving = requestedWorldweavingObjective(
+        Object.hasOwn(body, "worldweaving") ? body.worldweaving : undefined,
+        body.target
+      );
+      const runRequest = worldweavingRunRequest({
+        ...body,
+        avoidTarget: validatedAdaptiveAvoidTarget(body.avoidTarget)
+      }, worldweaving);
+      const mode = ["reach", "quick", "moves", "daily", "weekly", "challenge"].includes(runRequest.mode) ? runRequest.mode : "reach";
       if (
-        (body.adaptive === true || ["quick", "moves"].includes(mode))
-        && adaptiveModePolicy({ mode, custom: Boolean(body.custom) }).eligible
+        (runRequest.adaptive === true || ["quick", "moves"].includes(mode))
+        && adaptiveModePolicy({ mode, custom: Boolean(runRequest.custom) }).eligible
       ) {
         const prepared = gameStore.ensureRoutePromotion(player.id);
         if (prepared.changed) await gameStore.persist();
       }
-      const details = officialRunDetails(
+      const details = withWorldweavingDetails(officialRunDetails(
         mode,
-        body.seed,
-        body.stage,
-        String(body.target || ""),
-        Boolean(body.custom),
-        body,
+        runRequest.seed,
+        runRequest.stage,
+        String(runRequest.target || ""),
+        Boolean(runRequest.custom),
+        runRequest,
         player.id
-      );
+      ), worldweaving);
       if (!details) throw serviceError(422, "That target has no verified route yet.", "target_unavailable");
       if (mode === "daily" && gameStore.hasScore(player.id, details.challengeId)) throw serviceError(409, "Today's ranked Word has already been completed.", "daily_complete");
       const priorForfeit = details.ranked ? gameStore.forfeitedChallenge(player.id, details.challengeId) : null;
@@ -3519,7 +3768,7 @@ export const server = createServer(async (request, response) => {
       };
       const verified = verifiedServerRoute(game, { includeDynamic: !details.ranked });
       if (!verified) throw serviceError(422, "That target has no verified route yet.", "target_unavailable");
-      const previewRequest = missionPreviewRequest(details, body);
+      const previewRequest = missionPreviewRequest(details, runRequest);
       const previewToken = createMissionPreviewToken(player.id, previewRequest, game, verified.route);
       return sendJson(response, 200, {
         game: publicMissionGame({ ...game, routeLength: verified.route.length }),
@@ -3536,10 +3785,14 @@ export const server = createServer(async (request, response) => {
         : undefined;
       const preview = body.previewToken ? readMissionPreviewToken(body.previewToken, player.id) : null;
       const sourceRunRequest = preview?.request || body;
-      const runRequest = {
+      const worldweaving = requestedWorldweavingObjective(
+        Object.hasOwn(sourceRunRequest, "worldweaving") ? sourceRunRequest.worldweaving : undefined,
+        sourceRunRequest.target
+      );
+      const runRequest = worldweavingRunRequest({
         ...sourceRunRequest,
         avoidTarget: validatedAdaptiveAvoidTarget(sourceRunRequest.avoidTarget)
-      };
+      }, worldweaving);
       const mode = ["reach", "quick", "moves", "daily", "weekly", "challenge"].includes(runRequest.mode) ? runRequest.mode : "reach";
       if (
         (runRequest.adaptive === true || ["quick", "moves"].includes(mode))
@@ -3548,7 +3801,7 @@ export const server = createServer(async (request, response) => {
         const prepared = gameStore.ensureRoutePromotion(player.id);
         if (prepared.changed) await gameStore.persist();
       }
-      let details = officialRunDetails(
+      let details = withWorldweavingDetails(officialRunDetails(
         mode,
         runRequest.seed,
         runRequest.stage,
@@ -3556,10 +3809,13 @@ export const server = createServer(async (request, response) => {
         Boolean(runRequest.custom),
         runRequest,
         player.id
-      );
+      ), worldweaving);
       if (!details && preview?.request.custom && preview.route.length) {
         registerDynamicRoute(preview.route, preview.request.target);
-        details = officialRunDetails(mode, runRequest.seed, runRequest.stage, String(runRequest.target || ""), true, runRequest);
+        details = withWorldweavingDetails(
+          officialRunDetails(mode, runRequest.seed, runRequest.stage, String(runRequest.target || ""), true, runRequest),
+          worldweaving
+        );
       }
       if (!details && preview) throw serviceError(409, "This mission briefing expired or changed. Review the refreshed mission before starting.", "mission_stale");
       if (!details) throw serviceError(422, "That target has no verified route yet.", "target_unavailable");
@@ -3763,7 +4019,7 @@ export const server = createServer(async (request, response) => {
         assist: run.assist,
         scoringDisabled,
         scoreEligible: !scoringDisabled && policy.scoreEligible,
-        scoreMultiplier: scoringDisabled ? 0 : policy.scoreMultiplier,
+        scoreMultiplier: scoringDisabled ? 0 : runScoreMultiplier(run),
         rewardEligible: !scoringDisabled,
         leaderboardEligible: Boolean(run.ranked && !scoringDisabled),
         ranked: Boolean(run.ranked),
@@ -3811,7 +4067,7 @@ export const server = createServer(async (request, response) => {
         assist: run.assist,
         scoringDisabled,
         scoreEligible: !scoringDisabled && policy.scoreEligible,
-        scoreMultiplier: scoringDisabled ? 0 : policy.scoreMultiplier,
+        scoreMultiplier: scoringDisabled ? 0 : runScoreMultiplier(run),
         rewardEligible: !scoringDisabled,
         leaderboardEligible: Boolean(run.ranked && !scoringDisabled),
         ranked: Boolean(run.ranked),
@@ -3901,13 +4157,13 @@ export const server = createServer(async (request, response) => {
       }
       if (!run.ranked) return sendJson(response, 200, { ranked: false, reason: "Practice runs are not uploaded." });
       if (run.submitted) {
-        const division = run.assist === "none" ? "pure" : "open";
+        const division = runPublishedDivision(run);
         const placement = gameStore.rankFor(run.finalChallengeKey || run.challengeId, division, player.id);
         if (placement) {
           const rewardKey = placement.entry.challengeBaseKey || placement.entry.challengeKey || run.challengeId;
           const reward = placement.provisional
             ? { creditReward: 0, weeklyBonus: 0 }
-            : await gameStore.grantChallengeCredits(player.id, rewardKey, run.game.mode === "daily" ? 10 : run.game.mode === "weekly" ? 8 : 4);
+            : await gameStore.grantChallengeCredits(player.id, rewardKey, challengeCreditReward(run));
           return sendJson(response, 200, {
             ranked: true,
             recovered: true,
@@ -3927,7 +4183,7 @@ export const server = createServer(async (request, response) => {
       const placement = await gameStore.addScore(entry);
       const reward = entry.status === "provisional"
         ? { creditReward: 0, weeklyBonus: 0 }
-        : await gameStore.grantChallengeCredits(player.id, entry.challengeBaseKey || entry.challengeKey, run.game.mode === "daily" ? 10 : run.game.mode === "weekly" ? 8 : 4);
+        : await gameStore.grantChallengeCredits(player.id, entry.challengeBaseKey || entry.challengeKey, challengeCreditReward(run));
       await runRegistry.flush();
       return sendJson(response, 201, {
         ranked: true,
@@ -4155,7 +4411,7 @@ export const server = createServer(async (request, response) => {
       }
       if (!result && !run?.ranked) result = contextualCombination(safeA, safeB);
       if (!result) {
-        if (run && pathGuardEnabledForRun(run)) {
+        if (run && pathGuardDecisionForRun(run, { a: safeA, b: safeB, result: null }).blocked) {
           return sendJson(response, 409, pathGuardWrongPathPayload(run));
         }
         let rejectedAttempt = null;
@@ -4200,7 +4456,8 @@ export const server = createServer(async (request, response) => {
       };
       let universeContext = null;
       if (run) {
-        const twist = (run.game.remixes?.activeCount || pathGuardDecision.active) ? null : selectCosmicTwist({
+        const worldweaving = canonicalWorldweavingObjective(run.game.worldweavingObjective, run.game.target);
+        const twist = (worldweaving || run.game.remixes?.activeCount || pathGuardDecision.active) ? null : selectCosmicTwist({
           a: safeA,
           b: safeB,
           canonicalResult: responseResult,
@@ -4226,6 +4483,20 @@ export const server = createServer(async (request, response) => {
           universeContext = annotation?.context || null;
         }
         const historyEntry = runRegistry.recordCombination(run, responseResult, { a: safeA, b: safeB });
+        if (
+          worldweaving
+          && String(responseResult.word).toLowerCase() === String(worldweaving.target).toLowerCase()
+        ) {
+          const completed = recipeMatchesWorldweavingObjective(worldweaving, {
+            a: safeA,
+            b: safeB,
+            word: responseResult.word
+          });
+          historyEntry.targetMade = true;
+          historyEntry.completionBlocked = !completed;
+          historyEntry.worldweavingMessage = completed ? "" : worldweavingBlockedMessage(worldweaving);
+          if (completed) run.completedAt ||= Date.now();
+        }
         await runRegistry.persist(run);
         responseResult = {
           ...responseResult,
@@ -4236,6 +4507,7 @@ export const server = createServer(async (request, response) => {
           remixProgress: historyEntry?.remixProgress || null,
           targetMade: historyEntry?.targetMade === true,
           completionBlocked: historyEntry?.completionBlocked === true,
+          worldweavingMessage: String(historyEntry?.worldweavingMessage || ""),
           remixMessage: historyEntry?.completionBlocked
             ? String(historyEntry?.remixCompletion?.reason || "")
             : ""
@@ -4252,9 +4524,10 @@ export const server = createServer(async (request, response) => {
         assist: run?.assist || "none",
         scoringDisabled,
         scoreEligible: !scoringDisabled && runPolicy.scoreEligible,
-        scoreMultiplier: scoringDisabled ? 0 : runPolicy.scoreMultiplier,
-        division: scoringDisabled ? "study" : runPolicy.division,
+        scoreMultiplier: scoringDisabled ? 0 : runScoreMultiplier(run),
+        division: scoringDisabled ? "study" : runPublishedDivision(run),
         ...(run ? { routeProgress: routeProgressForRun(run) } : {}),
+        ...(run ? { conceptChemistry: conceptChemistryGuideForRun(run) } : {}),
         ...(run?.completedAt && runPlayer
           ? {
               routeRank: gameStore.publicRouteRank(runPlayer.id),
@@ -4301,8 +4574,50 @@ export const server = createServer(async (request, response) => {
     if (!filePath.startsWith(base)) return sendJson(response, 403, { error: "Forbidden" });
     const file = await readFile(filePath);
     const extension = extname(filePath);
-    const cacheControl = extension === ".html" || extension === ".js" || extension === ".mjs" || isPlayServiceWorker ? "no-cache" : "public, max-age=300";
-    response.writeHead(200, { "Content-Type": mime[extension] || "application/octet-stream", "Cache-Control": cacheControl, "Content-Length": file.length });
+    const locallyMutableStylesheet = process.env.NODE_ENV !== "production" && extension === ".css";
+    const cacheControl = extension === ".html" || extension === ".js" || extension === ".mjs" || isPlayServiceWorker || locallyMutableStylesheet
+      ? "no-cache"
+      : "public, max-age=300";
+    const mediaAsset = [".mp4", ".webm", ".ogg", ".mp3", ".wav"].includes(extension);
+    const rangeHeader = mediaAsset && request.method === "GET" ? String(request.headers.range || "").trim() : "";
+    if (rangeHeader) {
+      const match = /^bytes=(\d*)-(\d*)$/.exec(rangeHeader);
+      let start = match?.[1] ? Number(match[1]) : NaN;
+      let end = match?.[2] ? Number(match[2]) : NaN;
+      if (match && !Number.isFinite(start) && Number.isFinite(end)) {
+        start = Math.max(0, file.length - end);
+        end = file.length - 1;
+      } else {
+        if (!Number.isFinite(start)) start = 0;
+        if (!Number.isFinite(end)) end = file.length - 1;
+      }
+      if (!match || start < 0 || start >= file.length || end < start) {
+        response.writeHead(416, {
+          "Content-Range": `bytes */${file.length}`,
+          "Accept-Ranges": "bytes",
+          "Cache-Control": cacheControl
+        });
+        response.end();
+        return;
+      }
+      end = Math.min(file.length - 1, end);
+      const chunk = file.subarray(start, end + 1);
+      response.writeHead(206, {
+        "Content-Type": mime[extension] || "application/octet-stream",
+        "Cache-Control": cacheControl,
+        "Accept-Ranges": "bytes",
+        "Content-Range": `bytes ${start}-${end}/${file.length}`,
+        "Content-Length": chunk.length
+      });
+      response.end(chunk);
+      return;
+    }
+    response.writeHead(200, {
+      "Content-Type": mime[extension] || "application/octet-stream",
+      "Cache-Control": cacheControl,
+      "Content-Length": file.length,
+      ...(mediaAsset ? { "Accept-Ranges": "bytes" } : {})
+    });
     response.end(request.method === "HEAD" ? undefined : file);
   } catch (error) {
     if (error.code === "ENOENT") return sendJson(response, 404, { error: "Not found" });
@@ -4319,6 +4634,7 @@ function sendJson(response, status, value) {
 
 let backupTimer = null;
 let duelTickTimer = null;
+let lastDuelTickFailureLogAt = 0;
 let shutdownPromise = null;
 
 export function shutdownServer(signal = "shutdown") {
@@ -4344,18 +4660,23 @@ export function shutdownServer(signal = "shutdown") {
 }
 
 if (isMainModule) {
-  try {
-    await createSafeBackup();
-  } catch (error) {
-    structuredLog("error", "backup_failed", { code: error.code || "backup_failed" });
+  if (backupDirectory) {
+    try {
+      await createSafeBackup();
+    } catch (error) {
+      structuredLog("error", "backup_failed", { code: error.code || "backup_failed" });
+    }
+    backupTimer = setInterval(() => {
+      void createSafeBackup().catch((error) => structuredLog("error", "backup_failed", { code: error.code || "backup_failed" }));
+    }, 24 * 60 * 60_000);
+    backupTimer.unref();
   }
-  backupTimer = setInterval(() => {
-    void createSafeBackup().catch((error) => structuredLog("error", "backup_failed", { code: error.code || "backup_failed" }));
-  }, 24 * 60 * 60_000);
-  backupTimer.unref();
   duelTickTimer = setInterval(() => {
     if (!duelsEnabled()) return;
     void Promise.resolve(duelService.tick()).catch((error) => {
+      const now = Date.now();
+      if (now - lastDuelTickFailureLogAt < 30_000) return;
+      lastDuelTickFailureLogAt = now;
       structuredLog("error", "duel_tick_failed", { code: error.code || "duel_tick_failed" });
     });
   }, 250);

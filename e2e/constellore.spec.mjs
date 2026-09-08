@@ -23,10 +23,36 @@ async function visibleTextBelow15px(page) {
 }
 
 async function activateInventoryWord(page, word) {
+  if (await page.locator("#gameScreen").getAttribute("data-word-input") === "bloom") {
+    const bloom = page.locator("#constellationBloom");
+    if (await bloom.getAttribute("data-stage") === "closed") {
+      await page.locator("#constellationBloomTrigger").click();
+    }
+    const search = page.locator("#constellationBloomSearch");
+    await expect(search).toBeVisible();
+    await search.fill(word);
+    const choice = bloom.locator(`.constellation-bloom__word[data-word="${word}"]`);
+    await expect(choice).toBeVisible();
+    await expect(choice).toBeEnabled();
+    await choice.click();
+    return;
+  }
   const item = page.locator(`.inventory-word[data-word="${word}"]`);
   await expect(item).toBeVisible();
   await expect(item).toBeEnabled();
   await item.click();
+}
+
+async function startFirstGameFromHome(page) {
+  await expect(page.locator("#startScreen")).toBeVisible();
+  await expect(page.locator("#gameScreen")).toBeHidden();
+  await expect(page.locator("#primaryOrbitTitle")).toHaveText("Make Mud");
+  const play = page.locator("#primaryOrbitButton");
+  await expect(play).toBeVisible();
+  await expect(play).toBeEnabled();
+  await play.click();
+  await expect(page.locator("#gameScreen")).toBeVisible();
+  await expect(page.locator("#startScreen")).toBeHidden();
 }
 
 async function installPresentationExclusionAudit(page) {
@@ -71,23 +97,26 @@ test.beforeEach(async ({ page }) => {
 test("marketing path makes the playable beta obvious and mobile-safe", async ({ page }) => {
   await page.goto("/");
   await expect(page).toHaveTitle(/Constellore/i);
-  await expect(page.getByRole("heading", { name: "Make the word." })).toBeVisible();
-  await expect(page.locator(".hero-lede")).toContainText(/make the target word/i);
-  const primaryPlay = page.locator(".hero-copy a.hero-button");
+  await expect(page.getByRole("heading", { name: "Two ideas. Then everything." })).toBeVisible();
+  await expect(page.locator("#panel-discover .chapter-lede")).toContainText("Start with Earth and Water. Make Mud.");
+  const primaryPlay = page.locator("#panel-discover a.button");
   await expect(primaryPlay).toBeVisible();
-  await expect(primaryPlay).toHaveAttribute("href", /\/play\/$/);
+  await expect(primaryPlay).toHaveAttribute("href", /\/play\/\?birthday=off$/);
   await expectNoHorizontalOverflow(page);
   expect(await visibleTextBelow15px(page)).toEqual([]);
 });
 
-test("a first-time player opens directly into a guaranteed game, celebrates, and reaches the next-game menu", async ({ page }) => {
-  await page.goto("/play/");
-  await expect(page.locator("#gameScreen")).toBeVisible();
-  await expect(page.locator("#startScreen")).toBeHidden();
+test("a first-time player starts from Home, completes Mud, resumes Mountain, and returns to the menu", async ({ page }) => {
+  await page.goto("/play/?birthday=off");
+  await startFirstGameFromHome(page);
   await expect(page.locator("#cosmicGate")).toBeHidden();
   await expect(page.locator("#missionBriefingDialog")).toHaveJSProperty("open", false);
   await expect(page.locator("#targetWord")).toHaveText("Mud");
-  await expect(page.locator("#firstOrbitInstruction")).toHaveText("Tap Earth, then tap Water.");
+  await expect(page.locator("#firstOrbitInstruction")).toHaveText(
+    await page.locator("#gameScreen").getAttribute("data-word-input") === "bloom"
+      ? "Tap Add word. Choose Earth, then Water to combine them."
+      : "Tap Earth, then tap Water."
+  );
   const incomplete = await page.evaluate(() => {
     const raw = localStorage.getItem("constellore-local-profile-v1")
       || localStorage.getItem("constellore-profile-v1");
@@ -95,14 +124,14 @@ test("a first-time player opens directly into a guaranteed game, celebrates, and
   });
   expect(incomplete).toEqual({ seen: true, completed: false });
 
-  await page.goto("/play/", { waitUntil: "domcontentloaded" });
+  await page.reload({ waitUntil: "domcontentloaded" });
   await expect(page.locator("#gameScreen")).toBeVisible();
   await expect(page.locator("#targetWord")).toHaveText("Mud");
   await installPresentationExclusionAudit(page);
 
   await activateInventoryWord(page, "earth");
   await activateInventoryWord(page, "water");
-  await expect(page.locator('.inventory-word[data-word="mud"]')).toBeVisible();
+  await expect(page.locator('.board-word[data-word="mud"]')).toBeVisible();
   await expect(page.locator(".cosmic-gate__first-discovery")).toBeVisible({ timeout: 8_000 });
   await expect(page.locator("#resultDialog")).toHaveJSProperty("open", true, { timeout: 10_000 });
   await expect(page.locator("#resultTitle")).toHaveText("Your first discovery: Mud!");
@@ -111,7 +140,7 @@ test("a first-time player opens directly into a guaranteed game, celebrates, and
   await expect(page.locator("#resultPrimary")).toBeFocused();
   await expect(page.locator(".cosmic-gate__first-discovery")).toBeHidden();
   await expect(page.locator("#cosmicGate")).toHaveAttribute("aria-hidden", "true");
-  await expect(page.locator("#cosmicGate")).toHaveAttribute("data-phase", "closed");
+  await expect(page.locator("#cosmicGate")).toHaveAttribute("data-phase", /^(?:idle|closed)$/);
   await expectNoPresentationCollisions(page);
   const completion = await page.evaluate(() => {
     const raw = localStorage.getItem("constellore-local-profile-v1")
@@ -125,7 +154,9 @@ test("a first-time player opens directly into a guaranteed game, celebrates, and
   await expect(page.locator("#targetWord")).toHaveText("Mountain", { timeout: 8_000 });
   await expect(page.locator("#missionBriefingDialog")).toHaveJSProperty("open", true, { timeout: 8_000 });
 
-  await page.goto("/play/", { waitUntil: "domcontentloaded" });
+  await page.locator("#beginMission").click();
+  await expect(page.locator("#missionBriefingDialog")).toHaveJSProperty("open", false);
+  await page.reload({ waitUntil: "domcontentloaded" });
   await expect(page.locator("#gameScreen")).toBeVisible();
   await expect(page.locator("#targetWord")).toHaveText("Mountain");
   await expect(page.locator("#cosmicGate")).toBeHidden();
@@ -150,18 +181,19 @@ test("a first-time player opens directly into a guaranteed game, celebrates, and
   await customize.click();
   const observatory = page.locator(".cosmetics-observatory");
   await expect(observatory).toHaveJSProperty("open", true);
-  await expect(observatory.getByRole("heading", { name: "Cosmetics Observatory" })).toBeVisible();
-  await observatory.getByRole("button", { name: "Close Cosmetics Observatory" }).click();
+  await expect(observatory.getByRole("heading", { name: "Cosmetic Lab" })).toBeVisible();
+  await observatory.getByRole("button", { name: "Close Cosmetic Lab" }).click();
   await expect(customize).toBeFocused();
 });
 
 test("the full-motion first discovery launches all space-confetti particles without overlapping the result", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "no-preference" });
-  await page.goto("/play/");
+  await page.goto("/play/?birthday=off");
+  await startFirstGameFromHome(page);
   await installPresentationExclusionAudit(page);
   await activateInventoryWord(page, "earth");
   await activateInventoryWord(page, "water");
-  await expect(page.locator('.inventory-word[data-word="mud"]')).toBeVisible();
+  await expect(page.locator('.board-word[data-word="mud"]')).toBeVisible();
   await expect(page.locator("#cosmicGate")).toBeHidden();
   await expect(page.locator("#resultDialog")).toHaveJSProperty("open", false);
   await page.waitForTimeout(650);
@@ -178,13 +210,13 @@ test("the full-motion first discovery launches all space-confetti particles with
   await expect(page.locator("#resultDialog")).toHaveJSProperty("open", true, { timeout: 10_000 });
   await expect(page.locator(".cosmic-gate__first-discovery")).toBeHidden();
   await expect(page.locator("#cosmicGate")).toHaveAttribute("aria-hidden", "true");
-  await expect(page.locator("#cosmicGate")).toHaveAttribute("data-phase", "closed");
+  await expect(page.locator("#cosmicGate")).toHaveAttribute("data-phase", /^(?:idle|closed)$/);
   await expectNoPresentationCollisions(page);
 });
 
 test("the first-discovery layer honors reduced-motion preferences", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
-  await page.goto("/play/");
+  await page.goto("/play/?birthday=off");
   expect(await page.evaluate(() => matchMedia("(prefers-reduced-motion: reduce)").matches)).toBe(true);
   await expect(page.locator(".cosmic-gate__confetti")).toHaveCSS("display", "none");
   const raysDisplay = await page.locator(".cosmic-gate__first-discovery").evaluate(
@@ -218,7 +250,7 @@ test("landing and playable-board surfaces have no serious WCAG violations", asyn
     await page.goto(path);
     if (path === "/play/") {
       await expect(page.locator(".first-open-cinematic")).toHaveCount(0);
-      await expect(page.locator("#gameScreen")).toBeVisible();
+      await startFirstGameFromHome(page);
     }
     const results = await new AxeBuilder({ page })
       .withTags(["wcag2a", "wcag2aa", "wcag21aa", "wcag22aa"])

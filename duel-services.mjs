@@ -16,6 +16,7 @@ import {
   sanitizeScrambleModeRating,
   scrambleRatingForMode
 } from "./public/scramble-arena.mjs";
+import { profileFrameBySlug } from "./public/profile-frame-catalog.mjs";
 import { resolveForgeClash, selectForgeChampion } from "./public/forge-clash.mjs";
 import {
   RIDDLE_SAGA_CHAPTER_COUNT,
@@ -46,6 +47,17 @@ const INVITE_CODE_PATTERN = /^[A-Za-z0-9_-]{24,160}$/;
 const ACTIVE_STATUSES = new Set(["waiting", "countdown", "active"]);
 const SCRAMBLE_XP = Object.freeze({ win: 40, draw: 24, loss: 16 });
 const SCRAMBLE_XP_PER_LEVEL = 250;
+const testMinimumRouteRank = process.env.NODE_ENV === "test"
+  ? Math.floor(Number(process.env.CONSTELLORE_TEST_DUEL_MINIMUM_ROUTE_RANK))
+  : NaN;
+export const DUEL_MINIMUM_ROUTE_RANK = Number.isFinite(testMinimumRouteRank)
+  ? Math.min(2, Math.max(1, testMinimumRouteRank))
+  : 2;
+
+function arenaFrameSlug(value) {
+  const slug = String(value ?? "").trim();
+  return profileFrameBySlug(slug)?.slug || "";
+}
 
 function asRecord(value) {
   return value && typeof value === "object" && !Array.isArray(value) ? value : {};
@@ -252,6 +264,7 @@ function normalizeParticipant(value) {
     playerId,
     slot: source.slot === "slot-b" ? "slot-b" : "slot-a",
     callsign: String(source.callsign || "STARGAZER").slice(0, 32),
+    frameSlug: arenaFrameSlug(source.frameSlug),
     runId,
     ready: source.ready === true,
     revision: Math.max(0, Math.floor(Number(source.revision) || 0)),
@@ -389,6 +402,31 @@ export class DuelService {
 
   run(participant) {
     return this.runRegistry.getOwned(participant.runId, participant.playerId);
+  }
+
+  duelRunsAvailable(duel) {
+    return duel.participants.length > 0 && duel.participants.every((participant) => {
+      const run = this.runRegistry.runs.get(String(participant.runId || ""));
+      return Boolean(run && run.playerId === participant.playerId);
+    });
+  }
+
+  async cancelDuelWithUnavailableRuns(duel) {
+    if (!ACTIVE_STATUSES.has(duel.status)) return duel;
+    duel.status = "cancelled";
+    duel.rated = false;
+    duel.winnerPlayerId = "";
+    duel.finishReason = "run_unavailable";
+    duel.settledAt = this.now();
+    duel.ratingReceipt = null;
+    for (const runId of this.sagaRunIds(duel)) this.runRegistry.discard(runId);
+    this.inviteCodes.delete(duel.id);
+    const event = this.appendEvent(duel, "match_finished", {
+      reason: duel.finishReason
+    });
+    await this.store.persist();
+    this.notify(duel, event);
+    return duel;
   }
 
   arena(playerId) {
@@ -623,6 +661,22 @@ export class DuelService {
     }
   }
 
+  hasArenaAccess(playerId) {
+    const routeRank = this.store.publicRouteRank(playerId)?.rank;
+    const number = Math.floor(Number(routeRank?.number));
+    return Number.isFinite(number) && number >= DUEL_MINIMUM_ROUTE_RANK;
+  }
+
+  assertArenaAccess(playerId) {
+    if (this.hasArenaAccess(playerId)) return;
+    throw serviceError(
+      403,
+      "Reach Silver Route Rank before entering Scramble Arena.",
+      "duel_route_rank_locked",
+      { minimumRouteRank: DUEL_MINIMUM_ROUTE_RANK, minimumRouteRankName: "Silver" }
+    );
+  }
+
   hasRankedMatchmakingAccess(playerId) {
     const player = this.player(playerId);
     return sanitizeDuelEligibility(player.duelEligibility).soloWinAttested
@@ -668,7 +722,7 @@ export class DuelService {
     return started.run.runId;
   }
 
-  async createParticipant(playerId, slot, game, solutionRoute = []) {
+  async createParticipant(playerId, slot, game, solutionRoute = [], frameSlug = "") {
     const player = this.player(playerId);
     const runId = await this.createParticipantRun(playerId, game, solutionRoute);
     const now = this.now();
@@ -676,6 +730,7 @@ export class DuelService {
       playerId,
       slot,
       callsign: String(player.callsign || "STARGAZER").slice(0, 32),
+      frameSlug: arenaFrameSlug(frameSlug),
       runId,
       ready: false,
       revision: 0,
@@ -710,8 +765,13 @@ export class DuelService {
     rated = false,
     rematchOf = "",
     inviteDigest = "",
-    createdByActionId = ""
+    createdByActionId = "",
+    frameSlugs = []
   } = {}) {
+    for (const playerId of playerIds) {
+      this.player(playerId);
+      this.assertArenaAccess(playerId);
+    }
     const mode = scrambleMode(format);
     const id = randomUUID();
     const numericSeed = Number.isFinite(Number(seed))
@@ -800,7 +860,13 @@ export class DuelService {
     const route = board.route;
     const participants = [];
     for (let index = 0; index < playerIds.length; index += 1) {
-      participants.push(await this.createParticipant(playerIds[index], index === 0 ? "slot-a" : "slot-b", game, route));
+      participants.push(await this.createParticipant(
+        playerIds[index],
+        index === 0 ? "slot-a" : "slot-b",
+        game,
+        route,
+        Array.isArray(frameSlugs) ? frameSlugs[index] : ""
+      ));
     }
     if (saga) {
       for (const participant of participants) {
@@ -1039,6 +1105,7 @@ export class DuelService {
           slot: participant.slot,
           side: participant.playerId === playerId ? "self" : "rival",
           callsign: participant.callsign,
+          frameSlug: arenaFrameSlug(participant.frameSlug),
           ready: participant.ready,
           connected: participant.disconnectedAt == null,
           discoveries: Math.max(0, board.words.length - (duel.game.starters?.length || 0)),
@@ -1086,6 +1153,7 @@ export class DuelService {
 
   async createInvite(playerId, options = {}) {
     this.player(playerId);
+    this.assertArenaAccess(playerId);
     const mode = scrambleMode(options.format);
     const id = actionId(options.actionId);
     const duplicate = Object.values(this.store.data.duels).find((duel) =>
@@ -1105,7 +1173,8 @@ export class DuelService {
       seed: options.seed,
       rated: false,
       inviteDigest,
-      createdByActionId: id
+      createdByActionId: id,
+      frameSlugs: [options.frameSlug]
     });
     this.inviteCodes.set(duel.id, inviteCode);
     return { inviteCode, duel: this.publicSnapshot(duel, playerId) };
@@ -1113,6 +1182,7 @@ export class DuelService {
 
   async joinInvite(playerId, options = {}) {
     this.player(playerId);
+    this.assertArenaAccess(playerId);
     const id = actionId(options.actionId);
     const code = String(options.inviteCode || "").trim();
     if (!INVITE_CODE_PATTERN.test(code)) throw serviceError(400, "That Duel invitation is invalid.", "invalid_duel_invite");
@@ -1135,7 +1205,8 @@ export class DuelService {
       playerId,
       "slot-b",
       duel.game,
-      hostRun.solutionRoute || []
+      hostRun.solutionRoute || [],
+      options.frameSlug
     );
     duel.participants.push(await this.attachSagaRuns(duel, rival));
     duel.inviteDigest = "";
@@ -1154,6 +1225,7 @@ export class DuelService {
 
   async joinPublicQueue(playerId, options = {}) {
     this.player(playerId);
+    this.assertArenaAccess(playerId);
     const mode = scrambleMode(options.format);
     actionId(options.actionId);
     await this.attestSoloWin(playerId, options.soloWins);
@@ -1172,6 +1244,7 @@ export class DuelService {
     const ticket = {
       playerId,
       format: mode.id,
+      frameSlug: arenaFrameSlug(options.frameSlug),
       rating,
       joinedAt: this.now(),
       actionId: options.actionId
@@ -1189,7 +1262,8 @@ export class DuelService {
     this.queue.delete(opponent.playerId);
     const duel = await this.createDuel("public", [opponent.playerId, playerId], {
       format: mode.id,
-      rated: true
+      rated: true,
+      frameSlugs: [opponent.frameSlug, ticket.frameSlug]
     });
     const events = [
       this.appendEvent(duel, "player_joined", { actorPlayerId: opponent.playerId }),
@@ -2028,6 +2102,7 @@ export class DuelService {
   async requestRematch(duelId, playerId, options = {}) {
     const duel = this.duel(duelId);
     this.participant(duel, playerId);
+    this.assertArenaAccess(playerId);
     const id = actionId(options.actionId);
     const duplicate = this.receipt(duel, playerId, "rematch", id);
     if (duplicate) {
@@ -2047,7 +2122,8 @@ export class DuelService {
       format: duel.format,
       target: duel.game.target,
       rated: false,
-      rematchOf: duel.id
+      rematchOf: duel.id,
+      frameSlugs: duel.participants.map((participant) => participant.frameSlug)
     });
     duel.rematchDuelId = next.id;
     const ready = this.appendEvent(duel, "rematch_ready", { nextDuelId: next.id });
@@ -2104,6 +2180,14 @@ export class DuelService {
 
   async tickDuel(duel) {
     const now = this.now();
+    // Run snapshots have a deliberately shorter retention window than Duel
+    // history. If a test server or production process stays offline past that
+    // window, RunRegistry.flush() can legitimately prune the board state before
+    // the first Duel tick. Retire that no-longer-playable match as an unrated
+    // cancellation instead of letting one stale record break every later tick.
+    if (ACTIVE_STATUSES.has(duel.status) && !this.duelRunsAvailable(duel)) {
+      return this.cancelDuelWithUnavailableRuns(duel);
+    }
     if (duel.status === "waiting" && duel.participants.length < 2 && now >= duel.expiresAt) {
       duel.status = "cancelled";
       duel.rated = false;

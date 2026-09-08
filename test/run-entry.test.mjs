@@ -68,6 +68,29 @@ test("the gate closes before a run is fetched and opens before its objective", a
   assert.equal(result.payload.run.id, "run-1");
 });
 
+test("a superseded fold still presents the committed run objective exactly once", async () => {
+  const order = [];
+  const gate = {
+    async enterBoard(swap) {
+      await swap();
+      order.push("fold-superseded");
+      return false;
+    }
+  };
+
+  const result = await enterPreparedRun({
+    gate,
+    prepare: () => ({ mode: "reach" }),
+    create: () => ({ game: { target: "Steam" }, run: { id: "run-committed" } }),
+    commit: () => order.push("load-board"),
+    ready: () => order.push("show-objective")
+  });
+
+  assert.equal(result.entered, false);
+  assert.equal(result.payload.run.id, "run-committed");
+  assert.deepEqual(order, ["load-board", "fold-superseded", "show-objective"]);
+});
+
 test("ambiguous run creation retries once with the identical idempotency body", async () => {
   const requests = [];
   const body = { mode: "reach", entryId: "stable-entry" };

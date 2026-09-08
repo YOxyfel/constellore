@@ -37,7 +37,7 @@ const FAILURE_OUTCOMES = new Set([
   "timeout"
 ]);
 
-// Pair misses and optional, score-safe help are run events, not challenge
+// Pair misses and optional, bounded help are run events, not challenge
 // outcomes. Experimenting with words must never secretly change the next game.
 const IGNORED_OUTCOMES = new Set([
   "combination_missing",

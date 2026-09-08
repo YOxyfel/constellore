@@ -19,10 +19,25 @@ import {
   sanitizeScrambleEvent,
   sanitizeScrambleFormatResult,
   sanitizeScrambleFormatState,
+  sanitizeScrambleFrameSlug,
+  sanitizeScramblePlayer,
   sanitizeScrambleRules,
   sanitizeScrambleSaga,
   sanitizeScrambleToken
 } from "../public/scramble.mjs";
+
+test("Arena frame slugs stay allowlisted on normalized player cards", () => {
+  assert.equal(sanitizeScrambleFrameSlug("berry-burrow"), "berry-burrow");
+  assert.equal(sanitizeScrambleFrameSlug("not-in-the-catalog"), "");
+  assert.equal(sanitizeScramblePlayer({
+    slot: "slot-a",
+    frameSlug: "ember-sovereign"
+  }).frameSlug, "ember-sovereign");
+  assert.equal(sanitizeScramblePlayer({
+    slot: "slot-b",
+    frameSlug: "<script>"
+  }).frameSlug, "");
+});
 
 test("Scramble uses a three-second countdown and five-minute match clock", () => {
   assert.equal(SCRAMBLE_COUNTDOWN_SECONDS, 3);
@@ -229,9 +244,13 @@ test("result presentation keeps Duel Rating separate from private matches", () =
     }
   });
   assert.equal(scrambleResultPresentation(ranked).title, "You reached it first");
-  assert.equal(scrambleResultPresentation(ranked).ratingLabel, "Duel Rating +18");
+  assert.equal(scrambleResultPresentation(ranked).ratingLabel, "1v1 Rating +18");
   const privateMatch = { ...ranked, ranked: false };
   assert.equal(scrambleResultPresentation(privateMatch).ratingLabel, "Private match \u00b7 no rating");
+  for (const finishReason of ["forfeit", "player_forfeit", "disconnect_forfeit"]) {
+    assert.equal(scrambleResultPresentation({ ...privateMatch, finishReason }).title, "You won by forfeit");
+    assert.equal(scrambleResultPresentation({ ...privateMatch, winnerId: "slot-b", finishReason }).title, "NOVA won by forfeit");
+  }
 });
 
 test("legacy snapshots default to Target Race while every mode carries bounded rules and objective copy", () => {

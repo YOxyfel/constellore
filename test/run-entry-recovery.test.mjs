@@ -30,6 +30,7 @@ async function preparedLocalRequest(context) {
   await writeLocalWorldModule(join(directory, "local-world.mjs"));
   await Promise.all([
     "local-beta.mjs",
+    "concept-chemistry.mjs",
     "cosmic-twists.mjs",
     "engagement-features.mjs",
     "universe-director.mjs",

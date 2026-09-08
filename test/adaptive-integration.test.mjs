@@ -13,6 +13,7 @@ import { buildGameForMode, server, solutionRoute } from "../server.mjs";
 
 const LOCAL_RUNTIME_ASSETS = [
   "adaptive-difficulty.mjs",
+  "concept-chemistry.mjs",
   "remix-progression.mjs",
   "remix-readiness.mjs",
   "path-guard.mjs",

@@ -1,0 +1,1766 @@
+/*
+ * Moon Outpost
+ * ------------
+ * An isolated, lazy full-screen destination. Its artwork is composited from
+ * replaceable layers; no image is ever stretched to become a border or scene.
+ */
+
+html.moon-outpost-is-open,
+body.moon-outpost-is-open {
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+.moon-outpost {
+  --outpost-ink: #fff9e9;
+  --outpost-copy: #c8dfe1;
+  --outpost-muted: #8eabb3;
+  --outpost-cyan: #7bf0ee;
+  --outpost-cyan-strong: #31d7d6;
+  --outpost-gold: #ffd27a;
+  --outpost-violet: #aa92ff;
+  --outpost-panel: rgba(4, 18, 28, .91);
+  --outpost-line: rgba(134, 222, 226, .24);
+  --outpost-safe-top: env(safe-area-inset-top, 0px);
+  --outpost-safe-right: env(safe-area-inset-right, 0px);
+  --outpost-safe-bottom: env(safe-area-inset-bottom, 0px);
+  --outpost-safe-left: env(safe-area-inset-left, 0px);
+  --outpost-parallax-x: 0px;
+  --outpost-parallax-y: 0px;
+  --outpost-tilt-x: 0deg;
+  --outpost-tilt-y: 0deg;
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  max-width: none;
+  height: var(--outpost-viewport-height, 100dvh);
+  max-height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  color: var(--outpost-ink);
+  background:
+    radial-gradient(circle at 72% 18%, rgba(123, 240, 238, .09), transparent 26%),
+    radial-gradient(circle at 18% 80%, rgba(170, 146, 255, .07), transparent 32%),
+    #020812;
+  color-scheme: dark;
+  isolation: isolate;
+}
+
+@supports not (height: 100dvh) {
+  .moon-outpost { height: 100vh; }
+}
+
+.moon-outpost::backdrop {
+  background: rgba(0, 5, 12, .92);
+  backdrop-filter: blur(12px);
+}
+
+.moon-outpost,
+.moon-outpost button {
+  font-family: Manrope, Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+.moon-outpost [hidden] { display: none !important; }
+
+.moon-outpost button {
+  color: inherit;
+}
+
+.moon-outpost :where(button, [tabindex]):focus-visible {
+  outline: 2px solid var(--outpost-cyan);
+  outline-offset: 3px;
+}
+
+.moon-outpost__shell,
+.moon-outpost__overview,
+.moon-outpost__cache-screen,
+.moon-outpost__launch {
+  width: 100%;
+  height: 100%;
+}
+
+.moon-outpost__shell {
+  position: relative;
+  overflow: hidden;
+  background:
+    linear-gradient(180deg, rgba(1, 9, 18, .12), rgba(1, 8, 16, .72)),
+    radial-gradient(circle at 50% 34%, rgba(118, 201, 211, .07), transparent 35%);
+  animation: moon-outpost-enter .48s cubic-bezier(.16, .82, .24, 1) both;
+}
+
+.moon-outpost__shell::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  opacity: .34;
+  pointer-events: none;
+  background-image:
+    radial-gradient(circle, rgba(255, 255, 255, .85) 0 1px, transparent 1.4px),
+    radial-gradient(circle, rgba(123, 240, 238, .7) 0 1px, transparent 1.35px);
+  background-size: 149px 149px, 223px 223px;
+  background-position: 11px 37px, 91px 119px;
+  mask-image: linear-gradient(#000, transparent 90%);
+  animation: moon-outpost-stars 24s linear infinite alternate;
+}
+
+.moon-outpost__overview {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+.moon-outpost__header {
+  position: relative;
+  z-index: 30;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: clamp(10px, 2vw, 22px);
+  min-height: calc(76px + var(--outpost-safe-top));
+  padding:
+    var(--outpost-safe-top)
+    max(18px, calc(18px + var(--outpost-safe-right)))
+    0
+    max(18px, calc(18px + var(--outpost-safe-left)));
+  border-bottom: 1px solid rgba(134, 222, 226, .13);
+  background: linear-gradient(180deg, rgba(2, 12, 21, .96), rgba(2, 12, 21, .72));
+  box-shadow: 0 12px 42px rgba(0, 0, 0, .19);
+}
+
+.moon-outpost__icon-button,
+.moon-outpost__screen-back {
+  position: relative;
+  z-index: 3;
+  width: 48px;
+  min-width: 48px;
+  height: 48px;
+  padding: 0;
+  border: 1px solid rgba(123, 240, 238, .38);
+  border-radius: 50%;
+  color: var(--outpost-ink);
+  background: rgba(5, 29, 38, .8);
+  box-shadow: inset 0 0 0 4px rgba(123, 240, 238, .045), 0 0 22px rgba(52, 216, 215, .08);
+  font-size: 25px;
+  cursor: pointer;
+}
+
+.moon-outpost__icon-button:hover,
+.moon-outpost__screen-back:hover {
+  border-color: var(--outpost-cyan);
+  background: rgba(13, 56, 63, .9);
+}
+
+.moon-outpost__back-button,
+.moon-outpost__main-menu-button {
+  display: inline-flex;
+  width: auto;
+  min-width: 120px;
+  min-height: 48px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border: 1px solid rgba(123, 240, 238, .38);
+  border-radius: 999px;
+  color: var(--outpost-ink);
+  background: rgba(5, 29, 38, .8);
+  font-size: 13px;
+  font-weight: 750;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.moon-outpost__back-glyph { font-size: 20px; font-weight: 400; }
+.moon-outpost__main-menu-button { min-width: 112px; }
+.moon-outpost__back-button:hover,
+.moon-outpost__main-menu-button:hover { border-color: var(--outpost-cyan); background: rgba(13, 56, 63, .9); }
+.moon-outpost__back-button:focus-visible,
+.moon-outpost__main-menu-button:focus-visible { outline: 3px solid var(--outpost-gold); outline-offset: 2px; }
+
+.moon-outpost__overflow { position: relative; z-index: 35; }
+.moon-outpost__overflow > summary {
+  display: grid;
+  width: 48px;
+  height: 48px;
+  place-items: center;
+  border: 1px solid rgba(123, 240, 238, .34);
+  border-radius: 14px;
+  color: var(--outpost-ink);
+  background: rgba(5, 31, 40, .9);
+  cursor: pointer;
+  font-size: 24px;
+  list-style: none;
+}
+.moon-outpost__overflow > summary::-webkit-details-marker { display: none; }
+.moon-outpost__overflow > summary:focus-visible { outline: 3px solid var(--outpost-gold); outline-offset: 2px; }
+.moon-outpost__overflow-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 174px;
+  padding: 7px;
+  border: 1px solid var(--outpost-line);
+  border-radius: 15px;
+  background: rgba(2, 18, 27, .98);
+  box-shadow: 0 18px 46px rgba(0, 0, 0, .48);
+}
+.moon-outpost__overflow-menu .moon-outpost__main-menu-button { width: 100%; }
+.moon-outpost__pane-switcher { display: none; }
+
+.moon-outpost__identity {
+  min-width: 0;
+}
+
+.moon-outpost__eyebrow {
+  display: block;
+  color: var(--outpost-cyan);
+  font: 700 10px/1.2 "DM Mono", ui-monospace, monospace;
+  letter-spacing: .16em;
+}
+
+.moon-outpost__identity h1,
+.moon-outpost__cache-copy h2,
+.moon-outpost__launch-copy h2,
+.moon-outpost__dossier h2 {
+  margin: 3px 0 0;
+  color: var(--outpost-ink);
+  font-family: Georgia, "Times New Roman", serif;
+  font-weight: 600;
+  letter-spacing: -.025em;
+}
+
+.moon-outpost__identity h1 {
+  overflow: hidden;
+  font-size: clamp(23px, 3vw, 39px);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.moon-outpost__identity p {
+  margin: 3px 0 0;
+  overflow: hidden;
+  color: var(--outpost-muted);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.moon-outpost__completion {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  min-height: 44px;
+  padding: 8px 13px;
+  border: 1px solid var(--outpost-line);
+  border-radius: 999px;
+  background: rgba(4, 25, 35, .74);
+  white-space: nowrap;
+}
+
+.moon-outpost__completion strong {
+  color: var(--outpost-gold);
+  font: 700 18px/1 "DM Mono", ui-monospace, monospace;
+}
+
+.moon-outpost__completion span {
+  color: var(--outpost-muted);
+  font: 650 9px/1.1 "DM Mono", ui-monospace, monospace;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.moon-outpost__body {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: minmax(0, 1.62fr) minmax(330px, .72fr);
+  min-height: 0;
+  overflow: hidden;
+}
+
+.moon-outpost__scene {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  perspective: 1100px;
+  background:
+    radial-gradient(ellipse at 50% 80%, rgba(123, 240, 238, .1), transparent 31%),
+    linear-gradient(180deg, #030b16, #071522 58%, #050a12);
+  touch-action: pan-y;
+}
+
+.moon-outpost__moon-art {
+  position: absolute;
+  inset: -2%;
+  width: 104%;
+  height: 104%;
+  object-fit: cover;
+  object-position: 50% 60%;
+  opacity: .64;
+  filter: saturate(.72) brightness(.61) contrast(1.08);
+  transform: translate3d(calc(var(--outpost-parallax-x) * -.28), calc(var(--outpost-parallax-y) * -.28), 0) scale(1.035);
+  transition: transform .34s ease-out;
+  pointer-events: none;
+}
+
+.moon-outpost__stars {
+  position: absolute;
+  inset: 0;
+  opacity: .58;
+  background-image:
+    radial-gradient(circle, rgba(255, 255, 255, .9) 0 1px, transparent 1.4px),
+    radial-gradient(circle, rgba(255, 210, 122, .85) 0 1px, transparent 1.5px);
+  background-size: 113px 113px, 197px 197px;
+  background-position: 21px 18px, 79px 41px;
+  transform: translate3d(calc(var(--outpost-parallax-x) * -.65), calc(var(--outpost-parallax-y) * -.65), 0);
+  transition: transform .24s ease-out;
+  mask-image: linear-gradient(#000 0 52%, transparent 84%);
+  pointer-events: none;
+}
+
+.moon-outpost__horizon {
+  position: absolute;
+  left: -12%;
+  right: -12%;
+  bottom: -29%;
+  height: 60%;
+  border-radius: 50% 50% 0 0;
+  background:
+    radial-gradient(ellipse at 50% 0, rgba(154, 199, 209, .17), transparent 53%),
+    repeating-radial-gradient(ellipse at 50% 0, rgba(255, 255, 255, .025) 0 1px, transparent 2px 15px),
+    linear-gradient(180deg, rgba(60, 76, 88, .62), #151d26 56%, #090e15);
+  box-shadow: 0 -5px 40px rgba(123, 240, 238, .08);
+  transform: translate3d(calc(var(--outpost-parallax-x) * .2), calc(var(--outpost-parallax-y) * .2), 0) rotateX(var(--outpost-tilt-x));
+  transform-origin: 50% 0;
+  transition: transform .3s ease-out;
+  pointer-events: none;
+}
+
+.moon-outpost__rocket {
+  position: absolute;
+  z-index: 8;
+  left: 50%;
+  bottom: clamp(52px, 7vh, 86px);
+  width: clamp(98px, 13vw, 164px);
+  aspect-ratio: 404 / 768;
+  padding: 0;
+  border: 0;
+  outline-offset: 6px;
+  background: transparent;
+  filter: drop-shadow(0 24px 19px rgba(0, 0, 0, .54));
+  transform: translate3d(calc(-50% + var(--outpost-parallax-x) * .42), calc(var(--outpost-parallax-y) * .26), 42px) rotateX(var(--outpost-tilt-x)) rotateY(var(--outpost-tilt-y));
+  transform-origin: 50% 74%;
+  transform-style: preserve-3d;
+  transition: transform .3s ease-out, filter .3s ease, scale .3s ease;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.moon-outpost__rocket:hover,
+.moon-outpost__rocket:focus-visible,
+.moon-outpost__rocket[data-ignited="true"] {
+  filter: drop-shadow(0 24px 22px rgba(0, 0, 0, .5)) drop-shadow(0 0 15px rgba(123, 240, 238, .38));
+  scale: 1.035;
+}
+
+.moon-outpost__rocket::after {
+  content: "";
+  position: absolute;
+  z-index: -2;
+  left: 38%;
+  bottom: -14%;
+  width: 24%;
+  height: 24%;
+  border-radius: 50% 50% 70% 70%;
+  opacity: 0;
+  background: linear-gradient(#fff9d1, #71f5f1 31%, rgba(77, 157, 255, .6) 62%, transparent);
+  filter: blur(3px) drop-shadow(0 0 12px var(--outpost-cyan));
+  transform: scaleY(.1);
+  transform-origin: 50% 0;
+  transition: opacity .22s ease, transform .32s cubic-bezier(.16, .82, .24, 1);
+}
+
+.moon-outpost__rocket:is(:hover, :focus-visible, [data-ignited="true"])::after {
+  opacity: .9;
+  transform: scaleY(1);
+  animation: moon-outpost-engine .18s linear infinite alternate;
+}
+
+.moon-outpost__rocket-aura {
+  position: absolute;
+  inset: 12% -22% -8%;
+  z-index: -1;
+  border-radius: 50%;
+  opacity: .22;
+  background: radial-gradient(ellipse, rgba(123, 240, 238, .28), transparent 67%);
+  filter: blur(12px);
+  transition: opacity .25s ease, scale .25s ease;
+}
+
+.moon-outpost__rocket:is(:hover, :focus-visible, [data-ignited="true"]) .moon-outpost__rocket-aura {
+  opacity: .75;
+  scale: 1.18;
+}
+
+.moon-outpost__rocket-layer,
+.moon-outpost__rocket-layer img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.moon-outpost__rocket-layer img {
+  object-fit: contain;
+  object-position: 50% 50%;
+}
+
+.moon-outpost__rocket-layer--hull { z-index: 2; }
+.moon-outpost__rocket-layer--window { z-index: 3; }
+.moon-outpost__rocket-layer--markings { z-index: 4; }
+.moon-outpost__rocket-layer--engine { z-index: 5; }
+.moon-outpost__rocket-layer--glow { z-index: 6; mix-blend-mode: screen; }
+.moon-outpost__rocket-layer--shadow { z-index: 1; }
+
+.moon-outpost__rocket-layer--shadow[data-has-art="false"]::before {
+  content: "";
+  position: absolute;
+  left: 2%;
+  right: 2%;
+  bottom: -5%;
+  height: 10%;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, .58);
+  filter: blur(7px);
+  transform: rotateX(72deg);
+}
+
+.moon-outpost__rocket-layer--window[data-has-art="false"]::before {
+  content: "";
+  position: absolute;
+  top: 29.8%;
+  left: 40%;
+  width: 20%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  opacity: .42;
+  background: radial-gradient(circle at 40% 35%, #dfffff, #35d7dd 43%, #123442 68%);
+  box-shadow: 0 0 14px rgba(123, 240, 238, .55);
+}
+
+.moon-outpost__rocket-layer--glow[data-has-art="false"]::before {
+  content: "";
+  position: absolute;
+  inset: 8% 11%;
+  opacity: .25;
+  background: linear-gradient(transparent 25%, rgba(123, 240, 238, .3), transparent 73%);
+  filter: blur(8px);
+}
+
+.moon-outpost__structures {
+  position: absolute;
+  inset: 0;
+  z-index: 7;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  pointer-events: none;
+  transform-style: preserve-3d;
+}
+
+.moon-outpost__structure-item {
+  position: absolute;
+  width: clamp(132px, 19vw, 218px);
+  pointer-events: auto;
+}
+
+.moon-outpost__structure-item:nth-child(1) { left: 5%; bottom: 18%; }
+.moon-outpost__structure-item:nth-child(2) { right: 5%; bottom: 16%; }
+.moon-outpost__structure-item:nth-child(3) { right: 7%; top: 13%; }
+
+.moon-outpost__structure {
+  width: 100%;
+  min-height: 64px;
+  display: grid;
+  grid-template-columns: 50px minmax(0, 1fr);
+  align-items: center;
+  gap: 9px;
+  padding: 7px 10px;
+  border: 1px solid rgba(136, 221, 225, .25);
+  border-radius: 14px;
+  color: var(--outpost-copy);
+  background:
+    linear-gradient(145deg, rgba(13, 49, 57, .88), rgba(3, 18, 29, .9)),
+    rgba(3, 18, 29, .9);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .05),
+    0 15px 26px rgba(0, 0, 0, .33),
+    0 3px 0 rgba(5, 9, 15, .8);
+  text-align: left;
+  transform: translate3d(calc(var(--outpost-parallax-x) * .55), calc(var(--outpost-parallax-y) * .4), 25px) rotateX(calc(7deg + var(--outpost-tilt-x) * .35)) rotateY(calc(var(--outpost-tilt-y) * .35));
+  transform-style: preserve-3d;
+  transition: transform .28s ease, border-color .24s ease, box-shadow .24s ease, opacity .24s ease;
+  cursor: pointer;
+}
+
+.moon-outpost__structure:hover,
+.moon-outpost__structure[aria-pressed="true"] {
+  border-color: rgba(123, 240, 238, .7);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .08),
+    0 19px 32px rgba(0, 0, 0, .37),
+    0 0 21px rgba(68, 218, 218, .12),
+    0 3px 0 rgba(5, 9, 15, .8);
+  transform: translate3d(calc(var(--outpost-parallax-x) * .55), calc(-4px + var(--outpost-parallax-y) * .4), 37px) rotateX(5deg) rotateY(calc(var(--outpost-tilt-y) * .3));
+}
+
+.moon-outpost__structure[data-state="locked"] { opacity: .46; filter: saturate(.5); }
+.moon-outpost__structure[data-state="available"] { border-style: dashed; }
+.moon-outpost__structure[data-state="installed"] .moon-outpost__structure-glyph { opacity: 1; }
+
+.moon-outpost__structure-glyph {
+  position: relative;
+  width: 48px;
+  height: 48px;
+  opacity: .72;
+  border: 1px solid rgba(123, 240, 238, .28);
+  border-radius: 12px;
+  background: rgba(2, 14, 24, .72);
+  box-shadow: inset 0 0 16px rgba(123, 240, 238, .07);
+  transform: translateZ(13px);
+}
+
+.moon-outpost__structure-glyph::before,
+.moon-outpost__structure-glyph::after {
+  content: "";
+  position: absolute;
+}
+
+[data-structure-glyph="power"]::before {
+  inset: 10px 7px 14px;
+  border: 2px solid var(--outpost-gold);
+  background: repeating-linear-gradient(90deg, rgba(255, 210, 122, .34) 0 5px, transparent 5px 8px);
+  transform: skewY(-7deg);
+}
+
+[data-structure-id="power"][data-variant="solar"] [data-structure-glyph="power"] {
+  box-shadow: inset 0 0 18px rgba(255, 210, 122, .12), 0 0 13px rgba(255, 210, 122, .09);
+}
+
+[data-structure-id="power"][data-variant="lunar"] [data-structure-glyph="power"]::before {
+  inset: 9px 14px;
+  border: 1px solid var(--outpost-violet);
+  background: linear-gradient(135deg, rgba(170, 146, 255, .15), var(--outpost-violet));
+  clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+  transform: none;
+}
+
+[data-structure-glyph="power"]::after {
+  left: 22px;
+  bottom: 5px;
+  width: 3px;
+  height: 12px;
+  background: currentColor;
+}
+
+[data-structure-glyph="shelter"]::before {
+  left: 8px;
+  right: 8px;
+  bottom: 8px;
+  height: 24px;
+  border: 2px solid var(--outpost-cyan);
+  border-radius: 28px 28px 4px 4px;
+  background: radial-gradient(circle at 55% 50%, rgba(123, 240, 238, .34), transparent 45%);
+}
+
+[data-structure-id="shelter"][data-variant="bastion"] [data-structure-glyph="shelter"] {
+  box-shadow: inset 0 0 18px rgba(123, 240, 238, .11), 0 0 13px rgba(123, 240, 238, .08);
+}
+
+[data-structure-id="shelter"][data-variant="hive"] [data-structure-glyph="shelter"]::before {
+  inset: 10px;
+  height: auto;
+  border-radius: 8px;
+  background:
+    radial-gradient(circle at 25% 30%, var(--outpost-gold) 0 3px, transparent 4px),
+    radial-gradient(circle at 70% 30%, var(--outpost-gold) 0 3px, transparent 4px),
+    radial-gradient(circle at 50% 72%, var(--outpost-gold) 0 3px, transparent 4px);
+}
+
+[data-structure-id="shelter"][data-variant="haven"] [data-structure-glyph="shelter"]::before {
+  left: 6px;
+  right: 6px;
+  border-color: var(--outpost-gold);
+  border-radius: 50% 50% 9px 9px;
+  transform: skewX(-8deg);
+}
+
+[data-structure-glyph="signal"]::before {
+  left: 22px;
+  top: 7px;
+  width: 3px;
+  height: 34px;
+  background: linear-gradient(var(--outpost-cyan), var(--outpost-gold));
+}
+
+[data-structure-glyph="signal"]::after {
+  left: 10px;
+  top: 7px;
+  width: 28px;
+  height: 22px;
+  border: 2px solid var(--outpost-cyan);
+  border-bottom: 0;
+  border-left-color: transparent;
+  border-radius: 50% 50% 0 0;
+}
+
+[data-structure-id="signal"][data-variant="beacon"] [data-structure-glyph="signal"] {
+  box-shadow: inset 0 0 18px rgba(123, 240, 238, .13), 0 0 15px rgba(123, 240, 238, .1);
+}
+
+[data-structure-id="signal"][data-variant="stars"] [data-structure-glyph="signal"] {
+  background:
+    radial-gradient(circle at 24% 27%, var(--outpost-gold) 0 2px, transparent 3px),
+    radial-gradient(circle at 72% 22%, var(--outpost-cyan) 0 2px, transparent 3px),
+    radial-gradient(circle at 58% 73%, #fff 0 2px, transparent 3px),
+    rgba(2, 14, 24, .72);
+}
+
+[data-structure-id="signal"][data-variant="stars"] [data-structure-glyph="signal"]::before,
+[data-structure-id="signal"][data-variant="stars"] [data-structure-glyph="signal"]::after { display: none; }
+
+.moon-outpost__structure-copy {
+  display: grid;
+  min-width: 0;
+  transform: translateZ(8px);
+}
+
+.moon-outpost__structure-copy strong {
+  overflow: hidden;
+  color: var(--outpost-ink);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.moon-outpost__structure-copy small {
+  margin-top: 3px;
+  overflow: hidden;
+  color: var(--outpost-muted);
+  font: 650 9px/1.2 "DM Mono", ui-monospace, monospace;
+  letter-spacing: .07em;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.moon-outpost__cache-beacon {
+  position: absolute;
+  z-index: 9;
+  left: 6%;
+  top: 16%;
+  min-width: 148px;
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 6px 11px 6px 6px;
+  border: 1px solid rgba(255, 210, 122, .48);
+  border-radius: 999px;
+  color: var(--outpost-ink);
+  background: rgba(13, 29, 38, .88);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, .31), 0 0 18px rgba(255, 210, 122, .08);
+  transform: translate3d(calc(var(--outpost-parallax-x) * .7), calc(var(--outpost-parallax-y) * .55), 30px);
+  transition: transform .25s ease, border-color .25s ease;
+  cursor: pointer;
+}
+
+.moon-outpost__cache-beacon:hover { border-color: var(--outpost-gold); transform: translate3d(calc(var(--outpost-parallax-x) * .7), calc(-3px + var(--outpost-parallax-y) * .55), 38px); }
+.moon-outpost__cache-beacon:disabled { opacity: .45; cursor: not-allowed; }
+.moon-outpost__cache-beacon[data-state="claimed"] { border-color: rgba(123, 240, 238, .3); }
+
+.moon-outpost__cache-glyph {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  color: var(--outpost-gold);
+  background: radial-gradient(circle, rgba(255, 210, 122, .2), rgba(8, 27, 37, .7));
+  box-shadow: inset 0 0 0 1px rgba(255, 210, 122, .28);
+}
+
+.moon-outpost__cache-beacon > span:last-child { display: grid; text-align: left; }
+.moon-outpost__cache-beacon strong { font-size: 11px; }
+.moon-outpost__cache-beacon small { color: var(--outpost-muted); font-size: 9px; }
+
+.moon-outpost__scene-caption {
+  position: absolute;
+  z-index: 4;
+  left: 50%;
+  bottom: 11px;
+  margin: 0;
+  padding: 5px 9px;
+  border: 1px solid rgba(134, 222, 226, .14);
+  border-radius: 999px;
+  color: rgba(207, 232, 233, .72);
+  background: rgba(2, 11, 19, .56);
+  font: 550 9px/1.2 "DM Mono", ui-monospace, monospace;
+  letter-spacing: .04em;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+.moon-outpost__console {
+  position: relative;
+  z-index: 12;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding:
+    clamp(18px, 3.2vh, 34px)
+    max(18px, calc(18px + var(--outpost-safe-right)))
+    max(18px, calc(18px + var(--outpost-safe-bottom)))
+    clamp(18px, 2.4vw, 30px);
+  overflow: auto;
+  border-left: 1px solid rgba(134, 222, 226, .2);
+  background:
+    radial-gradient(circle at 100% 0, rgba(255, 210, 122, .07), transparent 33%),
+    linear-gradient(160deg, rgba(5, 25, 35, .96), rgba(2, 12, 22, .97));
+  box-shadow: -24px 0 56px rgba(0, 0, 0, .26);
+}
+
+.moon-outpost__dossier {
+  min-height: 154px;
+  padding: 19px;
+  border: 1px solid var(--outpost-line);
+  border-radius: 18px;
+  background: rgba(3, 19, 29, .7);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .035);
+  overflow: auto;
+}
+
+.moon-outpost__dossier h2 {
+  font-size: clamp(24px, 3vw, 34px);
+}
+
+.moon-outpost__dossier > p:not(.moon-outpost__recipe) {
+  margin: 8px 0 0;
+  color: var(--outpost-copy);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.moon-outpost__recipe {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  width: max-content;
+  max-width: 100%;
+  margin: 15px 0 0;
+  padding: 7px 10px;
+  overflow-x: auto;
+  border: 1px solid rgba(123, 240, 238, .2);
+  border-radius: 999px;
+  color: var(--outpost-copy);
+  background: rgba(2, 13, 23, .68);
+  font: 650 10px/1.15 "DM Mono", ui-monospace, monospace;
+  white-space: nowrap;
+}
+
+.moon-outpost__recipe .operator { color: var(--outpost-muted); }
+.moon-outpost__recipe .result { color: var(--outpost-gold); }
+
+.moon-outpost__simulator-metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+  margin: 13px 0 0;
+}
+
+.moon-outpost__simulator-metric {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+  padding: 8px 9px;
+  border: 1px solid rgba(123, 240, 238, .14);
+  border-radius: 10px;
+  background: rgba(2, 14, 23, .52);
+}
+
+.moon-outpost__simulator-metric dt {
+  overflow: hidden;
+  color: var(--outpost-muted);
+  font: 650 8px/1.2 "DM Mono", ui-monospace, monospace;
+  letter-spacing: .04em;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.moon-outpost__simulator-metric dd {
+  margin: 0;
+  color: var(--outpost-ink);
+  font: 700 11px/1.2 "DM Mono", ui-monospace, monospace;
+}
+
+.moon-outpost__simulator-metric[data-state="ready"] dd { color: var(--outpost-cyan); }
+.moon-outpost__simulator-metric[data-state="attention"] dd { color: var(--outpost-gold); }
+
+.moon-outpost__simulator-actions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(44px, 1fr));
+  gap: 6px;
+  margin-top: 9px;
+}
+
+.moon-outpost__simulator-action,
+.moon-outpost__simulator-collect,
+.moon-outpost__simulator-project {
+  min-width: 0;
+  min-height: 44px;
+  padding: 6px;
+  border: 1px solid rgba(123, 240, 238, .25);
+  border-radius: 10px;
+  color: var(--outpost-copy);
+  background: rgba(6, 37, 46, .68);
+  font-size: 9px;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.moon-outpost__simulator-collect {
+  border-color: rgba(255, 210, 122, .42);
+  color: var(--outpost-gold);
+  background: rgba(67, 51, 24, .38);
+}
+
+.moon-outpost__simulator-project {
+  grid-column: 1 / -1;
+  border-color: rgba(255, 210, 122, .62);
+  color: #071921;
+  background: linear-gradient(110deg, var(--outpost-gold), var(--outpost-cyan));
+  box-shadow: 0 10px 28px rgba(123, 240, 238, .12);
+  font-weight: 850;
+}
+
+.moon-outpost__simulator-action:disabled,
+.moon-outpost__simulator-collect:disabled,
+.moon-outpost__simulator-project:disabled { opacity: .42; cursor: not-allowed; }
+
+.moon-outpost__simulator-action:hover:not(:disabled),
+.moon-outpost__simulator-collect:hover:not(:disabled),
+.moon-outpost__simulator-project:hover:not(:disabled) { border-color: var(--outpost-cyan); filter: brightness(1.1); }
+
+.moon-outpost__worldword {
+  display: grid;
+  gap: 4px;
+  padding: 13px 15px;
+  border: 1px solid rgba(255, 210, 122, .25);
+  border-radius: 15px;
+  background: linear-gradient(110deg, rgba(255, 210, 122, .08), rgba(123, 240, 238, .045));
+}
+
+.moon-outpost__worldword strong {
+  color: var(--outpost-gold);
+  font: 600 22px/1.1 Georgia, "Times New Roman", serif;
+}
+
+.moon-outpost__worldword small { color: var(--outpost-muted); font-size: 10px; }
+
+.moon-outpost__actions {
+  display: grid;
+  gap: 9px;
+  margin-top: auto;
+}
+
+.moon-outpost__primary,
+.moon-outpost__secondary,
+.moon-outpost__quiet,
+.moon-outpost__skip {
+  min-height: 48px;
+  border-radius: 13px;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.moon-outpost__primary {
+  border: 1px solid rgba(255, 226, 160, .9);
+  color: #142129;
+  background: linear-gradient(105deg, #ffe19a, #6fded8);
+  box-shadow: 0 10px 24px rgba(123, 240, 238, .11);
+}
+
+.moon-outpost__secondary,
+.moon-outpost__quiet,
+.moon-outpost__skip {
+  border: 1px solid rgba(123, 240, 238, .28);
+  color: var(--outpost-copy);
+  background: rgba(6, 37, 46, .68);
+}
+
+.moon-outpost__quiet { background: transparent; }
+.moon-outpost__primary:disabled { opacity: .45; filter: saturate(.35); cursor: not-allowed; }
+.moon-outpost__primary:hover:not(:disabled),
+.moon-outpost__secondary:hover:not(:disabled),
+.moon-outpost__quiet:hover:not(:disabled) { transform: translateY(-1px); filter: brightness(1.08); }
+
+.moon-outpost__action-hint {
+  margin: -3px 5px 2px;
+  color: var(--outpost-muted);
+  font-size: 9px;
+  line-height: 1.35;
+}
+
+.moon-outpost__status {
+  min-height: 1.25em;
+  margin: 0;
+  color: var(--outpost-cyan);
+  font-size: 10px;
+  line-height: 1.3;
+}
+
+.moon-outpost__status:empty { visibility: hidden; }
+.moon-outpost__status.is-error { color: #ffb8b0; }
+
+/* Cache opening is a screen state, not a nested modal. */
+.moon-outpost__cache-screen {
+  position: relative;
+  z-index: 20;
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(320px, .8fr);
+  align-items: center;
+  overflow: hidden;
+  padding:
+    max(22px, calc(22px + var(--outpost-safe-top)))
+    max(22px, calc(22px + var(--outpost-safe-right)))
+    max(22px, calc(22px + var(--outpost-safe-bottom)))
+    max(22px, calc(22px + var(--outpost-safe-left)));
+  background:
+    radial-gradient(circle at 33% 50%, rgba(255, 210, 122, .11), transparent 25%),
+    linear-gradient(145deg, #020812, #071b25 61%, #030a12);
+}
+
+.moon-outpost__screen-back {
+  position: absolute;
+  top: max(16px, calc(16px + var(--outpost-safe-top)));
+  left: max(16px, calc(16px + var(--outpost-safe-left)));
+}
+
+.moon-outpost__cache-stage {
+  position: relative;
+  min-height: min(68vh, 590px);
+  display: grid;
+  place-items: center;
+  perspective: 800px;
+}
+
+.moon-outpost__cache-rings,
+.moon-outpost__cache-rings i {
+  position: absolute;
+  inset: 50% auto auto 50%;
+  border: 1px solid rgba(123, 240, 238, .24);
+  border-radius: 50%;
+  transform: translate(-50%, -50%) rotateX(62deg);
+}
+
+.moon-outpost__cache-rings { width: min(42vw, 430px); aspect-ratio: 1; }
+.moon-outpost__cache-rings i:nth-child(1) { width: 72%; height: 72%; }
+.moon-outpost__cache-rings i:nth-child(2) { width: 112%; height: 112%; }
+.moon-outpost__cache-rings i:nth-child(3) { width: 146%; height: 146%; }
+
+.moon-outpost__cache-crate {
+  position: relative;
+  z-index: 2;
+  width: min(43vw, 360px);
+  aspect-ratio: 1.45;
+  display: grid;
+  place-items: center;
+  border: 2px solid rgba(255, 210, 122, .68);
+  border-radius: 21px;
+  color: var(--outpost-gold);
+  background:
+    linear-gradient(145deg, rgba(255, 210, 122, .13), transparent 40%),
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, .025) 0 1px, transparent 1px 24px),
+    #0c1d25;
+  box-shadow: inset 0 0 0 7px rgba(2, 12, 19, .72), 0 28px 46px rgba(0, 0, 0, .46);
+  transform: rotateX(8deg) rotateY(-9deg);
+  transform-style: preserve-3d;
+}
+
+.moon-outpost__cache-crate::before,
+.moon-outpost__cache-crate::after {
+  content: "";
+  position: absolute;
+  top: 12%;
+  bottom: 12%;
+  width: 9%;
+  border: 1px solid rgba(123, 240, 238, .31);
+  background: rgba(4, 44, 53, .65);
+}
+
+.moon-outpost__cache-crate::before { left: 8%; }
+.moon-outpost__cache-crate::after { right: 8%; }
+.moon-outpost__cache-crate b { font: 700 11px/1 "DM Mono", ui-monospace, monospace; letter-spacing: .17em; }
+
+.moon-outpost__cache-light {
+  position: absolute;
+  z-index: 4;
+  top: 49%;
+  left: 50%;
+  width: min(38vw, 340px);
+  height: min(34vh, 280px);
+  opacity: 0;
+  background: radial-gradient(ellipse, rgba(255, 242, 184, .88), rgba(123, 240, 238, .3) 38%, transparent 70%);
+  filter: blur(14px);
+  transform: translate(-50%, -50%) scale(.2);
+}
+
+.moon-outpost__cache-stage[data-cache-phase="opening"] .moon-outpost__cache-crate {
+  animation: moon-outpost-cache-scan .76s ease-in-out both;
+}
+
+.moon-outpost__cache-stage[data-cache-phase="opening"] .moon-outpost__cache-rings {
+  animation: moon-outpost-cache-rings 1s linear infinite;
+}
+
+.moon-outpost__cache-stage[data-cache-phase="revealed"] .moon-outpost__cache-crate {
+  transform: rotateX(-19deg) translateY(-18px);
+  box-shadow: inset 0 0 0 7px rgba(2, 12, 19, .72), 0 35px 62px rgba(0, 0, 0, .5), 0 0 45px rgba(255, 210, 122, .2);
+}
+
+.moon-outpost__cache-stage[data-cache-phase="revealed"] .moon-outpost__cache-light {
+  opacity: .85;
+  transform: translate(-50%, -50%) scale(1);
+  transition: opacity .6s ease, transform .7s cubic-bezier(.16, .82, .24, 1);
+}
+
+.moon-outpost__cache-copy {
+  position: relative;
+  z-index: 5;
+  max-width: 480px;
+  padding: clamp(20px, 4vw, 42px);
+  border: 1px solid var(--outpost-line);
+  border-radius: 22px;
+  background: rgba(3, 18, 29, .82);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, .29);
+  max-height: calc(100dvh - max(44px, calc(44px + var(--outpost-safe-top) + var(--outpost-safe-bottom))));
+  overflow: auto;
+}
+
+.moon-outpost__cache-copy h2,
+.moon-outpost__launch-copy h2 {
+  font-size: clamp(31px, 5vw, 58px);
+  line-height: 1.02;
+}
+
+.moon-outpost__cache-copy > p:not(.moon-outpost__status),
+.moon-outpost__launch-copy > p:not(.moon-outpost__status) {
+  color: var(--outpost-copy);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.moon-outpost__cache-ledger {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 14px;
+  color: var(--outpost-gold);
+  font: 700 9px/1.25 "DM Mono", ui-monospace, monospace;
+  letter-spacing: .04em;
+}
+
+.moon-outpost__cache-tiers {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+  margin-top: 10px;
+}
+
+.moon-outpost__cache-tier {
+  min-height: 52px;
+  display: grid;
+  align-content: center;
+  gap: 3px;
+  padding: 7px 9px;
+  border: 1px solid rgba(123, 240, 238, .22);
+  border-radius: 11px;
+  color: var(--outpost-copy);
+  background: rgba(3, 23, 33, .72);
+  text-align: left;
+  cursor: pointer;
+}
+
+.moon-outpost__cache-tier strong { color: var(--outpost-ink); font-size: 11px; }
+.moon-outpost__cache-tier small { color: var(--outpost-muted); font-size: 8px; }
+.moon-outpost__cache-tier[aria-pressed="true"] { border-color: var(--outpost-cyan); background: rgba(20, 66, 72, .6); }
+.moon-outpost__cache-tier[data-tier="rare"] { border-color: rgba(170, 146, 255, .35); }
+.moon-outpost__cache-tier[data-tier="epic"] { border-color: rgba(255, 210, 122, .3); }
+.moon-outpost__cache-tier[data-tier="mythic"] { border-color: rgba(255, 151, 121, .34); }
+.moon-outpost__cache-tier:disabled { opacity: .48; cursor: not-allowed; }
+
+.moon-outpost__cache-details {
+  display: grid;
+  gap: 4px;
+  margin-top: 9px;
+  padding: 9px 10px;
+  border: 1px solid rgba(134, 222, 226, .15);
+  border-radius: 11px;
+  background: rgba(1, 12, 21, .55);
+}
+
+.moon-outpost__cache-details > strong { color: var(--outpost-ink); font-size: 12px; }
+.moon-outpost__cache-details > p { margin: 0; color: var(--outpost-muted); font-size: 9px; line-height: 1.35; }
+.moon-outpost__cache-details > small { color: var(--outpost-cyan); font: 600 8px/1.3 "DM Mono", ui-monospace, monospace; }
+
+.moon-outpost__selection-redeem {
+  display: grid;
+  gap: 5px;
+  margin-top: 9px;
+  padding: 9px 10px;
+  border: 1px solid rgba(255, 210, 122, .2);
+  border-radius: 11px;
+  background: rgba(60, 43, 18, .18);
+}
+
+.moon-outpost__selection-redeem > label {
+  color: var(--outpost-gold);
+  font: 650 8px/1.25 "DM Mono", ui-monospace, monospace;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.moon-outpost__selection-redeem > div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 6px;
+}
+
+.moon-outpost__selection-redeem select {
+  min-width: 0;
+  min-height: 44px;
+  padding: 7px 28px 7px 9px;
+  border: 1px solid rgba(123, 240, 238, .25);
+  border-radius: 10px;
+  color: var(--outpost-ink);
+  background: #071f2a;
+  font-size: 10px;
+}
+
+.moon-outpost__selection-redeem .moon-outpost__secondary {
+  min-height: 44px;
+  padding: 6px 9px;
+  font-size: 9px;
+  white-space: nowrap;
+}
+
+.moon-outpost__cache-copy > .moon-outpost__primary,
+.moon-outpost__cache-copy > .moon-outpost__secondary { width: 100%; margin-top: 10px; }
+
+.moon-outpost__reward-list {
+  display: grid;
+  gap: 8px;
+  margin: 18px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.moon-outpost__reward {
+  min-height: 46px;
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  border: 1px solid rgba(255, 210, 122, .22);
+  border-radius: 12px;
+  background: rgba(255, 210, 122, .055);
+}
+
+.moon-outpost__reward > span { color: var(--outpost-gold); text-align: center; }
+.moon-outpost__reward strong { font-size: 12px; }
+.moon-outpost__reward small { color: var(--outpost-cyan); font: 700 10px/1 "DM Mono", ui-monospace, monospace; }
+
+/* Launch is deterministic: CSS stages, host-owned destination handoff. */
+.moon-outpost__launch {
+  position: relative;
+  z-index: 20;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 50% 75%, rgba(123, 240, 238, .12), transparent 22%),
+    linear-gradient(180deg, #01050d, #061623 64%, #030911);
+}
+
+.moon-outpost__launch-stars,
+.moon-outpost__launch-stars::before,
+.moon-outpost__launch-stars::after {
+  position: absolute;
+  inset: 0;
+  content: "";
+  background-image: radial-gradient(circle, rgba(255, 255, 255, .85) 0 1px, transparent 1.5px);
+  background-size: 109px 109px;
+}
+
+.moon-outpost__launch-stars::before { opacity: .55; background-size: 173px 173px; transform: translate(41px, 23px); }
+.moon-outpost__launch-stars::after { opacity: .3; background-size: 251px 251px; transform: translate(83px, 67px); }
+
+.moon-outpost__launch-planet {
+  position: absolute;
+  left: 50%;
+  bottom: -31vw;
+  width: min(112vw, 1500px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 45% 18%, rgba(199, 226, 229, .26), transparent 24%),
+    repeating-radial-gradient(circle at 48% 28%, rgba(255, 255, 255, .03) 0 2px, transparent 3px 28px),
+    linear-gradient(145deg, #52606d, #252d37 47%, #101721);
+  box-shadow: 0 -10px 80px rgba(123, 240, 238, .12);
+  transform: translateX(-50%);
+  transition: transform .68s cubic-bezier(.16, .82, .24, 1), opacity .52s ease;
+}
+
+.moon-outpost__launch-rocket {
+  position: absolute;
+  z-index: 6;
+  left: 50%;
+  bottom: 12%;
+  width: clamp(105px, 14vw, 178px);
+  aspect-ratio: 404 / 768;
+  transform: translateX(-50%);
+  transition: transform .62s cubic-bezier(.33, .01, .36, 1), filter .3s ease, opacity .22s ease;
+}
+
+.moon-outpost__launch-rocket > .moon-outpost__rocket {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  aspect-ratio: auto;
+  filter: drop-shadow(0 20px 21px rgba(0, 0, 0, .5));
+  transform: none;
+  pointer-events: none;
+}
+
+.moon-outpost__engine-trail {
+  position: absolute;
+  z-index: -1;
+  left: 40%;
+  top: 91%;
+  width: 20%;
+  height: 140%;
+  border-radius: 50%;
+  opacity: 0;
+  background: linear-gradient(#fff4bd, var(--outpost-cyan) 17%, rgba(74, 124, 255, .54) 48%, transparent 82%);
+  filter: blur(7px) drop-shadow(0 0 15px rgba(123, 240, 238, .72));
+  transform: scaleY(.12);
+  transform-origin: 50% 0;
+  transition: opacity .22s ease, transform .36s ease;
+}
+
+.moon-outpost__skip {
+  position: absolute;
+  z-index: 15;
+  top: max(17px, calc(17px + var(--outpost-safe-top)));
+  right: max(17px, calc(17px + var(--outpost-safe-right)));
+  min-width: 132px;
+  padding: 8px 14px;
+}
+
+.moon-outpost__launch-copy {
+  position: absolute;
+  z-index: 12;
+  left: max(24px, calc(24px + var(--outpost-safe-left)));
+  top: max(24px, calc(24px + var(--outpost-safe-top)));
+  width: min(460px, calc(100vw - 48px));
+  padding: clamp(18px, 3vw, 31px);
+  border-left: 2px solid var(--outpost-cyan);
+  background: linear-gradient(90deg, rgba(2, 13, 22, .88), transparent);
+  transition: transform .32s ease, opacity .32s ease;
+}
+
+.moon-outpost__launch-copy h2 { max-width: 9ch; }
+.moon-outpost__launch-actions { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 9px; margin-top: 19px; }
+
+.moon-outpost[data-launch-phase="ignition"] .moon-outpost__engine-trail,
+.moon-outpost[data-launch-phase="ascent"] .moon-outpost__engine-trail,
+.moon-outpost[data-launch-phase="horizon"] .moon-outpost__engine-trail {
+  opacity: .94;
+  transform: scaleY(1);
+  animation: moon-outpost-engine .16s linear infinite alternate;
+}
+
+.moon-outpost[data-launch-phase="ignition"] .moon-outpost__launch-rocket {
+  filter: drop-shadow(0 0 21px rgba(123, 240, 238, .52));
+  animation: moon-outpost-ignition .1s linear infinite alternate;
+}
+
+.moon-outpost[data-launch-phase="ascent"] .moon-outpost__launch-rocket {
+  transform: translate(-50%, -54vh) scale(.8);
+}
+
+.moon-outpost[data-launch-phase="ascent"] .moon-outpost__launch-planet,
+.moon-outpost[data-launch-phase="horizon"] .moon-outpost__launch-planet,
+.moon-outpost[data-launch-phase="complete"] .moon-outpost__launch-planet {
+  opacity: .22;
+  transform: translate(-50%, 28%) scale(1.08);
+}
+
+.moon-outpost[data-launch-phase="horizon"] .moon-outpost__launch-rocket {
+  transform: translate(27vw, -70vh) scale(.34) rotate(12deg);
+}
+
+.moon-outpost[data-launch-phase="horizon"] .moon-outpost__launch-stars,
+.moon-outpost[data-launch-phase="complete"] .moon-outpost__launch-stars {
+  animation: moon-outpost-starflight .7s linear infinite;
+}
+
+.moon-outpost[data-launch-phase="complete"] .moon-outpost__launch-rocket {
+  opacity: 0;
+  transform: translate(35vw, -76vh) scale(.14) rotate(14deg);
+  transition-duration: .22s;
+}
+
+@keyframes moon-outpost-enter {
+  from { opacity: 0; filter: brightness(.88); }
+  to { opacity: 1; filter: brightness(1); }
+}
+
+@keyframes moon-outpost-stars {
+  from { transform: translate3d(-7px, -4px, 0); }
+  to { transform: translate3d(11px, 7px, 0); }
+}
+
+@keyframes moon-outpost-engine {
+  from { filter: blur(4px) brightness(.9); scale: .92 1; }
+  to { filter: blur(7px) brightness(1.2); scale: 1.08 1.08; }
+}
+
+@keyframes moon-outpost-cache-scan {
+  0% { filter: brightness(.75); transform: rotateX(8deg) rotateY(-9deg); }
+  45% { filter: brightness(1.35); transform: rotateX(8deg) rotateY(7deg) translateY(-8px); }
+  100% { filter: brightness(1); transform: rotateX(8deg) rotateY(-9deg); }
+}
+
+@keyframes moon-outpost-cache-rings {
+  to { transform: translate(-50%, -50%) rotateX(62deg) rotateZ(1turn); }
+}
+
+@keyframes moon-outpost-ignition {
+  from { translate: -1px 0; }
+  to { translate: 1px -.5px; }
+}
+
+@keyframes moon-outpost-starflight {
+  from { transform: translateY(-4%); }
+  to { transform: translateY(10%); }
+}
+
+@media (max-width: 900px) and (orientation: portrait), (max-width: 700px) {
+  .moon-outpost__header {
+    grid-template-areas:
+      "back menu"
+      "identity completion";
+    grid-template-columns: minmax(0, 1fr) auto;
+    min-height: calc(65px + var(--outpost-safe-top));
+    gap: 8px;
+    padding-right: max(9px, calc(9px + var(--outpost-safe-right)));
+    padding-left: max(9px, calc(9px + var(--outpost-safe-left)));
+  }
+
+  .moon-outpost__icon-button { width: 44px; min-width: 44px; height: 44px; }
+  .moon-outpost__back-button { width: max-content; min-width: 108px; min-height: 44px; grid-area: back; padding-inline: 11px; font-size: 12px; }
+  .moon-outpost__main-menu-button { min-width: 96px; min-height: 44px; grid-area: menu; padding-inline: 10px; font-size: 12px; }
+  .moon-outpost__identity { grid-area: identity; }
+  .moon-outpost__completion { grid-area: completion; }
+  .moon-outpost__identity h1 { font-size: clamp(19px, 5.6vw, 27px); }
+  .moon-outpost__identity p { display: none; }
+  .moon-outpost__completion { min-height: 40px; padding: 6px 9px; }
+  .moon-outpost__completion span { display: none; }
+
+  .moon-outpost__body {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(260px, 56fr) minmax(245px, 44fr);
+  }
+
+  .moon-outpost__scene { grid-row: 1; }
+  .moon-outpost__moon-art { object-position: 50% 61%; }
+  .moon-outpost__rocket { bottom: 42px; width: clamp(82px, 25vw, 122px); }
+  .moon-outpost__structure-item { width: clamp(112px, 36vw, 155px); }
+  .moon-outpost__structure-item:nth-child(1) { left: 3%; bottom: 13%; }
+  .moon-outpost__structure-item:nth-child(2) { right: 3%; bottom: 12%; }
+  .moon-outpost__structure-item:nth-child(3) { right: 3%; top: 6%; }
+  .moon-outpost__structure { min-height: 51px; grid-template-columns: 36px minmax(0, 1fr); gap: 6px; padding: 5px 7px; border-radius: 11px; }
+  .moon-outpost__structure-glyph { width: 34px; height: 34px; border-radius: 9px; scale: .74; transform-origin: 0 50%; }
+  .moon-outpost__structure-copy strong { font-size: 11px; }
+  .moon-outpost__structure-copy small { font-size: 7px; }
+  .moon-outpost__cache-beacon { left: 3%; top: 6%; min-width: 44px; width: 44px; height: 44px; padding: 4px; }
+  .moon-outpost__cache-beacon > span:last-child { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .moon-outpost__cache-glyph { width: 34px; height: 34px; }
+  .moon-outpost__scene-caption { display: none; }
+
+  .moon-outpost__console {
+    grid-row: 2;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(145px, .72fr);
+    grid-template-rows: minmax(0, 1fr) auto;
+    gap: 9px;
+    padding: 10px max(11px, calc(11px + var(--outpost-safe-right))) max(11px, calc(9px + var(--outpost-safe-bottom))) max(11px, calc(11px + var(--outpost-safe-left)));
+    border-top: 1px solid rgba(134, 222, 226, .2);
+    border-left: 0;
+  }
+
+  .moon-outpost__dossier { min-height: 0; padding: 12px; border-radius: 14px; }
+  .moon-outpost__dossier h2 { font-size: clamp(20px, 6vw, 27px); }
+  .moon-outpost__dossier > p:not(.moon-outpost__recipe) { margin-top: 4px; font-size: 10px; line-height: 1.35; }
+  .moon-outpost__recipe { display: none; }
+  .moon-outpost__simulator-metrics { gap: 4px; margin-top: 7px; }
+  .moon-outpost__simulator-metric { gap: 1px; padding: 5px 6px; }
+  .moon-outpost__simulator-metric dt { font-size: 6px; }
+  .moon-outpost__simulator-metric dd { font-size: 8px; }
+  .moon-outpost__simulator-actions { gap: 4px; margin-top: 6px; }
+  .moon-outpost__simulator-action, .moon-outpost__simulator-collect { min-height: 44px; padding: 4px 2px; font-size: 7px; }
+  .moon-outpost__worldword { display: none; }
+  .moon-outpost__actions { grid-column: 2; grid-row: 1 / span 2; align-content: end; gap: 6px; }
+  .moon-outpost__primary, .moon-outpost__secondary, .moon-outpost__quiet { min-height: 44px; padding: 6px 8px; font-size: 10px; }
+  .moon-outpost__action-hint { display: none; }
+  .moon-outpost__status { grid-column: 1; font-size: 8px; }
+
+  .moon-outpost__cache-screen {
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(210px, 1fr) auto;
+    align-items: stretch;
+    padding: max(12px, calc(12px + var(--outpost-safe-top))) max(12px, calc(12px + var(--outpost-safe-right))) max(12px, calc(12px + var(--outpost-safe-bottom))) max(12px, calc(12px + var(--outpost-safe-left)));
+  }
+
+  .moon-outpost__cache-stage { min-height: 0; }
+  .moon-outpost__cache-rings { width: min(82vw, 360px); }
+  .moon-outpost__cache-crate { width: min(68vw, 310px); }
+  .moon-outpost__cache-copy { max-width: none; padding: 16px; border-radius: 17px; }
+  .moon-outpost__cache-copy h2, .moon-outpost__launch-copy h2 { font-size: clamp(27px, 9vw, 42px); }
+  .moon-outpost__cache-copy > p:not(.moon-outpost__status) { font-size: 11px; }
+
+  .moon-outpost__launch-copy {
+    left: max(14px, calc(14px + var(--outpost-safe-left)));
+    top: max(66px, calc(66px + var(--outpost-safe-top)));
+    width: calc(100vw - max(28px, calc(28px + var(--outpost-safe-left) + var(--outpost-safe-right))));
+    padding: 15px;
+  }
+  .moon-outpost__launch-copy h2 { max-width: 11ch; }
+  .moon-outpost__launch-copy > p:not(.moon-outpost__status) { font-size: 11px; }
+  .moon-outpost__launch-rocket { width: clamp(88px, 27vw, 130px); bottom: 8%; }
+  .moon-outpost__launch-planet { bottom: -56vw; width: 145vw; }
+  .moon-outpost__launch-actions { grid-template-columns: 1fr; }
+  .moon-outpost__skip { min-width: 110px; min-height: 44px; top: max(10px, calc(10px + var(--outpost-safe-top))); right: max(10px, calc(10px + var(--outpost-safe-right))); }
+}
+
+@media (max-width: 360px) {
+  .moon-outpost__back-button { min-width: 100px; padding-inline: 8px; }
+  .moon-outpost__main-menu-button { min-width: 88px; padding-inline: 8px; }
+  .moon-outpost__eyebrow { font-size: 8px; }
+  .moon-outpost__completion { padding-inline: 7px; }
+  .moon-outpost__body { grid-template-rows: minmax(245px, 54fr) minmax(255px, 46fr); }
+  .moon-outpost__structure-item { width: 112px; }
+  .moon-outpost__structure-copy small { display: none; }
+  .moon-outpost__console { grid-template-columns: minmax(0, 1fr) 126px; }
+  .moon-outpost__dossier > p:not(.moon-outpost__recipe) { display: none; }
+  .moon-outpost__recipe { max-width: 100%; }
+  .moon-outpost__quiet { display: none; }
+  .moon-outpost__selection-redeem > div { grid-template-columns: minmax(0, 1fr); }
+  .moon-outpost__selection-redeem .moon-outpost__secondary { width: 100%; }
+}
+
+@media (orientation: landscape) and (max-width: 900px) and (max-height: 500px) {
+  .moon-outpost__header {
+    min-height: calc(52px + var(--outpost-safe-top));
+    grid-template-areas: none;
+    grid-template-columns: auto minmax(0, 1fr) auto auto;
+    gap: 8px;
+    padding-right: max(8px, calc(8px + var(--outpost-safe-right)));
+    padding-left: max(8px, calc(8px + var(--outpost-safe-left)));
+  }
+  .moon-outpost__icon-button { width: 44px; min-width: 44px; height: 44px; }
+  .moon-outpost__back-button { width: auto; min-width: 104px; min-height: 44px; grid-area: auto; padding-inline: 9px; font-size: 11px; }
+  .moon-outpost__main-menu-button { min-width: 92px; min-height: 44px; grid-area: auto; padding-inline: 8px; font-size: 11px; }
+  .moon-outpost__identity, .moon-outpost__completion { grid-area: auto; }
+  .moon-outpost__identity h1 { margin-top: 0; font-size: 18px; }
+  .moon-outpost__identity p, .moon-outpost__eyebrow { display: none; }
+  .moon-outpost__completion { min-height: 38px; padding: 5px 8px; }
+  .moon-outpost__completion span { display: none; }
+  .moon-outpost__body { grid-template-columns: minmax(0, 1fr) clamp(230px, 36vw, 300px); }
+  .moon-outpost__rocket { bottom: 29px; width: clamp(72px, 10vw, 104px); }
+  .moon-outpost__structure-item { width: clamp(104px, 18vw, 145px); }
+  .moon-outpost__structure-item:nth-child(1) { left: 2%; bottom: 10%; }
+  .moon-outpost__structure-item:nth-child(2) { right: 2%; bottom: 9%; }
+  .moon-outpost__structure-item:nth-child(3) { right: 3%; top: 6%; }
+  .moon-outpost__structure { min-height: 45px; grid-template-columns: 31px minmax(0, 1fr); gap: 4px; padding: 4px 5px; border-radius: 9px; }
+  .moon-outpost__structure-glyph { width: 30px; height: 30px; scale: .65; transform-origin: 0 50%; }
+  .moon-outpost__structure-copy strong { font-size: 9px; }
+  .moon-outpost__structure-copy small { display: none; }
+  .moon-outpost__cache-beacon { left: 2%; top: 5%; min-width: 44px; width: 44px; height: 44px; padding: 4px; }
+  .moon-outpost__cache-beacon > span:last-child { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .moon-outpost__cache-glyph { width: 34px; height: 34px; }
+  .moon-outpost__scene-caption { display: none; }
+  .moon-outpost__console { gap: 7px; padding: 8px max(8px, calc(8px + var(--outpost-safe-right))) max(8px, calc(7px + var(--outpost-safe-bottom))) 8px; }
+  .moon-outpost__dossier { min-height: 0; padding: 9px; border-radius: 12px; }
+  .moon-outpost__dossier h2 { margin-top: 0; font-size: 20px; }
+  .moon-outpost__dossier > p:not(.moon-outpost__recipe) { margin-top: 3px; font-size: 8px; line-height: 1.25; }
+  .moon-outpost__recipe { display: none; }
+  .moon-outpost__simulator-metrics { gap: 4px; margin-top: 5px; }
+  .moon-outpost__simulator-metric { padding: 4px 5px; }
+  .moon-outpost__simulator-metric dt { font-size: 6px; }
+  .moon-outpost__simulator-metric dd { font-size: 8px; }
+  .moon-outpost__simulator-actions { gap: 4px; margin-top: 5px; }
+  .moon-outpost__simulator-action, .moon-outpost__simulator-collect { min-height: 44px; padding: 3px 2px; font-size: 7px; }
+  .moon-outpost__worldword { display: none; }
+  .moon-outpost__actions { gap: 5px; }
+  .moon-outpost__primary, .moon-outpost__secondary, .moon-outpost__quiet { min-height: 44px; padding: 5px 7px; font-size: 9px; }
+  .moon-outpost__action-hint { display: none; }
+  .moon-outpost__status { font-size: 8px; }
+
+  .moon-outpost__cache-screen { grid-template-columns: minmax(0, 1fr) minmax(260px, .7fr); padding: max(8px, calc(8px + var(--outpost-safe-top))) max(8px, calc(8px + var(--outpost-safe-right))) max(8px, calc(8px + var(--outpost-safe-bottom))) max(8px, calc(8px + var(--outpost-safe-left))); }
+  .moon-outpost__cache-stage { min-height: 0; height: 100%; }
+  .moon-outpost__cache-crate { width: min(34vw, 280px); }
+  .moon-outpost__cache-copy { padding: 14px; max-height: calc(100dvh - 16px); overflow: auto; }
+  .moon-outpost__cache-copy h2, .moon-outpost__launch-copy h2 { font-size: clamp(23px, 7vh, 35px); }
+  .moon-outpost__cache-copy > p:not(.moon-outpost__status) { margin-block: 6px; font-size: 9px; }
+  .moon-outpost__reward-list { margin-top: 8px; }
+  .moon-outpost__reward { min-height: 42px; }
+  .moon-outpost__cache-copy > .moon-outpost__primary { min-height: 44px; margin-top: 8px; }
+  .moon-outpost__launch-copy { top: max(12px, calc(12px + var(--outpost-safe-top))); left: max(12px, calc(12px + var(--outpost-safe-left))); width: min(380px, 54vw); padding: 13px; }
+  .moon-outpost__launch-copy > p:not(.moon-outpost__status) { margin-block: 5px; font-size: 9px; }
+  .moon-outpost__launch-rocket { width: clamp(70px, 10vw, 104px); bottom: 5%; }
+  .moon-outpost__launch-actions { grid-template-columns: 1.35fr 1fr; margin-top: 8px; }
+  .moon-outpost__skip { min-height: 44px; top: max(7px, calc(7px + var(--outpost-safe-top))); right: max(7px, calc(7px + var(--outpost-safe-right))); }
+}
+
+/* Compact Outpost shell: scene and console are full-size panes, not squeezed columns. */
+@media (max-width: 700px), (orientation: portrait) and (max-width: 900px), (orientation: landscape) and (max-width: 900px) and (max-height: 500px) {
+  .moon-outpost__overview { grid-template-rows: auto auto minmax(0, 1fr); }
+  .moon-outpost__header {
+    grid-template-areas: "back identity completion overflow";
+    grid-template-columns: auto minmax(0, 1fr) auto auto;
+    grid-template-rows: 48px;
+    gap: 6px;
+    min-height: calc(56px + var(--outpost-safe-top));
+    padding: max(4px, calc(4px + var(--outpost-safe-top))) max(7px, calc(7px + var(--outpost-safe-right))) 4px max(7px, calc(7px + var(--outpost-safe-left)));
+  }
+  .moon-outpost__back-button {
+    width: auto;
+    min-width: 44px;
+    max-width: 122px;
+    grid-area: back;
+    padding-inline: 10px;
+    overflow: hidden;
+    font-size: 12px;
+    text-overflow: ellipsis;
+  }
+  .moon-outpost__identity { grid-area: identity; }
+  .moon-outpost__identity h1 { margin: 0; font-size: clamp(18px, 5.4vw, 24px); }
+  .moon-outpost__identity .moon-outpost__eyebrow,
+  .moon-outpost__identity p { display: none; }
+  .moon-outpost__completion {
+    min-width: 52px;
+    min-height: 44px;
+    grid-area: completion;
+    padding: 7px;
+  }
+  .moon-outpost__completion strong,
+  .moon-outpost__completion span { font-size: 12px; }
+  .moon-outpost__completion span { display: none; }
+  .moon-outpost__overflow { grid-area: overflow; }
+  .moon-outpost__overflow > summary { width: 44px; height: 44px; }
+
+  .moon-outpost__pane-switcher {
+    z-index: 12;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 4px;
+    padding: 4px max(8px, calc(8px + var(--outpost-safe-right))) 4px max(8px, calc(8px + var(--outpost-safe-left)));
+    border-bottom: 1px solid var(--outpost-line);
+    background: rgba(2, 17, 26, .96);
+  }
+  .moon-outpost__pane-switcher button {
+    min-height: 44px;
+    border: 1px solid transparent;
+    border-radius: 12px;
+    color: var(--outpost-muted);
+    background: rgba(9, 39, 48, .68);
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 750;
+  }
+  .moon-outpost__pane-switcher button[aria-selected="true"] {
+    border-color: rgba(123, 240, 238, .5);
+    color: var(--outpost-ink);
+    background: rgba(17, 66, 72, .9);
+    box-shadow: inset 0 -2px var(--outpost-cyan);
+  }
+
+  .moon-outpost__body {
+    display: grid;
+    grid-template: minmax(0, 1fr) / minmax(0, 1fr);
+    min-height: 0;
+  }
+  .moon-outpost__scene,
+  .moon-outpost__console {
+    grid-area: 1 / 1;
+    min-width: 0;
+    min-height: 0;
+  }
+  .moon-outpost__scene { overflow: hidden; }
+  .moon-outpost__console {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: none;
+    grid-auto-rows: max-content;
+    align-content: start;
+    gap: 12px;
+    overflow: auto;
+    padding: 14px max(13px, calc(13px + var(--outpost-safe-right))) max(14px, calc(14px + var(--outpost-safe-bottom))) max(13px, calc(13px + var(--outpost-safe-left)));
+    border: 0;
+    background: rgba(2, 18, 28, .97);
+  }
+  .moon-outpost__console > * { grid-column: 1; grid-row: auto; }
+  .moon-outpost__actions { align-content: start; }
+  .moon-outpost__dossier { min-height: 0; padding: 14px; overflow: visible; }
+  .moon-outpost__dossier h2 { font-size: clamp(22px, 7vw, 30px); }
+  .moon-outpost__dossier > p:not(.moon-outpost__recipe),
+  .moon-outpost__action-hint,
+  .moon-outpost__cache-copy > p:not(.moon-outpost__status),
+  .moon-outpost__launch-copy > p:not(.moon-outpost__status) { font-size: 14px; line-height: 1.45; }
+  .moon-outpost__structure { min-height: 54px; }
+  .moon-outpost__structure-copy strong,
+  .moon-outpost__cache-beacon strong,
+  .moon-outpost__worldword small { font-size: 12px; }
+  .moon-outpost__structure-copy small,
+  .moon-outpost__cache-beacon small { font-size: 12px; }
+  .moon-outpost__simulator-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .moon-outpost__simulator-project { min-height: 44px; padding: 8px 10px; font-size: 14px; }
+  .moon-outpost__simulator-metric { min-height: 48px; padding: 8px; }
+  .moon-outpost__simulator-metric dt { font-size: 12px; }
+  .moon-outpost__simulator-metric dd { font-size: 14px; }
+  .moon-outpost__simulator-action,
+  .moon-outpost__simulator-collect,
+  .moon-outpost__primary,
+  .moon-outpost__secondary,
+  .moon-outpost__quiet { min-height: 44px; padding: 8px 10px; font-size: 14px; }
+  .moon-outpost__status { min-height: 18px; font-size: 12px; }
+  .moon-outpost__cache-tier strong,
+  .moon-outpost__cache-tier small,
+  .moon-outpost__cache-details > p,
+  .moon-outpost__selection-redeem label { font-size: 12px; }
+  .moon-outpost__cache-copy { overflow: auto; }
+  .moon-outpost__cache-tier,
+  .moon-outpost__selection-redeem select,
+  .moon-outpost__selection-redeem button { min-height: 44px; }
+}
+
+@media (orientation: landscape) and (max-width: 900px) and (max-height: 500px) {
+  .moon-outpost__overview { grid-template-rows: auto minmax(0, 1fr); }
+  .moon-outpost__body { grid-row: 2; }
+  .moon-outpost__pane-switcher {
+    position: absolute;
+    z-index: 30;
+    top: calc(6px + var(--outpost-safe-top));
+    left: 50%;
+    width: min(250px, 34vw);
+    padding: 0;
+    border: 0;
+    background: transparent;
+    transform: translateX(-50%);
+  }
+  .moon-outpost__identity { visibility: hidden; }
+  .moon-outpost__back-button { max-width: 150px; }
+  .moon-outpost__console { padding-top: 10px; }
+  .moon-outpost__cache-screen { grid-template-columns: minmax(190px, .75fr) minmax(300px, 1fr); }
+  .moon-outpost__cache-copy { max-height: 100%; padding: 12px; }
+  .moon-outpost__launch-copy { width: min(430px, 65vw); max-height: calc(100% - 16px); overflow: auto; }
+}
+
+.moon-outpost__eyebrow,
+.moon-outpost__completion span,
+.moon-outpost__structure-copy strong,
+.moon-outpost__structure-copy small,
+.moon-outpost__cache-beacon strong,
+.moon-outpost__cache-beacon small,
+.moon-outpost__simulator-metric dt,
+.moon-outpost__cache-tier strong,
+.moon-outpost__cache-tier small,
+.moon-outpost__cache-details > p,
+.moon-outpost__worldword small,
+.moon-outpost__action-hint,
+.moon-outpost__status { font-size: 12px; }
+
+.moon-outpost__dossier > p:not(.moon-outpost__recipe),
+.moon-outpost__cache-copy > p:not(.moon-outpost__status),
+.moon-outpost__launch-copy > p:not(.moon-outpost__status) { font-size: 14px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .moon-outpost *,
+  .moon-outpost *::before,
+  .moon-outpost *::after {
+    scroll-behavior: auto !important;
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+
+  .moon-outpost {
+    --outpost-parallax-x: 0px !important;
+    --outpost-parallax-y: 0px !important;
+    --outpost-tilt-x: 0deg !important;
+    --outpost-tilt-y: 0deg !important;
+  }
+
+  .moon-outpost__rocket,
+  .moon-outpost__structure,
+  .moon-outpost__moon-art,
+  .moon-outpost__horizon { transform: none; }
+
+  .moon-outpost__rocket { translate: -50% 0; }
+  .moon-outpost__launch-rocket { translate: -50% 0; }
+}
+
+@media (forced-colors: active) {
+  .moon-outpost,
+  .moon-outpost__header,
+  .moon-outpost__console,
+  .moon-outpost__structure,
+  .moon-outpost__dossier,
+  .moon-outpost__worldword,
+  .moon-outpost__cache-copy,
+  .moon-outpost__reward,
+  .moon-outpost__selection-redeem,
+  .moon-outpost__selection-redeem select,
+  .moon-outpost__simulator-metric,
+  .moon-outpost__simulator-action,
+  .moon-outpost__simulator-collect,
+  .moon-outpost__simulator-project,
+  .moon-outpost__primary,
+  .moon-outpost__secondary,
+  .moon-outpost__quiet,
+  .moon-outpost__back-button,
+  .moon-outpost__main-menu-button,
+  .moon-outpost__skip {
+    border-color: CanvasText;
+    color: CanvasText;
+    background: Canvas;
+    box-shadow: none;
+  }
+
+  .moon-outpost__moon-art { opacity: .2; }
+  .moon-outpost__rocket-layer--glow,
+  .moon-outpost__stars,
+  .moon-outpost__launch-stars { display: none; }
+  .moon-outpost__primary { border: 2px solid ButtonText; }
+}

@@ -68,8 +68,6 @@ async function expectMixerFits(page, controlSelector) {
 
 async function enterFirstOrbit(page) {
   const cinematic = page.locator(".first-open-cinematic");
-  await expect(cinematic).toBeVisible();
-  await page.getByRole("button", { name: "Skip introduction" }).click();
   await expect(cinematic).toHaveCount(0);
   await expect(page.locator("#startScreen")).toBeVisible();
   await expect(page.locator("#gameScreen")).toBeHidden();
@@ -79,8 +77,8 @@ async function enterFirstOrbit(page) {
   await expect(primaryOrbit).toBeEnabled();
   await primaryOrbit.click();
   const briefing = page.locator("#missionBriefingDialog");
-  await expect(briefing).toHaveJSProperty("open", true);
-  await briefing.locator("#beginMission").click();
+  await expect(briefing).toHaveJSProperty("open", false);
+  await expect(page.locator("#firstOrbitGuide")).toBeVisible();
   await expect(page.locator("#gameScreen")).toBeVisible();
   await expect(page.locator("#cosmicGate")).toBeHidden();
 }

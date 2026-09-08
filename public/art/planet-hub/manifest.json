@@ -1,0 +1,2050 @@
+{
+  "schemaVersion": 1,
+  "productionVersion": 1,
+  "tools": {
+    "three": "0.185.1",
+    "gltfTransform": "4.4.2",
+    "meshoptimizer": "1.2.0",
+    "pillow": "12.1.0",
+    "ffmpeg": "8.1.1"
+  },
+  "coordinateSystem": {
+    "up": "Y",
+    "planetRadius": 1,
+    "roadRadius": 1.006,
+    "destinationLayouts": {
+      "earth": {
+        "type": "geographic",
+        "latitude": "north-positive",
+        "longitude": "east-positive",
+        "primeMeridianAxis": "+X",
+        "east90Axis": "-Z"
+      },
+      "moon": {
+        "type": "authored-ring",
+        "tiltDegrees": 23.5
+      }
+    }
+  },
+  "posterCamera": {
+    "width": 1024,
+    "height": 1024,
+    "perspectiveDegrees": 28,
+    "position": [
+      0,
+      0.08,
+      4.5
+    ],
+    "target": [
+      0,
+      0,
+      0
+    ],
+    "selectedAnchor": [
+      0,
+      0.42,
+      0.907524
+    ]
+  },
+  "worlds": {
+    "earth": {
+      "posters": {
+        "forge": "./art/planet-hub/posters/earth-forge.webp",
+        "journey": "./art/planet-hub/posters/earth-journey.webp",
+        "arena": "./art/planet-hub/posters/earth-arena.webp"
+      },
+      "tiers": {
+        "low": {
+          "planet": {
+            "url": "./art/planet-hub/models/earth-low.glb",
+            "bytes": 360744,
+            "triangles": 9849,
+            "sha256": "0fab79e608e917f91ee293f81f265473fe12e077b9a3b07655ff31239e213f04",
+            "bounds": {
+              "min": [
+                -0.981328,
+                -1,
+                -0.981564
+              ],
+              "max": [
+                0.980997,
+                1,
+                0.981754
+              ]
+            },
+            "textures": [
+              {
+                "width": 1024,
+                "height": 512,
+                "mimeType": "image/jpeg"
+              }
+            ]
+          },
+          "landmarks": {
+            "forge": {
+              "url": "./art/planet-hub/models/forge-low.glb",
+              "bytes": 282212,
+              "triangles": 4259,
+              "sha256": "a5f69f45e2a7c7e873fc1857d4e04ddcf991b14c2d5fbe208f0768602bf03e3a",
+              "bounds": {
+                "min": [
+                  -0.5,
+                  0,
+                  -0.5
+                ],
+                "max": [
+                  0.5,
+                  0.722229,
+                  0.5
+                ]
+              },
+              "textures": [
+                {
+                  "width": 512,
+                  "height": 512,
+                  "mimeType": "image/jpeg"
+                }
+              ],
+              "transform": {
+                "layout": "geographic",
+                "region": "Europe",
+                "latitudeDegrees": 50,
+                "longitudeDegrees": 10,
+                "anchor": [
+                  -0.633022222,
+                  0.766044443,
+                  0.111618897
+                ],
+                "tangent": [
+                  -0.173648178,
+                  0,
+                  -0.984807753
+                ],
+                "scale": 0.4
+              },
+              "sockets": {}
+            },
+            "journey": {
+              "url": "./art/planet-hub/models/earth-landing-low.glb",
+              "bytes": 171876,
+              "triangles": 1916,
+              "sha256": "781ed2582f171d6448a645109a7ce9b424a2156d236ad9e79b18b4e481bda7ed",
+              "bounds": {
+                "min": [
+                  -0.5,
+                  0,
+                  -0.5
+                ],
+                "max": [
+                  0.5,
+                  0.150685,
+                  0.5
+                ]
+              },
+              "textures": [
+                {
+                  "width": 512,
+                  "height": 512,
+                  "mimeType": "image/jpeg"
+                }
+              ],
+              "transform": {
+                "layout": "geographic",
+                "region": "Antarctica",
+                "latitudeDegrees": -80,
+                "longitudeDegrees": 0,
+                "anchor": [
+                  -0.173648178,
+                  -0.984807753,
+                  0
+                ],
+                "tangent": [
+                  0,
+                  0,
+                  -1
+                ],
+                "scale": 0.34
+              },
+              "sockets": {
+                "rocketDock": [
+                  0,
+                  0.16,
+                  0
+                ]
+              }
+            },
+            "arena": {
+              "url": "./art/planet-hub/models/portal-low.glb",
+              "bytes": 237368,
+              "triangles": 2825,
+              "sha256": "625f8faf3fefde54d1a51d69859ecc62c932fa557db3c5732b3954fa68f3edf8",
+              "bounds": {
+                "min": [
+                  -0.5,
+                  0,
+                  -0.312133
+                ],
+                "max": [
+                  0.5,
+                  0.651663,
+                  0.312133
+                ]
+              },
+              "textures": [
+                {
+                  "width": 512,
+                  "height": 512,
+                  "mimeType": "image/jpeg"
+                }
+              ],
+              "transform": {
+                "layout": "geographic",
+                "region": "North America",
+                "latitudeDegrees": 40,
+                "longitudeDegrees": -100,
+                "anchor": [
+                  0.133022222,
+                  0.64278761,
+                  -0.754406507
+                ],
+                "tangent": [
+                  0.984807753,
+                  0,
+                  0.173648178
+                ],
+                "scale": 0.38
+              },
+              "sockets": {
+                "vfx": [
+                  0,
+                  0.37,
+                  0
+                ]
+              }
+            }
+          }
+        },
+        "standard": {
+          "planet": {
+            "url": "./art/planet-hub/models/earth-standard.glb",
+            "bytes": 986632,
+            "triangles": 29548,
+            "sha256": "5f3093001721cb29f4061dbdc3cf5b42f000f30bb92adf7c97d8b4b7acc8a31e",
+            "bounds": {
+              "min": [
+                -0.981565,
+                -1,
+                -0.981564
+              ],
+              "max": [
+                0.981516,
+                1,
+                0.981754
+              ]
+            },
+            "textures": [
+              {
+                "width": 2048,
+                "height": 1024,
+                "mimeType": "image/jpeg"
+              }
+            ]
+          },
+          "landmarks": {
+            "forge": {
+              "url": "./art/planet-hub/models/forge-standard.glb",
+              "bytes": 421508,
+              "triangles": 4259,
+              "sha256": "c43ddd1d716bcd2977358a689324f4f58344390fc456439d76f49d85c71318b7",
+              "bounds": {
+                "min": [
+                  -0.5,
+                  0,
+                  -0.5
+                ],
+                "max": [
+                  0.5,
+                  0.722229,
+                  0.5
+                ]
+              },
+              "textures": [
+                {
+                  "width": 1024,
+                  "height": 1024,
+                  "mimeType": "image/jpeg"
+                }
+              ],
+              "transform": {
+                "layout": "geographic",
+                "region": "Europe",
+                "latitudeDegrees": 50,
+                "longitudeDegrees": 10,
+                "anchor": [
+                  -0.633022222,
+                  0.766044443,
+                  0.111618897
+                ],
+                "tangent": [
+                  -0.173648178,
+                  0,
+                  -0.984807753
+                ],
+                "scale": 0.4
+              },
+              "sockets": {}
+            },
+            "journey": {
+              "url": "./art/planet-hub/models/earth-landing-standard.glb",
+              "bytes": 354016,
+              "triangles": 1916,
+              "sha256": "7fd599689a69023339afb88586f0f8f5f83349bd8c45688590ae120510b1c87c",
+              "bounds": {
+                "min": [
+                  -0.5,
+                  0,
+                  -0.5
+                ],
+                "max": [
+                  0.5,
+                  0.150685,
+                  0.5
+                ]
+              },
+              "textures": [
+                {
+                  "width": 1024,
+                  "height": 1024,
+                  "mimeType": "image/jpeg"
+                }
+              ],
+              "transform": {
+                "layout": "geographic",
+                "region": "Antarctica",
+                "latitudeDegrees": -80,
+                "longitudeDegrees": 0,
+                "anchor": [
+                  -0.173648178,
+                  -0.984807753,
+                  0
+                ],
+                "tangent": [
+                  0,
+                  0,
+                  -1
+                ],
+                "scale": 0.34
+              },
+              "sockets": {
+                "rocketDock": [
+                  0,
+                  0.16,
+                  0
+                ]
+              }
+            },
+            "arena": {
+              "url": "./art/planet-hub/models/portal-standard.glb",
+              "bytes": 421320,
+              "triangles": 2825,
+              "sha256": "01edd78a91e02491a64ddefb606120553730147c0082dafaaeca6518db09a3fc",
+              "bounds": {
+                "min": [
+                  -0.5,
+                  0,
+                  -0.312133
+                ],
+                "max": [
+                  0.5,
+                  0.651663,
+                  0.312133
+                ]
+              },
+              "textures": [
+                {
+                  "width": 1024,
+                  "height": 1024,
+                  "mimeType": "image/jpeg"
+                }
+              ],
+              "transform": {
+                "layout": "geographic",
+                "region": "North America",
+                "latitudeDegrees": 40,
+                "longitudeDegrees": -100,
+                "anchor": [
+                  0.133022222,
+                  0.64278761,
+                  -0.754406507
+                ],
+                "tangent": [
+                  0.984807753,
+                  0,
+                  0.173648178
+                ],
+                "scale": 0.38
+              },
+              "sockets": {
+                "vfx": [
+                  0,
+                  0.37,
+                  0
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "moon": {
+      "posters": {
+        "forge": "./art/planet-hub/posters/moon-forge.webp",
+        "journey": "./art/planet-hub/posters/moon-journey.webp",
+        "arena": "./art/planet-hub/posters/moon-arena.webp"
+      },
+      "tiers": {
+        "low": {
+          "planet": {
+            "url": "./art/planet-hub/models/moon-low.glb",
+            "bytes": 1070768,
+            "triangles": 24581,
+            "sha256": "920e756bc56b5366c5e5ad2b9f2f662e23a9d5147b99cc06318777b069ea366c",
+            "bounds": {
+              "min": [
+                -0.998238,
+                -0.998872,
+                -0.9988
+              ],
+              "max": [
+                0.998177,
+                0.997806,
+                0.99919
+              ]
+            },
+            "textures": [
+              {
+                "width": 1024,
+                "height": 1024,
+                "mimeType": "image/jpeg"
+              }
+            ]
+          },
+          "landmarks": {
+            "forge": {
+              "url": "./art/planet-hub/models/forge-low.glb",
+              "bytes": 282212,
+              "triangles": 4259,
+              "sha256": "a5f69f45e2a7c7e873fc1857d4e04ddcf991b14c2d5fbe208f0768602bf03e3a",
+              "bounds": {
+                "min": [
+                  -0.5,
+                  0,
+                  -0.5
+                ],
+                "max": [
+                  0.5,
+                  0.722229,
+                  0.5
+                ]
+              },
+              "textures": [
+                {
+                  "width": 512,
+                  "height": 512,
+                  "mimeType": "image/jpeg"
+                }
+              ],
+              "transform": {
+                "layout": "authored-ring",
+                "phaseDegrees": 0,
+                "anchor": [
+                  1,
+                  0,
+                  0
+                ],
+                "tangent": [
+                  0,
+                  -0.398749069,
+                  0.917060074
+                ],
+                "scale": 0.4
+              },
+              "sockets": {}
+            },
+            "journey": {
+              "url": "./art/planet-hub/models/moon-landing-low.glb",
+              "bytes": 115276,
+              "triangles": 1758,
+              "sha256": "5a6b156e28ce39650ae5f3574e4e3bd4f9819dcb545f31278a34435106b91190",
+              "bounds": {
+                "min": [
+                  -0.5,
+                  0,
+                  -0.5
+                ],
+                "max": [
+                  0.5,
+                  0.209393,
+                  0.5
+                ]
+              },
+              "textures": [
+                {
+                  "width": 512,
+                  "height": 512,
+                  "mimeType": "image/jpeg"
+                }
+              ],
+              "transform": {
+                "layout": "authored-ring",
+                "phaseDegrees": 120,
+                "anchor": [
+                  -0.5,
+                  -0.345326823,
+                  0.794197321
+                ],
+                "tangent": [
+                  -0.866025404,
+                  0.199374534,
+                  -0.458530037
+                ],
+                "scale": 0.34
+              },
+              "sockets": {
+                "rocketDock": [
+                  0,
+                  0.16,
+                  0
+                ]
+              }
+            },
+            "arena": {
+              "url": "./art/planet-hub/models/portal-low.glb",
+              "bytes": 237368,
+              "triangles": 2825,
+              "sha256": "625f8faf3fefde54d1a51d69859ecc62c932fa557db3c5732b3954fa68f3edf8",
+              "bounds": {
+                "min": [
+                  -0.5,
+                  0,
+                  -0.312133
+                ],
+                "max": [
+                  0.5,
+                  0.651663,
+                  0.312133
+                ]
+              },
+              "textures": [
+                {
+                  "width": 512,
+                  "height": 512,
+                  "mimeType": "image/jpeg"
+                }
+              ],
+              "transform": {
+                "layout": "authored-ring",
+                "phaseDegrees": 240,
+                "anchor": [
+                  -0.5,
+                  0.345326823,
+                  -0.794197321
+                ],
+                "tangent": [
+                  0.866025404,
+                  0.199374534,
+                  -0.458530037
+                ],
+                "scale": 0.38
+              },
+              "sockets": {
+                "vfx": [
+                  0,
+                  0.37,
+                  0
+                ]
+              }
+            }
+          }
+        },
+        "standard": {
+          "planet": {
+            "url": "./art/planet-hub/models/moon-standard.glb",
+            "bytes": 2029708,
+            "triangles": 59098,
+            "sha256": "cc3f84d0cbf97f4de64ca3b16e8386621efece4032abc78bbd2d5d910565c2d6",
+            "bounds": {
+              "min": [
+                -0.99946,
+                -0.998872,
+                -1
+              ],
+              "max": [
+                0.9991,
+                0.998872,
+                1
+              ]
+            },
+            "textures": [
+              {
+                "width": 1024,
+                "height": 1024,
+                "mimeType": "image/jpeg"
+              }
+            ]
+          },
+          "landmarks": {
+            "forge": {
+              "url": "./art/planet-hub/models/forge-standard.glb",
+              "bytes": 421508,
+              "triangles": 4259,
+              "sha256": "c43ddd1d716bcd2977358a689324f4f58344390fc456439d76f49d85c71318b7",
+              "bounds": {
+                "min": [
+                  -0.5,
+                  0,
+                  -0.5
+                ],
+                "max": [
+                  0.5,
+                  0.722229,
+                  0.5
+                ]
+              },
+              "textures": [
+                {
+                  "width": 1024,
+                  "height": 1024,
+                  "mimeType": "image/jpeg"
+                }
+              ],
+              "transform": {
+                "layout": "authored-ring",
+                "phaseDegrees": 0,
+                "anchor": [
+                  1,
+                  0,
+                  0
+                ],
+                "tangent": [
+                  0,
+                  -0.398749069,
+                  0.917060074
+                ],
+                "scale": 0.4
+              },
+              "sockets": {}
+            },
+            "journey": {
+              "url": "./art/planet-hub/models/moon-landing-standard.glb",
+              "bytes": 286756,
+              "triangles": 1758,
+              "sha256": "e7f8ff00720b64dcd84181f95a5043714033df38952c30fcc05d8cc54eaeaa4a",
+              "bounds": {
+                "min": [
+                  -0.5,
+                  0,
+                  -0.5
+                ],
+                "max": [
+                  0.5,
+                  0.209393,
+                  0.5
+                ]
+              },
+              "textures": [
+                {
+                  "width": 1024,
+                  "height": 1024,
+                  "mimeType": "image/jpeg"
+                }
+              ],
+              "transform": {
+                "layout": "authored-ring",
+                "phaseDegrees": 120,
+                "anchor": [
+                  -0.5,
+                  -0.345326823,
+                  0.794197321
+                ],
+                "tangent": [
+                  -0.866025404,
+                  0.199374534,
+                  -0.458530037
+                ],
+                "scale": 0.34
+              },
+              "sockets": {
+                "rocketDock": [
+                  0,
+                  0.16,
+                  0
+                ]
+              }
+            },
+            "arena": {
+              "url": "./art/planet-hub/models/portal-standard.glb",
+              "bytes": 421320,
+              "triangles": 2825,
+              "sha256": "01edd78a91e02491a64ddefb606120553730147c0082dafaaeca6518db09a3fc",
+              "bounds": {
+                "min": [
+                  -0.5,
+                  0,
+                  -0.312133
+                ],
+                "max": [
+                  0.5,
+                  0.651663,
+                  0.312133
+                ]
+              },
+              "textures": [
+                {
+                  "width": 1024,
+                  "height": 1024,
+                  "mimeType": "image/jpeg"
+                }
+              ],
+              "transform": {
+                "layout": "authored-ring",
+                "phaseDegrees": 240,
+                "anchor": [
+                  -0.5,
+                  0.345326823,
+                  -0.794197321
+                ],
+                "tangent": [
+                  0.866025404,
+                  0.199374534,
+                  -0.458530037
+                ],
+                "scale": 0.38
+              },
+              "sockets": {
+                "vfx": [
+                  0,
+                  0.37,
+                  0
+                ]
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "shared": {
+    "tiers": {
+      "low": {
+        "rocket": {
+          "url": "./art/planet-hub/models/rocket-low.glb",
+          "bytes": 268480,
+          "triangles": 4409,
+          "sha256": "4647c054650b6cc1f4022343434733f1d3aa8554d9ed363ffd1602400b1043bd",
+          "bounds": {
+            "min": [
+              -0.226028,
+              0,
+              -0.249512
+            ],
+            "max": [
+              0.226028,
+              1,
+              0.249512
+            ]
+          },
+          "textures": [
+            {
+              "width": 512,
+              "height": 512,
+              "mimeType": "image/jpeg"
+            }
+          ],
+          "transform": {
+            "scale": 0.32
+          },
+          "sockets": {
+            "engine": [
+              0,
+              0.015,
+              0
+            ]
+          }
+        },
+        "sun": {
+          "url": "./art/planet-hub/models/sun-low.glb",
+          "bytes": 20760,
+          "triangles": 418,
+          "sha256": "b27c6e1562babf001352446fb2d7a15cda75b479866832a63ac147c653336e0a",
+          "bounds": {
+            "min": [
+              -0.990393,
+              -1,
+              -0.995185
+            ],
+            "max": [
+              0.995185,
+              1,
+              0.995185
+            ]
+          },
+          "textures": [
+            {
+              "width": 256,
+              "height": 128,
+              "mimeType": "image/jpeg"
+            }
+          ]
+        }
+      },
+      "standard": {
+        "rocket": {
+          "url": "./art/planet-hub/models/rocket-standard.glb",
+          "bytes": 409812,
+          "triangles": 4409,
+          "sha256": "876ccf068af2d41e09f28b86da700af1977286d057e71b00f5fd34f023f1ffd2",
+          "bounds": {
+            "min": [
+              -0.226028,
+              0,
+              -0.249512
+            ],
+            "max": [
+              0.226028,
+              1,
+              0.249512
+            ]
+          },
+          "textures": [
+            {
+              "width": 1024,
+              "height": 1024,
+              "mimeType": "image/jpeg"
+            }
+          ],
+          "transform": {
+            "scale": 0.32
+          },
+          "sockets": {
+            "engine": [
+              0,
+              0.015,
+              0
+            ]
+          }
+        },
+        "sun": {
+          "url": "./art/planet-hub/models/sun-low.glb",
+          "bytes": 20760,
+          "triangles": 418,
+          "sha256": "b27c6e1562babf001352446fb2d7a15cda75b479866832a63ac147c653336e0a",
+          "bounds": {
+            "min": [
+              -0.990393,
+              -1,
+              -0.995185
+            ],
+            "max": [
+              0.995185,
+              1,
+              0.995185
+            ]
+          },
+          "textures": [
+            {
+              "width": 256,
+              "height": 128,
+              "mimeType": "image/jpeg"
+            }
+          ]
+        }
+      }
+    }
+  },
+  "portal": {
+    "mp4": "./art/planet-hub/media/portal-alpha.mp4",
+    "webm": "./art/planet-hub/media/portal-alpha.webm",
+    "poster": "./art/planet-hub/media/portal-alpha.webp",
+    "width": 1024,
+    "height": 512,
+    "frameCount": 200,
+    "durationSeconds": 6.667,
+    "muted": true,
+    "loopable": true,
+    "colorRect": [
+      0,
+      0,
+      0.5,
+      1
+    ],
+    "matteRect": [
+      0.5,
+      0,
+      0.5,
+      1
+    ],
+    "files": {
+      "mp4": {
+        "bytes": 677334,
+        "sha256": "e41a4950a1556f5a0fb17f34c62564ac1a0e63735cd071071e664955fd180dde"
+      },
+      "webm": {
+        "bytes": 315422,
+        "sha256": "75a22de1054c01e7dadaa5dfbc5c75ae5e05541617502ca2c216e4e0efe4b4d9"
+      },
+      "poster": {
+        "bytes": 12148,
+        "sha256": "7cc6ed121fb51e24beba7de0034c11cfa87f3cf9120c6b173a5b3e7b99642c80"
+      }
+    }
+  },
+  "optionalDetails": {
+    "schemaVersion": 1,
+    "derivationVersion": 1,
+    "initialScene": false,
+    "loadPolicy": "focus",
+    "textureContract": {
+      "flipY": false,
+      "uvChannel": 0,
+      "authoredColorSpace": "srgb",
+      "supportColorSpace": "none"
+    },
+    "bytes": 2445906,
+    "tiers": {
+      "low": {
+        "bytes": 498258,
+        "earth": {
+          "clouds": {
+            "url": "./art/planet-hub/details/earth-clouds-low.webp",
+            "bytes": 168954,
+            "sha256": "ee4bfa5e3ca5cb88f1c8879119025ca2bdac790314eb6f3ef0de7db1466e0351",
+            "width": 1024,
+            "height": 512,
+            "mimeType": "image/webp",
+            "colorSpace": "linear",
+            "usage": "earth-cloud-coverage",
+            "authored": true,
+            "derived": false,
+            "source": {
+              "model": "itch-assets/Models/Earth/Earth8K.glb",
+              "sha256": "76f210da6b363db569a9c33e8659288c8981b9b97208ca54c7c5479fad309f87",
+              "material": "lambert6",
+              "slot": "baseColor.alpha"
+            },
+            "channels": "rgb-coverage",
+            "hasAlpha": false,
+            "lumaStdDev": 61.555777,
+            "transform": "authored-alpha-to-rgb-coverage; lanczos-resize"
+          },
+          "night": {
+            "url": "./art/planet-hub/details/earth-night-low.webp",
+            "bytes": 21202,
+            "sha256": "12e9ea9d3389e12af69884f2f104f4040a0bae974487012dc7f905be9e69fb6e",
+            "width": 1024,
+            "height": 512,
+            "mimeType": "image/webp",
+            "colorSpace": "srgb",
+            "usage": "earth-night-emissive",
+            "authored": true,
+            "derived": false,
+            "source": {
+              "model": "itch-assets/Models/Earth/Earth8K.glb",
+              "material": "phong1",
+              "slot": "emissive"
+            },
+            "channels": "rgb",
+            "hasAlpha": false,
+            "lumaStdDev": 8.052855
+          },
+          "albedo": {
+            "url": "./art/planet-hub/details/earth-albedo-low.webp",
+            "bytes": 212344,
+            "sha256": "67cdc933cb934d8ad8c742e4fe5da001547890e27494aab71cbe12ce2b6097f0",
+            "width": 2048,
+            "height": 1024,
+            "mimeType": "image/webp",
+            "colorSpace": "srgb",
+            "usage": "earth-progressive-albedo",
+            "authored": true,
+            "derived": false,
+            "channels": "rgb",
+            "hasAlpha": false,
+            "lumaStdDev": 98.827478,
+            "source": {
+              "file": "itch-assets/Models/Earth/textures/earth albedo.jpg",
+              "sha256": "12e94e5cc617df501c1c4aa852ea35b293b3ed531bb362be6abc7707a1e73fee"
+            },
+            "transform": "lanczos-resize; vertical-flip-to-packaged-gltf-uv",
+            "initialScene": false,
+            "loadPolicy": "progressive-after-ready"
+          }
+        },
+        "sun": {
+          "emissive": {
+            "url": "./art/planet-hub/details/sun-emissive-low.webp",
+            "bytes": 11270,
+            "sha256": "2ac8483a1780aa258c1c315814c12cfe447336a50a3229b87624077b853aa571",
+            "width": 256,
+            "height": 128,
+            "mimeType": "image/webp",
+            "colorSpace": "srgb",
+            "usage": "sun-emissive",
+            "authored": true,
+            "derived": false,
+            "source": {
+              "model": "itch-assets/Models/Sun/sun.glb",
+              "material": "material",
+              "slot": "emissive"
+            },
+            "channels": "rgb",
+            "hasAlpha": false,
+            "lumaStdDev": 12.783565
+          }
+        },
+        "materials": {
+          "forge": {
+            "normal": {
+              "url": "./art/planet-hub/details/forge-normal-low.webp",
+              "bytes": 8672,
+              "sha256": "c2d97dc1a0589cbd40d91321bea1f9409eb51e9f21e7dc1024320a4cb8d0e37a",
+              "width": 256,
+              "height": 256,
+              "mimeType": "image/webp",
+              "colorSpace": "linear",
+              "usage": "focus-normal",
+              "authored": false,
+              "derived": true,
+              "source": {
+                "model": "itch-assets/Models/MainZone/MainZoneTextured.glb",
+                "material": "tripo_node_53f5b7db_material",
+                "slot": "baseColor"
+              },
+              "channels": "tangent-normal-rgb",
+              "algorithm": "albedo-support-v1",
+              "hasAlpha": false,
+              "lumaStdDev": 3.257251
+            },
+            "orm": {
+              "url": "./art/planet-hub/details/forge-orm-low.webp",
+              "bytes": 7692,
+              "sha256": "6f82fc09253b2b9bf693a6ee73701fc41e98d4288df7d8c8d38d7e01c6421bd2",
+              "width": 256,
+              "height": 256,
+              "mimeType": "image/webp",
+              "colorSpace": "linear",
+              "usage": "focus-orm",
+              "authored": false,
+              "derived": true,
+              "source": {
+                "model": "itch-assets/Models/MainZone/MainZoneTextured.glb",
+                "material": "tripo_node_53f5b7db_material",
+                "slot": "baseColor"
+              },
+              "channels": "r=ao,g=roughness,b=metallic",
+              "algorithm": "albedo-support-v1",
+              "hasAlpha": false,
+              "lumaStdDev": 3.003544
+            }
+          },
+          "earth-landing": {
+            "normal": {
+              "url": "./art/planet-hub/details/earth-landing-normal-low.webp",
+              "bytes": 6642,
+              "sha256": "c5c5dfe86aeb505f5416f7e8f3ca0d94f6b7fedc1151f92510410eeae19b29f0",
+              "width": 256,
+              "height": 256,
+              "mimeType": "image/webp",
+              "colorSpace": "linear",
+              "usage": "focus-normal",
+              "authored": false,
+              "derived": true,
+              "source": {
+                "model": "itch-assets/Models/Earth/earth landing.glb",
+                "material": "tripo_node_78d8f864-15d5-4a7d-b8ec-e12d30af8aaa_material",
+                "slot": "baseColor"
+              },
+              "channels": "tangent-normal-rgb",
+              "algorithm": "albedo-support-v1",
+              "hasAlpha": false,
+              "lumaStdDev": 3.073832
+            },
+            "orm": {
+              "url": "./art/planet-hub/details/earth-landing-orm-low.webp",
+              "bytes": 6676,
+              "sha256": "da828a8ee2eb5d09e3eb57f5b1d26783c9d4a72d416f60aba4c4e0ebd654905c",
+              "width": 256,
+              "height": 256,
+              "mimeType": "image/webp",
+              "colorSpace": "linear",
+              "usage": "focus-orm",
+              "authored": false,
+              "derived": true,
+              "source": {
+                "model": "itch-assets/Models/Earth/earth landing.glb",
+                "material": "tripo_node_78d8f864-15d5-4a7d-b8ec-e12d30af8aaa_material",
+                "slot": "baseColor"
+              },
+              "channels": "r=ao,g=roughness,b=metallic",
+              "algorithm": "albedo-support-v1",
+              "hasAlpha": false,
+              "lumaStdDev": 3.160788
+            }
+          },
+          "moon-landing": {
+            "normal": {
+              "url": "./art/planet-hub/details/moon-landing-normal-low.webp",
+              "bytes": 4692,
+              "sha256": "1374b8363ece5a98fdac4adebf3a3d38c966e4623649cf65a26b5d52654a4504",
+              "width": 256,
+              "height": 256,
+              "mimeType": "image/webp",
+              "colorSpace": "linear",
+              "usage": "focus-normal",
+              "authored": false,
+              "derived": true,
+              "source": {
+                "model": "itch-assets/Models/Moon/moon landing.glb",
+                "material": "tripo_node_7c052cba-d41c-4091-bd69-bcf74925c56d_material",
+                "slot": "baseColor"
+              },
+              "channels": "tangent-normal-rgb",
+              "algorithm": "albedo-support-v1",
+              "hasAlpha": false,
+              "lumaStdDev": 2.689551
+            },
+            "orm": {
+              "url": "./art/planet-hub/details/moon-landing-orm-low.webp",
+              "bytes": 4356,
+              "sha256": "d0462f9304045bc0ab05f0e9dd8ded7d356df26fae68ea7b2fa1144abcdbdf0a",
+              "width": 256,
+              "height": 256,
+              "mimeType": "image/webp",
+              "colorSpace": "linear",
+              "usage": "focus-orm",
+              "authored": false,
+              "derived": true,
+              "source": {
+                "model": "itch-assets/Models/Moon/moon landing.glb",
+                "material": "tripo_node_7c052cba-d41c-4091-bd69-bcf74925c56d_material",
+                "slot": "baseColor"
+              },
+              "channels": "r=ao,g=roughness,b=metallic",
+              "algorithm": "albedo-support-v1",
+              "hasAlpha": false,
+              "lumaStdDev": 2.825111
+            }
+          },
+          "portal": {
+            "normal": {
+              "url": "./art/planet-hub/details/portal-normal-low.webp",
+              "bytes": 7750,
+              "sha256": "78d55791d3152fdffbae1ecfe61d868609e420b8cc3437de3d88f60822e0132e",
+              "width": 256,
+              "height": 256,
+              "mimeType": "image/webp",
+              "colorSpace": "linear",
+              "usage": "focus-normal",
+              "authored": false,
+              "derived": true,
+              "source": {
+                "model": "itch-assets/Models/PortalZone/Portal.glb",
+                "material": "tripo_node_d424c05c-ae10-487c-80cd-92d34a5d0bc3_material",
+                "slot": "baseColor"
+              },
+              "channels": "tangent-normal-rgb",
+              "algorithm": "albedo-support-v1",
+              "hasAlpha": false,
+              "lumaStdDev": 3.693281
+            },
+            "orm": {
+              "url": "./art/planet-hub/details/portal-orm-low.webp",
+              "bytes": 7868,
+              "sha256": "44447a012a4e316f3b99af85bb9d71374a7fc1a655b05e832f48ffde9322f69c",
+              "width": 256,
+              "height": 256,
+              "mimeType": "image/webp",
+              "colorSpace": "linear",
+              "usage": "focus-orm",
+              "authored": false,
+              "derived": true,
+              "source": {
+                "model": "itch-assets/Models/PortalZone/Portal.glb",
+                "material": "tripo_node_d424c05c-ae10-487c-80cd-92d34a5d0bc3_material",
+                "slot": "baseColor"
+              },
+              "channels": "r=ao,g=roughness,b=metallic",
+              "algorithm": "albedo-support-v1",
+              "hasAlpha": false,
+              "lumaStdDev": 3.754189
+            },
+            "emissive": {
+              "url": "./art/planet-hub/details/portal-emissive-low.webp",
+              "bytes": 11088,
+              "sha256": "624a66bff472abe78ac85e755593076119509f244901f718a2abeafff0c76918",
+              "width": 256,
+              "height": 256,
+              "mimeType": "image/webp",
+              "colorSpace": "srgb",
+              "usage": "focus-emissive",
+              "authored": false,
+              "derived": true,
+              "source": {
+                "model": "itch-assets/Models/PortalZone/Portal.glb",
+                "material": "tripo_node_d424c05c-ae10-487c-80cd-92d34a5d0bc3_material",
+                "slot": "baseColor"
+              },
+              "channels": "rgb",
+              "algorithm": "conservative-portal-emissive-v1",
+              "hasAlpha": false,
+              "lumaStdDev": 15.109548
+            }
+          },
+          "rocket": {
+            "normal": {
+              "url": "./art/planet-hub/details/rocket-normal-low.webp",
+              "bytes": 9006,
+              "sha256": "64d75a2ec512886e2de705257866d6e4973a87921847e0c81861787deeda127e",
+              "width": 256,
+              "height": 256,
+              "mimeType": "image/webp",
+              "colorSpace": "linear",
+              "usage": "focus-normal",
+              "authored": false,
+              "derived": true,
+              "source": {
+                "model": "itch-assets/Models/Rocket/RocketTextured.glb",
+                "material": "tripo_node_c52a85b5_material",
+                "slot": "baseColor"
+              },
+              "channels": "tangent-normal-rgb",
+              "algorithm": "albedo-support-v1",
+              "hasAlpha": false,
+              "lumaStdDev": 3.354946
+            },
+            "orm": {
+              "url": "./art/planet-hub/details/rocket-orm-low.webp",
+              "bytes": 10046,
+              "sha256": "9fa4f5577d1bb38e56cc65b32662ec234042a99574d42d3ed070d042488b16bd",
+              "width": 256,
+              "height": 256,
+              "mimeType": "image/webp",
+              "colorSpace": "linear",
+              "usage": "focus-orm",
+              "authored": false,
+              "derived": true,
+              "source": {
+                "model": "itch-assets/Models/Rocket/RocketTextured.glb",
+                "material": "tripo_node_c52a85b5_material",
+                "slot": "baseColor"
+              },
+              "channels": "r=ao,g=roughness,b=metallic",
+              "algorithm": "albedo-support-v1",
+              "hasAlpha": false,
+              "lumaStdDev": 4.868088
+            }
+          }
+        }
+      },
+      "standard": {
+        "bytes": 1947648,
+        "earth": {
+          "clouds": {
+            "url": "./art/planet-hub/details/earth-clouds-standard.webp",
+            "bytes": 636368,
+            "sha256": "7dea3d274f575b5aa04ff3257eced6dcdf8198c47d0594f0e02584b001394b80",
+            "width": 2048,
+            "height": 1024,
+            "mimeType": "image/webp",
+            "colorSpace": "linear",
+            "usage": "earth-cloud-coverage",
+            "authored": true,
+            "derived": false,
+            "source": {
+              "model": "itch-assets/Models/Earth/Earth8K.glb",
+              "sha256": "76f210da6b363db569a9c33e8659288c8981b9b97208ca54c7c5479fad309f87",
+              "material": "lambert6",
+              "slot": "baseColor.alpha"
+            },
+            "channels": "rgb-coverage",
+            "hasAlpha": false,
+            "lumaStdDev": 62.897871,
+            "transform": "authored-alpha-to-rgb-coverage; lanczos-resize"
+          },
+          "night": {
+            "url": "./art/planet-hub/details/earth-night-standard.webp",
+            "bytes": 83796,
+            "sha256": "ba26fbf3f6c7ed53a367ab81d7bef53e9f0b9ff28df005c4d3eb8d993ef32ba5",
+            "width": 2048,
+            "height": 1024,
+            "mimeType": "image/webp",
+            "colorSpace": "srgb",
+            "usage": "earth-night-emissive",
+            "authored": true,
+            "derived": false,
+            "source": {
+              "model": "itch-assets/Models/Earth/Earth8K.glb",
+              "material": "phong1",
+              "slot": "emissive"
+            },
+            "channels": "rgb",
+            "hasAlpha": false,
+            "lumaStdDev": 9.566496
+          },
+          "albedo": {
+            "url": "./art/planet-hub/details/earth-albedo-standard.webp",
+            "bytes": 937672,
+            "sha256": "3c58b78f57aa9db26fbcbddc903553c39607cb288a13393d36ecc3929e0f524a",
+            "width": 4096,
+            "height": 2048,
+            "mimeType": "image/webp",
+            "colorSpace": "srgb",
+            "usage": "earth-progressive-albedo",
+            "authored": true,
+            "derived": false,
+            "channels": "rgb",
+            "hasAlpha": false,
+            "lumaStdDev": 99.098339,
+            "source": {
+              "file": "itch-assets/Models/Earth/textures/earth albedo.jpg",
+              "sha256": "12e94e5cc617df501c1c4aa852ea35b293b3ed531bb362be6abc7707a1e73fee"
+            },
+            "transform": "lanczos-resize; vertical-flip-to-packaged-gltf-uv",
+            "initialScene": false,
+            "loadPolicy": "progressive-after-ready"
+          }
+        },
+        "sun": {
+          "emissive": {
+            "url": "./art/planet-hub/details/sun-emissive-standard.webp",
+            "bytes": 44634,
+            "sha256": "6a291b6219f28ac3947de4ef7f23f20e1ac68a8c8eed605ea3509d4a18a8189c",
+            "width": 512,
+            "height": 256,
+            "mimeType": "image/webp",
+            "colorSpace": "srgb",
+            "usage": "sun-emissive",
+            "authored": true,
+            "derived": false,
+            "source": {
+              "model": "itch-assets/Models/Sun/sun.glb",
+              "material": "material",
+              "slot": "emissive"
+            },
+            "channels": "rgb",
+            "hasAlpha": false,
+            "lumaStdDev": 15.213025
+          }
+        },
+        "materials": {
+          "forge": {
+            "normal": {
+              "url": "./art/planet-hub/details/forge-normal-standard.webp",
+              "bytes": 21308,
+              "sha256": "60089bb7097c1a6299035643bb271d2969c087ddff1a9dae55551d843f87c17f",
+              "width": 512,
+              "height": 512,
+              "mimeType": "image/webp",
+              "colorSpace": "linear",
+              "usage": "focus-normal",
+              "authored": false,
+              "derived": true,
+              "source": {
+                "model": "itch-assets/Models/MainZone/MainZoneTextured.glb",
+                "material": "tripo_node_53f5b7db_material",
+                "slot": "baseColor"
+              },
+              "channels": "tangent-normal-rgb",
+              "algorithm": "albedo-support-v1",
+              "hasAlpha": false,
+              "lumaStdDev": 2.394209
+            },
+            "orm": {
+              "url": "./art/planet-hub/details/forge-orm-standard.webp",
+              "bytes": 23228,
+              "sha256": "00303ef85e9f907baaf48f51ed0381e66d259c10de0289adc81b8475bf346e6f",
+              "width": 512,
+              "height": 512,
+              "mimeType": "image/webp",
+              "colorSpace": "linear",
+              "usage": "focus-orm",
+              "authored": false,
+              "derived": true,
+              "source": {
+                "model": "itch-assets/Models/MainZone/MainZoneTextured.glb",
+                "material": "tripo_node_53f5b7db_material",
+                "slot": "baseColor"
+              },
+              "channels": "r=ao,g=roughness,b=metallic",
+              "algorithm": "albedo-support-v1",
+              "hasAlpha": false,
+              "lumaStdDev": 2.964221
+            }
+          },
+          "earth-landing": {
+            "normal": {
+              "url": "./art/planet-hub/details/earth-landing-normal-standard.webp",
+              "bytes": 17210,
+              "sha256": "5e0bfa83cf01f30a94205b6df0bb7f55bd6fab2fc54c918997e3999d9fb4213d",
+              "width": 512,
+              "height": 512,
+              "mimeType": "image/webp",
+              "colorSpace": "linear",
+              "usage": "focus-normal",
+              "authored": false,
+              "derived": true,
+              "source": {
+                "model": "itch-assets/Models/Earth/earth landing.glb",
+                "material": "tripo_node_78d8f864-15d5-4a7d-b8ec-e12d30af8aaa_material",
+                "slot": "baseColor"
+              },
+              "channels": "tangent-normal-rgb",
+              "algorithm": "albedo-support-v1",
+              "hasAlpha": false,
+              "lumaStdDev": 2.388569
+            },
+            "orm": {
+              "url": "./art/planet-hub/details/earth-landing-orm-standard.webp",
+              "bytes": 22396,
+              "sha256": "119351a53bff5c1517290d2896104f60c276092f23a8a7b0bff8c43d32e6ed79",
+              "width": 512,
+              "height": 512,
+              "mimeType": "image/webp",
+              "colorSpace": "linear",
+              "usage": "focus-orm",
+              "authored": false,
+              "derived": true,
+              "source": {
+                "model": "itch-assets/Models/Earth/earth landing.glb",
+                "material": "tripo_node_78d8f864-15d5-4a7d-b8ec-e12d30af8aaa_material",
+                "slot": "baseColor"
+              },
+              "channels": "r=ao,g=roughness,b=metallic",
+              "algorithm": "albedo-support-v1",
+              "hasAlpha": false,
+              "lumaStdDev": 3.291721
+            }
+          },
+          "moon-landing": {
+            "normal": {
+              "url": "./art/planet-hub/details/moon-landing-normal-standard.webp",
+              "bytes": 12538,
+              "sha256": "958355ac5f4eef69a410d693be4cb9fc9861d6e5a53beec3da852d860123eb54",
+              "width": 512,
+              "height": 512,
+              "mimeType": "image/webp",
+              "colorSpace": "linear",
+              "usage": "focus-normal",
+              "authored": false,
+              "derived": true,
+              "source": {
+                "model": "itch-assets/Models/Moon/moon landing.glb",
+                "material": "tripo_node_7c052cba-d41c-4091-bd69-bcf74925c56d_material",
+                "slot": "baseColor"
+              },
+              "channels": "tangent-normal-rgb",
+              "algorithm": "albedo-support-v1",
+              "hasAlpha": false,
+              "lumaStdDev": 2.111274
+            },
+            "orm": {
+              "url": "./art/planet-hub/details/moon-landing-orm-standard.webp",
+              "bytes": 14758,
+              "sha256": "d24d3761562365047211d39482b8eaa825a24a6a8c2ffd80eb9ca2e97367bb75",
+              "width": 512,
+              "height": 512,
+              "mimeType": "image/webp",
+              "colorSpace": "linear",
+              "usage": "focus-orm",
+              "authored": false,
+              "derived": true,
+              "source": {
+                "model": "itch-assets/Models/Moon/moon landing.glb",
+                "material": "tripo_node_7c052cba-d41c-4091-bd69-bcf74925c56d_material",
+                "slot": "baseColor"
+              },
+              "channels": "r=ao,g=roughness,b=metallic",
+              "algorithm": "albedo-support-v1",
+              "hasAlpha": false,
+              "lumaStdDev": 2.962361
+            }
+          },
+          "portal": {
+            "normal": {
+              "url": "./art/planet-hub/details/portal-normal-standard.webp",
+              "bytes": 24276,
+              "sha256": "59e0e719264add5a86fadc4c7fd1908624e0d351a00ffc54e69cedcb69bd5904",
+              "width": 512,
+              "height": 512,
+              "mimeType": "image/webp",
+              "colorSpace": "linear",
+              "usage": "focus-normal",
+              "authored": false,
+              "derived": true,
+              "source": {
+                "model": "itch-assets/Models/PortalZone/Portal.glb",
+                "material": "tripo_node_d424c05c-ae10-487c-80cd-92d34a5d0bc3_material",
+                "slot": "baseColor"
+              },
+              "channels": "tangent-normal-rgb",
+              "algorithm": "albedo-support-v1",
+              "hasAlpha": false,
+              "lumaStdDev": 3.212092
+            },
+            "orm": {
+              "url": "./art/planet-hub/details/portal-orm-standard.webp",
+              "bytes": 26652,
+              "sha256": "dc16a4e3772cf4e69a1280f888e77125921a7c4faaa0211c29dd05fb0a6d51ea",
+              "width": 512,
+              "height": 512,
+              "mimeType": "image/webp",
+              "colorSpace": "linear",
+              "usage": "focus-orm",
+              "authored": false,
+              "derived": true,
+              "source": {
+                "model": "itch-assets/Models/PortalZone/Portal.glb",
+                "material": "tripo_node_d424c05c-ae10-487c-80cd-92d34a5d0bc3_material",
+                "slot": "baseColor"
+              },
+              "channels": "r=ao,g=roughness,b=metallic",
+              "algorithm": "albedo-support-v1",
+              "hasAlpha": false,
+              "lumaStdDev": 4.042129
+            },
+            "emissive": {
+              "url": "./art/planet-hub/details/portal-emissive-standard.webp",
+              "bytes": 34494,
+              "sha256": "1b61acb456783a10a67b62b290c848520c31b17970587baeadb6174f8b12c168",
+              "width": 512,
+              "height": 512,
+              "mimeType": "image/webp",
+              "colorSpace": "srgb",
+              "usage": "focus-emissive",
+              "authored": false,
+              "derived": true,
+              "source": {
+                "model": "itch-assets/Models/PortalZone/Portal.glb",
+                "material": "tripo_node_d424c05c-ae10-487c-80cd-92d34a5d0bc3_material",
+                "slot": "baseColor"
+              },
+              "channels": "rgb",
+              "algorithm": "conservative-portal-emissive-v1",
+              "hasAlpha": false,
+              "lumaStdDev": 16.18114
+            }
+          },
+          "rocket": {
+            "normal": {
+              "url": "./art/planet-hub/details/rocket-normal-standard.webp",
+              "bytes": 21020,
+              "sha256": "fa89904b5fefd88e5eb027b07414540b6091c17e6fe74fffb081a978621f1321",
+              "width": 512,
+              "height": 512,
+              "mimeType": "image/webp",
+              "colorSpace": "linear",
+              "usage": "focus-normal",
+              "authored": false,
+              "derived": true,
+              "source": {
+                "model": "itch-assets/Models/Rocket/RocketTextured.glb",
+                "material": "tripo_node_c52a85b5_material",
+                "slot": "baseColor"
+              },
+              "channels": "tangent-normal-rgb",
+              "algorithm": "albedo-support-v1",
+              "hasAlpha": false,
+              "lumaStdDev": 2.523943
+            },
+            "orm": {
+              "url": "./art/planet-hub/details/rocket-orm-standard.webp",
+              "bytes": 27298,
+              "sha256": "1b2f4559c73d77bf53ab45fd18d404b4af8c32cbab3144880416be98f6a21dca",
+              "width": 512,
+              "height": 512,
+              "mimeType": "image/webp",
+              "colorSpace": "linear",
+              "usage": "focus-orm",
+              "authored": false,
+              "derived": true,
+              "source": {
+                "model": "itch-assets/Models/Rocket/RocketTextured.glb",
+                "material": "tripo_node_c52a85b5_material",
+                "slot": "baseColor"
+              },
+              "channels": "r=ao,g=roughness,b=metallic",
+              "algorithm": "albedo-support-v1",
+              "hasAlpha": false,
+              "lumaStdDev": 4.982217
+            }
+          }
+        }
+      }
+    }
+  },
+  "spaceLayers": {
+    "schemaVersion": 1,
+    "derivationVersion": 1,
+    "initialScene": false,
+    "loadPolicy": "progressive-after-ready",
+    "textureContract": {
+      "projection": "equirectangular",
+      "colorSpace": "srgb",
+      "horizontalWrap": "repeat",
+      "verticalWrap": "clamp",
+      "mipmaps": false
+    },
+    "bytes": 345156,
+    "tiers": {
+      "low": {
+        "width": 1024,
+        "height": 512,
+        "quality": 78,
+        "bytes": 78678,
+        "layers": [
+          {
+            "id": "cosmic-horizon",
+            "order": 1,
+            "url": "./art/planet-hub/space-layers/01-cosmic-horizon-low.webp",
+            "bytes": 3254,
+            "sha256": "1fd7f60f04d4d197f3de12d109286567bcf31396a336b7a1dc1c1543a69caf3a",
+            "width": 1024,
+            "height": 512,
+            "mimeType": "image/webp"
+          },
+          {
+            "id": "deep-stars",
+            "order": 2,
+            "url": "./art/planet-hub/space-layers/02-deep-stars-low.webp",
+            "bytes": 61386,
+            "sha256": "3cbdbdfd1a1d17e01bfe282133ee242ff14fd74ec59cc130b23389e08c217b6b",
+            "width": 1024,
+            "height": 512,
+            "mimeType": "image/webp"
+          },
+          {
+            "id": "deep-sky",
+            "order": 3,
+            "url": "./art/planet-hub/space-layers/03-deep-sky-low.webp",
+            "bytes": 2794,
+            "sha256": "3467fd47e35582a8c09d6c238679e7d9218d615528430544ba6336be616ac9fc",
+            "width": 1024,
+            "height": 512,
+            "mimeType": "image/webp"
+          },
+          {
+            "id": "nebula-filaments",
+            "order": 4,
+            "url": "./art/planet-hub/space-layers/04-nebula-filaments-low.webp",
+            "bytes": 8192,
+            "sha256": "d1df366d5d079681299eb2259ac0a0ed8a134c22a8ae09ca931f045de915d3ae",
+            "width": 1024,
+            "height": 512,
+            "mimeType": "image/webp"
+          },
+          {
+            "id": "near-stars",
+            "order": 5,
+            "url": "./art/planet-hub/space-layers/05-near-stars-low.webp",
+            "bytes": 3052,
+            "sha256": "f13e3cc31c35f06b23600b310450ae422ba530fe07c4be77a1af30bd81cc270f",
+            "width": 1024,
+            "height": 512,
+            "mimeType": "image/webp"
+          }
+        ]
+      },
+      "standard": {
+        "width": 2048,
+        "height": 1024,
+        "quality": 82,
+        "bytes": 266478,
+        "layers": [
+          {
+            "id": "cosmic-horizon",
+            "order": 1,
+            "url": "./art/planet-hub/space-layers/01-cosmic-horizon-standard.webp",
+            "bytes": 13670,
+            "sha256": "b851fb2929e0274297f784ebd9051968419fa1002b6cb538c44d5f5a70332a25",
+            "width": 2048,
+            "height": 1024,
+            "mimeType": "image/webp"
+          },
+          {
+            "id": "deep-stars",
+            "order": 2,
+            "url": "./art/planet-hub/space-layers/02-deep-stars-standard.webp",
+            "bytes": 198614,
+            "sha256": "37851e8dede1dede64d3ac2b31d104621c4ab2aeeec00c42a6ff84d1cc9e3a82",
+            "width": 2048,
+            "height": 1024,
+            "mimeType": "image/webp"
+          },
+          {
+            "id": "deep-sky",
+            "order": 3,
+            "url": "./art/planet-hub/space-layers/03-deep-sky-standard.webp",
+            "bytes": 10096,
+            "sha256": "fe05c88d3bab15758fc647b2f1a10124a40a5ea0f7bf81bffeb465d99e1a647d",
+            "width": 2048,
+            "height": 1024,
+            "mimeType": "image/webp"
+          },
+          {
+            "id": "nebula-filaments",
+            "order": 4,
+            "url": "./art/planet-hub/space-layers/04-nebula-filaments-standard.webp",
+            "bytes": 31592,
+            "sha256": "99724ed368089486f1cd724c082cc855e5251d6ff57da4b7018d6d0297d99f22",
+            "width": 2048,
+            "height": 1024,
+            "mimeType": "image/webp"
+          },
+          {
+            "id": "near-stars",
+            "order": 5,
+            "url": "./art/planet-hub/space-layers/05-near-stars-standard.webp",
+            "bytes": 12506,
+            "sha256": "d0837a2d1e59c3aa895b0d08a2896135f99f6637bcd80e465425b2a1da12bebc",
+            "width": 2048,
+            "height": 1024,
+            "mimeType": "image/webp"
+          }
+        ]
+      }
+    }
+  },
+  "galaxyTexture": {
+    "schemaVersion": 1,
+    "derivationVersion": 1,
+    "initialScene": false,
+    "loadPolicy": "milky-way-tier",
+    "textureContract": {
+      "projection": "face-on-disc",
+      "colorSpace": "srgb",
+      "background": "black-luminance-alpha",
+      "mipmaps": true
+    },
+    "bytes": 162236,
+    "tiers": {
+      "low": {
+        "url": "./art/planet-hub/galaxy/milky-way-low.webp",
+        "bytes": 25050,
+        "sha256": "3d8a1f8474e3d2d08aef0c393f66ff3fe446975e4e98664a42490e8335d0be74",
+        "width": 512,
+        "height": 512,
+        "mimeType": "image/webp",
+        "quality": 76
+      },
+      "standard": {
+        "url": "./art/planet-hub/galaxy/milky-way-standard.webp",
+        "bytes": 137186,
+        "sha256": "cdc6f2538280abb50c00360516f4f0d1fed9ffe0037d5f85d7b4b762df305559",
+        "width": 1024,
+        "height": 1024,
+        "mimeType": "image/webp",
+        "quality": 82
+      }
+    }
+  },
+  "placeThumbnails": {
+    "schemaVersion": 1,
+    "derivationVersion": 1,
+    "initialScene": false,
+    "loadPolicy": "places-panel",
+    "sprite": {
+      "url": "./art/planet-hub/place-thumbnails/solar-bodies.webp",
+      "bytes": 13024,
+      "sha256": "03dc445b6fc95bec2613506e8a505075d7338e9593e4cec8f8045b87c85b2c7b",
+      "width": 960,
+      "height": 96,
+      "tileSize": 96,
+      "count": 10,
+      "order": [
+        "sun",
+        "mercury",
+        "venus",
+        "earth",
+        "moon",
+        "mars",
+        "jupiter",
+        "saturn",
+        "uranus",
+        "neptune"
+      ],
+      "quality": 80,
+      "mimeType": "image/webp"
+    }
+  },
+  "posters": {
+    "earth-forge": {
+      "url": "./art/planet-hub/posters/earth-forge.webp",
+      "bytes": 174482,
+      "sha256": "c412c986e82a5d7b97f90c1f5d177f9d8d0ef0e32c157e1584fa6e16d0756400",
+      "width": 1024,
+      "height": 1024,
+      "format": "WEBP",
+      "hasAlpha": true,
+      "lumaMean": 66.245534,
+      "lumaStdDev": 66.035126,
+      "visiblePixelRatio": 0.700365,
+      "opaquePixelRatio": 0.675052
+    },
+    "earth-journey": {
+      "url": "./art/planet-hub/posters/earth-journey.webp",
+      "bytes": 120176,
+      "sha256": "05c2343fa3672480bcc105ece0f5934a6682b61fb66354c1d0c79dd335687e28",
+      "width": 1024,
+      "height": 1024,
+      "format": "WEBP",
+      "hasAlpha": true,
+      "lumaMean": 40.739575,
+      "lumaStdDev": 53.348072,
+      "visiblePixelRatio": 0.696083,
+      "opaquePixelRatio": 0.67481
+    },
+    "earth-arena": {
+      "url": "./art/planet-hub/posters/earth-arena.webp",
+      "bytes": 125578,
+      "sha256": "b70bfa99100160e5d2b4c2150fa9563a189c2e124dc38d9f5e3f5ea0cc02f0cf",
+      "width": 1024,
+      "height": 1024,
+      "format": "WEBP",
+      "hasAlpha": true,
+      "lumaMean": 30.427287,
+      "lumaStdDev": 37.231861,
+      "visiblePixelRatio": 0.695043,
+      "opaquePixelRatio": 0.674784
+    },
+    "moon-forge": {
+      "url": "./art/planet-hub/posters/moon-forge.webp",
+      "bytes": 55392,
+      "sha256": "4acd01f338d775b674bc945bb545765f83a8f934a97dd354c081e629687cae07",
+      "width": 1024,
+      "height": 1024,
+      "format": "WEBP",
+      "hasAlpha": true,
+      "lumaMean": 31.807189,
+      "lumaStdDev": 46.429166,
+      "visiblePixelRatio": 0.655505,
+      "opaquePixelRatio": 0.653389
+    },
+    "moon-journey": {
+      "url": "./art/planet-hub/posters/moon-journey.webp",
+      "bytes": 52390,
+      "sha256": "fabb920ca11e234144b20fdaac800da6b269e92c7bcc3b309f031b4d06bc6ba3",
+      "width": 1024,
+      "height": 1024,
+      "format": "WEBP",
+      "hasAlpha": true,
+      "lumaMean": 35.514482,
+      "lumaStdDev": 47.91844,
+      "visiblePixelRatio": 0.655706,
+      "opaquePixelRatio": 0.653632
+    },
+    "moon-arena": {
+      "url": "./art/planet-hub/posters/moon-arena.webp",
+      "bytes": 47632,
+      "sha256": "b620cc2fea21f3ad7225f5daa42a68931bbd5002bb5a2d7d8611c5b650f7636d",
+      "width": 1024,
+      "height": 1024,
+      "format": "WEBP",
+      "hasAlpha": true,
+      "lumaMean": 23.692261,
+      "lumaStdDev": 34.076767,
+      "visiblePixelRatio": 0.655526,
+      "opaquePixelRatio": 0.653472
+    }
+  },
+  "sources": {
+    "itch-assets/Models/Earth/Earth1k.glb": {
+      "bytes": 20361636,
+      "sha256": "a2d134efce4ed489ef6ae4e1d8f50f66eb9b8fbd060614c8997fb5802631a113"
+    },
+    "itch-assets/Models/Earth/Earth8K.glb": {
+      "bytes": 64273192,
+      "sha256": "76f210da6b363db569a9c33e8659288c8981b9b97208ca54c7c5479fad309f87"
+    },
+    "itch-assets/Models/Earth/earth landing.glb": {
+      "bytes": 19462460,
+      "sha256": "72e1ffeb1057971f04464a036c376277c3f85a7b90afc5b213d18c9d45b17a7b"
+    },
+    "itch-assets/Models/MainZone/MainZoneTextured.glb": {
+      "bytes": 11455744,
+      "sha256": "ef369fc843cd67f70438b6203c81333a369d7a00d36fc49d7015e94fd7d81a06"
+    },
+    "itch-assets/Models/Moon/Moon1K.glb": {
+      "bytes": 6950956,
+      "sha256": "02b4d979d5539b402cfd0bcede269b9da260f51291859c57a6d7d1894c07ee19"
+    },
+    "itch-assets/Models/Moon/moon landing.glb": {
+      "bytes": 20269756,
+      "sha256": "cd59c886491df6559e196d26da0bd82bad063cee5645eb0c5d69ec506ca2691b"
+    },
+    "itch-assets/Models/PlaceThumbnails/solar-bodies-source.png": {
+      "bytes": 1857888,
+      "sha256": "c4ac2d882694e9f439c082820534609e04eba77bbbdc55809b7713dbce7b75cf"
+    },
+    "itch-assets/Models/PortalZone/Portal.glb": {
+      "bytes": 16451612,
+      "sha256": "0ae238fc2c6aad986cf15e9c42468d39cd066cd70cc7402a7d8b75b7027eb8a0"
+    },
+    "itch-assets/Models/PortalZone/VFX/Front_Portal_5_2682_2K/Front_Portal_5_2682_2K.mov": {
+      "bytes": 72159556,
+      "sha256": "a44ae9f181050a9eff422d0012bc3e651fd51de883781e7e36975a91ccc9b7a3"
+    },
+    "itch-assets/Models/PortalZone/VFX/Front_Portal_5_2682_2K/Front_Portal_5_Matte_2K.mov": {
+      "bytes": 13510932,
+      "sha256": "45a69402b0525578ef9fd834ab5a7c14b2b9407cf587772286b398e688ecee57"
+    },
+    "itch-assets/Models/Rocket/RocketTextured.glb": {
+      "bytes": 9638288,
+      "sha256": "b5cbb66e5973871a8c660c2c4d9aae9ea17e37ee97f51fe201d6e0bf6e9cffd1"
+    },
+    "itch-assets/Models/SpaceLayers/01-cosmic-horizon-source.png": {
+      "bytes": 1353769,
+      "sha256": "21cf39f4bf3c1337426d8548db9759fd682dd42f32a289147147ac1eb52dbf3f"
+    },
+    "itch-assets/Models/SpaceLayers/02-deep-stars-source.png": {
+      "bytes": 1991629,
+      "sha256": "eefce139e17b939987049d3e374d92d99263f940000328172ba042b545644f2d"
+    },
+    "itch-assets/Models/SpaceLayers/03-deep-sky-source.png": {
+      "bytes": 881353,
+      "sha256": "673b650b9d9bf6b9ad1ea2d840d721b50ea79b318445c2c0e90ffea66d4df87c"
+    },
+    "itch-assets/Models/SpaceLayers/04-nebula-filaments-source.png": {
+      "bytes": 1480929,
+      "sha256": "d3bfc66f1918eaade30ee00abbff6a7999c3da2f55879e68a8a5eccc2e6ed2fa"
+    },
+    "itch-assets/Models/SpaceLayers/05-near-stars-source.png": {
+      "bytes": 803040,
+      "sha256": "899619df83e66c906fe80a0a47e989cabdaa42a7f9c40fc52dcd12a32161619c"
+    },
+    "itch-assets/Models/SpaceLayers/milky-way-source.png": {
+      "bytes": 2259966,
+      "sha256": "5b78ab87694ed09e0bd383f4aebef9105359fc3a1e604fd1b07d0e7983ae5828"
+    },
+    "itch-assets/Models/Sun/sun.glb": {
+      "bytes": 2116612,
+      "sha256": "5b17f3d40ca7a577413e7b5083a9dad5720033e76909597246088b9d65b3eab2"
+    },
+    "itch-assets/Models/Earth/textures/earth albedo.jpg": {
+      "bytes": 4425114,
+      "sha256": "12e94e5cc617df501c1c4aa852ea35b293b3ed531bb362be6abc7707a1e73fee"
+    }
+  },
+  "attribution": {
+    "earth": {
+      "title": "Earth",
+      "creator": "AirStudios",
+      "creatorUrl": "https://sketchfab.com/sebbe613",
+      "sourceUrl": "https://sketchfab.com/3d-models/earth-5f9c35be31a047928eace8b415a8ee3a",
+      "license": "CC BY 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/"
+    },
+    "moon": {
+      "title": "Moon",
+      "creator": "matousekfoto",
+      "creatorUrl": "https://sketchfab.com/matousekfoto",
+      "sourceUrl": "https://sketchfab.com/3d-models/moon-5a917c638c1344d7af7e34e5d4122f72",
+      "license": "CC BY 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/"
+    },
+    "sun": {
+      "title": "Sun",
+      "creator": "SebastianSosnowski",
+      "creatorUrl": "https://sketchfab.com/SebastianSosnowski",
+      "sourceUrl": "https://sketchfab.com/3d-models/sun-9ef1c68fbb944147bcfcc891d3912645",
+      "license": "CC BY 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/"
+    },
+    "commercialProvenanceRequired": [
+      "Tripo landmark models",
+      "Front Portal VFX color and matte"
+    ]
+  },
+  "budgets": {
+    "packBytes": 12582912,
+    "planetHubOptionalBytes": 13631488,
+    "portalMp4Bytes": 716800,
+    "optionalDetailBytes": 3200000,
+    "spaceLayers": {
+      "bytes": 524288,
+      "tiers": {
+        "low": {
+          "width": 1024,
+          "height": 512,
+          "quality": 78,
+          "bytes": 131072
+        },
+        "standard": {
+          "width": 2048,
+          "height": 1024,
+          "quality": 82,
+          "bytes": 393216
+        }
+      }
+    },
+    "galaxyTexture": {
+      "bytes": 240000,
+      "tiers": {
+        "low": {
+          "width": 512,
+          "quality": 76,
+          "bytes": 50000
+        },
+        "standard": {
+          "width": 1024,
+          "quality": 82,
+          "bytes": 190000
+        }
+      }
+    },
+    "placeThumbnails": {
+      "width": 960,
+      "height": 96,
+      "tileSize": 96,
+      "quality": 80,
+      "bytes": 65536
+    },
+    "detailTiers": {
+      "low": {
+        "earthTextureWidth": 1024,
+        "sunTextureWidth": 256,
+        "supportTextureWidth": 256,
+        "bytes": 950000
+      },
+      "standard": {
+        "earthTextureWidth": 2048,
+        "sunTextureWidth": 512,
+        "supportTextureWidth": 512,
+        "bytes": 2500000
+      }
+    },
+    "tiers": {
+      "low": {
+        "earthTriangles": 30000,
+        "moonTriangles": 25000,
+        "sunTriangles": 512,
+        "sunTextureSize": 256,
+        "sunBytes": 32768,
+        "landmarkTriangles": 10000,
+        "landmarkTextureSize": 512,
+        "planetTextureSize": 1024,
+        "sceneBytes": 2621440
+      },
+      "standard": {
+        "earthTriangles": 90000,
+        "moonTriangles": 60000,
+        "sunTriangles": 512,
+        "sunTextureSize": 256,
+        "sunBytes": 32768,
+        "landmarkTriangles": 10000,
+        "landmarkTextureSize": 1024,
+        "planetTextureSize": 2048,
+        "sceneBytes": 4718592
+      }
+    }
+  }
+}

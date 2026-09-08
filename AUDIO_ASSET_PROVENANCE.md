@@ -116,8 +116,8 @@ stable order:
 | `sense` | Sense assistance reveals useful direction. |
 | `mastery` | A mastery milestone resolves. |
 | `ghostPass` | A ghost or preview path hands play back to the player. |
-| `gateClose` | The opening gate closes around the transition. |
-| `gateOpen` | The gate opens onto the board. |
+| `gateClose` | Compatibility slot for the Constellation Fold gathering into its veil (`foldGather`). |
+| `gateOpen` | Compatibility slot for the Constellation Fold resolving onto the board (`foldResolve`). |
 | `runStart` | Active play begins. |
 | `resultReveal` | The result presentation is revealed. |
 | `homeReturn` | The results flow returns to Home. |

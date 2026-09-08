@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 2,
+  "contractVersion": "1.2.0",
+  "contractSha256": "0459b858503d99cc30d04139b5aa6144d03fb81e4b2e95fb9be4973f149b1416",
+  "approval": {
+    "approved": false,
+    "humanApproved": {
+      "reviewer": null,
+      "approvedAt": null,
+      "evidencePath": null
+    }
+  },
+  "truthBoundary": "This manifest enables mastered playback only after production verification and auditable human approval at both manifest and variant level. Empty records deliberately fall back to realtime or poster delivery.",
+  "variants": {}
+}

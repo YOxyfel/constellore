@@ -13,7 +13,7 @@ test("secondary destinations stay lazy while the Cosmos suite remains staged", a
     source("scripts/sync-public-release.mjs")
   ]);
 
-  assert.doesNotMatch(page, /<link[^>]+(?:cosmos-circuit|cosmetics-observatory)[.]css/i);
+  assert.doesNotMatch(page, /<link[^>]+(?:cosmos-circuit|cosmetics-observatory(?:-full-page)?|profile-rank-frame)[.]css/i);
   assert.match(page, /id="cosmosCircuitHomeButton"[^>]*data-development-only="cosmos-suite"[^>]*hidden/);
   assert.match(page, /id="cosmosCircuitHomeStatus"/);
   assert.match(loader, /createLazyCosmosCircuit/);
@@ -37,7 +37,7 @@ test("earned Stardust supplies disclose exact prices, caps, and local-only accou
   assert.match(page, /id="buyStarCompass"[\s\S]*90 Stardust[\s\S]*0 \/ 9/);
   assert.match(page, /id="buyStreakShield"[\s\S]*240 Stardust[\s\S]*0 \/ 3/);
   assert.match(page, /Star Compass enters the declared Open division at 75% score/);
-  assert.match(page, /Neither is sold for money/);
+  assert.match(page, /Nothing here is sold for money/);
   assert.match(page, /id="syncCloudProfile"[^>]*hidden/);
   assert.match(page, /Gameplay stays on this device/);
   assert.match(page, /3 of every power per UTC day for 30 days/);

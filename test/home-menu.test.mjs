@@ -5,6 +5,7 @@ import {
   createHomeMenuState,
   HOME_MENU_ADVANCED_WINS,
   HOME_MENU_ADVENTURES_RANK,
+  HOME_MENU_ARENA_RANK,
   HOME_MENU_DAILY_RANK,
   HOME_MENU_DAILY_WINS,
   HOME_MENU_CHOICES_RANK,
@@ -22,6 +23,7 @@ function menu(overrides = {}) {
     firstOrbit: { seen: false, completed: false },
     wins: 0,
     dailyCompleted: "",
+    dailyPlayed: "",
     todayKey,
     ...overrides
   });
@@ -36,6 +38,8 @@ test("a fresh player sees one guided action and one game chooser", () => {
   assert.equal(state.dailyReady, false);
   assert.equal(state.dailyLocked, true);
   assert.equal(state.dailyAvailable, false);
+  assert.equal(state.dailyAttention, false);
+  assert.equal(state.arenaReady, false);
   assert.equal(state.choicesReady, false);
   assert.equal(state.exploreReady, false);
   assert.equal(state.adventuresReady, false);
@@ -43,12 +47,12 @@ test("a fresh player sees one guided action and one game chooser", () => {
   assert.equal(state.focusMode, true);
   assert.equal(state.winsUntilAdvanced, HOME_MENU_ADVANCED_WINS);
   assert.equal(state.primary.action, "training");
-  assert.equal(state.primary.label, "Begin");
+  assert.equal(state.primary.label, "Start playing");
   assert.equal(state.primary.secondaryAction, "modes");
   assert.equal(state.primary.secondaryLabel, "Choose game");
-  assert.equal(state.primary.kicker, "FIRST CONSTELLATION");
+  assert.equal(state.primary.kicker, "Your first discovery");
   assert.equal(state.primary.title, "Make Mud");
-  assert.equal(state.primary.description, "Earth + Water. One move. You can’t get lost.");
+  assert.equal(state.primary.description, "Combine Earth and Water to discover your first word.");
   assert.equal(state.primary.meta, "Mud · 1 combination");
 });
 
@@ -57,10 +61,10 @@ test("an unfinished first game remains the primary action after an exit", () => 
   assert.equal(state.stage, "onboarding");
   assert.equal(state.onboardingComplete, false);
   assert.equal(state.primary.action, "training");
-  assert.equal(state.primary.kicker, "ORBIT IN PROGRESS");
+  assert.equal(state.primary.kicker, "Continue playing");
   assert.equal(state.primary.title, "Return to Mud");
   assert.equal(state.primary.description, "Your first constellation is waiting.");
-  assert.equal(state.primary.label, "Continue");
+  assert.equal(state.primary.label, "Continue playing");
   assert.equal(state.progressReady, false);
   assert.equal(state.adventuresReady, false);
 });
@@ -70,7 +74,7 @@ test("completing the first lesson presents one short second lesson", () => {
   assert.equal(state.stage, "onboarding");
   assert.equal(state.onboardingComplete, false);
   assert.equal(state.primary.action, "second-orbit");
-  assert.equal(state.primary.kicker, "NEXT CONSTELLATION");
+  assert.equal(state.primary.kicker, "Keep discovering");
   assert.equal(state.primary.title, "Make Mountain");
   assert.equal(state.primary.label, "Continue");
   assert.equal(state.primary.secondaryAction, "modes");
@@ -89,6 +93,7 @@ test("completing both lessons keeps today's word locked until a scored Bronze wi
   assert.equal(state.dailyReady, false);
   assert.equal(state.dailyLocked, true);
   assert.equal(state.dailyAvailable, false);
+  assert.equal(state.dailyAttention, false);
   assert.equal(state.rankReadyForDaily, true);
   assert.equal(state.primary.action, "reach");
   assert.equal(state.primary.secondaryAction, "modes");
@@ -107,12 +112,41 @@ test("a scored Bronze completion unlocks today's word without exposing every sys
   assert.equal(state.dailyReady, true);
   assert.equal(state.dailyLocked, false);
   assert.equal(state.dailyAvailable, true);
+  assert.equal(state.dailyAttention, true);
   assert.equal(state.choicesReady, false);
   assert.equal(state.exploreReady, false);
   assert.equal(state.adventuresReady, false);
   assert.equal(state.advancedReady, false);
   assert.equal(state.focusMode, true);
-  assert.equal(state.primary.action, "daily");
+  assert.equal(state.primary.action, "reach");
+  assert.equal(state.primary.title, "Create something impossible");
+});
+
+test("playing the daily dismisses its star without removing the retry destination", () => {
+  const state = menu({
+    firstOrbit: { seen: true, completed: true },
+    wins: HOME_MENU_DAILY_WINS,
+    routeRank: "bronze",
+    dailyPlayed: todayKey
+  });
+  assert.equal(state.primary.action, "reach");
+  assert.equal(state.dailyReady, true);
+  assert.equal(state.dailyAvailable, true);
+  assert.equal(state.dailyAttention, false);
+});
+
+test("the daily star returns on a new day and ignores malformed played dates", () => {
+  for (const dailyPlayed of ["2026-07-21", "yesterday", null, { date: todayKey }]) {
+    const state = menu({
+      firstOrbit: { seen: true, completed: true },
+      wins: HOME_MENU_DAILY_WINS,
+      routeRank: "bronze",
+      dailyPlayed
+    });
+    assert.equal(state.dailyAvailable, true);
+    assert.equal(state.dailyAttention, true);
+    assert.equal(state.primary.action, "reach");
+  }
 });
 
 test("a scored win cannot expose today's word before Route Rank is known as Bronze", () => {
@@ -127,6 +161,7 @@ test("a scored win cannot expose today's word before Route Rank is known as Bron
     assert.equal(state.dailyReady, false);
     assert.equal(state.dailyLocked, true);
     assert.equal(state.dailyAvailable, false);
+    assert.equal(state.dailyAttention, false);
     assert.equal(state.primary.action, "reach");
   }
 });
@@ -148,6 +183,30 @@ test("game catalogs appear only when both play history and Route Rank are ready"
   assert.equal(explore.choicesReady, false);
   assert.equal(explore.exploreReady, true);
   assert.equal(explore.advancedReady, false);
+});
+
+test("Scramble Arena unlocks at Silver Route Rank after onboarding", () => {
+  const bronze = menu({
+    firstOrbit: { seen: true, completed: true },
+    secondOrbit: { seen: true, completed: true },
+    wins: 3,
+    routeRank: "bronze"
+  });
+  assert.equal(bronze.rankReadyForArena, false);
+  assert.equal(bronze.arenaReady, false);
+
+  const silver = menu({
+    firstOrbit: { seen: true, completed: true },
+    secondOrbit: { seen: true, completed: true },
+    wins: 3,
+    routeRank: { number: HOME_MENU_ARENA_RANK }
+  });
+  assert.equal(silver.rankReadyForArena, true);
+  assert.equal(silver.arenaReady, true);
+
+  const skippedOnboarding = menu({ routeRank: "silver" });
+  assert.equal(skippedOnboarding.rankReadyForArena, true);
+  assert.equal(skippedOnboarding.arenaReady, false);
 });
 
 test("advanced and adventure systems wait for Gold and ten completed games", () => {
@@ -180,9 +239,10 @@ test("a completed daily falls back to the plain untimed primary game", () => {
   assert.equal(state.dailyReady, true);
   assert.equal(state.dailyLocked, false);
   assert.equal(state.dailyAvailable, false);
+  assert.equal(state.dailyAttention, false);
   assert.equal(state.primary.action, "reach");
   assert.equal(state.primary.secondaryAction, "modes");
-  assert.equal(state.primary.label, "Enter");
+  assert.equal(state.primary.label, "Play a new game");
   assert.equal(state.primary.title, "Create something impossible");
   assert.equal(state.primary.description, "Find the target at your own pace.");
 });

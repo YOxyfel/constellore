@@ -12,9 +12,11 @@ import {
   deriveCollectionLoadout,
   filterObservatoryCollections,
   filterObservatoryItems,
+  groupObservatoryCollectionsByFamily,
   loadoutsEqual,
   observatoryCollectionValue,
   observatoryEffectModeForKey,
+  observatoryLoadoutSummary,
   observatoryLoadoutIsOwned,
   observatoryPreviewAssetUrl,
   observatoryPreviewSurface,
@@ -53,6 +55,22 @@ const COLLECTIONS = [
     creditPrice: 450
   }
 ];
+
+test("full-page Lab reserves a non-overlapping short-landscape preview and action footer", async () => {
+  const [fullPageCss, previewCss] = await Promise.all([
+    readFile(new URL("../public/cosmetics-observatory-full-page.css", import.meta.url), "utf8"),
+    readFile(new URL("../public/cosmetic-world-preview.css", import.meta.url), "utf8")
+  ]);
+
+  assert.match(fullPageCss, /@media \(orientation: landscape\) and \(max-width: 900px\) and \(max-height: 500px\)/);
+  assert.match(fullPageCss, /grid-template-rows:\s*54px 50px minmax\(0, 1fr\) 60px/);
+  assert.match(fullPageCss, /[.]cosmetics-observatory__footer\s*\{[^}]*position:\s*relative[^}]*min-height:\s*60px[^}]*max-height:\s*60px/s);
+  assert.match(fullPageCss, /[.]cosmetics-observatory__category-track\s*\{[^}]*mask-image:\s*linear-gradient/s);
+  assert.match(fullPageCss, /[.]cosmetics-observatory__segment-button\s*\{[^}]*min-height:\s*48px/s);
+  assert.match(previewCss, /#gameScreen > :not\([.]game-layout\)/);
+  assert.match(previewCss, /#gameScreen [.]game-layout > :not\(#board\)/);
+  assert.match(previewCss, /[.]cosmetic-world-preview__bar\s*\{[^}]*min-height:\s*56px[^}]*max-height:\s*64px/s);
+});
 
 test("observatory model normalizes manifest vocabulary and authoritative ownership", () => {
   const model = buildObservatoryModel({
@@ -132,6 +150,140 @@ test("Observatory labels rank rewards and purchase-only collections without hidi
   assert.match(purchaseOnly.unlockHint, /Route Rank does not unlock/);
   assert.equal(model.items.find((item) => item.id === "aurora.word").badge, "Rank reward");
   assert.equal(model.items.find((item) => item.id === "pixel.word").badge, "Purchase only");
+});
+
+test("collection families sort shelves and kits, hide empty future families, and retain unknown collections", () => {
+  const model = buildObservatoryModel({
+    collectionFamilies: [
+      {
+        id: "theme worlds",
+        label: "Malformed Theme Worlds",
+        order: -1
+      },
+      {
+        id: "community-creations",
+        label: "Community Creations",
+        order: 4,
+        future: true
+      },
+      {
+        id: "theme-worlds",
+        label: "Theme Worlds",
+        kicker: "Genre transformations",
+        order: 2
+      },
+      {
+        id: "collaborations",
+        label: "Collaborations",
+        order: 3,
+        future: true
+      },
+      {
+        id: "constellore",
+        label: "Constellore Originals",
+        kicker: "Core universe",
+        order: 1
+      }
+    ],
+    collections: [
+      {
+        id: "unknown",
+        label: "Uncatalogued Kit",
+        collectionFamily: "future-unregistered",
+        styleLabel: "Uncatalogued style",
+        order: 0,
+        itemIds: ["unknown.word"]
+      },
+      {
+        id: "pixel",
+        label: "Pixel Frontier",
+        collectionFamily: "theme-worlds",
+        styleLabel: "Retro arcade",
+        order: 6,
+        itemIds: ["pixel.word"]
+      },
+      {
+        id: "aurora",
+        label: "Aurora Archive",
+        collectionFamily: "constellore",
+        styleLabel: "Prismatic frostglass",
+        order: 2,
+        itemIds: ["aurora.word"]
+      },
+      {
+        id: "atlas",
+        label: "Celestial Atlas",
+        collectionFamily: "constellore",
+        styleLabel: "Classic celestial",
+        order: 1,
+        itemIds: ["atlas.word"]
+      }
+    ],
+    items: [
+      { id: "unknown.word", slot: "wordPlaque", collectionId: "unknown" },
+      { id: "pixel.word", slot: "wordPlaque", collectionId: "pixel" },
+      { id: "aurora.word", slot: "wordPlaque", collectionId: "aurora" },
+      { id: "atlas.word", slot: "wordPlaque", collectionId: "atlas", access: "free" }
+    ],
+    slotOrder: ["wordPlaque"],
+    owned: (item) => item.id === "atlas.word"
+  });
+
+  assert.deepEqual(model.collectionFamilies.map((family) => family.id), [
+    "constellore",
+    "theme-worlds",
+    "collaborations",
+    "community-creations",
+    "other-collections"
+  ]);
+  assert.equal(model.collections.find((collection) => collection.id === "unknown").collectionFamily, "other-collections");
+  assert.equal(model.collections.find((collection) => collection.id === "unknown").styleLabel, "Uncatalogued style");
+
+  const groups = groupObservatoryCollectionsByFamily(model);
+  assert.deepEqual(groups.map((family) => ({
+    id: family.id,
+    label: family.label,
+    collectionIds: family.collections.map((collection) => collection.id)
+  })), [
+    {
+      id: "constellore",
+      label: "Constellore Originals",
+      collectionIds: ["atlas", "aurora"]
+    },
+    {
+      id: "theme-worlds",
+      label: "Theme Worlds",
+      collectionIds: ["pixel"]
+    },
+    {
+      id: "other-collections",
+      label: "Other Collections",
+      collectionIds: ["unknown"]
+    }
+  ]);
+  assert.equal(groups.some((family) => family.id === "collaborations"), false);
+  assert.equal(groups.some((family) => family.id === "community-creations"), false);
+  assert.equal(groups.find((family) => family.id === "other-collections").label, "Other Collections");
+  assert.deepEqual(groupObservatoryCollectionsByFamily({ collections: {} }), []);
+  assert.deepEqual(
+    groupObservatoryCollectionsByFamily({ collections: [{ id: "b" }, { id: "a" }] })
+      .flatMap((family) => family.collections.map((collection) => collection.id)),
+    ["a", "b"]
+  );
+
+  const ownedGroups = groupObservatoryCollectionsByFamily(
+    model,
+    filterObservatoryCollections(model, { tab: "owned" })
+  );
+  assert.deepEqual(ownedGroups.map((family) => ({
+    id: family.id,
+    collectionIds: family.collections.map((collection) => collection.id)
+  })), [
+    {
+      id: "constellore",
+      collectionIds: ["atlas"]
+    }
+  ]);
 });
 
 test("collection presentation metadata stays ordered, safe, and honestly valued", () => {
@@ -277,9 +429,9 @@ test("collection presentation metadata stays ordered, safe, and honestly valued"
   assert.equal(model.items.find((item) => item.id.includes("bubble-reef")).tone, "reef");
   assert.equal(model.items.find((item) => item.id.includes("stellar-vanguard")).tone, "vanguard");
   assert.equal(observatoryCollectionValue({ creditPrice: 0 }), "Included");
-  assert.equal(observatoryCollectionValue({ creditPrice: 450 }), "450 C");
-  assert.equal(observatoryCollectionValue({ creditPrice: 1200 }), "1,200 C");
-  assert.equal(observatoryCollectionValue({ creditPrice: 2400 }), "2,400 C");
+  assert.equal(observatoryCollectionValue({ creditPrice: 450 }), "450 Star Credits");
+  assert.equal(observatoryCollectionValue({ creditPrice: 1200 }), "1,200 Star Credits");
+  assert.equal(observatoryCollectionValue({ creditPrice: 2400 }), "2,400 Star Credits");
 });
 
 test("purchase confirmation arms one collection and confirms only a matching second activation", () => {
@@ -369,6 +521,55 @@ test("collections, pieces, and owned views filter without hiding locked previews
     filterObservatoryItems(model, { tab: "owned" }).map((item) => item.id),
     ["atlas.word", "atlas.trail"]
   );
+});
+
+test("loadout summary identifies the equipped collection, staged slots, and owned alternatives", () => {
+  const model = buildObservatoryModel({
+    collections: COLLECTIONS,
+    items: ITEMS,
+    slotOrder: ["wordPlaque", "trailSet"],
+    loadout: { wordPlaque: "atlas.word", trailSet: "atlas.trail" },
+    owned: (item) => item.badge === "Free" || item.id === "earned.trail"
+  });
+  const summary = observatoryLoadoutSummary(
+    model,
+    model.loadout,
+    { ...model.loadout, trailSet: "earned.trail" }
+  );
+
+  assert.equal(summary.label, "Celestial Atlas");
+  assert.equal(summary.collectionId, "atlas");
+  assert.equal(summary.staged, true);
+  assert.deepEqual(summary.slots.map((slot) => ({
+    slot: slot.slot,
+    itemLabel: slot.itemLabel,
+    stagedItemLabel: slot.stagedItemLabel,
+    staged: slot.staged,
+    ownedOptions: slot.ownedOptions
+  })), [
+    {
+      slot: "wordPlaque",
+      itemLabel: "Woven Atlas",
+      stagedItemLabel: "Woven Atlas",
+      staged: false,
+      ownedOptions: 1
+    },
+    {
+      slot: "trailSet",
+      itemLabel: "Classic Thread",
+      stagedItemLabel: "First Light",
+      staged: true,
+      ownedOptions: 2
+    }
+  ]);
+
+  const custom = observatoryLoadoutSummary(model, {
+    wordPlaque: "aurora.word",
+    trailSet: "atlas.trail"
+  });
+  assert.equal(custom.label, "Custom mix");
+  assert.equal(custom.collectionId, "");
+  assert.equal(custom.staged, false);
 });
 
 test("selection states distinguish equipped, previewed, locked, and equip-ready", () => {
@@ -483,9 +684,53 @@ test("public Observatory contract exposes stable tabs and effects modes", () => 
   assert.throws(() => createCosmeticsObservatory(), /browser document/);
 });
 
-test("implementation avoids data-to-HTML injection and includes accessibility fallbacks", async () => {
+test("profile-frame media is cleaned before replacement and static fallback remains available", async () => {
+  const moduleSource = await readFile(new URL("../public/cosmetics-observatory.mjs", import.meta.url), "utf8");
+  const cleanup = moduleSource.slice(
+    moduleSource.indexOf("function stopProfileFramePreviewMedia"),
+    moduleSource.indexOf("function close(", moduleSource.indexOf("function stopProfileFramePreviewMedia"))
+  );
+  const close = moduleSource.slice(
+    moduleSource.indexOf("function close("),
+    moduleSource.indexOf("function badgeNode", moduleSource.indexOf("function close("))
+  );
+  const previewVisual = moduleSource.slice(
+    moduleSource.indexOf("function carouselPreviewVisual"),
+    moduleSource.indexOf("function bindCarouselSwipe", moduleSource.indexOf("function carouselPreviewVisual"))
+  );
+  const render = moduleSource.slice(
+    moduleSource.indexOf("function render("),
+    moduleSource.indexOf("function keydown", moduleSource.indexOf("function render("))
+  );
+
+  for (const token of [
+    'querySelectorAll?.("[data-profile-frame-preview-video]")',
+    "video.pause?.()",
+    'video.removeAttribute("src")',
+    "video.load?.()"
+  ]) {
+    assert.ok(cleanup.includes(token), `cleanup must retain ${token}`);
+  }
+  assert.match(close, /stopProfileFramePreviewMedia\(\)/);
+  assert.ok(
+    render.indexOf("stopProfileFramePreviewMedia(surface)")
+      < render.indexOf("surface.replaceChildren()"),
+    "preview media must be released before the old carousel DOM is detached"
+  );
+  assert.match(previewVisual, /try \{[\s\S]*?settings[.]createProfileFramePreview/);
+  assert.match(previewVisual, /catch \{[\s\S]*?previewNode = null/);
+  assert.match(
+    previewVisual,
+    /if \(previewNode[?][.]nodeType\) mount[.]append\(previewNode\);\s*else mount[.]append\(profileFrameThumbnailVisual\(entry\)\);/
+  );
+});
+
+test("implementation keeps carousel selection safe and includes accessibility fallbacks", async () => {
   const moduleSource = await readFile(new URL("../public/cosmetics-observatory.mjs", import.meta.url), "utf8");
   const cssSource = await readFile(new URL("../public/cosmetics-observatory.css", import.meta.url), "utf8");
+  const fullPageCssSource = await readFile(new URL("../public/cosmetics-observatory-full-page.css", import.meta.url), "utf8");
+  const profileFrameCssSource = await readFile(new URL("../public/profile-rank-frame.css", import.meta.url), "utf8");
+  const allObservatoryCssSource = `${cssSource}\n${fullPageCssSource}\n${profileFrameCssSource}`;
   assert.doesNotMatch(moduleSource, /\.innerHTML\s*=/);
   assert.match(moduleSource, /aria-live/);
   assert.match(moduleSource, /aria-labelledby/);
@@ -496,21 +741,51 @@ test("implementation avoids data-to-HTML injection and includes accessibility fa
   assert.match(moduleSource, /function resumePreview\(\)/);
   assert.match(moduleSource, /isPreviewSuspended/);
   assert.match(moduleSource, /Back to cosmetics/);
+  assert.match(moduleSource, /Cosmetic Lab/);
+  assert.match(moduleSource, /function stageCarouselEntry\(model, entry/);
+  assert.match(moduleSource, /function carouselCategoryStrip\(model\)/);
+  assert.match(moduleSource, /PROFILE_FRAME_CATEGORY = "profileFrames"/);
+  assert.match(moduleSource, /carouselEntryForProfileFrame/);
+  assert.match(moduleSource, /function commitProfileFrame\(/);
+  assert.match(moduleSource, /settings[.]onProfileFrameCommit/);
+  assert.match(moduleSource, /settings[.]createProfileFramePreview/);
+  assert.match(moduleSource, /Preview without a frame/);
+  assert.match(moduleSource, /function carouselFocusedPreview\(model, entries, selected\)/);
+  assert.match(moduleSource, /viewport\.dataset\.hasPrevious = String\(index > 0\)/);
+  assert.match(moduleSource, /viewport\.dataset\.hasNext = String\(index < entries\.length - 1\)/);
+  assert.doesNotMatch(moduleSource, /carouselPeekVisual/);
+  assert.doesNotMatch(moduleSource, /cosmetics-observatory__carousel-peek/);
+  assert.match(moduleSource, /function bindCarouselSwipe\(node, model, index, total\)/);
+  assert.match(moduleSource, /aria-roledescription/);
+  assert.match(moduleSource, /role", "listbox"/);
+  assert.match(moduleSource, /role", "option"/);
+  assert.match(moduleSource, /includeLocked = true/);
+  assert.match(moduleSource, /function carouselAccessState\(model, entry/);
+  assert.match(moduleSource, /function carouselStateIcon\(state\)/);
+  assert.match(moduleSource, /dataset\.ownershipIcon/);
+  assert.match(moduleSource, /All \$\{allCount\} choices are shown/);
+  assert.match(moduleSource, /dialog\.dataset\.presentation = "full-page"/);
+  assert.match(moduleSource, /carouselOption && \["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End"\]/);
+  assert.match(moduleSource, /Math\.abs\(deltaX\) < 42/);
+  assert.match(moduleSource, /Math\.abs\(deltaY\) \* 1\.25/);
+  assert.match(moduleSource, /event\.target === carouselStage/);
+  assert.match(moduleSource, /tab\.closest\('\[role="tablist"\]'\)/);
   assert.match(moduleSource, /gameplay stays locked in preview mode/);
   assert.match(moduleSource, /cosmetics-observatory__preview-surface/);
   assert.match(moduleSource, /dialog\.append\(surface, live\)/);
   assert.doesNotMatch(moduleSource, /surface\.append\([^;]*live\)/s);
   assert.match(moduleSource, /calculatePiecePreviewLoadout\(baseLoadout, item\)/);
-  assert.match(moduleSource, /const previewOwned = observatoryLoadoutIsOwned\(model, previewLoadout\)/);
+  assert.match(moduleSource, /if \(!observatoryLoadoutIsOwned\(model, candidate\)\)/);
+  assert.match(moduleSource, /callPreview\(previewLoadout, \{ \.\.\.entry\.meta, transient: true, carousel: true \}\)/);
   assert.doesNotMatch(moduleSource, /\bownerForLoadout\b/);
   assert.match(moduleSource, /const committedLoadout = asRecord\(persisted\)/);
   assert.match(moduleSource, /ArrowUp/);
   assert.match(moduleSource, /aria-busy/);
-  assert.match(moduleSource, /Main-menu backgrounds/);
+  assert.match(moduleSource, /Home backgrounds/);
   assert.match(moduleSource, /Board backgrounds & finishes/);
-  assert.match(moduleSource, /Main-menu background included/);
-  assert.match(moduleSource, /Presentation tier/);
-  assert.match(moduleSource, /\$\{pieceCount\}-piece kit/);
+  assert.match(moduleSource, /Home background included/);
+  assert.match(moduleSource, /Style tier/);
+  assert.match(moduleSource, /\$\{pieceCount\} pieces/);
   assert.match(moduleSource, /Included cosmetic slots/);
   assert.match(moduleSource, /Star Credit value/);
   assert.match(moduleSource, /dataset\.acquisition/);
@@ -537,7 +812,7 @@ test("implementation avoids data-to-HTML injection and includes accessibility fa
     /async function commit\([^)]*\) \{[\s\S]*?clearPurchaseConfirmation\(\);/,
     /function close\([^)]*\) \{[\s\S]*?clearPurchaseConfirmation\(\);/,
     /clearPurchaseConfirmation\(\);\s*activeTab = tab;/,
-    /clearPurchaseConfirmation\(\);\s*selectedSlot = slot;/,
+    /clearPurchaseConfirmation\(\);\s*selectedSlot = selectedSlot === slot [?] "" : slot;/,
     /clearPurchaseConfirmation\(\);\s*selectedSlot = "";/
   ]) {
     assert.match(moduleSource, resetSequence);
@@ -568,4 +843,17 @@ test("implementation avoids data-to-HTML injection and includes accessibility fa
   assert.match(cssSource, /\.cosmetics-observatory__collection-facts/);
   assert.match(cssSource, /\.cosmetics-observatory__included-slots/);
   assert.match(cssSource, /\.cosmetics-observatory__card\.is-full-shell/);
+  assert.match(profileFrameCssSource, /\.cosmetics-observatory__profile-frame-preview/);
+  assert.match(profileFrameCssSource, /\.cosmetics-observatory__frame-thumb-visual/);
+  assert.match(profileFrameCssSource, /profile-rank-frame-islands--card-clipped/);
+  assert.match(cssSource, /\.cosmetics-observatory__category-track/);
+  assert.match(cssSource, /\.cosmetics-observatory__carousel-stage/);
+  assert.match(cssSource, /\.cosmetics-observatory__carousel-details/);
+  assert.match(fullPageCssSource, /\[data-presentation="full-page"\]/);
+  assert.match(allObservatoryCssSource, /width: 100vw/);
+  assert.match(allObservatoryCssSource, /height: 100dvh/);
+  assert.match(fullPageCssSource, /\.cosmetics-observatory__carousel-state-mark/);
+  assert.match(fullPageCssSource, /repeat\(3, minmax\(0, 1fr\)\)/);
+  assert.match(fullPageCssSource, /outline-offset: -4px/);
+  assert.match(allObservatoryCssSource, /touch-action: pan-y/);
 });

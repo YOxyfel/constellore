@@ -44,3 +44,20 @@ test("only Explore hydrates the reusable universe; mission modes still reset to 
   assert.match(localRuntime, /const hasRunCredentials = Boolean\(body\.runId \|\| body\.runToken\)/);
   assert.match(localRuntime, /const available = run\?\.available \|\| new Set/);
 });
+
+
+test("known metadata restores placeholder Explore icons without replacing saved discoveries", () => {
+  const saved = sanitizeExploreInventory([], ["Lava", "Mountain"]);
+  const hydrated = sanitizeExploreInventory(saved, [
+    { word: "Lava", emoji: "🌋", category: "nature" },
+    { word: "Mountain", emoji: "⛰️", category: "nature" }
+  ]);
+  assert.equal(hydrated.length, saved.length);
+  assert.equal(hydrated.find((item) => item.word === "Lava").emoji, "🌋");
+  assert.equal(hydrated.find((item) => item.word === "Mountain").category, "nature");
+  const custom = sanitizeExploreInventory(
+    [{ word: "Lava", emoji: "🔥", category: "force", source: "gift", note: "Saved gift" }],
+    [{ word: "Lava", emoji: "🌋", category: "nature" }]
+  ).find((item) => item.word === "Lava");
+  assert.deepEqual(custom, { word: "Lava", emoji: "🔥", category: "force", source: "gift", note: "Saved gift" });
+});

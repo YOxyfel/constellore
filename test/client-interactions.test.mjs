@@ -2,11 +2,19 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-const app = await readFile(new URL("../public/app.js", import.meta.url), "utf8");
+const appCore = await readFile(new URL("../public/app.js", import.meta.url), "utf8");
+const inventoryRuntime = await readFile(new URL("../public/inventory-view-runtime.mjs", import.meta.url), "utf8");
+const powerupRuntime = await readFile(new URL("../public/powerup-view-runtime.mjs", import.meta.url), "utf8");
+const conceptMatterApp = await readFile(new URL("../public/concept-matter-app.mjs", import.meta.url), "utf8");
+const app = `${appCore}\n${inventoryRuntime}\n${powerupRuntime}\n${conceptMatterApp}`;
 const audioRuntime = await readFile(new URL("../public/audio-runtime.mjs", import.meta.url), "utf8");
 const homeMenuView = await readFile(new URL("../public/home-menu-view.mjs", import.meta.url), "utf8");
 const styles = await readFile(new URL("../public/styles.css", import.meta.url), "utf8");
-const simpleStyles = await readFile(new URL("../public/simple-ui.css", import.meta.url), "utf8");
+const simpleStyles = [
+  await readFile(new URL("../public/simple-ui.css", import.meta.url), "utf8"),
+  await readFile(new URL("../public/mobile-play-shell.css", import.meta.url), "utf8")
+].join("\n");
+const mobileShellRuntime = await readFile(new URL("../public/mobile-play-shell-runtime.mjs", import.meta.url), "utf8");
 const cosmeticStyles = await readFile(new URL("../public/cosmetics.css", import.meta.url), "utf8");
 const stardustStoreRuntime = await readFile(new URL("../public/stardust-store-runtime.mjs", import.meta.url), "utf8");
 const page = await readFile(new URL("../public/index.html", import.meta.url), "utf8");
@@ -57,33 +65,45 @@ test("word surfaces expose bounded category and source hooks for atlas styling",
   assert.match(tray, /ghost[.]dataset[.]source = visualWordToken\(item[.]source\)/);
 });
 
+test("the extracted desktop inventory renderer receives the shared word-key normalizer", () => {
+  assert.match(inventoryRuntime, /createInventoryRenderer\(\{[\s\S]*?\binventoryKey,/);
+  const wiring = appCore.slice(
+    appCore.indexOf("renderInventory = createInventoryRenderer({"),
+    appCore.indexOf("const cosmicGate", appCore.indexOf("renderInventory = createInventoryRenderer({"))
+  );
+  assert.match(wiring, /\binventoryKey,/);
+});
+
 test("mobile training reserves playable board space in portrait and short landscape", () => {
-  assert.match(app, /const safeTop = guideRect/);
-  assert.match(app, /top: safeTop/);
+  const measuredStart = app.indexOf("function measuredPlayableBoardLayout");
+  const measuredEnd = app.indexOf("function schedulePlayableBoardRefresh", measuredStart);
+  const measured = app.slice(measuredStart, measuredEnd);
+  assert.match(app, /import \{ calculatePlayableBounds \} from "[.]\/mobile-play-chrome[.]mjs/);
+  assert.match(app, /import \{ bindMobilePlayShell \} from "[.]\/mobile-play-shell-runtime[.]mjs/);
+  assert.match(mobileShellRuntime, /createMobilePlayChrome\(\{/);
+  assert.match(measured, /learningOrbitActive\(\) \? els[.]firstOrbitGuide : null/);
+  assert.match(measured, /const top = shortLandscape[\s\S]*topChrome[.]reduce/);
+  assert.match(measured, /calculatePlayableBounds\(\{[\s\S]*persistentInsets: \{ top, right: 8, bottom: 8, left: 8 \}[\s\S]*blockers[\s\S]*minimum: extreme \? \{ width: 240, height: 140 \} : \{ width: 280, height: 220 \}/);
+  assert.match(measured, /data-playable-minimum/);
   assert.match(app, /els[.]board[.]scrollTop = 0/);
-  assert.match(styles, /[.]cosmos-board\s*\{[^}]*overflow:\s*clip/);
-  assert.match(styles, /@media \(max-width: 700px\) and \(max-height: 500px\) and \(min-width: 520px\)/);
-  assert.match(styles, /grid-template-columns:\s*minmax\(0,1fr\) minmax\(176px,28vw\)/);
-  assert.match(styles, /[.]nav-icon\s*\{\s*width:\s*44px;\s*height:\s*44px/);
+  assert.match(simpleStyles, /#gameScreen\[data-play-layout="stacked"\] [.]game-layout\s*\{[^}]*display:\s*flex[^}]*flex-direction:\s*column/);
+  assert.match(simpleStyles, /#gameScreen\[data-play-layout="short-landscape"\] [.]game-layout\s*\{[^}]*display:\s*grid[^}]*grid-template-columns:\s*minmax\(0, 1fr\) var\(--play-shell-side-peek\)/);
 });
 
 test("inventory placement cannot fall into a bottom vertical-list seam", () => {
-  const bottomLayout = styles.match(/@media \(max-width: 700px\), \(max-width: 900px\) and \(orientation: portrait\) \{([\s\S]*?)\n\}/)?.[1] || "";
-  assert.match(bottomLayout, /[.]game-layout\s*\{[^}]*display:\s*flex[^}]*flex-direction:\s*column/);
-  assert.match(bottomLayout, /[.]inventory\s*\{[^}]*max-height:\s*198px[^}]*overflow:\s*hidden/);
-  assert.match(bottomLayout, /[.]word-list\s*\{[^}]*display:\s*flex[^}]*overflow-x:\s*auto[^}]*overflow-y:\s*hidden[^}]*scroll-snap-type:\s*x proximity/);
-  assert.match(bottomLayout, /[.]inventory-word\s*\{[^}]*flex:\s*0 0 auto[^}]*width:\s*auto[^}]*scroll-snap-align:\s*start/);
+  assert.match(simpleStyles, /#gameScreen\[data-play-layout="stacked"\] [.]inventory\s*\{[^}]*height:\s*var\(--play-shell-inventory-peek\)[^}]*overflow:\s*hidden/);
+  assert.match(simpleStyles, /#gameScreen\[data-play-layout="stacked"\]\[data-inventory-expanded="true"\] [.]inventory\s*\{[^}]*height:\s*var\(--play-shell-inventory-open\)[^}]*flex-basis:\s*var\(--play-shell-inventory-open\)/);
+  assert.match(simpleStyles, /#gameScreen\[data-play-layout="stacked"\] [.]word-list\s*\{[^}]*display:\s*flex[^}]*overflow-x:\s*auto[^}]*overflow-y:\s*hidden[^}]*touch-action:\s*pan-x/);
+  assert.match(simpleStyles, /#gameScreen\[data-play-layout="stacked"\] [.]inventory-word\s*\{[^}]*width:\s*auto[^}]*flex:\s*0 0 auto[^}]*touch-action:\s*pan-x/);
 
-  const sideLayout = styles.match(/@media \(max-width: 700px\) and \(max-height: 500px\) and \(min-width: 520px\) \{([\s\S]*?)\n\}/)?.[1] || "";
-  assert.match(sideLayout, /[.]game-layout\s*\{[^}]*display:\s*grid[^}]*grid-template-columns:\s*minmax\(0,1fr\) minmax\(176px,28vw\)/);
-  assert.match(sideLayout, /[.]inventory\s*\{[^}]*max-height:\s*none/);
-  assert.match(sideLayout, /[.]word-list\s*\{[^}]*display:\s*block[^}]*overflow-x:\s*hidden[^}]*overflow-y:\s*auto/);
-  assert.match(sideLayout, /[.]inventory-word\s*\{[^}]*width:\s*100%[^}]*flex-direction:\s*row/);
+  assert.match(simpleStyles, /#gameScreen\[data-play-layout="short-landscape"\] [.]game-layout\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\) var\(--play-shell-side-peek\)/);
+  assert.match(simpleStyles, /#gameScreen\[data-play-layout="short-landscape"\]\[data-inventory-expanded="true"\] [.]game-layout\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\) var\(--play-shell-side-open\)/);
+  assert.match(simpleStyles, /#gameScreen\[data-play-layout="short-landscape"\] [.]inventory\s*\{[^}]*max-height:\s*none[^}]*overflow:\s*hidden/);
+  assert.match(simpleStyles, /#gameScreen\[data-play-layout="short-landscape"\] [.]word-list\s*\{[^}]*display:\s*flex[^}]*flex-direction:\s*column[^}]*overflow-x:\s*hidden[^}]*overflow-y:\s*auto[^}]*touch-action:\s*pan-y/);
 
   const trayDrag = app.slice(app.indexOf("function startTrayPointerDrag"), app.indexOf("function addNode", app.indexOf("function startTrayPointerDrag")));
-  assert.match(trayDrag, /const compactSideRail = matchMedia\("\(max-width: 700px\) and \(max-height: 500px\) and \(min-width: 520px\)"\)[.]matches/);
-  assert.match(trayDrag, /matchMedia\("\(max-width: 700px\), \(max-width: 900px\) and \(orientation: portrait\)"\)[.]matches/);
-  assert.match(trayDrag, /mobileTray\s*\?\s*dy < -8[\s\S]*:\s*dx < -8/);
+  assert.match(trayDrag, /const stackedTray = els[.]gameScreen[?][.]dataset[.]playLayout === "stacked"/);
+  assert.match(trayDrag, /stackedTray\s*[?]\s*dy < -10 && Math[.]abs\(dy\) > Math[.]abs\(dx\) \* 1[.]15\s*:\s*dx < -10 && Math[.]abs\(dx\) > Math[.]abs\(dy\) \* 1[.]15/);
 });
 
 test("first-game inventory guidance has a paint gutter, staggered motion, and unclipped contained light", () => {
@@ -203,21 +223,25 @@ test("Star Compass preserves its visible Open penalty on an ambiguous network re
   assert.match(stardustStoreRuntime, /legacyCompassButton[.]disabled = busy \|\| !compassQuote[.]quoted/);
 });
 
-test("Help presents three plain choices with their exact scoring effects", () => {
+test("Help presents a numbered assistance ladder with exact scoring effects", () => {
   const dialog = page.match(/<dialog\b(?=[^>]*\bid="senseDialog")[^>]*>[\s\S]*?<\/dialog>/i)?.[0] || "";
   assert.match(dialog, /id="powerupsIntro"/);
-  for (const id of ["useQuickTip", "quickTipMessage", "useWordGift", "wordGiftMessage", "useSense", "senseMessage"]) {
+  for (const id of ["useQuickTip", "quickTipMessage", "useSense", "useSenseStock", "senseMessage", "useWordGift", "wordGiftMessage"]) {
     assert.match(dialog, new RegExp(`id="${id}"`));
   }
   assert.match(dialog, /Need help[?]/);
-  assert.match(dialog, /Hint[\s\S]*Your points stay the same/);
-  assert.match(dialog, /Add a helpful word[\s\S]*You keep half your points/);
-  assert.match(dialog, /Show the answer[\s\S]*You get no points/);
-  assert.ok(dialog.indexOf('id="useQuickTip"') < dialog.indexOf('id="useWordGift"'));
+  assert.match(dialog, />01<[\s\S]*ROUTE SIGNAL[\s\S]*Next signal keeps 90% of max score and Stardust; Star Credits are reduced too[.]/);
+  assert.match(dialog, />02<[\s\S]*STAR COMPASS[\s\S]*OPEN &middot; 75% SCORE[\s\S]*No Route Rank mastery/);
+  assert.match(dialog, />03<[\s\S]*WORD GIFT[\s\S]*OPEN &middot; 50% SCORE[\s\S]*No Route Rank mastery/);
+  assert.match(dialog, /Show the complete route[\s\S]*Study run with no score/);
+  assert.ok(dialog.indexOf('id="useQuickTip"') < dialog.indexOf('id="useSense"'));
+  assert.ok(dialog.indexOf('id="useSense"') < dialog.indexOf('id="useWordGift"'));
   assert.ok(dialog.indexOf('id="useWordGift"') < dialog.indexOf('id="revealPathButton"'));
-  assert.match(dialog, /class="simple-hidden"[^>]*aria-hidden="true"[\s\S]*id="useSense"/, "legacy advanced help stays out of the primary choice list");
+  assert.doesNotMatch(dialog, /class="simple-hidden"[^>]*aria-hidden="true"[\s\S]*id="useSense"/, "Star Compass stays directly usable in the primary ladder");
+  assert.match(app, /\$\("#useSense"\)[.]addEventListener\("click", useSenseShortcut\)/);
+  assert.match(app, /expiresAt: Date[.]now\(\) \+ 4_000/);
   assert.match(app, /async function useQuickTip\([\s\S]*fetchJson\("\/api\/run\/tip"[\s\S]*tipIndex/);
-  assert.match(app, /state[.]powerups[.]tipsUsed = clamp\(Number\(tip[.]used\)/);
+  assert.match(app, /const confirmedTipsUsed = clamp\(Number\(tip[.]used\)[\s\S]*state[.]powerups[.]tipsUsed = confirmedTipsUsed/);
   assert.match(app, /tipsUsed: clamp\(Number\(state[.]powerups[.]tipsUsed\)/, "Quick Tip use survives interrupted-run restore");
   assert.match(simpleStyles, /[.]powerup-action,[\s\S]*?[.]powerup-buy,[\s\S]*?\)\s*\{[^}]*min-height:\s*52px/);
   assert.match(simpleStyles, /[.]powerup-message\s*\{[^}]*font-size:\s*16px/);
@@ -235,35 +259,41 @@ test("the latest hint remains visible as a compact active-level objective", () =
   assert.match(app, /currentTip: sanitizeHintObjective\(state[.]powerups[.]currentTip\)/, "the current hint must survive interrupted-run restore");
   assert.match(app, /state[.]powerups[.]currentTip = sanitizeHintObjective\(progress[.]currentTip \?\? matchingSnapshot[.]currentTip\)/);
   assert.match(app, /state[.]powerups = \{ tipsUsed: 0, tipIds: \[\], currentTip: ""/, "a new challenge clears the old objective");
-  assert.match(app, /state[.]finished = true;\s*renderHintObjective\(\)/, "a finished challenge hides the active objective");
-  assert.match(app, /const candidates = \[[^\]]*els[.]hintObjective/, "word placement must avoid the objective");
+  assert.match(app, /state[.]finished = true;[\s\S]{0,200}syncPlayPhase\("result"\);[\s\S]{0,120}renderHintObjective\(\)/, "result phase rendering hides the active objective after completion");
+  const measured = app.slice(app.indexOf("function measuredPlayableBoardLayout"), app.indexOf("function schedulePlayableBoardRefresh"));
+  assert.match(measured, /const topChrome = \[els[.]boardTopHud\]/, "measured placement reserves the complete objective HUD row");
+  assert.match(measured, /blockerElements = \[[\s\S]*learningOrbitActive\(\) \? els[.]firstOrbitGuide : null/, "tutorial guidance remains an independent measured blocker");
   assert.match(styles, /[.]hint-objective\s*\{[^}]*width:\s*min\(580px, 100%\)[^}]*max-height:[^}]*overflow:\s*auto/);
-  assert.match(simpleStyles, /[.]cosmos-board[.]reveal-active :is\([\s\S]*[.]hint-objective/);
+  assert.match(simpleStyles, /#gameScreen:is\(\[data-play-layout="stacked"\], \[data-play-layout="short-landscape"\]\) [.]hint-objective\s*\{[^}]*position:\s*relative[^}]*grid-column:\s*1 \/ -1[^}]*grid-row:\s*2[^}]*width:\s*100%/);
+  assert.match(simpleStyles, /#gameScreen:is\(\[data-play-phase="reveal"\], \[data-play-phase="cinematic"\]\):is\(\[data-play-layout="stacked"\], \[data-play-layout="short-landscape"\]\) :is\([.]board-guide, #helpNudge, [.]board-bottom-hud\)/);
 });
 
-test("the board shows one Help action while advanced shortcuts stay hidden and safe", () => {
-  const hudStart = page.indexOf('<div class="game-hud">');
-  const tools = page.slice(hudStart, page.indexOf("</header>", hudStart));
-  assert.match(tools, /class="powerup-shortcuts"[^>]*role="group"/);
-  for (const id of ["senseButton", "quickTipShortcut", "wordGiftShortcut", "senseShortcut", "powerupShopShortcut"]) {
-    assert.match(tools, new RegExp(`id="${id}"`));
+test("the board exposes the four numbered assistance actions and a separate Help handoff", () => {
+  const workspaceStart = page.indexOf('<div class="board-workspace-bar"');
+  const rail = page.slice(workspaceStart, page.indexOf('<section class="cosmos-board" id="board"', workspaceStart));
+  assert.match(rail, /class="board-assistance-rail" id="boardAssistanceRail"[^>]*aria-label="Help tools"/);
+  for (const [id, key] of [["quickTipShortcut", 1], ["senseShortcut", 2], ["wordGiftShortcut", 3], ["revealShortcut", 4]]) {
+    assert.match(rail, new RegExp(`id="${id}"[^>]*aria-keyshortcuts="${key}"`));
+    assert.match(rail, new RegExp(`<kbd[^>]*>${key}<\\/kbd>`));
   }
-  assert.match(tools, /id="senseButton"[^>]*aria-label="Open help"[\s\S]*<b>Help<\/b>/);
-  for (const id of ["quickTipShortcut", "wordGiftShortcut", "senseShortcut", "powerupShopShortcut"]) {
-    assert.match(tools, new RegExp(`id="${id}"[^>]*\\shidden(?:\\s|>)`), `${id} must not compete with Help`);
-  }
-  assert.match(app, /quickTipShortcutCount[.]textContent = String\(tipsRemaining\)/);
-  assert.match(app, /wordGiftShortcutCount[.]textContent = armedKind === "gift"/);
-  assert.match(app, /senseShortcutCount[.]textContent = armedKind === "sense"/);
+  assert.match(rail, /id="senseButton"[^>]*aria-controls="senseDialog"[^>]*aria-label="Open Need help information"[\s\S]*<b class="assist-rail-label">Need help[?]<\/b>/);
+  const assistanceRailTag = rail.match(/<nav class="board-assistance-rail"[^>]*>/)?.[0] || "";
+  assert.match(assistanceRailTag, /\shidden(?:\s|>)/, "the Help disclosure starts collapsed to preserve canvas space");
+  assert.match(rail, /id="mobileAssistToggle"[^>]*aria-expanded="false"[^>]*aria-controls="boardAssistanceRail"/);
+  assert.match(app, /quickTipShortcutCount[.]textContent = tipsRemaining > 0 [^;]* : "[+]"/);
+  assert.match(app, /wordGiftShortcutCount[.]textContent = state[.]powerups[.]giftUsed [^;]* : "[+]"/);
+  assert.match(app, /senseShortcutCount[.]textContent = senseCount > 0 [^;]* : "[+]"/);
+  assert.match(app, /revealShortcutCount[.]textContent = state[.]reveal[.]revealed [^;]* : "∞"/);
   assert.match(app, /function activateOpenPowerupShortcut\(kind, action\)[\s\S]*activeArmedPowerup\(\) === kind[\s\S]*keeps [^`]+ score in Open/);
   assert.match(app, /if \(!els[.]senseDialog[.]open\) showAlchemy\(`HINT/);
-  assert.match(app, /function openPowerupShop\(\)[\s\S]*scrollIntoView[\s\S]*focus\(\{ preventScroll: true \}\)/);
+  assert.match(app, /async function openPowerupShop\(\{ focusItem = "", trigger = null \} = \{\}\)[\s\S]*els[.]senseDialog[.]close\(\)[\s\S]*els[.]stardustDialog[.]showModal\(\)[\s\S]*focus\(\{ preventScroll: true \}\)/);
   assert.match(app, /onProfileChange: \(\) => \{[\s\S]*saveProfile\(\{ fields: \["progression"\] \}\);[\s\S]*renderProfile\(\)/);
   assert.match(stardustStoreRuntime, /async function purchase\(itemId\)[\s\S]*applyStardustPurchase\(before, itemId, 1\)[\s\S]*await onProfileChange/);
-  assert.match(app, /wordGiftShortcut[.]addEventListener\("click", useWordGiftShortcut\)/);
-  assert.match(app, /senseShortcut[.]addEventListener\("click", useSenseShortcut\)/);
-  assert.match(simpleStyles, /[.]game-hud #senseButton\s*\{[^}]*min-height:\s*50px/);
-  assert.match(simpleStyles, /[.]game-hud [.]powerup-shortcuts > :not\(#senseButton\)\s*\{[^}]*display:\s*none !important/, "shortcut widgets stay visually removed");
+  assert.match(app, /wordGiftShortcut[.]addEventListener\("click", useWordGiftRailShortcut\)/);
+  assert.match(app, /senseShortcut[.]addEventListener\("click", useSenseRailShortcut\)/);
+  assert.match(app, /revealShortcut[.]addEventListener\("click", useRevealRailShortcut\)/);
+  assert.match(simpleStyles, /[.]simple-ui [.]board-assistance-rail\s*\{[^}]*position:\s*absolute[^}]*flex-direction:\s*column/);
+  assert.match(simpleStyles, /[.]simple-ui :is\([.]assist-rail-action, [.]assist-rail-info\)\s*\{[^}]*min-height:\s*var\(--assist-rail-size\)/);
 });
 
 test("Word Gift is one-use, server-selected, durable, and commits its Open penalty before its request", () => {
@@ -291,7 +321,7 @@ test("graded assistance remains visibly and accessibly marked for the whole orbi
   assert.match(app, /function updateStudyHud\(\)/);
   assert.match(app, /els[.]lawPill[.]textContent = "◇ STUDY · 0 SCORE"/);
   assert.match(app, /updateHud\(\)[\s\S]*updateStudyHud\(\)/);
-  assert.match(app, /els[.]lawPill[.]textContent = `◇ OPEN · \$\{Math[.]round\(state[.]scoreMultiplier \* 100\)\}% SCORE`/);
+  assert.match(app, /els[.]lawPill[.]textContent = `[^`]*\$\{scoreMultiplierPercent\(state[.]scoreMultiplier\)\}% SCORE`/);
   assert.match(styles, /[.]game-target #lawPill[.]study-status:not\(\[hidden\]\)\s*\{[^}]*display:\s*block[^}]*font-size:\s*15px/);
   assert.match(styles, /[.]game-target #lawPill[.]partial-status:not\(\[hidden\]\)\s*\{[^}]*display:\s*block[^}]*font-size:\s*15px/);
   assert.match(page, /id="partialAssistResultCard"[\s\S]*id="partialAssistScore"/);
@@ -398,7 +428,7 @@ test("menus keep readable cards and separate next, replay, and main-menu actions
   const hubDialog = page.match(/<dialog\b(?=[^>]*id="hubMenuDialog")[\s\S]*?<\/dialog>/)?.[0] || "";
   const resultDialog = page.match(/<dialog\b(?=[^>]*id="resultDialog")[\s\S]*?<\/dialog>/)?.[0] || "";
   assert.match(hubDialog, /id="hubMenuTitle">Menu</);
-  assert.match(hubDialog, /id="openObservatory"[\s\S]*id="hubMenuSettingsTitle">Settings and data/);
+  assert.match(hubDialog, /id="hubMenuSettingsTitle">Settings and data[\s\S]*id="openObservatory"/);
   assert.match(hubDialog, /profile-preferences[\s\S]*profile-data/);
   assert.match(simpleStyles, /[.]simple-ui [.]hub-menu-grid > [.]hub-menu-action\s*\{[^}]*display:\s*grid[^}]*grid-template-columns:\s*42px minmax\(0,\s*1fr\) 18px/);
   assert.match(simpleStyles, /@media \(max-width:\s*760px\)[\s\S]*[.]simple-ui [.]hub-menu-grid\s*\{[^}]*grid-template-columns:\s*1fr/);
@@ -422,13 +452,14 @@ test("seeing or skipping training never unlocks the full home shell by itself", 
   assert.doesNotMatch(page, /id="firstOrbitDialog"/, "first use should not be blocked by a redundant welcome dialog");
 });
 
-test("opening the Gold game catalog is gated, reduced-motion aware, and keyboard focused", () => {
+test("opening the Gold game catalog uses the contained Forge sheet and restores focus", () => {
   const source = app.slice(app.indexOf("function openModePicker()"), app.indexOf("async function beginPrimarySecondary()"));
   assert.match(source, /homeMenuState\(\)[.]choicesReady/);
-  assert.match(source, /prefers-reduced-motion: reduce/);
-  assert.match(source, /picker[.]scrollIntoView/);
-  assert.match(source, /[.]focus\(\{ preventScroll: true \}\)/);
-  assert.doesNotMatch(source, /picker[.]open = true/);
+  assert.match(source, /getHomeOrbitController\(document\)[?][.]openCatalog/);
+  assert.match(source, /trigger:\s*\$\("#primaryOrbitSecondary"\)/);
+  assert.match(source, /focus:\s*true/);
+  assert.doesNotMatch(source, /scrollIntoView/);
+  assert.match(homeMenuView, /function closeCatalog\([^]+restoreFocus[^]+focusAfterPaint\(catalogOpener\)/);
 });
 
 test("relaxed Reach suppresses the race ghost and leaderboards retain exact challenge identity", () => {
@@ -474,20 +505,24 @@ test("Dev Logs exposes the complete accessible, readable, responsive update hist
   assert.match(dialog.match(/<dialog\b[^>]*>/i)?.[0] || "", /\baria-labelledby="updatesTitle"/i);
   assert.match(dialog, /id="updatesTitle"/i);
   assert.match(dialog, /data-close="updatesDialog"/i);
-  assert.equal((dialog.match(/\bdata-update-entry(?:=|\s|>)/gi) || []).length, 23, "the update log retains all twenty-three updates");
-  for (const label of ["Release", "Ctrl", "Shift", "Route Signals", "Living Atlas", "Signature Constellations", "Path Becomes the Game", "Clearer Play, Better Answers", "A Journey That Learns How You Play", "One Play, a Growing Universe", "The Cosmic Gate Opens", "Results Stay With You", "The Cosmos Comes Into Focus", "A New Sky Between Worlds", "Little Games Between Worlds", "A Thought Between Worlds", "One Tap to the Stars", "A Gentle First Light", "A Clearer Finish", "First Paths, Shared Skies", "Your Ideas Can Reach Us", "Shape Your Constellation", "Constellation Scramble"]) assert.match(dialog, new RegExp(`\\b${label}\\b`, "i"));
-  assert.match(dialog, /23 UPDATES/i);
+  assert.equal((dialog.match(/\bdata-update-entry(?:=|\s|>)/gi) || []).length, 24, "the update log retains all twenty-four updates");
+  for (const label of ["Release", "Ctrl", "Shift", "Route Signals", "Living Atlas", "Signature Constellations", "Path Becomes the Game", "Clearer Play, Better Answers", "A Journey That Learns How You Play", "One Play, a Growing Universe", "The Cosmic Gate Opens", "Results Stay With You", "The Cosmos Comes Into Focus", "A New Sky Between Worlds", "Little Games Between Worlds", "A Thought Between Worlds", "One Tap to the Stars", "A Gentle First Light", "A Clearer Finish", "First Paths, Shared Skies", "Your Ideas Can Reach Us", "Shape Your Constellation", "Scramble Arena", "Continuous Deep Space"]) assert.match(dialog, new RegExp(`\\b${label}\\b`, "i"));
+  assert.match(dialog, /24 UPDATES/i);
   assert.equal((dialog.match(/\bis-latest\b/gi) || []).length, 1, "the log has exactly one latest entry");
   assert.equal((dialog.match(/>LATEST</gi) || []).length, 1, "the log has exactly one latest badge");
   const latest = dialog.match(/<li\b(?=[^>]*\bis-latest\b)[^>]*>[\s\S]*?<\/li>/i)?.[0] || "";
   assert.ok(latest, "the log identifies its latest entry");
   assert.ok(latest.toUpperCase().includes(`VERSION ${releaseVersion.toUpperCase()}`));
-  assert.match(latest, /Constellation Scramble[\s\S]*Live 1v1 has arrived[\s\S]*three-second countdown/i);
-  assert.match(latest, /private matches never affect rating[\s\S]*separate seasonal Duel Rating/i);
-  assert.match(latest, /Phones keep your own board primary[\s\S]*rival ticker[\s\S]*full rival-board toggle/i);
-  assert.match(latest, /Pages and itch remain fully local and offline for solo play[\s\S]*Only Scramble uses the live service/i);
-  assert.match(dialog, /Shape Your Constellation[\s\S]*eight complete kits[\s\S]*Pixel Frontier[\s\S]*Bubble Reef[\s\S]*Stellar Vanguard[\s\S]*Eclipse Sovereign/i);
-  assert.match(dialog, /Locked looks can be previewed[\s\S]*responsive pack art now loads on demand/i);
+  assert.match(latest, /Continuous Deep Space[\s\S]*Earth and Moon[\s\S]*stable physical pivot[\s\S]*precision rebase/i);
+  assert.match(latest, /Solar, nearby-star, deep-sky, Milky Way, Local Group[\s\S]*logarithmic crossfades[\s\S]*Constellation paths and cosmic filaments/i);
+  assert.match(latest, /collision-aware stellar labels[\s\S]*distance-faded world grid[\s\S]*physical projection/i);
+  assert.match(latest, /Milky Way continues outward[\s\S]*cosmic web[\s\S]*observable universe[\s\S]*outside the interaction-critical bundle/i);
+  assert.match(dialog, /Scramble Arena[\s\S]*Live 1v1 has arrived[\s\S]*three-second countdown/i);
+  assert.match(dialog, /private matches never affect rating[\s\S]*separate seasonal 1v1 Rating/i);
+  assert.match(dialog, /Phones keep your own board primary[\s\S]*rival ticker[\s\S]*full rival-board toggle/i);
+  assert.match(dialog, /Pages and itch remain fully local and offline for solo play[\s\S]*Only Scramble uses the live service/i);
+  assert.match(dialog, /Shape Your Constellation[\s\S]*eight complete collections[\s\S]*Pixel Frontier[\s\S]*Bubble Reef[\s\S]*Stellar Vanguard[\s\S]*Eclipse Sovereign/i);
+  assert.match(dialog, /Locked looks can be previewed[\s\S]*responsive collection art now loads on demand/i);
   assert.match(dialog, /Your Ideas Can Reach Us[\s\S]*free, anonymous feedback receiver/i);
   assert.match(dialog, /saved locally first[\s\S]*offline retry queue/i);
   assert.match(dialog, /Golden 50[\s\S]*three-to-seven-combination routes/i);
@@ -522,8 +557,17 @@ test("the in-game objective prompt has one plain instruction and one action", ()
   const hiddenData = dialog.slice(dataStart, actionsStart);
   const actions = dialog.slice(actionsStart);
 
-  assert.match(visiblePrompt, /<h2 id="missionBriefingTitle">Make <strong id="missionBriefingTarget">/);
+  assert.match(visiblePrompt, /<h2 id="missionBriefingTitle"><span id="missionBriefingVerb">Make<\/span> <strong id="missionBriefingTarget">/);
   assert.match(visiblePrompt, /<p class="mission-win-rule" id="missionBriefingRule">/);
+  assert.match(visiblePrompt, /<p class="mission-constraint" id="missionBriefingConstraint" hidden>/);
+  assert.match(app, /missionConstraint[.]hidden = !game[.]timeLimit && !game[.]moveLimit/);
+  assert.match(app, /missionConstraint[.]textContent = missionConstraint[.]hidden \? "" : `\$\{briefing[.]limitValue\} \$\{briefing[.]limitDetail\}`/);
+  assert.match(app, /Pairs that leave the route are blocked[.] Your words stay on the board and no move is used[.]/);
+  const guardNote = simpleStyles.match(/[.]simple-ui #missionBriefingDialog [.]mission-adaptive-note[.]path-guard-note\s*\{[^}]*\}/)?.[0] || "";
+  assert.match(guardNote, /width:\s*auto/);
+  assert.match(guardNote, /max-width:\s*100%/);
+  assert.match(guardNote, /min-width:\s*0/);
+  assert.match(guardNote, /white-space:\s*normal/);
   assert.match(visiblePrompt, /id="missionAdaptiveNote" hidden>Difficult/);
   assert.doesNotMatch(visiblePrompt, /missionBriefing(?:Clue|Start|Starters|Reward|Score|Law|Limit)|missionRemix|mission-details/);
 
@@ -540,7 +584,7 @@ test("the in-game objective prompt has one plain instruction and one action", ()
   assert.match(actions, /<button id="cancelMission" type="button" hidden tabindex="-1">Back<\/button>/);
   assert.equal((actions.match(/<button\b/g) || []).length, 2, "only Start and its hidden compatibility exit exist");
 
-  assert.match(page, /id="primaryOrbitDescription"[^>]*>Earth \+ Water[.] One move[.] You can’t get lost[.][\s\S]*id="primaryOrbitMeta">Mud · 1 combination/);
+  assert.match(page, /id="primaryOrbitDescription"[^>]*>Combine Earth and Water to discover your first word[.][\s\S]*id="primaryOrbitMeta">Mud · 1 combination/);
   const missionLayout = simpleStyles.match(/[.]simple-ui [.]mission-briefing-modal\s*\{[^}]*\}/)?.[0] || "";
   assert.match(missionLayout, /position:\s*fixed/);
   assert.match(missionLayout, /inset:\s*auto/);
@@ -614,12 +658,22 @@ test("Cosmos Scout renders a spoiler-safe encrypted progress window", () => {
 test("automatic placement and Tidy avoid visible board HUD overlays", () => {
   assert.match(app, /function visibleBoardOverlayRectangles\(/);
   assert.match(app, /rectangle[?][.]left \?\? rectangle[?][.]x/);
-  assert.match(app, /els[.]rivalGhost, els[.]ghostPreview, document[.]querySelector\("[.]board-quick-tools"\)/);
-  assert.match(app, /packOrbitAroundOverlays\(measured, packBounds, visibleBoardOverlayRectangles\(boardRect\)\)/);
-  assert.match(app, /concat\(visibleBoardOverlayRectangles\(rect\)\)/);
-  assert.match(app, /findOpenSpawn\(preferred, item, \[[.][.][.]blockers, [.][.][.]placed\]/);
-  assert.match(app, /function moveBoardNodeOutsideOverlays\(/);
-  assert.match(app, /if \(moved && !resolution[?][.]selected\) moveBoardNodeOutsideOverlays\(/, "manual drops must also stay clear of visible HUD panels");
+  assert.match(app, /els[.]rivalGhost, els[.]ghostPreview, els[.]boardAssistanceRail, document[.]querySelector\("[.]board-quick-tools"\)/);
+  const tidySource = app.slice(app.indexOf("function tidyOrbit"), app.indexOf("function boardNodesOverlap"));
+  assert.match(tidySource, /const playable = measuredPlayableBoardLayout\(boardRect\)/);
+  assert.match(tidySource, /mobilePlayShellActive\(\)\s*[?]\s*\{ left: playable[.]left, top: playable[.]top, width: Math[.]max\(1, playable[.]width\), height: Math[.]max\(1, playable[.]height\), gap: 10 \}/);
+  assert.match(tidySource, /packOrbitAroundOverlays\(measured, packBounds, mobilePlayShellActive\(\) \? playable[.]blockers : visibleBoardOverlayRectangles\(boardRect\)\)/);
+  const placementSource = app.slice(app.indexOf("function placeFromTray"), app.indexOf("function traySourceFor"));
+  assert.match(placementSource, /const playable = measuredPlayableBoardLayout\(rect\)/);
+  assert.match(placementSource, /const worldLayout = boardWorldLayout\(rect, playable\)/);
+  assert.match(placementSource, /concat\(worldLayout[.]blockers\)/);
+  assert.match(placementSource, /findOpenSpawn\([\s\S]*left: worldLayout[.]left, top: worldLayout[.]top, width: Math[.]max\(1, worldLayout[.]width\), height: Math[.]max\(1, worldLayout[.]height\)/);
+  const nudgeSource = app.slice(app.indexOf("function moveBoardNodeOutsideOverlays"), app.indexOf("function packOrbitAroundOverlays"));
+  assert.match(nudgeSource, /layout = measuredPlayableBoardLayout\(boardRect\)/);
+  assert.match(nudgeSource, /const worldLayout = boardWorldLayout\(boardRect, layout\)/);
+  assert.match(nudgeSource, /const overlays = worldLayout[.]blockers/);
+  assert.match(nudgeSource, /findOpenSpawn\([\s\S]*\[...occupied, ...overlays\][\s\S]*\{ left: worldLayout[.]left, top: worldLayout[.]top, width: Math[.]max\(1, worldLayout[.]width\), height: Math[.]max\(1, worldLayout[.]height\) \}/);
+  assert.match(app, /if \(moved && !resolution[?][.]selected\) moveBoardNodeOutsideOverlays\(node, element, boardRect, \{ width: nodeWidth, height: nodeHeight \}, playable\)/, "manual drops must also stay inside the measured playable board");
 });
 
 test("Shift hover removal and distance-spaced drag copies work from board and inventory", () => {
@@ -640,10 +694,15 @@ test("Shift hover removal and distance-spaced drag copies work from board and in
   assert.match(app, /moveEvent[.]shiftKey && !shiftBoard[.]snapshot\(\)[.]held[\s\S]*shiftArmedByPointer = true/);
   assert.match(app, /shiftBoard[.]moveDrag\(\{ x: node[.]x, y: node[.]y \}\)/);
   assert.match(app, /shiftBoard[.]endDrag\(\)[\s\S]*if \(shiftArmedByPointer\) shiftBoard[.]setHeld\(false\)/);
-  assert.match(app, /els[.]boardItems[.]append\(createBoardNode\(copy, true\)\)/);
   const duplicateStart = app.indexOf("function duplicateShiftBoardNode");
   const duplicateEnd = app.indexOf("function handleShiftBoardEnter", duplicateStart);
   const duplicateSource = app.slice(duplicateStart, duplicateEnd);
+  assert.match(duplicateSource, /const playable = measuredPlayableBoardLayout\(boardRect\)/);
+  assert.match(duplicateSource, /const worldLayout = boardWorldLayout\(boardRect, playable\)/);
+  assert.match(duplicateSource, /x: clamp\([^\n]+worldLayout[.]left[^\n]+worldLayout[.]right - width\)/);
+  assert.match(duplicateSource, /y: clamp\([^\n]+worldLayout[.]top[^\n]+worldLayout[.]bottom - height\)/);
+  assert.match(duplicateSource, /const copyElement = createBoardNode\(copy, true\);\s*els[.]boardItems[.]append\(copyElement\)/);
+  assert.match(duplicateSource, /moveBoardNodeOutsideOverlays\(copy, copyElement, boardRect, copyBounds, playable\)/);
   assert.doesNotMatch(duplicateSource, /addNode\(|renderBoard\(/, "copy stamps must not replace the pointer-captured board DOM");
   const removeStart = app.indexOf("function removeShiftBoardNode");
   const removeSource = app.slice(removeStart, duplicateStart);
@@ -655,15 +714,22 @@ test("Shift hover removal and distance-spaced drag copies work from board and in
   assert.match(app, /function getShiftBoardNode\([\s\S]*activeTrayShiftSource/);
   assert.match(traySource, /activeTrayShiftSource = \{[\s\S]*traySource: true/);
   assert.match(traySource, /shiftBoard[.]beginDrag\(activeTrayShiftSource[.]id, origin, dragSize\)/);
-  assert.match(app, /function measureBoardWord\(item\)[\s\S]*className = "board-word board-word-measure"[\s\S]*getBoundingClientRect\(\)/);
+  assert.match(app, /function measureBoardWord\(item\)[\s\S]*className = "board-word board-word-measure"[\s\S]*probe[.]offsetWidth[\s\S]*probe[.]offsetHeight/);
   assert.match(traySource, /dragSize = measureBoardWord\(item\)/, "Shift spacing must use the real board-chip size");
-  assert.match(traySource, /const inside = pointInsideBoard\(point\)[\s\S]*shiftBoard[.]reanchorDrag\(boardPoint\)[\s\S]*shiftBoard[.]moveDrag\(boardPoint\)/);
+  assert.match(app, /function captureDropGeometry\([^)]*\)\s*\{[\s\S]*version: boardGeometryVersion[\s\S]*boardRect[\s\S]*playable: measuredPlayableBoardLayout\(boardRect\)[\s\S]*candidates: eligibleDropCandidates/);
+  assert.match(app, /function refreshDropGeometry\(geometry, excludeId = null\)[\s\S]*geometry[?][.]version === boardGeometryVersion \? geometry : captureDropGeometry\(excludeId\)/);
+  assert.match(app, /function pointInsideBoard\(point, cachedRect = null, cachedPlayable = null\)[\s\S]*const playable = cachedPlayable \|\| measuredPlayableBoardLayout\(rect\)/);
+  assert.match(app, /function trayShiftBoardPoint\(point, size, cachedRect = null, cachedPlayable = null\)[\s\S]*const playable = cachedPlayable \|\| measuredPlayableBoardLayout\(rect\)/);
+  assert.match(traySource, /dropGeometry = refreshDropGeometry\(dropGeometry\)[\s\S]*trayShiftBoardPoint\(point, dragSize, dropGeometry[.]boardRect, dropGeometry[.]playable\)[\s\S]*shiftBoard[.]reanchorDrag\(boardPoint\)[\s\S]*shiftBoard[.]moveDrag\(boardPoint\)/);
   assert.match(traySource, /if \(dragging\) updateShiftTrail\(lastPoint\)[\s\S]*cleanup\(\)[\s\S]*dropTrayItem/, "pointer-up must flush the final Shift segment before drop resolution");
   assert.match(traySource, /shiftBoard[.]endDrag\(\)[\s\S]*activeTrayShiftSource = null/);
-  assert.match(traySource, /const placement = shouldDrop && dragSize \? \{ boardPoint: trayShiftBoardPoint\(lastPoint, dragSize\), size: dragSize \} : \{\}/);
+  assert.match(traySource, /pointInsideBoard\(lastPoint, dropGeometry[?][.]boardRect, dropGeometry[?][.]playable\)/);
+  assert.match(traySource, /const placement = shouldDrop && dragSize \? \{ boardPoint: trayShiftBoardPoint\(lastPoint, dragSize, dropGeometry[?][.]boardRect, dropGeometry[?][.]playable\), size: dragSize \} : \{\}/);
+  assert.match(traySource, /if \(shouldDrop\) placement[.]geometry = dropGeometry/);
   assert.match(traySource, /if \(shouldDrop\) dropTrayItem\(item, lastPoint, pointerType, placement\)/);
-  assert.match(app, /function placeFromTray\(item, point, placement = \{\}\)[\s\S]*boardPoint[\s\S]*measuredSize[\s\S]*addNode\(item, x, y, measuredSize \? \{ size: measuredSize, inset: 5 \} : \{\}\)/);
-  assert.match(app, /const \{ size, inset: requestedInset, [.][.][.]nodeOptions \} = options[\s\S]*bounds[.]width - width - inset/);
+  assert.match(app, /function dropTrayItem\(item, point, pointerType = "mouse", placement = \{\}\)[\s\S]*refreshDropGeometry\(placement[.]geometry\)[\s\S]*pointInsideBoard\(point, geometry[.]boardRect, geometry[.]playable\)/);
+  assert.match(app, /function placeFromTray\(item, point, placement = \{\}\)[\s\S]*const playable = measuredPlayableBoardLayout\(rect\)[\s\S]*boardPoint[\s\S]*measuredSize[\s\S]*addNode\(item, x, y, measuredSize \? \{ size: measuredSize, inset: 5 \} : \{\}\)/);
+  assert.match(app, /function addNode\(item, x, y, options = \{\}\)[\s\S]*const playable = measuredPlayableBoardLayout\(boardRect\)[\s\S]*const \{ size, inset: requestedInset, [.][.][.]nodeOptions \} = options[\s\S]*const safeX[\s\S]*const safeY[\s\S]*-1_000_000 \+ inset[\s\S]*1_000_000 - width - inset/);
   assert.match(app, /resolveDropCandidate\([\s\S]*sourceElement: element[\s\S]*if \(resolution[?][.]selected\) void combineNodes\(node, resolution[.]selected\)/);
   assert.match(styles, /[.]cosmos-board[.]shift-remove-active/);
   assert.match(styles, /[.]cosmos-board[.]shift-stamp-active/);

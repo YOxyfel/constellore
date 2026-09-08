@@ -1,0 +1,142 @@
+/* Bloom is a contextual word palette. Game words, groups and selection stay canonical. */
+.constellation-bloom,
+.simple-ui :is(.word-orbit-anchor,.word-orbit-list,.word-lens-head,.word-lens-filters) { display: none; }
+body.simple-ui #gameScreen:is([data-play-layout="stacked"],[data-play-layout="short-landscape"]) .game-layout {
+  min-width: 0; min-height: 0; display: grid !important;
+  grid-template: minmax(0, 1fr) / minmax(0, 1fr) !important;
+}
+body.simple-ui #gameScreen:is([data-play-layout="stacked"],[data-play-layout="short-landscape"]) #board {
+  width: 100%; min-width: 0; min-height: 0; grid-area: 1 / 1;
+}
+body.simple-ui #gameScreen:is([data-play-layout="stacked"],[data-play-layout="short-landscape"]) .inventory { display: none !important; }
+body.simple-ui #gameScreen[data-word-input="bloom"] #tapChainStatus { display: none !important; }
+body.simple-ui #gameScreen[data-word-input="bloom"] .constellation-bloom {
+  --bloom-origin-x: 50%; --bloom-origin-y: 62%;
+  --bloom-panel-x: 12px; --bloom-panel-y: 12px; --bloom-panel-width: 296px; --bloom-panel-height: 400px;
+  position: absolute; z-index: 7; inset: 0; display: block; overflow: hidden;
+  pointer-events: none; contain: layout paint;
+  color: #eff8f5; font-family: Manrope, Inter, system-ui, sans-serif;
+}
+.constellation-bloom[hidden], .constellation-bloom [hidden] { display: none !important; }
+.constellation-bloom :is(button,input) { box-sizing: border-box; font: inherit; }
+.constellation-bloom :is(button,input):focus-visible { outline: 2px solid #a8e7d7; outline-offset: 3px; }
+.constellation-bloom button { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.constellation-bloom button:disabled { cursor: default; opacity: .46; }
+.constellation-bloom__start {
+  position: absolute; z-index: 9; left: var(--bloom-origin-x); top: var(--bloom-origin-y);
+  width: max-content; min-width: 142px; max-width: 184px; height: 52px; min-height: 52px;
+  padding: 8px 17px; display: flex; align-items: center; justify-content: center; gap: 10px;
+  border: 1px solid #a8e7d7; border-radius: 16px; background: #a8e7d7; color: #102923;
+  box-shadow: 0 8px 24px #0004; transform: translate(-50%,-50%);
+  pointer-events: auto; touch-action: none; user-select: none;
+}
+.constellation-bloom__start::before,.constellation-bloom__start::after { display: none; }
+.constellation-bloom__star { display: grid; place-items: center; flex: 0 0 24px; font-size: 22px; line-height: 1; }
+.constellation-bloom__start-copy { display: grid; min-width: 0; text-align: left; gap: 2px; }
+.constellation-bloom__start-copy small { display: none; }
+.constellation-bloom__start.has-anchor .constellation-bloom__start-copy small {
+  display: block; max-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 10px;
+}
+.constellation-bloom__start-copy strong { font-size: 13px; font-weight: 800; white-space: nowrap; }
+.constellation-bloom:not([data-stage="closed"]) .constellation-bloom__start {
+  left: calc(var(--bloom-panel-x) + var(--bloom-panel-width) - 34px); top: calc(var(--bloom-panel-y) + 34px);
+  width: 44px; min-width: 44px; max-width: 44px; height: 44px; min-height: 44px; padding: 0;
+  border: 0; border-radius: 12px; background: #ffffff0b; color: #d3e6e0; box-shadow: none;
+}
+.constellation-bloom:not([data-stage="closed"]) .constellation-bloom__start-copy { display: none; }
+.constellation-bloom__cancel {
+  position: absolute; z-index: 8; left: var(--bloom-cancel-x); top: var(--bloom-origin-y);
+  width: 44px; min-width: 44px; height: 44px; min-height: 44px; padding: 0;
+  border: 1px solid #ffffff22; border-radius: 12px; background: #14262d; color: #d2e3e0;
+  font-size: 22px; transform: translate(-50%,-50%); pointer-events: auto;
+}
+.constellation-bloom__panel {
+  position: absolute; left: var(--bloom-panel-x); top: var(--bloom-panel-y);
+  width: var(--bloom-panel-width); height: var(--bloom-panel-height); max-height: calc(100% - 24px);
+  padding: 12px; display: grid; grid-template-rows: auto auto minmax(0,1fr) auto; gap: 10px;
+  border: 1px solid #9ec1b82e; border-radius: 24px; background: #101d25f7;
+  box-shadow: 0 24px 64px #0005; backdrop-filter: blur(18px); pointer-events: auto;
+}
+.constellation-bloom__head {
+  min-height: 44px; padding-right: 46px; display: flex; align-items: center; gap: 8px;
+  color: #eff8f5;
+}
+.constellation-bloom__head > span { order: 0; display: grid; flex: 1; min-width: 0; gap: 4px; }
+.constellation-bloom__head small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #98b3ac; font-size: 9px; font-weight: 700; letter-spacing: .09em; }
+.constellation-bloom__head strong { font-size: 15px; line-height: 1.25; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.constellation-bloom__head button {
+  order: 1; min-width: 58px; height: 44px; padding: 0 8px; border: 0; border-radius: 10px;
+  background: #ffffff0b; color: #b3d8cd; font-size: 11px; font-weight: 750;
+}
+.constellation-bloom__head > b { display: none; }
+.constellation-bloom__search {
+  display: grid; grid-template-columns: 18px minmax(0,1fr) 44px; align-items: center; gap: 5px;
+  min-height: 46px; padding: 0 3px 0 12px; border: 1px solid #ffffff20; border-radius: 13px;
+  background: #07131c; color: #98b3ac; pointer-events: auto;
+}
+.constellation-bloom__search:focus-within { border-color: #a8e7d7; }
+.constellation-bloom__search input {
+  width: 100%; min-width: 0; height: 44px; padding: 0; border: 0; outline: 0 !important;
+  background: transparent; color: #eff8f5; font-size: 16px; box-shadow: none;
+}
+.constellation-bloom__search input::placeholder { color: #9aacae; font-size: 13px; }
+.constellation-bloom__search input::-webkit-search-cancel-button { -webkit-appearance: none; appearance: none; display: none; }
+.constellation-bloom__search button {
+  width: 44px; min-width: 44px; height: 44px; border: 0; border-radius: 10px;
+  background: transparent; color: #b2cac3; font-size: 20px;
+}
+.constellation-bloom__categories,.constellation-bloom__words {
+  min-height: 0; display: grid; grid-template-columns: repeat(var(--bloom-columns,2),minmax(0,1fr));
+  grid-auto-rows: var(--bloom-row-height,64px); gap: var(--bloom-row-gap,8px); overflow: auto; overscroll-behavior: contain;
+  align-content: start; scrollbar-width: thin; scrollbar-color: #536b67 transparent;
+}
+.constellation-bloom__category-shell,.constellation-bloom__word-shell { min-width: 0; min-height: 54px; position: relative; }
+.constellation-bloom__category,.constellation-bloom__word {
+  width: 100%; min-width: 44px; min-height: 54px; height: 100%; padding: 0; display: block;
+  border: 1px solid #ffffff12; border-radius: 14px; background: #ffffff05;
+  color: #eaf5f1; pointer-events: auto; touch-action: manipulation;
+  transition: background .12s ease, border-color .12s ease;
+}
+.constellation-bloom__petal-visual {
+  min-width: 0; min-height: inherit; height: 100%; padding: 10px; display: flex; align-items: center; gap: 9px; pointer-events: none;
+}
+.constellation-bloom__petal-mark { flex: 0 0 26px; display: grid; place-items: center; font-size: 22px; line-height: 1; }
+.constellation-bloom__petal-label { min-width: 0; overflow-wrap: anywhere; font-size: 12px; font-weight: 650; line-height: 1.3; text-align: left; }
+.constellation-bloom__category .constellation-bloom__petal-mark { font-size: 18px; color: #a8e7d7; }
+.constellation-bloom__category-count { margin-left: auto; font-size: 10px; color: #9aada7; }
+.constellation-bloom :is(.constellation-bloom__category,.constellation-bloom__word):is(:hover,:focus-visible,.is-focused,.tutorial-hot) {
+  border-color: #a8e7d77d; background: #a8e7d714;
+}
+.constellation-bloom__word.is-repeat::after { content: "x2"; position: absolute; right: 8px; bottom: 5px; font-size: 9px; color: #9eb9b0; }
+.constellation-bloom__words > .constellation-bloom__word-shell:only-child { grid-column: 1/-1; }
+.constellation-bloom__empty { grid-column: 1/-1; align-self: center; margin: 0; padding: 18px 8px; color: #adbfba; text-align: center; font-size: 13px; }
+.constellation-bloom__pager { display: flex; min-height: 44px; align-items: center; justify-content: space-between; color: #a6bab3; font-size: 12px; }
+.constellation-bloom__pager button {
+  width: 44px; min-width: 44px; height: 44px; border: 1px solid #ffffff20; border-radius: 11px;
+  background: #ffffff06; color: #eff8f5; font-size: 18px; pointer-events: auto;
+}
+.constellation-bloom__links { display: none; }
+.constellation-bloom[data-has-pages="false"] .constellation-bloom__panel { grid-template-rows: auto auto minmax(0,1fr); }
+.constellation-bloom[data-palette-layout="compact"] .constellation-bloom__panel { padding: 8px; gap: 4px; border-radius: 18px; }
+.constellation-bloom[data-palette-layout="compact"] :is(.constellation-bloom__category-shell,.constellation-bloom__word-shell,.constellation-bloom__word,.constellation-bloom__category) { min-height: 44px; }
+.constellation-bloom[data-palette-layout="compact"] .constellation-bloom__petal-visual { padding: 4px 8px; }
+.constellation-bloom[data-palette-layout="compact"] .constellation-bloom__petal-label { font-size: 11px; }
+.constellation-bloom[data-columns="1"] .constellation-bloom__head { padding-right: 0; display: grid; grid-template: 44px 44px / minmax(0,1fr); gap: 4px; }
+.constellation-bloom[data-columns="1"] .constellation-bloom__head > span { padding-right: 54px; }
+.constellation-bloom[data-palette-layout="horizontal"] .constellation-bloom__panel {
+  padding: 10px; gap: 7px; border-radius: 20px;
+  grid-template-columns: minmax(0,1fr) minmax(0,1.3fr); grid-template-rows: 46px minmax(0,1fr) auto;
+}
+.constellation-bloom[data-palette-layout="horizontal"][data-has-pages="false"] .constellation-bloom__panel { grid-template-rows: 46px minmax(0,1fr); }
+.constellation-bloom[data-palette-layout="horizontal"] .constellation-bloom__head { grid-column: 1; grid-row: 1; padding-right: 0; }
+.constellation-bloom[data-palette-layout="horizontal"] .constellation-bloom__search { grid-column: 2; grid-row: 1; margin-right: 46px; }
+.constellation-bloom[data-palette-layout="horizontal"] :is(.constellation-bloom__categories,.constellation-bloom__words) { grid-column: 1/-1; grid-row: 2; }
+.constellation-bloom[data-palette-layout="horizontal"] .constellation-bloom__pager { grid-column: 1/-1; grid-row: 3; }
+.constellation-bloom[data-palette-layout="horizontal"] :is(.constellation-bloom__category-shell,.constellation-bloom__word-shell,.constellation-bloom__word,.constellation-bloom__category) { min-height: 44px; }
+.constellation-bloom[data-palette-layout="horizontal"] .constellation-bloom__petal-visual { padding: 6px 10px; }
+@media (prefers-reduced-motion: reduce) { .constellation-bloom * { animation: none !important; transition-duration: .01ms !important; } }
+body.simple-ui:is([data-cosmetic-effects="reduced"],[data-cosmetic-effects="off"]) .constellation-bloom * { animation: none !important; transition-duration: .01ms !important; }
+@media (forced-colors: active) {
+  .constellation-bloom :is(button,input,.constellation-bloom__panel,.constellation-bloom__search) { border-color: CanvasText; background: Canvas; color: CanvasText; box-shadow: none; forced-color-adjust: auto; }
+  .constellation-bloom :is(.is-focused,.tutorial-hot) { outline: 2px solid Highlight; }
+}

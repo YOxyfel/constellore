@@ -1,4 +1,4 @@
-import { cosmeticTrailStyle } from "./cosmetic-economy.mjs?v=5.0.0-beta.1";
+import { cosmeticTrailStyle } from "./cosmetic-economy.mjs?v=5.0.0-beta.4";
 
 const clampValue = (value, minimum, maximum) => Math.min(maximum, Math.max(minimum, value));
 
@@ -83,6 +83,7 @@ export function startCosmosCanvas({
   board,
   canvas,
   cosmeticLoadout,
+  getBoardCamera = () => ({ x: 0, y: 0, zoom: 1 }),
   drawRevealGraph
 }) {
   cancelAnimationFrame(state.cosmosFrame);
@@ -125,6 +126,11 @@ export function startCosmosCanvas({
 
     const connectionColor = forcedColors ? "#ffffff" : trailStyle.connectionColor;
     const connectionSecondary = forcedColors ? "#ffffff" : trailStyle.connectionSecondary;
+    const camera = getBoardCamera?.() || { x: 0, y: 0, zoom: 1 };
+    const project = (x, y) => ({
+      x: x * (Number(camera.zoom) || 1) + (Number(camera.x) || 0),
+      y: y * (Number(camera.zoom) || 1) + (Number(camera.y) || 0)
+    });
     ctx.save();
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
@@ -134,7 +140,10 @@ export function startCosmosCanvas({
       : trailStyle.connectionWidth;
     for (let trailIndex = 0; trailIndex < state.trails.length; trailIndex += 1) {
       const trail = state.trails[trailIndex];
-      const gradient = ctx.createLinearGradient(trail.ax, trail.ay, trail.bx, trail.by);
+      const a = project(trail.ax, trail.ay);
+      const b = project(trail.bx, trail.by);
+      const result = project(trail.x, trail.y);
+      const gradient = ctx.createLinearGradient(a.x, a.y, b.x, b.y);
       gradient.addColorStop(0, connectionColor);
       gradient.addColorStop(.5, connectionSecondary);
       gradient.addColorStop(1, connectionColor);
@@ -142,14 +151,14 @@ export function startCosmosCanvas({
       ctx.shadowColor = connectionSecondary;
       ctx.globalAlpha = strongerContrast || forcedColors ? .72 : trailStyle.enabled ? .34 : .24;
       ctx.beginPath();
-      ctx.moveTo(trail.ax, trail.ay);
-      ctx.lineTo(trail.x, trail.y);
-      ctx.lineTo(trail.bx, trail.by);
+      ctx.moveTo(a.x, a.y);
+      ctx.lineTo(result.x, result.y);
+      ctx.lineTo(b.x, b.y);
       ctx.stroke();
       ctx.fillStyle = connectionSecondary;
       ctx.globalAlpha = strongerContrast || forcedColors ? .9 : .7;
       ctx.beginPath();
-      ctx.arc(trail.x, trail.y, strongerContrast || forcedColors ? 2.5 : 1.75, 0, Math.PI * 2);
+      ctx.arc(result.x, result.y, strongerContrast || forcedColors ? 2.5 : 1.75, 0, Math.PI * 2);
       ctx.fill();
     }
     ctx.restore();
@@ -196,6 +205,7 @@ export function startCosmosCanvas({
       ctx.save();
       ctx.lineCap = "round";
       for (const burst of state.fusionBursts) {
+        const projectedBurst = project(burst.x, burst.y);
         const age = Math.max(0, frameTime - burst.at);
         const life = Math.max(0, 1 - age / trailStyle.burstLifetimeMs);
         const radius = 5 + (1 - life) * 24;
@@ -213,12 +223,12 @@ export function startCosmosCanvas({
           ctx.shadowColor = color;
           ctx.beginPath();
           ctx.moveTo(
-            burst.x + Math.cos(angle) * radius * .35,
-            burst.y + Math.sin(angle) * radius * .35
+            projectedBurst.x + Math.cos(angle) * radius * .35,
+            projectedBurst.y + Math.sin(angle) * radius * .35
           );
           ctx.lineTo(
-            burst.x + Math.cos(angle) * radius,
-            burst.y + Math.sin(angle) * radius
+            projectedBurst.x + Math.cos(angle) * radius,
+            projectedBurst.y + Math.sin(angle) * radius
           );
           ctx.stroke();
         }
@@ -248,4 +258,9 @@ export function startCosmosCanvas({
     if (!reduced) state.cosmosFrame = requestAnimationFrame(draw);
   };
   draw();
+  return Object.freeze({
+    invalidate() {
+      if (reduced) draw(performance.now());
+    }
+  });
 }

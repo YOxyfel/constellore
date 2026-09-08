@@ -1,5 +1,5 @@
-import { buildGoldenPairAnimation } from "./golden-pair-animations.mjs?v=5.0.0-beta.1";
-import { createGoldenPairView } from "./golden-pair-view.mjs?v=5.0.0-beta.1";
+import { buildGoldenPairAnimation } from "./golden-pair-animations.mjs?v=5.0.0-beta.4";
+import { createGoldenPairView } from "./golden-pair-view.mjs?v=5.0.0-beta.4";
 
 const STYLE_MARKER = "data-golden-pair-style";
 const HOST_MARKER = "data-golden-pair-runtime-root";
@@ -40,7 +40,7 @@ function loadStyles(documentRef) {
   if (documentRef.querySelector?.(`[${STYLE_MARKER}]`)) return Promise.resolve();
   const link = documentRef.createElement("link");
   const moduleUrl = new URL(import.meta.url);
-  const styleUrl = new URL("./golden-pair.css?v=5.0.0-beta.1", moduleUrl);
+  const styleUrl = new URL("./golden-pair.css?v=5.0.0-beta.4", moduleUrl);
   styleUrl.search = moduleUrl.search;
   link.rel = "stylesheet";
   link.href = styleUrl.href;
@@ -63,7 +63,8 @@ async function initializeGoldenPairRuntime({
   root,
   board,
   timers,
-  reducedMotion
+  reducedMotion,
+  fusionAnimation
 } = {}, registeredBoard = null) {
   const documentRef = root?.ownerDocument || board?.ownerDocument;
   let host = root;
@@ -137,17 +138,33 @@ async function initializeGoldenPairRuntime({
         }
         return frozenResult(false, "effects-off");
       }
+      let fusionPreference = "normal";
+      try {
+        const candidate = typeof fusionAnimation === "function" ? fusionAnimation() : fusionAnimation;
+        if (["normal", "faster", "off"].includes(candidate)) fusionPreference = candidate;
+      } catch {
+        fusionPreference = "normal";
+      }
+      if (fusionPreference === "off") {
+        try {
+          view.cancel("fusion-animation-off");
+        } catch {
+          // A preference change still skips the optional scene if teardown fails.
+        }
+        return frozenResult(false, "fusion-animation-off");
+      }
       try {
         const model = buildGoldenPairAnimation({
           a: options?.a,
           b: options?.b,
-          result: options?.result
+          result: options?.result,
+          major: options?.major === true
         });
         if (!model) {
           view.cancel("not-authored");
           return frozenResult(false, "not-authored");
         }
-        return view.play(model);
+        return view.play(model, { pace: fusionPreference });
       } catch {
         try {
           view.cancel("runtime-error");

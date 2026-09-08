@@ -6,8 +6,8 @@ import {
   constellationSharePresentation,
   normalizeConstellationCardStyle,
   renderConstellationCardSvg
-} from "./constellation-card.mjs?v=5.0.0-beta.1";
-import { selectUniverse } from "./universe-director.mjs?v=5.0.0-beta.1";
+} from "./constellation-card.mjs?v=5.0.0-beta.4";
+import { selectUniverse } from "./universe-director.mjs?v=5.0.0-beta.4";
 
 const $ = (selector) => document.querySelector(selector);
 const clamp = (value, minimum, maximum) => Math.min(Math.max(value, minimum), maximum);

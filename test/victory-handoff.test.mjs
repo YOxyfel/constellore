@@ -14,20 +14,21 @@ test("public victory handoff timing is frozen and intentionally bounded", () => 
     revealedAnswerMs: 520,
     standardWinMs: 980,
     goldenPairReducedMotionMs: 850,
-    goldenPairFullMotionMs: 2_900,
+    goldenPairFullMotionMs: 3_650,
+    goldenPairLingerMs: 250,
     minimumMs: 0,
-    maximumMs: 3_200
+    maximumMs: 4_000
   });
 
   for (const [name, value] of Object.entries(VICTORY_HANDOFF_TIMING)) {
     assert.equal(Number.isSafeInteger(value), true, `${name} must be an integer`);
-    assert.ok(value >= 0 && value <= 3_200, `${name} must remain inside the public bound`);
+    assert.ok(value >= 0 && value <= 4_000, `${name} must remain inside the public bound`);
   }
   assert.ok(VICTORY_HANDOFF_TIMING.standardWinMs >= 900);
   assert.ok(VICTORY_HANDOFF_TIMING.standardWinMs <= 1_050);
-  assert.ok(VICTORY_HANDOFF_TIMING.goldenPairFullMotionMs >= 2_600);
-  assert.ok(VICTORY_HANDOFF_TIMING.goldenPairFullMotionMs <= 3_200);
-  assert.ok(VICTORY_HANDOFF_TIMING.goldenPairFullMotionMs - 850 >= 1_700);
+  assert.ok(VICTORY_HANDOFF_TIMING.goldenPairFullMotionMs >= 3_600);
+  assert.ok(VICTORY_HANDOFF_TIMING.goldenPairFullMotionMs <= 4_000);
+  assert.ok(VICTORY_HANDOFF_TIMING.goldenPairFullMotionMs - 850 >= 2_700);
   assert.ok(VICTORY_HANDOFF_TIMING.goldenPairReducedMotionMs >= 700);
   assert.ok(VICTORY_HANDOFF_TIMING.goldenPairReducedMotionMs <= 1_000);
 
@@ -69,12 +70,31 @@ test("authored Golden Pair wins receive full and reduced-motion protected holds"
     reducedMotion: true
   });
 
-  assert.equal(full, 2_900);
-  assert.ok(full >= 2_600 && full <= 3_200);
+  assert.equal(full, 3_650);
+  assert.ok(full >= 3_600 && full <= 4_000);
   assert.ok(full > 850, "the full hold must include the complete scene and result linger");
   assert.equal(reduced, 850);
   assert.ok(reduced >= 700 && reduced <= 1_000);
   assert.ok(reduced < full);
+});
+
+test("the result handoff follows the animation's actual Faster duration", () => {
+  assert.equal(victoryHandoffHoldMs({
+    won: true,
+    authoredGoldenPair: true,
+    goldenPairDurationMs: 2_100
+  }), 2_350);
+  assert.equal(victoryHandoffHoldMs({
+    won: true,
+    authoredGoldenPair: true,
+    goldenPairDurationMs: 99_000
+  }), VICTORY_HANDOFF_TIMING.maximumMs);
+  assert.equal(victoryHandoffHoldMs({
+    won: true,
+    authoredGoldenPair: true,
+    reducedMotion: true,
+    goldenPairDurationMs: 2_100
+  }), VICTORY_HANDOFF_TIMING.goldenPairReducedMotionMs);
 });
 
 test("revealed answers never receive the Golden Pair hold", () => {
@@ -132,7 +152,7 @@ test("hostile and malformed values cannot coerce a longer result delay", () => {
     authoredGoldenPair: true,
     revealed: "false",
     reducedMotion: "true"
-  }), 2_900);
+  }), 3_650);
 
   const throwingProxy = new Proxy({}, {
     get() {

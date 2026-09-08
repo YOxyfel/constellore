@@ -101,7 +101,9 @@ test("cloud account, restore, and protected operator contracts are enforced over
           sound: false,
           music: true,
           haptics: true,
+          helpNudges: false,
           resultDetails: true,
+          fusionAnimation: "faster",
           muted: false,
           volume: 0.75,
           musicVolume: 0.4,
@@ -114,6 +116,8 @@ test("cloud account, restore, and protected operator contracts are enforced over
   assert.equal(updatedProfile.response.status, 200);
   assert.equal(updatedProfile.payload.version, 1);
   assert.equal(updatedProfile.payload.profile.feedbackPreferences.resultDetails, true);
+  assert.equal(updatedProfile.payload.profile.feedbackPreferences.helpNudges, false);
+  assert.equal(updatedProfile.payload.profile.feedbackPreferences.fusionAnimation, "faster");
   assert.equal(updatedProfile.payload.profile.feedbackPreferences.musicVolume, 0.4);
   assert.equal(updatedProfile.payload.profile.feedbackPreferences.sfxVolume, 0.65);
   const forbiddenBalance = await request("/api/player/profile", { method: "PUT", body: { version: 1, profile: { credits: 999_999 } } });
@@ -136,6 +140,18 @@ test("cloud account, restore, and protected operator contracts are enforced over
   });
   assert.equal(invalidSfxVolume.response.status, 400);
   assert.equal(invalidSfxVolume.payload.code, "invalid_cloud_profile");
+  const invalidHelpNudges = await request("/api/player/profile", {
+    method: "PUT",
+    body: { version: 1, profile: { feedbackPreferences: { helpNudges: "false" } } }
+  });
+  assert.equal(invalidHelpNudges.response.status, 400);
+  assert.equal(invalidHelpNudges.payload.code, "invalid_cloud_profile");
+  const invalidFusionAnimation = await request("/api/player/profile", {
+    method: "PUT",
+    body: { version: 1, profile: { feedbackPreferences: { fusionAnimation: "instant" } } }
+  });
+  assert.equal(invalidFusionAnimation.response.status, 400);
+  assert.equal(invalidFusionAnimation.payload.code, "invalid_cloud_profile");
   const legacyProfile = await request("/api/player/profile", {
     method: "PUT",
     body: {
@@ -153,7 +169,8 @@ test("cloud account, restore, and protected operator contracts are enforced over
     muted: true,
     volume: 0.25,
     musicVolume: 0.4,
-    sfxVolume: 0.65
+    sfxVolume: 0.65,
+    fusionAnimation: "faster"
   });
   const largeProfile = await request("/api/player/profile", {
     method: "PUT",

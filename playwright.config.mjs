@@ -7,6 +7,14 @@ const chromiumDevice = (device) => ({
   ...device,
   ...(chromiumChannel ? { channel: chromiumChannel } : {})
 });
+const chromiumWebGLHarness = {
+  // Test-harness only: bundled headless Chromium otherwise marks its software
+  // WebGL2 context as a major performance caveat. Production keeps rejecting
+  // that class of context and continues to use the poster fallback.
+  launchOptions: {
+    args: ["--use-angle=swiftshader", "--enable-unsafe-swiftshader"]
+  }
+};
 
 export default defineConfig({
   testDir: "./e2e",
@@ -31,10 +39,13 @@ export default defineConfig({
   },
   projects: [
     { name: "chromium-mobile", use: chromiumDevice(devices["Pixel 7"]) },
-    { name: "chromium-desktop", use: chromiumDevice(devices["Desktop Chrome"]) },
+    {
+      name: "chromium-desktop",
+      use: { ...chromiumDevice(devices["Desktop Chrome"]), ...chromiumWebGLHarness }
+    },
     {
       name: "chromium-reduced-motion",
-      testMatch: /(?:reveal-presentation|first-open-cinematic|constellore)[.]spec[.]mjs/,
+      testMatch: /(?:reveal-presentation|first-open-cinematic|constellore|mobile-play-shell)[.]spec[.]mjs/,
       use: { ...chromiumDevice(devices["Pixel 7"]), reducedMotion: "reduce" }
     },
     { name: "webkit-mobile", use: { ...devices["iPhone 13"] } },
@@ -47,13 +58,17 @@ export default defineConfig({
       ...process.env,
       PORT: String(port),
       NODE_ENV: "test",
-      CONSTELLORE_DATA_PATH: `./data/e2e-${port}.json`,
+      CONSTELLORE_DATA_PATH: ":memory:",
       CONSTELLORE_ENABLE_TEST_STORE: "false",
       CONSTELLORE_TEST_PLAYER_REGISTRATION_LIMIT: "500",
+      // Browser fixtures seed local progression only. The authoritative Bronze
+      // gate is covered by Duel service/API tests; this explicit test-only
+      // override lets the two-client UI harness exercise the live match itself.
+      CONSTELLORE_TEST_DUEL_MINIMUM_ROUTE_RANK: "1",
       CONSTELLORE_COMMERCE_FULFILLMENT_READY: "false",
       REWARDED_ADS_ENABLED: "false"
     },
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer: process.env.CONSTELLORE_E2E_REUSE_SERVER === "true",
     timeout: 30_000
   }
 });

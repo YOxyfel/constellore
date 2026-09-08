@@ -1,10 +1,11 @@
-import { sanitizeFeedbackPreferences } from "./engagement-features.mjs?v=5.0.0-beta.1";
+import { sanitizeFeedbackPreferences } from "./engagement-features.mjs?v=5.0.0-beta.4";
 
 const TOGGLES = Object.freeze([
   ["sound", "soundPreference", "audio_toggled"],
   ["music", "musicPreference", "music_toggled"],
   ["haptics", "hapticPreference", "haptic_toggled"],
-  ["resultDetails", "resultDetailsPreference", "result_details_toggled"]
+  ["resultDetails", "resultDetailsPreference", "result_details_toggled"],
+  ["helpNudges", "helpNudgesPreference", "help_nudges_toggled"]
 ]);
 
 const VOLUMES = Object.freeze([
@@ -41,6 +42,15 @@ const QUICK_MASTER_STEPS = Object.freeze([
   ["pauseVolumeUp", .05],
   ["circuitVolumeDown", -.05],
   ["circuitVolumeUp", .05]
+]);
+
+const FUSION_ANIMATION_CONTROLS = Object.freeze([
+  ["fusionAnimationNormal", "normal"],
+  ["fusionAnimationFaster", "faster"],
+  ["fusionAnimationOff", "off"],
+  ["pauseFusionAnimationNormal", "normal"],
+  ["pauseFusionAnimationFaster", "faster"],
+  ["pauseFusionAnimationOff", "off"]
 ]);
 
 const percentage = (value) => `${Math.round(Number(value) * 100)}%`;
@@ -108,6 +118,9 @@ export function createFeedbackPreferencesUi({
     for (const [field, controls] of VOLUMES) {
       renderVolume(field, controls, preferences);
     }
+    for (const [id, value] of FUSION_ANIMATION_CONTROLS) {
+      byId(id)?.setAttribute?.("aria-pressed", String(preferences.fusionAnimation === value));
+    }
     renderQuickMaster(preferences);
     const quickToggle = byId("feedbackToggle");
     if (quickToggle) {
@@ -138,6 +151,19 @@ export function createFeedbackPreferencesUi({
     byId(id)?.addEventListener?.("click", () => toggle(field, eventName));
   }
   byId("feedbackToggle")?.addEventListener?.("click", () => toggle("sound", "audio_toggled"));
+
+  for (const [id, value] of FUSION_ANIMATION_CONTROLS) {
+    byId(id)?.addEventListener?.("click", () => {
+      const current = sanitizeFeedbackPreferences(get());
+      if (current.fusionAnimation === value) return;
+      const preferences = sanitizeFeedbackPreferences({ ...current, fusionAnimation: value });
+      set(preferences);
+      render(preferences);
+      save(preferences, "fusionAnimation");
+      track("fusion_animation_changed", { value });
+      audio?.playFeedback?.("uiSelect");
+    });
+  }
 
   for (const [field, controls] of VOLUMES) {
     for (const [inputId] of controls) {

@@ -5,13 +5,57 @@ const PROFILE_RANK_CSS = String.raw`
   width: min(720px, calc(100% - 28px));
   max-height: min(860px, calc(100dvh - 28px));
   padding: 34px;
-  border-color: rgba(105, 216, 204, .3);
-  background:
+  border-color: var(--cosmetic-panel-line, rgba(105, 216, 204, .3));
+  background: var(--cosmetic-panel-surface,
     radial-gradient(circle at 12% 0, rgba(105, 216, 204, .1), transparent 34%),
-    linear-gradient(155deg, rgba(17, 55, 65, .98), rgba(5, 27, 36, .99) 68%);
+    linear-gradient(155deg, rgba(17, 55, 65, .98), rgba(5, 27, 36, .99) 68%)
+  );
+  box-shadow: var(--ui-dialog-shadow);
+}
+
+.simple-ui .profile-modal > .modal-close {
+  width: 50px;
+  height: 50px;
+  min-width: 50px;
+  min-height: 50px;
+  top: 14px;
+  right: 14px;
+  z-index: 4;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 2px solid color-mix(in srgb, var(--atlas-teal) 58%, #fff 42%);
+  border-radius: 50%;
+  color: #fffdf4;
+  background:
+    radial-gradient(circle at 34% 26%, rgba(255, 255, 255, .14), transparent 42%),
+    linear-gradient(145deg, rgba(13, 42, 50, .98), rgba(2, 13, 19, .98));
   box-shadow:
-    inset 0 1px rgba(255, 255, 255, .055),
-    0 30px 90px rgba(0, 7, 12, .64);
+    0 0 0 3px rgba(2, 13, 19, .72),
+    0 0 22px color-mix(in srgb, var(--atlas-teal) 30%, transparent),
+    0 10px 24px rgba(0, 0, 0, .46);
+  font: 600 30px/1 Arial, sans-serif;
+  text-shadow: 0 1px 3px #000;
+  backdrop-filter: blur(10px);
+  cursor: pointer;
+}
+
+.simple-ui .profile-modal > .modal-close:hover {
+  border-color: #fffdf4;
+  color: #fff;
+  background:
+    radial-gradient(circle at 34% 26%, rgba(255, 255, 255, .2), transparent 42%),
+    color-mix(in srgb, var(--atlas-teal) 24%, rgba(2, 13, 19, .98));
+  box-shadow:
+    0 0 0 3px rgba(2, 13, 19, .78),
+    0 0 28px color-mix(in srgb, var(--atlas-teal) 46%, transparent),
+    0 12px 28px rgba(0, 0, 0, .5);
+  transform: scale(1.05);
+}
+
+.simple-ui .profile-modal > .modal-close:focus-visible {
+  outline: 3px solid #fffdf4;
+  outline-offset: 4px;
 }
 
 .simple-ui .profile-heading {
@@ -309,11 +353,15 @@ const PROFILE_RANK_CSS = String.raw`
 
 .simple-ui .profile-overview {
   margin: 18px 0 26px;
+  padding: 0;
+  display: block;
+  border: 0;
+  background: transparent;
 }
 
 .simple-ui .profile-core-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12px;
   overflow: visible;
   border: 0;
@@ -341,6 +389,46 @@ const PROFILE_RANK_CSS = String.raw`
 .simple-ui .profile-core-grid div:nth-child(n) {
   border-right: 1px solid rgba(169, 211, 206, .18);
   border-bottom: 1px solid rgba(169, 211, 206, .18);
+}
+
+.simple-ui .profile-core-grid .profile-total {
+  min-width: 0;
+  min-height: 112px;
+  margin: 0;
+  padding: 16px 12px;
+  display: grid;
+  grid-template-columns: 1fr;
+  grid-template-rows: 22px auto auto;
+  place-items: center;
+  gap: 4px;
+  border: 1px solid rgba(241, 202, 120, .34);
+  border-radius: 13px;
+  background:
+    radial-gradient(circle at 50% 0, rgba(241, 202, 120, .12), transparent 52%),
+    linear-gradient(180deg, rgba(255, 255, 255, .035), transparent),
+    rgba(5, 26, 34, .62);
+  box-shadow:
+    inset 0 1px rgba(255, 255, 255, .035),
+    0 0 24px rgba(241, 202, 120, .045);
+  text-align: center;
+}
+
+.simple-ui .profile-core-grid .profile-total i,
+.simple-ui .profile-core-grid .profile-total strong {
+  color: var(--atlas-gold-bright);
+}
+
+.simple-ui .profile-core-grid .profile-total span {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+}
+
+.simple-ui .profile-core-grid .profile-total small {
+  color: color-mix(in srgb, var(--atlas-gold) 54%, var(--atlas-muted));
+  font: 650 9px/1.15 Consolas, monospace;
+  letter-spacing: .08em;
+  text-transform: uppercase;
 }
 
 .simple-ui .profile-core-grid i {
@@ -426,6 +514,37 @@ const PROFILE_RANK_CSS = String.raw`
   background: rgba(8, 34, 43, .74);
 }
 
+@media (min-width: 701px) and (max-width: 820px) {
+  .simple-ui .profile-route-rank {
+    min-height: 0;
+    padding: 20px;
+    grid-template-columns: 84px minmax(0, 1fr);
+    gap: 18px;
+  }
+
+  .simple-ui .profile-rank-crest {
+    width: 80px;
+    height: 80px;
+  }
+
+  .simple-ui .profile-rank-crest::before {
+    width: 60px;
+    height: 60px;
+  }
+
+  .simple-ui .profile-rank-crest i {
+    width: 94px;
+  }
+
+  .simple-ui .profile-rank-unlock {
+    min-height: 0;
+    padding: 14px 0 0;
+    grid-column: 1 / -1;
+    border-top: 1px solid rgba(var(--rank-accent-rgb), .22);
+    border-left: 0;
+  }
+}
+
 @media (max-width: 700px) {
   .simple-ui .modal.profile-modal {
     inset: 0;
@@ -437,6 +556,11 @@ const PROFILE_RANK_CSS = String.raw`
     padding: calc(58px + env(safe-area-inset-top)) 16px max(22px, env(safe-area-inset-bottom));
     border: 0;
     border-radius: 0;
+  }
+
+  .simple-ui .profile-modal > .modal-close {
+    top: calc(10px + env(safe-area-inset-top));
+    right: max(10px, env(safe-area-inset-right));
   }
 
   .simple-ui .profile-heading {
@@ -488,6 +612,17 @@ const PROFILE_RANK_CSS = String.raw`
     grid-column: 1 / -1;
     border-top: 1px solid rgba(var(--rank-accent-rgb), .22);
     border-left: 0;
+  }
+
+  .simple-ui .profile-core-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .simple-ui .profile-core-grid div,
+  .simple-ui .profile-core-grid .profile-total {
+    min-height: 96px;
+    padding: 13px 10px;
   }
 
   .simple-ui .profile-more-heading {
@@ -557,26 +692,29 @@ const PROFILE_RANK_CSS = String.raw`
   }
 
   .simple-ui .profile-core-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;
   }
 
-  .simple-ui .profile-core-grid div {
-    min-height: 64px;
-    padding: 10px 13px;
-    grid-template-columns: 24px auto minmax(0, 1fr);
-    grid-template-rows: 1fr;
-    justify-items: start;
-    text-align: left;
+  .simple-ui .profile-core-grid div,
+  .simple-ui .profile-core-grid .profile-total {
+    min-height: 86px;
+    padding: 10px 8px;
+    grid-template-columns: 1fr;
+    grid-template-rows: 18px auto auto;
+    place-items: center;
+    text-align: center;
   }
 
   .simple-ui .profile-core-grid strong {
     font-size: 24px;
   }
 
-  .simple-ui .profile-core-grid span {
-    justify-self: end;
-    text-align: right;
+  .simple-ui .profile-core-grid span { text-align: center; }
+
+  .simple-ui .profile-core-grid .profile-total small {
+    font-size: 8px;
+    letter-spacing: .055em;
   }
 }
 

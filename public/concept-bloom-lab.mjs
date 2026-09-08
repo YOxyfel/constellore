@@ -17,7 +17,7 @@ import {
   removeNode,
   rewireBond,
   runMoonStress
-} from "./concept-bloom-domain.mjs";
+} from "./concept-bloom-domain.mjs?v=5.0.0-beta.4";
 
 const byId = (id) => document.getElementById(id);
 const elements = {

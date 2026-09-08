@@ -1,0 +1,345 @@
+/*
+ * Deep-Space Observatory
+ *
+ * Presentation-only skin for the existing board authority. Gameplay remains
+ * in the HTML word controls; the canvas and semantic constellation are inert
+ * visual/navigation layers behind and around those controls.
+ */
+
+body.simple-ui #gameScreen[data-board-presentation="observatory"] {
+  --observatory-space: #02050f;
+  --observatory-panel: rgba(3, 14, 24, .84);
+  --observatory-line: rgba(109, 222, 226, .24);
+  --observatory-route: #f0c76d;
+  --observatory-cyan: #71e9ed;
+}
+
+body.simple-ui #gameScreen[data-board-presentation="observatory"] .cosmos-board {
+  /* Keep the equipped universe's authored board art and finish. The inert
+     Observatory canvas supplies depth above it instead of replacing it. */
+  background-color: var(--observatory-space);
+  isolation: isolate;
+}
+
+body.simple-ui #gameScreen[data-board-presentation="observatory"] .cosmos-board::after {
+  z-index: 1;
+  background:
+    radial-gradient(circle at 50% 48%, transparent 24%, rgba(1, 5, 12, .18) 58%, rgba(0, 2, 8, .72) 100%),
+    linear-gradient(180deg, rgba(80, 211, 219, .025), transparent 24%, transparent 76%, rgba(240, 199, 109, .025));
+}
+
+body.simple-ui #gameScreen[data-board-presentation="observatory"] .cosmos-canvas {
+  z-index: 0;
+  opacity: 1;
+  filter: saturate(1.08) contrast(1.04);
+}
+
+body.simple-ui #gameScreen[data-board-presentation="observatory"] .nebula {
+  display: none;
+}
+
+body.simple-ui #gameScreen[data-board-presentation="observatory"] .board-items {
+  z-index: 4;
+}
+
+body.simple-ui #gameScreen[data-board-presentation="observatory"] .board-word {
+  border-color: color-mix(in srgb, var(--word-accent, var(--cosmetic-word-edge, var(--observatory-cyan))) 42%, rgba(255,255,255,.16));
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--cosmetic-word-highlight, rgba(255,255,255,.08)) 72%, transparent), transparent 54%),
+    var(--cosmetic-word-pattern, none),
+    linear-gradient(115deg, var(--cosmetic-word-surface-a, rgba(14, 34, 43, .91)), var(--cosmetic-word-surface-b, rgba(5, 12, 24, .93)));
+  box-shadow:
+    var(--cosmetic-word-shadow, 0 12px 30px rgba(0, 0, 0, .32)),
+    0 0 0 1px rgba(255, 255, 255, .025) inset,
+    0 0 22px rgba(80, 220, 225, .05);
+  backdrop-filter: blur(14px) saturate(1.15);
+}
+
+body.simple-ui #gameScreen[data-board-presentation="observatory"] .board-word.fusion-materializing {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .16s ease;
+}
+
+body.simple-ui #gameScreen[data-board-presentation="observatory"] .board-word:is(:hover, :focus-visible, .keyboard-selected) {
+  border-color: color-mix(in srgb, var(--observatory-cyan) 72%, white);
+  box-shadow:
+    0 15px 34px rgba(0, 0, 0, .38),
+    0 0 0 3px rgba(113, 233, 237, .1),
+    0 0 32px rgba(113, 233, 237, .2);
+}
+
+body.simple-ui #gameScreen[data-board-presentation="observatory"] .board-word[data-category="force"] {
+  border-color: color-mix(in srgb, #71e9ed 48%, rgba(255,255,255,.15));
+}
+
+body.simple-ui #gameScreen[data-board-presentation="observatory"] .board-word[data-category="nature"] {
+  border-color: color-mix(in srgb, #8fd3a9 46%, rgba(255,255,255,.15));
+}
+
+body.simple-ui #gameScreen[data-board-presentation="observatory"] .board-word[data-category="life"] {
+  border-color: color-mix(in srgb, #e5a1bb 44%, rgba(255,255,255,.15));
+}
+
+body.simple-ui #gameScreen[data-board-presentation="observatory"] .board-word[data-category="structure"] {
+  border-color: color-mix(in srgb, #f0c76d 46%, rgba(255,255,255,.15));
+}
+
+body.simple-ui #gameScreen[data-board-presentation="observatory"] .board-word[data-category="celestial"] {
+  border-color: color-mix(in srgb, #a78be8 54%, rgba(255,255,255,.15));
+}
+
+body.simple-ui #gameScreen[data-board-presentation="observatory"] .board-guide {
+  /* The Bloom is the board's primary invitation. Keeping the legacy drag
+     coachmark in the same visual centre makes both controls harder to read,
+     especially at 320px. Tutorials retain their dedicated coachmark. */
+  display: none;
+}
+
+
+
+/* Wide screens keep the readable desktop inventory by default. Players can
+   explicitly opt into the spatial Bloom without changing the Observatory
+   board renderer or affecting the forced compact interface. */
+body.simple-ui #gameScreen[data-board-presentation="observatory"][data-play-layout="wide"][data-word-selector="bloom"]:not(.scramble-orbit) .game-layout {
+  grid-template-columns: minmax(0, 1fr) !important;
+}
+
+body.simple-ui #gameScreen[data-board-presentation="observatory"][data-play-layout="wide"][data-word-selector="bloom"]:not(.scramble-orbit) .inventory {
+  display: none !important;
+}
+
+body.simple-ui #gameScreen:not([data-board-presentation="observatory"]) #alignConstellation {
+  display: none !important;
+}
+
+/* The Bloom is a nonmodal disclosure. Rest the persistent HUD while it is
+   open so its heading and petals never share hit targets with route/tools or
+   the inactivity snackbar. Everything returns when the Bloom closes. */
+body.simple-ui #gameScreen[data-board-presentation="observatory"][data-play-layout="wide"][data-word-selector="bloom"][data-bloom-stage]:not([data-bloom-stage="closed"]) .board-word {
+  filter: saturate(.72) brightness(.68);
+  opacity: .58;
+}
+
+body.simple-ui #gameScreen[data-board-presentation="observatory"]:not([data-bloom-stage="closed"]) .board-guide {
+  opacity: 0;
+  visibility: hidden;
+}
+
+body.simple-ui #gameScreen[data-board-presentation="observatory"] .mobile-tools-panel #alignConstellation {
+  display: inline-flex;
+}
+
+/* Four disclosed commands form a balanced two-by-two panel on compact
+   layouts. The fifth always-visible Undo control remains outside it. */
+body.simple-ui #gameScreen[data-board-presentation="observatory"]:is([data-play-layout="stacked"], [data-play-layout="short-landscape"]) .mobile-tools-panel {
+  width: min(216px, calc(100vw - var(--play-shell-safe-left, 0px) - var(--play-shell-safe-right, 0px) - 16px));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+/* A compact disclosure owns the interaction layer while it is open. Resting
+   the closed Bloom hub prevents the two-by-two Tools panel (and the vertical
+   Assistance rail) from visually or physically sharing its centre target. */
+body.simple-ui #gameScreen[data-board-presentation="observatory"]:is([data-play-layout="stacked"], [data-play-layout="short-landscape"]):not([data-mobile-surface="none"]) .constellation-bloom {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/* Reveal owns the canvas while it is playing; ordinary observatory chrome rests. */
+body.simple-ui #gameScreen[data-board-presentation="observatory"][data-play-phase="reveal"] .constellation-bloom,
+body.simple-ui #gameScreen[data-board-presentation="observatory"][data-play-phase="cinematic"] .constellation-bloom {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+@media (max-width: 700px), (max-height: 500px) and (orientation: landscape) {
+  body.simple-ui #gameScreen[data-board-presentation="observatory"] .board-word {
+    backdrop-filter: blur(9px);
+  }
+
+  }
+
+@media (prefers-reduced-motion: reduce) {
+  body.simple-ui #gameScreen[data-board-presentation="observatory"] :is(.board-word, .board-top-hud, .cosmos-canvas, .constellation-bloom *) {
+    transition-duration: .01ms !important;
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+
+@media (forced-colors: active) {
+  body.simple-ui #gameScreen[data-board-presentation="observatory"] .cosmos-board {
+    background: Canvas;
+  }
+
+  body.simple-ui #gameScreen[data-board-presentation="observatory"] .board-word {
+    border: 2px solid ButtonText;
+    background: ButtonFace;
+    color: ButtonText;
+    box-shadow: none;
+  }
+
+  body.simple-ui #gameScreen[data-board-presentation="observatory"] .cosmos-canvas {
+    display: none;
+  }
+
+  body.simple-ui #gameScreen[data-board-presentation="observatory"] .board-word:focus-visible {
+    outline: 3px solid Highlight;
+    outline-offset: 2px;
+  }
+}
+
+/* Play workspace: controls occupy their own row, leaving the canvas for words. */
+body.simple-ui #gameScreen[data-board-presentation="observatory"] {
+  --play-ink: #eef3f1;
+  --play-muted: #a5b4bb;
+  --play-accent: #b8e6d2;
+  --play-line: rgba(222,238,238,.12);
+  --play-panel: #101a22;
+  --play-shell-panel: var(--play-panel);
+}
+body.simple-ui #gameScreen[data-board-presentation]:not(.scramble-orbit) {
+& .game-layout { grid-template-columns: minmax(0,1fr) 292px; grid-template-rows: auto minmax(0,1fr); gap: 0; }
+& .board-workspace-bar { grid-column: 1; grid-row: 1; position: relative; z-index: 25; padding: 8px 20px; background: #0d171e; border-bottom: 1px solid var(--play-line); }
+& #board { grid-column: 1; grid-row: 2; min-height: 0; border: 0; border-radius: 0; }
+& .inventory { grid-column: 2; grid-row: 1 / span 2; min-height: 0; padding: 24px 20px; border: 0; border-left: 1px solid var(--play-line); border-radius: 0; background: #101a22; box-shadow: none; }
+& .game-nav { min-height: 72px; padding: 10px 20px; border-bottom: 1px solid var(--play-line); background: #0d171e; box-shadow: none; }
+& .game-target { top: 0; bottom: 0; left: calc((100% - 292px)/2); }
+& .game-target > div::before { display: none; }
+& :is(.game-target strong,.inventory h2,.first-orbit-step span,.first-orbit-guide p,.assist-rail-label,.run-milestone,.board-quick-tools b) { font-family: Manrope,Inter,system-ui,sans-serif; letter-spacing: -.02em; }
+& .game-target strong { color: var(--play-muted); font-weight: 500; }
+& .game-target b { color: var(--play-ink); font-weight: 750; }
+& #boardTopHud { position: static; inset: auto; width: 100%; max-width: none; display: flex; align-items: center; justify-content: space-between; gap: 24px; transform: none; opacity: 1; visibility: visible; pointer-events: auto; }
+& .board-workspace-tools { display: flex; align-items: center; gap: 4px; flex: 0 0 auto; }
+& #boardQuickTools { position: relative; inset: auto; width: auto; height: auto; display: flex; gap: 4px; padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none; transform: none; overflow: visible; }
+& .board-workspace-bar :is(#boardTopHud,.mobile-assist-surface) { opacity: 1; visibility: visible; }
+&.explore-orbit .board-workspace-tools .mobile-assist-surface { display: none; }
+&.explore-orbit #runMilestone { display: flex !important; }
+&.explore-orbit #runMilestone :is(.route-line,.route-star-strip) { display: none; }
+& .board-workspace-progress { display: flex; flex: 1 1 320px; max-width: 420px; min-width: 0; align-items: center; gap: 16px; }
+& .board-run-limit { display: flex; align-items: baseline; flex: 0 0 auto; gap: 8px; color: var(--play-ink); }
+& .board-run-limit[hidden] { display: none; }
+& .board-run-limit small { color: var(--play-muted); font: 500 11px/1.4 Manrope,system-ui,sans-serif; }
+& .board-run-limit strong { font: 700 14px/1.4 Manrope,system-ui,sans-serif; font-variant-numeric: tabular-nums; }
+& .board-run-limit .urgent { color: #ffb4a9; }
+& #runMilestone { position: static; flex: 1; min-width: 0; width: auto; margin: 0; padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none; }
+& #runMilestone header { gap: 12px; }
+& #milestoneText { color: var(--play-muted); font-size: 12px; }
+& #routeStepCount { color: var(--play-accent); font: 600 11px/1.4 Manrope,system-ui,sans-serif; white-space: nowrap; }
+& .route-line { height: 3px; margin-top: 7px; background: rgba(222,238,238,.12); box-shadow: none; }
+& .route-line em { background: var(--play-accent); box-shadow: none; }
+& #hintObjective { position: static; min-width: 0; margin: 0; max-width: 48%; }
+& .mobile-assist-surface { display: block; position: relative; inset: auto; z-index: 20; opacity: 1; visibility: visible; pointer-events: auto; }
+& :is(.nav-icon,#boardQuickTools button,.board-camera-controls button,#mobileAssistToggle) { min-height: 40px; color: var(--play-ink); border: 1px solid transparent; border-radius: 9px; background: transparent; box-shadow: none; text-shadow: none; transition: background-color .16s ease,color .16s ease; }
+& :is(.nav-icon,#boardQuickTools button,.board-camera-controls button,#mobileAssistToggle):hover:not(:disabled) { background: rgba(221,239,241,.08); color: #fff; }
+& :is(button,summary,input):focus-visible { outline: 2px solid var(--play-accent); outline-offset: 3px; }
+& #boardQuickTools > button,& #mobileAssistToggle { display: flex; align-items: center; justify-content: center; gap: 7px; width: auto; min-width: 64px; height: 40px; padding: 0 10px; }
+& #boardQuickTools button > b,& #mobileAssistToggle > b { display: inline; position: static; width: auto; height: auto; clip: auto; clip-path: none; overflow: visible; font: 600 12px/1.3 Manrope,system-ui,sans-serif; }
+& #boardQuickTools button > span { color: var(--play-muted); }
+& #mobileAssistToggle > span { display: none; }
+&:has(#helpNudge:not([hidden])) #mobileAssistToggle { color: var(--play-accent); background: rgba(184,230,210,.12); border-color: var(--play-accent); }
+& #boardQuickTools button[aria-pressed="true"],& :is(#mobileToolsToggle,#mobileAssistToggle)[aria-expanded="true"] { color: var(--play-accent); background: rgba(184,230,210,.1); }
+& #mobileToolsPanel { position: absolute; z-index: 30; inset: calc(100% + 12px) auto auto 0; display: grid; width: 256px; max-width: calc(100vw - 24px); padding: 8px; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 5px; border: 1px solid var(--play-line); border-radius: 14px; background: var(--play-panel); box-shadow: 0 20px 56px #0006; }
+& #mobileToolsPanel[hidden],& #boardAssistanceRail[hidden] { display: none; }
+& #mobileToolsPanel > button { display: flex; justify-content: flex-start; gap: 8px; width: 100%; height: 44px; padding: 8px 10px; }
+& #mobileToolsPanel > button > span { display: inline; }
+& #boardQuickTools .clear-board-action { color: #edb8ad; }
+& #boardAssistanceRail { position: absolute; inset: calc(100% + 12px) auto auto 0; display: flex; flex-direction: column; width: 240px; max-width: calc(100vw - 24px); max-height: calc(100dvh - 168px); padding: 8px; gap: 4px; border: 1px solid var(--play-line); border-radius: 14px; background: var(--play-panel); box-shadow: 0 20px 56px #0006; transform: none; overflow: auto; }
+& #boardAssistanceRail :is(.assist-rail-action,.assist-rail-info) { display: grid; grid-template-columns: 26px 1fr; align-items: center; width: 100%; min-width: 0; height: 44px; min-height: 44px; padding: 0 10px; gap: 10px; border: 0; border-radius: 8px; background: transparent; box-shadow: none; animation: none; }
+& #boardAssistanceRail :is(.assist-rail-action,.assist-rail-info):hover { background: rgba(221,239,241,.07); }
+& .assist-rail-label { position: static; width: auto; max-width: none; padding: 0; border: 0; background: none; box-shadow: none; opacity: 1; visibility: visible; transform: none; text-align: left; font-size: 13px; color: var(--play-ink); }
+& .assist-rail-icon { filter: none; }
+& .assist-rail-action kbd { display: none; }
+& .assist-rail-action > em { top: 3px; right: 2px; box-shadow: none; }
+& .board-assistance-rail__signal { display: none; }
+& .inventory-head { display: flex; justify-content: space-between; align-items: center; padding: 0; border: 0; }
+& .inventory-head h2 { margin: 0; font-size: 20px; font-weight: 650; }
+& #collectionCount { color: var(--play-muted); font: 500 13px/1.4 Manrope,system-ui,sans-serif; }
+& .collection-instruction { margin: 10px 0 22px; color: var(--play-muted); font: 400 12px/1.6 Manrope,system-ui,sans-serif; min-height: 38px; }
+& .inventory-drawer-body { min-height: 0; }
+& .inventory-search { display: flex; min-height: 44px; margin-bottom: 14px; border: 1px solid var(--play-line); border-radius: 10px; background: #091219; }
+& .inventory-search { padding: 0 10px; gap: 7px; }
+& .inventory-search input { color: var(--play-ink); font-size: 13px; }
+& .inventory-search input::-webkit-search-cancel-button { -webkit-appearance: none; }
+& .word-list { display: flex; flex-direction: column; gap: 6px; padding: 6px 6px 16px; }
+& .inventory-word { display: flex; align-items: center; min-height: 48px; margin: 0; padding: 9px 12px; gap: 10px; border: 1px solid transparent; border-radius: 10px; background: rgba(221,239,241,.035); box-shadow: none; }
+& .inventory-word::before,& .inventory-word::after { display: none; }
+& .inventory-word .emoji { font-size: 20px; background: none; border: 0; box-shadow: none; }
+& .inventory-word .word { color: var(--play-ink); font-size: 14px; font-weight: 550; }
+& .inventory-word:hover:not(:disabled) { background: rgba(221,239,241,.08); border-color: var(--play-line); }
+& .inventory-word[aria-pressed="true"] { border-color: var(--play-accent); background: rgba(184,230,210,.1); }
+& .inventory-empty { color: var(--play-muted); font-size: 13px; line-height: 1.6; }
+& #boardBottomHud { left: 180px; right: 18px; bottom: 22px; width: auto; max-width: none; grid-template-columns: minmax(0,1fr); }
+& #boardBottomHud > * { min-width: 0; max-width: 100%; }
+&[data-bloom-stage]:not([data-bloom-stage="closed"]) #alchemyNote { visibility: hidden; pointer-events: none; }
+& #tapChainStatus { padding: 10px 12px 10px 18px; border: 1px solid var(--play-line); border-radius: 14px; background: var(--play-panel); box-shadow: 0 8px 28px #0003; color: var(--play-ink); font: 500 13px/1.5 Manrope,system-ui,sans-serif; }
+& #cancelTapChain { border: 0; border-radius: 8px; background: rgba(221,239,241,.08); padding: 8px 10px; color: var(--play-muted); }
+& .board-camera-controls { border: 1px solid var(--play-line); border-radius: 10px; background: #101a22dd; box-shadow: none; }
+& .board-camera-controls button { min-height: 40px; }
+& .first-orbit-guide { border: 1px solid var(--play-line); border-radius: 16px; padding: 16px 20px; background: var(--play-panel); box-shadow: none; }
+& .first-orbit-guide::before { display: none; }
+& .first-orbit-guide :is(header span,.first-orbit-step b) { color: var(--play-muted); font: 600 12px/1.4 Manrope,system-ui,sans-serif; letter-spacing: .02em; }
+& .first-orbit-guide p { color: var(--play-ink); font-size: 16px; }
+& .first-orbit-guide small { color: var(--play-muted); }
+& .first-orbit-progress i { background: var(--play-accent); box-shadow: none; }
+& .board-workspace-bar:has(#firstOrbitGuide:not([hidden])) #boardTopHud { display: none; }
+& .board-workspace-bar #firstOrbitGuide { position: static; inset: auto; width: 100%; max-width: none; max-height: none; margin: 0; padding: 4px 0 8px; border: 0; border-radius: 0; overflow: visible; transform: none; background: transparent; }
+& .board-workspace-bar #firstOrbitGuide > header { min-height: 36px; }
+& .board-workspace-bar #firstOrbitGuide .first-orbit-step { margin-top: 0; }
+& .board-workspace-bar #firstOrbitGuide #firstOrbitTip { display: none; }
+& .board-workspace-bar #firstOrbitGuide #firstOrbitInstruction { margin: 5px 0 0; font-size: 14px; line-height: 1.5; }
+&[data-play-layout="short-landscape"] .board-workspace-bar #firstOrbitGuide { display: grid; grid-template-columns: 220px minmax(0,1fr); gap: 0 20px; padding: 0; }
+&[data-play-layout="short-landscape"] .board-workspace-bar #firstOrbitGuide > header { grid-column: 1; grid-row: 1 / span 2; }
+&[data-play-layout="short-landscape"] .board-workspace-bar #firstOrbitGuide .first-orbit-progress { grid-column: 1 / -1; }
+& #firstOrbitGuide #firstOrbitInstruction { white-space: normal; overflow: visible; text-overflow: clip; max-height: none; }
+& #playVolumeControl { width: auto; max-width: none; border: 0; padding: 0; background: none; box-shadow: none; }
+& #playVolumeControl > :is(#playVolumeDown,#playMasterVolumeQuickValue,#playVolumeUp) { display: none; }
+& #playSoundToggle { width: auto; min-width: 70px; height: 44px; padding: 0 12px; display: flex; align-items: center; justify-content: center; gap: 6px; border: 0; border-radius: 10px; background: transparent; }
+& #playSoundToggle > b { display: inline; font: 600 12px/1 Manrope,system-ui,sans-serif; }
+&[data-play-layout="wide"][data-word-input="inventory"]:not(.training-orbit,.second-orbit,.scramble-orbit) .board-guide:not(.hidden) { display: flex; color: var(--play-muted); gap: 14px; }
+& .board-guide .guide-orbit { display: none; }
+& .board-guide strong { font: 550 clamp(24px,3vw,40px)/1.2 Manrope,system-ui,sans-serif; letter-spacing: -.045em; color: var(--play-ink); }
+&[data-word-input="bloom"]:not(.training-orbit,.second-orbit,.scramble-orbit) .board-guide:not(.hidden) { display: flex; top: 38%; width: calc(100% - 40px); gap: 12px; color: var(--play-muted); }
+&[data-word-input="bloom"] .board-guide strong { font-size: clamp(24px,4vw,32px); }
+&[data-word-input="bloom"] .board-guide .guide-mobile { display: block; }
+& .board-guide span { font: 400 14px/1.7 Manrope,system-ui,sans-serif; max-width: 390px; }
+&[data-word-selector="bloom"] .game-target { left: 50%; }
+&:is([data-play-layout="stacked"],[data-play-layout="short-landscape"]) {
+  & .game-layout { grid-template-columns: minmax(0,1fr) !important; grid-template-rows: auto minmax(0,1fr) !important; }
+  & .inventory { display: none; }
+  & .game-nav { min-height: 56px; padding: 4px 8px; display: grid; grid-template-columns: 72px minmax(0,1fr) 70px; gap: 6px; }
+  & .game-target { position: static; grid-column: 2; width: 100%; max-width: 100%; min-width: 0; transform: none; justify-content: center; text-align: center; }
+  & .board-workspace-bar { padding: 5px 8px; }
+  & #boardTopHud { gap: 12px; }
+  & .board-workspace-tools { gap: 0; }
+  & #boardQuickTools { gap: 0; }
+  & #boardQuickTools > button,& #mobileAssistToggle { min-width: 48px; min-height: 44px; height: 44px; padding: 0 7px; }
+  & #boardQuickTools > button > span { display: none; }
+  & #boardQuickTools > #undoBoardAction > b { display: inline; font-size: 11px; }
+  & #boardQuickTools button > b,& #mobileAssistToggle > b { font-size: 11px; }
+  & .board-workspace-progress { max-width: 200px; flex: 1; }
+  &:has(.board-run-limit:not([hidden])) #boardTopHud { flex-wrap: wrap; gap: 4px; }
+  &:has(.board-run-limit:not([hidden])) .board-workspace-progress { flex-basis: 100%; max-width: none; padding: 2px 7px 6px; }
+  & #milestoneText { display: none; }
+  & #runMilestone > div:first-child { justify-content: flex-end; }
+  &:has(#runMilestone:is(.has-route-signal,.has-concept-bond)) #boardTopHud { flex-wrap: wrap; gap: 8px; }
+  &:has(#runMilestone:is(.has-route-signal,.has-concept-bond)) .board-workspace-progress { flex-basis: 100%; max-width: none; }
+  & #runMilestone:is(.has-route-signal,.has-concept-bond) #milestoneText { display: block; white-space: normal; line-height: 1.5; font-size: 12px; color: var(--play-accent); }
+  & #runMilestone:is(.has-route-signal,.has-concept-bond) #routeStepCount { display: none; }
+  & #routeStepCount { font-size: 11px; }
+  & #hintObjective { display: none; }
+  & .mobile-assist-surface { position: static; }
+  & #boardAssistanceRail { left: 8px; right: auto; top: calc(100% + 4px); width: 230px; max-height: calc(100dvh - 136px); }
+  & #playSoundToggle > span { display: none; }
+  & .game-hud { width: 70px; min-width: 70px; max-width: 70px; }
+  & :is(#playSoundDisclosure,#playSoundToggle) { width: 70px; min-width: 70px; }
+  & #boardBottomHud { left: 8px; right: 8px; width: auto; bottom: 68px; }
+  & .board-camera-controls { bottom: 12px; }
+  & .board-camera-controls button { height: 44px; min-height: 44px; min-width: 44px; }
+  & #tapChainStatus { padding: 8px 10px; font-size: 12px; }
+}
+&[data-play-layout="short-landscape"] { & .first-orbit-guide { padding: 8px 12px; } & .board-workspace-progress { max-width: 300px; } }
+@media (prefers-reduced-motion: reduce) { & :is(.nav-icon,#boardQuickTools button,.board-camera-controls button,#mobileAssistToggle) { transition: none; } }
+@media (forced-colors: active) { & { --play-ink: CanvasText; --play-muted: CanvasText; --play-accent: Highlight; --play-panel: Canvas; --play-line: ButtonText; } }
+}

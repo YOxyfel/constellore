@@ -2,19 +2,69 @@ import { expect, test } from "@playwright/test";
 import { installSeenIntroFixture } from "./intro-fixture.mjs";
 
 async function startChallenge(page) {
-  await page.goto("/play/?challenge=1&target=Telescope&seed=73");
+  await page.goto("/play/?challenge=1&target=Telescope&seed=73&birthday=off");
   const briefing = page.locator("#missionBriefingDialog");
   await expect(briefing).toHaveJSProperty("open", true);
-  await page.locator("#beginMission").click();
+  await page.locator("#beginMission").evaluate((button) => button.click());
+  await expect(briefing).toHaveJSProperty("open", false);
   await expect(page.locator("#gameScreen")).toBeVisible();
   await expect(page.locator("#boardQuickTools")).toBeVisible();
 }
 
 async function addWord(page, word) {
-  const item = page.locator(`.inventory-word[data-word="${word}"]`);
+  const game = page.locator("#gameScreen");
+  if (await game.getAttribute("data-mobile-surface") !== "none") {
+    await page.keyboard.press("Escape");
+    await expect(game).toHaveAttribute("data-mobile-surface", "none");
+  }
+  if (await game.getAttribute("data-word-input") !== "bloom") {
+    const item = page.locator(`.inventory-word[data-word="${word}"]`);
+    await expect(item).toBeVisible();
+    await expect(item).toBeEnabled();
+    await item.click();
+    return;
+  }
+  const bloom = page.locator("#constellationBloom");
+  for (let step = 0; step < 5 && await bloom.getAttribute("data-stage") !== "closed"; step += 1) await page.keyboard.press("Escape");
+  await expect(bloom).toHaveAttribute("data-stage", "closed");
+  if (await game.getAttribute("data-mobile-surface") !== "none") {
+    await page.keyboard.press("Escape");
+    await expect(game).toHaveAttribute("data-mobile-surface", "none");
+  }
+  const trigger = page.locator("#constellationBloomTrigger");
+  await expect(trigger).toBeVisible();
+  await expect(trigger).toBeEnabled();
+  await trigger.click();
+  await expect(page.locator("#constellationBloomSearch")).toBeVisible();
+  await page.locator("#constellationBloomSearch").fill(word);
+  await expect(bloom).toHaveAttribute("data-stage", "search");
+  const item = page.locator(`.constellation-bloom__word[data-word="${word}"]`);
   await expect(item).toBeVisible();
   await expect(item).toBeEnabled();
-  await item.click({ force: true });
+  await item.click();
+  await expect(bloom).not.toHaveAttribute("data-transition", /\S/);
+  // The picker stays open after arming a word so the player can choose its partner.
+  await expect(page.locator(".board-word").first()).toBeVisible();
+}
+
+async function mobilePlayLayout(page) {
+  return (await page.locator("#gameScreen").getAttribute("data-play-layout")) !== "wide";
+}
+
+async function openTools(page) {
+  const toggle = page.locator("#mobileToolsToggle");
+  if (await toggle.getAttribute("aria-expanded") !== "true") await toggle.click();
+  await expect(toggle).toHaveAttribute("aria-expanded", "true");
+  await expect(page.locator("#mobileToolsPanel")).toBeVisible();
+  return true;
+}
+
+async function openAssistance(page) {
+  const toggle = page.locator("#mobileAssistToggle");
+  if (await toggle.getAttribute("aria-expanded") !== "true") await toggle.click();
+  await expect(toggle).toHaveAttribute("aria-expanded", "true");
+  await expect(page.locator("#boardAssistanceRail")).toBeVisible();
+  return true;
 }
 
 function rectanglesIntersect(left, right, gap = 0) {
@@ -25,19 +75,28 @@ function rectanglesIntersect(left, right, gap = 0) {
 }
 
 async function boardHudGeometry(page) {
-  return page.locator("#board").evaluate((board) => {
+  return page.locator("#gameScreen").evaluate((game) => {
     const rectangle = (element) => {
       const bounds = element.getBoundingClientRect();
       return { left: bounds.left, right: bounds.right, top: bounds.top, bottom: bounds.bottom, width: bounds.width, height: bounds.height };
     };
     const visible = (element) => element && !element.hidden && getComputedStyle(element).display !== "none" && rectangle(element).width > 0;
-    const toolbar = board.querySelector("#boardQuickTools");
-    const milestone = board.querySelector("#runMilestone");
+    const board = game.querySelector("#board");
+    const toolbar = game.querySelector("#boardQuickTools");
+    const milestone = game.querySelector("#runMilestone");
+    const help = game.querySelector("#mobileAssistToggle");
     return {
       board: rectangle(board),
+      bar: rectangle(game.querySelector(".board-workspace-bar")),
+      layout: game.dataset.playLayout || "wide",
       toolbar: rectangle(toolbar),
       milestone: visible(milestone) ? rectangle(milestone) : null,
-      buttons: [...toolbar.querySelectorAll("button")].map(rectangle),
+      help: rectangle(help),
+      buttons: [...toolbar.querySelectorAll("button"), help].filter(visible).map((element) => {
+        const rect = rectangle(element);
+        const hit = document.elementFromPoint(rect.left + rect.width / 2, rect.top + rect.height / 2);
+        return { ...rect, id: element.id, hit: hit === element || element.contains(hit) };
+      }),
       bottom: [...board.querySelectorAll("#boardBottomHud > *")].filter(visible).map(rectangle)
     };
   });
@@ -93,63 +152,98 @@ test.beforeEach(async ({ page, request }, testInfo) => {
 });
 
 for (const viewport of [
-  { name: "compact desktop", width: 835, height: 677, inventory: "side" },
-  { name: "portrait tablet", width: 797, height: 1265, inventory: "bottom" },
-  { name: "wide phone", width: 655, height: 610, inventory: "bottom" },
-  { name: "short tablet", width: 758, height: 414, inventory: "side" },
-  { name: "short phone landscape", width: 655, height: 414, inventory: "side" },
-  { name: "small phone", width: 320, height: 568, inventory: "bottom" }
+  { name: "compact desktop", width: 835, height: 677 },
+  { name: "portrait tablet", width: 797, height: 1265 },
+  { name: "wide phone", width: 655, height: 610 },
+  { name: "short tablet", width: 758, height: 414 },
+  { name: "short phone landscape", width: 655, height: 414 },
+  { name: "small phone", width: 320, height: 568 }
 ]) {
-  test(`board HUD stays centered and collision-free on ${viewport.name}`, async ({ page, browserName }) => {
+  test(`board workspace keeps utilities clear of the canvas on ${viewport.name}`, async ({ page, browserName }) => {
     test.skip(browserName !== "chromium", "Responsive board geometry is covered once in Chromium.");
     await page.setViewportSize({ width: viewport.width, height: viewport.height });
     await startChallenge(page);
 
-    const inventory = await inventoryGeometry(page);
-    const placement = inventory.inventory.top >= inventory.board.bottom - 2 ? "bottom" : "side";
-    expect(placement).toBe(viewport.inventory);
-    if (placement === "bottom") {
-      expect(inventory.display).toBe("flex");
-      expect(inventory.direction).toBe("row");
-      expect(inventory.overflowX).toBe("auto");
-      expect(inventory.overflowY).toBe("hidden");
-      expect(inventory.items.length).toBeGreaterThanOrEqual(4);
-      expect(Math.max(...inventory.items.map((item) => item.top)) - Math.min(...inventory.items.map((item) => item.top))).toBeLessThanOrEqual(2);
-      expect(inventory.items.every((item, index) => index === 0 || item.left > inventory.items[index - 1].left)).toBe(true);
-      expect(inventory.items.every((item) => item.width < inventory.list.width / 2)).toBe(true);
+    const layout = await page.locator("#gameScreen").getAttribute("data-play-layout");
+    if (layout === "wide") {
+      await expect(page.locator(".inventory")).toBeVisible();
+      await expect(page.locator("#constellationBloom")).toBeHidden();
+      await expect(page.locator("#gameScreen")).toHaveAttribute("data-word-input", "inventory");
     } else {
-      expect(inventory.display).toBe("block");
-      expect(inventory.overflowY).toBe("auto");
-      expect(inventory.items.every((item, index) => index === 0 || item.top > inventory.items[index - 1].top)).toBe(true);
+      await expect(page.locator(".inventory")).toBeHidden();
+      const bloom = page.locator("#constellationBloomTrigger");
+      await expect(bloom).toBeVisible();
+      const geometry = await page.locator("#board").evaluate((board) => {
+        const trigger = board.querySelector("#constellationBloomTrigger");
+        const rect = (element) => {
+          const bounds = element.getBoundingClientRect();
+          return { left: bounds.left, right: bounds.right, top: bounds.top, bottom: bounds.bottom, width: bounds.width, height: bounds.height };
+        };
+        return { board: rect(board), trigger: rect(trigger) };
+      });
+      expect(geometry.trigger.width).toBeGreaterThanOrEqual(44);
+      expect(geometry.trigger.height).toBeGreaterThanOrEqual(44);
+      expect(geometry.trigger.left).toBeGreaterThanOrEqual(geometry.board.left);
+      expect(geometry.trigger.right).toBeLessThanOrEqual(geometry.board.right);
+      expect(geometry.trigger.top).toBeGreaterThanOrEqual(geometry.board.top);
+      expect(geometry.trigger.bottom).toBeLessThanOrEqual(geometry.board.bottom);
     }
 
     const top = await boardHudGeometry(page);
-    expect(Math.abs((top.toolbar.left + top.toolbar.right) / 2 - (top.board.left + top.board.right) / 2)).toBeLessThanOrEqual(1);
-    expect(top.toolbar.left).toBeGreaterThanOrEqual(top.board.left);
-    expect(top.toolbar.right).toBeLessThanOrEqual(top.board.right);
+    expect(top.buttons.map(({ id }) => id)).toEqual(["undoBoardAction", "mobileToolsToggle", "mobileAssistToggle"]);
+    await expect(page.locator("#mobileToolsToggle")).toHaveAttribute("aria-expanded", "false");
+    await expect(page.locator("#mobileAssistToggle")).toHaveAttribute("aria-expanded", "false");
+    expect(top.bar.bottom).toBeLessThanOrEqual(top.board.top + 1);
+    expect(rectanglesIntersect(top.toolbar, top.board)).toBe(false);
+    expect(top.toolbar.left).toBeGreaterThanOrEqual(top.bar.left);
+    expect(top.toolbar.right).toBeLessThanOrEqual(top.bar.right);
     for (const button of top.buttons) {
       expect(button.width).toBeGreaterThanOrEqual(44);
-      expect(button.height).toBeGreaterThanOrEqual(44);
+      expect(button.height).toBeGreaterThanOrEqual(top.layout === "wide" ? 40 : 44);
+      expect(button.hit, `${button.id} remains directly clickable`).toBe(true);
+      expect(button.bottom).toBeLessThanOrEqual(top.bar.bottom);
     }
+    const clippedCaptions = await page.locator("#boardQuickTools button > b, #mobileAssistToggle > b").evaluateAll((labels) => (
+      labels.filter((label) => label.getBoundingClientRect().width > 0
+        && label.scrollWidth > label.clientWidth + 1).map((label) => label.textContent)
+    ));
+    expect(clippedCaptions, "Board command names remain readable").toEqual([]);
     if (top.milestone) {
-      expect(top.milestone.left).toBeGreaterThanOrEqual(top.board.left);
-      expect(top.milestone.right).toBeLessThanOrEqual(top.board.right);
+      expect(top.milestone.left).toBeGreaterThanOrEqual(top.bar.left);
+      expect(top.milestone.right).toBeLessThanOrEqual(top.bar.right);
+      expect(top.milestone.bottom).toBeLessThanOrEqual(top.board.top + 1);
       expect(rectanglesIntersect(top.toolbar, top.milestone, 6)).toBe(false);
+      expect(rectanglesIntersect(top.help, top.milestone, 6)).toBe(false);
     }
+    await openTools(page);
+    await openAssistance(page);
+    await expect(page.locator("#mobileToolsPanel")).toBeHidden();
+    await page.keyboard.press("Escape");
+    await expect(page.locator("#boardAssistanceRail")).toBeHidden();
+    await expect(page.locator("#mobileAssistToggle")).toBeFocused();
 
+    await openTools(page);
     await page.locator("#tidyBoard").focus();
     await page.keyboard.down("Shift");
-    await expect(page.locator("#alchemyNote")).toBeVisible();
+    if (top.layout === "wide") await expect(page.locator("#alchemyNote")).toBeVisible();
+    else {
+      await expect(page.locator("#alchemyNote")).toBeHidden();
+    }
     const notice = await boardHudGeometry(page);
-    expect(notice.bottom).toHaveLength(1);
-    expect(notice.bottom[0].left).toBeGreaterThanOrEqual(notice.board.left);
-    expect(notice.bottom[0].right).toBeLessThanOrEqual(notice.board.right);
-    expect(notice.bottom[0].bottom).toBeLessThanOrEqual(notice.board.bottom);
-    expect(rectanglesIntersect(notice.toolbar, notice.bottom[0])).toBe(false);
-    if (notice.milestone) expect(rectanglesIntersect(notice.milestone, notice.bottom[0])).toBe(false);
+    if (top.layout === "wide") {
+      expect(notice.bottom).toHaveLength(1);
+      expect(notice.bottom[0].left).toBeGreaterThanOrEqual(notice.board.left);
+      expect(notice.bottom[0].right).toBeLessThanOrEqual(notice.board.right);
+      expect(notice.bottom[0].bottom).toBeLessThanOrEqual(notice.board.bottom);
+      expect(rectanglesIntersect(notice.toolbar, notice.bottom[0])).toBe(false);
+      if (notice.milestone) expect(rectanglesIntersect(notice.milestone, notice.bottom[0])).toBe(false);
+    } else {
+      expect(notice.bottom).toHaveLength(0);
+    }
     await page.keyboard.up("Shift");
 
     await addWord(page, "earth");
+    await openTools(page);
     await page.locator("#resetBoard").click();
     await expect(page.locator("#boardUndo")).toBeVisible();
     await expect(page.locator("#alchemyNote")).toBeHidden();
@@ -176,7 +270,8 @@ test("the active Route Signal persists, advances, and clears without crowding a 
       body: JSON.stringify({
         available: true,
         remaining: Math.max(0, 3 - tipCall),
-        scoreSafe: true,
+        scoreSafe: false,
+        scoreMultiplier: Math.max(.7, 1 - tipCall * .1),
         text: hints[index],
         used: tipCall
       })
@@ -186,38 +281,31 @@ test("the active Route Signal persists, advances, and clears without crowding a 
   await startChallenge(page);
   const objective = page.locator("#hintObjective");
   await expect(objective).toBeHidden();
+  await openAssistance(page);
   await page.locator("#senseButton").click();
   await page.locator("#useQuickTip").click();
   await expect(page.locator("#quickTipMessage")).toHaveText(hints[0]);
   await page.locator('[data-close="senseDialog"]').click();
-  await expect(objective).toBeVisible();
+  await expect(objective).toBeHidden();
   await expect(page.locator("#hintObjectiveText")).toHaveText(hints[0]);
+  await expect(page.locator("#runMilestone")).toHaveClass(/has-route-signal/);
+  await expect(page.locator("#milestoneText")).toHaveText(hints[0]);
+  await expect(page.locator("#milestoneText")).toBeVisible();
 
-  const geometry = await page.locator("#board").evaluate((board) => {
-    const rectangle = (element) => {
-      const bounds = element.getBoundingClientRect();
-      return { left: bounds.left, right: bounds.right, top: bounds.top, bottom: bounds.bottom };
-    };
-    return {
-      board: rectangle(board),
-      tools: rectangle(board.querySelector("#boardQuickTools")),
-      milestone: rectangle(board.querySelector("#runMilestone")),
-      objective: rectangle(board.querySelector("#hintObjective"))
-    };
-  });
-  expect(geometry.objective.left).toBeGreaterThanOrEqual(geometry.board.left);
-  expect(geometry.objective.right).toBeLessThanOrEqual(geometry.board.right);
-  expect(geometry.objective.top).toBeGreaterThanOrEqual(geometry.board.top);
-  expect(rectanglesIntersect(geometry.tools, geometry.objective, 6)).toBe(false);
-  expect(rectanglesIntersect(geometry.milestone, geometry.objective, 6)).toBe(false);
+  const geometry = await boardHudGeometry(page);
+  expect(geometry.milestone.left).toBeGreaterThanOrEqual(geometry.bar.left);
+  expect(geometry.milestone.right).toBeLessThanOrEqual(geometry.bar.right);
+  expect(geometry.milestone.bottom).toBeLessThanOrEqual(geometry.board.top + 1);
+  expect(rectanglesIntersect(geometry.toolbar, geometry.milestone, 6)).toBe(false);
 
+  await openAssistance(page);
   await page.locator("#senseButton").click();
   await expect(page.locator("#quickTipMessage")).toHaveText(hints[0]);
   await page.locator("#useQuickTip").click();
   await expect(page.locator("#quickTipMessage")).toHaveText(hints[1]);
   await page.locator('[data-close="senseDialog"]').click();
   await expect(page.locator("#hintObjectiveText")).toHaveText(hints[1]);
-  await expect(objective).not.toContainText(hints[0]);
+  await expect(page.locator("#milestoneText")).toHaveText(hints[1]);
 
   await page.locator("#pauseRunButton").click();
   await page.locator("#pauseRestart").click();
@@ -225,14 +313,16 @@ test("the active Route Signal persists, advances, and clears without crowding a 
   await expect(page.locator("#gameScreen")).toBeVisible();
   await expect(objective).toBeHidden();
   await expect(page.locator("#hintObjectiveText")).toHaveText("");
+  await expect(page.locator("#runMilestone")).not.toHaveClass(/has-route-signal/);
 });
 
-test("quick board tools undo, redo, tidy, and reversibly clear visual words", async ({ page, browserName }) => {
+test("quick board tools undo, redo, align, tidy, and reversibly clear visual words", async ({ page, browserName }) => {
   test.skip(browserName !== "chromium", "Keyboard history is covered once in Chromium.");
   await startChallenge(page);
 
   const undo = page.locator("#undoBoardAction");
   const redo = page.locator("#redoBoardAction");
+  const align = page.locator("#alignConstellation");
   const tidy = page.locator("#tidyBoard");
   const clear = page.locator("#resetBoard");
   await expect(undo).toBeDisabled();
@@ -246,15 +336,22 @@ test("quick board tools undo, redo, tidy, and reversibly clear visual words", as
   await expect(page.locator(".board-word")).toHaveCount(0);
   await expect(redo).toBeEnabled();
 
+  await openTools(page);
   await redo.click();
   await expect(page.locator('.board-word[data-word="earth"]')).toHaveCount(1);
 
   await addWord(page, "water");
   await expect(page.locator(".board-word")).toHaveCount(2);
+  await expect(align).toBeEnabled();
+  await openTools(page);
+  await align.click();
+  await expect(page.locator(".board-word")).toHaveCount(2);
   await expect(tidy).toBeEnabled();
+  await openTools(page);
   await tidy.click();
   await expect(page.locator(".board-word")).toHaveCount(2);
 
+  await openTools(page);
   await clear.click();
   await expect(page.locator(".board-word")).toHaveCount(0);
   await expect(undo).toBeEnabled();
@@ -298,14 +395,15 @@ test("a missing combination asks for the player's expected result and saves or s
   await expect(page.locator("#gameScreen")).not.toHaveClass(/focus-orbit/);
   await addWord(page, "earth");
   await addWord(page, "water");
-  await expect(page.locator('.inventory-word[data-word="mud"]')).toBeVisible();
-  await expect(page.locator("#combinationStory")).toHaveAttribute("data-story-total-layers", "1");
+  await expect(page.locator('.board-word[data-word="mud"]')).toHaveCount(1);
+  await expect(page.locator("#combinationStory")).toHaveCount(0);
+  await openTools(page);
   await page.locator("#resetBoard").click();
   await expect(page.locator(".board-word")).toHaveCount(0);
   await addWord(page, "fire");
   await addWord(page, "air");
-  await expect(page.locator('.inventory-word[data-word="energy"]')).toBeVisible();
-  await expect(page.locator("#combinationStory")).toHaveAttribute("data-story-total-layers", "2");
+  await expect(page.locator('.board-word[data-word="energy"]')).toHaveCount(1);
+  await openTools(page);
   await page.locator("#resetBoard").click();
   await expect(page.locator(".board-word")).toHaveCount(0);
   await page.route("**/api/combine", async (route) => {
@@ -317,8 +415,8 @@ test("a missing combination asks for the player's expected result and saves or s
   });
   await addWord(page, "mud");
   await addWord(page, "energy");
-  await expect(page.locator("#combinationStory")).toHaveAttribute("data-story-total-layers", "2");
-  await expect(page.locator("#combinationStory [data-story-narration]")).toContainText(/crumbles.*rebuilds/i);
+  await expect(page.locator("#combinationStory")).toHaveCount(0);
+  await expect(page.locator("link[data-combination-story-style]")).toHaveCount(0);
 
   const feedback = page.locator("#expectedPairFeedback");
   await expect(feedback).toBeVisible();
@@ -339,4 +437,108 @@ test("a missing combination asks for the player's expected result and saves or s
     });
     expect(saved?.suggestions?.Wetland).toBe(1);
   }
+});
+
+for (const viewport of [
+  { name: "small portrait", width: 320, height: 568 },
+  { name: "short landscape", width: 844, height: 390 }
+]) {
+  test(`recipe notices stay clear of zoom and the word palette on ${viewport.name}`, async ({ page, browserName }) => {
+    test.skip(browserName !== "chromium", "Compact board notice geometry is covered in Chromium.");
+    await page.setViewportSize({ width: viewport.width, height: viewport.height });
+    await startChallenge(page);
+    await page.locator("#constellationBloomTrigger").click();
+    await page.locator("#constellationBloomSearch").fill("earth");
+    await page.locator('.constellation-bloom__word[data-word="earth"]').click();
+    await expect(page.locator('.board-word[data-word="earth"]')).toHaveAttribute("aria-pressed", "true");
+    await expect(page.locator("#constellationBloom")).not.toHaveAttribute("data-transition", /\S/);
+    await page.locator("#constellationBloomSearch").fill("water");
+    await page.locator('.constellation-bloom__word[data-word="water"]').click();
+    await expect(page.locator('.board-word[data-word="mud"]')).toHaveCount(1);
+    await expect(page.locator("[data-golden-pair]:visible")).toHaveCount(0);
+    await expect(page.locator("#alchemyNote")).toContainText("Mud");
+    await expect.poll(() => page.locator("#alchemyNote").evaluate((element) => Number(getComputedStyle(element).opacity))).toBeGreaterThan(0.5);
+
+    const noticeGeometry = async () => page.evaluate(() => {
+      const rect = (element) => {
+        const bounds = element.getBoundingClientRect();
+        return { left: bounds.left, right: bounds.right, top: bounds.top, bottom: bounds.bottom, width: bounds.width, height: bounds.height };
+      };
+      const note = document.querySelector("#alchemyNote");
+      const panel = document.querySelector("#constellationBloomPanel");
+      const visible = (element) => element?.checkVisibility({ checkVisibilityCSS: true, checkOpacity: true });
+      const controls = [...document.querySelectorAll("#boardCameraControls button,#constellationBloomPanel button,#constellationBloomTrigger")]
+        .filter(visible).filter((element) => {
+          const bounds = element.getBoundingClientRect();
+          return bounds.top >= 0 && bounds.bottom <= innerHeight && bounds.left >= 0 && bounds.right <= innerWidth;
+        });
+      return {
+        camera: rect(document.querySelector("#boardCameraControls")),
+        notice: visible(note) ? rect(note) : null,
+        palette: visible(panel) ? rect(panel) : null,
+        controls: controls.map((element) => {
+          const bounds = rect(element);
+          const hit = document.elementFromPoint(bounds.left + bounds.width / 2, bounds.top + bounds.height / 2);
+          return { ...bounds, id: element.id || element.dataset.word, hit: hit === element || element.contains(hit) };
+        })
+      };
+    });
+    const closed = await noticeGeometry();
+    expect(closed.notice).not.toBeNull();
+    expect(rectanglesIntersect(closed.notice, closed.camera)).toBe(false);
+    for (const control of closed.controls) {
+      expect(control.hit, `${control.id} has a clear hit target`).toBe(true);
+      if (["boardZoomOut", "resetBoardView", "boardZoomIn"].includes(control.id)) {
+        expect(control.width).toBeGreaterThanOrEqual(44);
+        expect(control.height).toBeGreaterThanOrEqual(44);
+      }
+    }
+    await page.locator("#constellationBloomTrigger").click();
+    await expect(page.locator("#constellationBloomPanel")).toBeVisible();
+    await expect(page.locator("#constellationBloom")).not.toHaveAttribute("data-transition", /\S/);
+    const open = await noticeGeometry();
+    expect(open.notice, "transient notices stay hidden while choosing a word").toBeNull();
+    await expect(page.locator("#alchemyNote")).toBeHidden();
+    for (const control of open.controls) expect(control.hit, `${control.id} has a clear hit target with the palette open`).toBe(true);
+  });
+}
+
+test("second lesson offers the discovered Stone directly without requiring search", async ({ page, browserName }) => {
+  test.skip(browserName !== "chromium", "The tutorial palette continuation is covered in Chromium.");
+  await page.setViewportSize({ width: 320, height: 568 });
+  await page.addInitScript(() => {
+    for (const key of ["constellore-profile-v1", "constellore-local-profile-v1"]) localStorage.removeItem(key);
+  });
+  await page.goto("/play/?birthday=off");
+  await page.locator("#firstOrbitGuide:visible,#primaryOrbitButton:visible").first().waitFor();
+  if (await page.locator("#primaryOrbitButton").isVisible()) await page.locator("#primaryOrbitButton").click();
+  await expect(page.locator("#firstOrbitGuide")).toBeVisible();
+
+  const chooseDefaultWord = async (word) => {
+    const bloom = page.locator("#constellationBloom");
+    await expect(bloom).not.toHaveAttribute("data-transition", /\S/);
+    if (await bloom.getAttribute("data-stage") === "closed") await page.locator("#constellationBloomTrigger").click();
+    await expect(page.locator("#constellationBloomSearch")).toHaveValue("");
+    const choice = page.locator(`.constellation-bloom__word[data-word="${word}"]`);
+    await expect(choice).toBeVisible();
+    await choice.click();
+  };
+  await chooseDefaultWord("earth");
+  await chooseDefaultWord("water");
+  await expect(page.locator("#resultDialog")).toHaveJSProperty("open", true);
+  await page.locator("#resultPrimary").click();
+  await expect(page.locator("#missionBriefingDialog")).toHaveJSProperty("open", true);
+  await page.locator("#beginMission").click();
+  await expect(page.locator("#firstOrbitGuideTitle")).toHaveText("Make Lava");
+  await chooseDefaultWord("earth");
+  await chooseDefaultWord("fire");
+  await expect(page.locator("[data-golden-pair]:visible")).toHaveCount(0);
+  await expect(page.locator("#firstOrbitInstruction")).toHaveText("Lava is ready. Choose Water to make Stone.");
+  await chooseDefaultWord("water");
+  await expect(page.locator("[data-golden-pair]:visible")).toHaveCount(0);
+  await expect(page.locator("#firstOrbitInstruction")).toHaveText("Stone is ready. Choose Stone again to make Mountain.");
+  await chooseDefaultWord("stone");
+  await expect(page.locator("#resultDialog")).toHaveJSProperty("open", true);
+  await expect(page.locator("#resultTitle")).toHaveText("You made Mountain!");
+  await expect(page.locator("#resultStats")).toContainText("3 combinations");
 });

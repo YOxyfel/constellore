@@ -192,14 +192,25 @@ test("local account and Stardust supplies stay explicit and usable on a narrow p
   await page.locator("#senseDialog").evaluate((dialog) => dialog.showModal());
 
   const help = page.locator("#senseDialog");
+  const supplies = page.locator("#stardustDialog");
   await expect(help).toHaveJSProperty("open", true);
-  await expect(help.getByRole("button", { name: "Star Compass 90 Stardust" })).toBeVisible();
-  await expect(help.getByRole("button", { name: "Streak Shield 240 Stardust" })).toBeVisible();
-  await expect(help).toContainText("Neither is sold for money");
+  await expect(help.getByRole("heading", { name: "Need help?" })).toBeVisible();
+  await expect(help.locator("#buyStarCompass")).toHaveCount(0);
   await expectDialogFitsViewport(page, "#senseDialog");
 
+  await page.locator("#powerupShopShortcut").click();
+  await expect(help).toHaveJSProperty("open", false);
+  await expect(supplies).toHaveJSProperty("open", true);
+  await expect(supplies.getByRole("button", { name: "Star Compass 90 Stardust" })).toBeVisible();
+  await expect(supplies.getByRole("button", { name: "Streak Shield 240 Stardust" })).toBeVisible();
+  await expect(supplies).toContainText("Nothing here is sold for money");
+  await expect(supplies.locator("#routeSignalRefillStatus")).toHaveText("3 ready");
+  await expect(supplies.locator("#wordGiftRefillStatus")).toHaveText("1 ready");
+  await expect(supplies.locator("#revealRefillStatus")).toHaveText("Ready");
+  await expectDialogFitsViewport(page, "#stardustDialog");
+
   const helpA11y = await new AxeBuilder({ page })
-    .include("#senseDialog")
+    .include("#stardustDialog")
     .withTags(["wcag2a", "wcag2aa", "wcag21aa"])
     .analyze();
   expect(helpA11y.violations).toEqual([]);

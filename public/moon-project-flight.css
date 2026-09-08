@@ -1,0 +1,372 @@
+/* Planetary Home launch scene and the repeat Moon-project flight handoff. */
+.simple-ui #startScreen .moon-home-voyage {
+  --journey-accent: #78eef1;
+  --journey-destination: #dcebf2;
+  position: relative;
+  width: min(820px, 100%);
+  height: clamp(350px, 34vw, 420px);
+  min-height: 350px;
+  margin: 22px auto 0;
+  padding: 0;
+  display: block;
+  isolation: isolate;
+  overflow: hidden;
+  border: 1px solid rgba(126, 238, 243, .3);
+  border-radius: 30px;
+  appearance: none;
+  color: var(--home-ink);
+  background:
+    radial-gradient(circle at 74% 27%, color-mix(in srgb, var(--journey-destination) 16%, transparent), transparent 24%),
+    radial-gradient(circle at 42% 72%, rgba(66, 222, 238, .12), transparent 30%),
+    linear-gradient(156deg, rgba(7, 31, 46, .96), rgba(2, 10, 23, .98) 68%);
+  box-shadow: inset 0 1px rgba(255,255,255,.08), 0 24px 64px rgba(0,3,13,.42), 0 0 52px rgba(70,224,238,.08);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: border-color .3s ease, box-shadow .3s ease, transform .3s ease;
+}
+
+.simple-ui #startScreen .moon-home-voyage[hidden] { display: none !important; }
+.simple-ui #startScreen .moon-home-voyage[data-destination-world="mars"] {
+  --journey-accent: #ffc06f;
+  --journey-destination: #ff995c;
+}
+.simple-ui #startScreen .moon-home-voyage:focus-visible { outline: 3px solid #8ff7f2; outline-offset: 4px; }
+.simple-ui #startScreen .moon-home-voyage::before {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  pointer-events: none;
+  opacity: .72;
+  background-image:
+    radial-gradient(circle at 7% 18%, #fff 0 1px, transparent 1.7px),
+    radial-gradient(circle at 23% 38%, #83eff3 0 1px, transparent 1.7px),
+    radial-gradient(circle at 55% 15%, #fff5cc 0 1px, transparent 1.8px),
+    radial-gradient(circle at 70% 48%, #fff 0 1px, transparent 1.7px),
+    radial-gradient(circle at 91% 20%, #8be8ff 0 1.2px, transparent 2px),
+    radial-gradient(circle at 84% 68%, #fff0ba 0 1px, transparent 1.7px);
+  filter: drop-shadow(0 0 5px rgba(168,245,255,.55));
+}
+.simple-ui #startScreen .moon-home-voyage::after {
+  content: "";
+  position: absolute;
+  z-index: 6;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  box-shadow: inset 0 -50px 80px rgba(0,5,14,.28), inset 0 0 0 7px rgba(150,230,236,.035);
+}
+
+.simple-ui #startScreen .moon-home-voyage__sky { position: absolute; z-index: 1; inset: 0; pointer-events: none; }
+.simple-ui #startScreen .moon-home-voyage__trajectory {
+  position: absolute;
+  top: 28%;
+  left: 47%;
+  width: 39%;
+  height: 28%;
+  opacity: .36;
+  border-top: 1px solid var(--journey-accent);
+  border-radius: 50%;
+  filter: drop-shadow(0 0 7px var(--journey-accent));
+  transform: rotate(-17deg);
+}
+.simple-ui #startScreen .moon-home-voyage__trajectory::after {
+  content: "";
+  position: absolute;
+  top: -3px;
+  right: 3%;
+  width: 5px;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: #fff7d7;
+  box-shadow: 0 0 12px 3px var(--journey-accent);
+}
+.simple-ui #startScreen .moon-home-voyage__destination {
+  position: absolute;
+  top: 27px;
+  right: 27px;
+  width: clamp(86px, 13%, 112px);
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  filter: drop-shadow(0 0 18px color-mix(in srgb, var(--journey-destination) 48%, transparent));
+  animation: moon-home-destination-float 4.8s ease-in-out infinite;
+}
+.simple-ui #startScreen .moon-home-voyage__destination img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  clip-path: circle(42% at 50% 50%);
+  object-fit: cover;
+}
+.simple-ui #startScreen .moon-home-voyage__destination-orbit {
+  position: absolute;
+  z-index: 2;
+  width: 126%;
+  height: 34%;
+  border: 1px solid color-mix(in srgb, var(--journey-accent) 60%, transparent);
+  border-radius: 50%;
+  transform: rotate(-18deg);
+  animation: moon-home-orbit 9s linear infinite;
+}
+.simple-ui #startScreen .moon-home-voyage__destination small {
+  position: absolute;
+  z-index: 3;
+  top: calc(100% - 4px);
+  padding: 4px 8px;
+  border: 1px solid color-mix(in srgb, var(--journey-accent) 45%, transparent);
+  border-radius: 999px;
+  color: #f4ffff;
+  background: rgba(2,13,25,.8);
+  font: 800 9px/1 Consolas,"DM Mono",monospace;
+  letter-spacing: .16em;
+  white-space: nowrap;
+}
+
+.simple-ui #startScreen .moon-home-voyage__platform {
+  position: absolute;
+  z-index: 2;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 47%;
+  overflow: hidden;
+  pointer-events: none;
+}
+.simple-ui #startScreen .moon-home-voyage__platform img {
+  position: absolute;
+  top: -6%;
+  left: -12.5%;
+  width: 125%;
+  max-width: none;
+  aspect-ratio: 1;
+  display: block;
+  clip-path: circle(45.5% at 50% 50%);
+  object-fit: cover;
+  filter: saturate(.9) brightness(.88) drop-shadow(0 -10px 22px color-mix(in srgb, var(--journey-accent) 38%, transparent));
+}
+.simple-ui #startScreen .moon-home-voyage__platform::after {
+  content: "";
+  position: absolute;
+  top: -3px;
+  left: 7%;
+  width: 86%;
+  height: 34px;
+  border-top: 2px solid color-mix(in srgb, var(--journey-accent) 74%, #fff 8%);
+  border-radius: 50%;
+  opacity: .72;
+  filter: blur(.4px) drop-shadow(0 0 13px var(--journey-accent));
+}
+
+.simple-ui #startScreen .moon-home-voyage__rocket {
+  position: absolute;
+  z-index: 4;
+  bottom: 7%;
+  left: 47%;
+  width: clamp(150px, 27%, 224px);
+  height: 84%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  pointer-events: none;
+  filter: drop-shadow(0 18px 18px rgba(0,0,0,.62));
+  transform: translateX(-50%);
+  transform-origin: 50% 100%;
+  transition: filter .28s ease, transform .34s cubic-bezier(.2,.75,.2,1);
+}
+.simple-ui #startScreen .moon-home-voyage__rocket img {
+  position: relative;
+  z-index: 3;
+  width: auto;
+  height: 100%;
+  /* Keep the generated rocket at its intrinsic ratio. The mobile rocket
+     cradle can be intentionally narrower than the nearly full-height art;
+     clamping only the width while leaving height at 100% made it look
+     squeezed on narrow phones. The cradle itself still owns positioning
+     and the scene clips safely at its rounded boundary. */
+  max-width: none;
+  max-height: 100%;
+  flex: none;
+  display: block;
+  object-fit: contain;
+  object-position: 50% 100%;
+}
+.simple-ui #startScreen .moon-home-voyage__launch-ring {
+  position: absolute;
+  z-index: 0;
+  bottom: -2%;
+  left: 50%;
+  width: 155%;
+  height: 13%;
+  border: 1px solid color-mix(in srgb, var(--journey-accent) 64%, transparent);
+  border-radius: 50%;
+  opacity: .5;
+  box-shadow: 0 0 24px color-mix(in srgb, var(--journey-accent) 24%, transparent);
+  transform: translateX(-50%);
+}
+.simple-ui #startScreen .moon-home-voyage__engine {
+  position: absolute;
+  z-index: 2;
+  bottom: -13%;
+  left: 42%;
+  width: 17%;
+  height: 31%;
+  border-radius: 50% 50% 66% 66%;
+  opacity: .13;
+  background: radial-gradient(ellipse at 50% 1%,#fff 0 7%,#a9fbff 12% 22%,#4adced 29% 44%,#8662ff 58%,transparent 75%);
+  filter: blur(.7px) drop-shadow(0 0 11px rgba(83,230,244,.62));
+  transform: translateX(-50%) scaleY(.32);
+  transform-origin: 50% 0;
+  transition: opacity .22s ease, transform .28s ease;
+}
+.simple-ui #startScreen .moon-home-voyage__engine--right { left: 58%; }
+
+.simple-ui #startScreen .moon-home-voyage__copy {
+  position: absolute;
+  z-index: 5;
+  top: 29px;
+  left: 29px;
+  width: min(45%, 320px);
+  display: grid;
+  gap: 5px;
+  pointer-events: none;
+  text-shadow: 0 3px 18px #000;
+}
+.simple-ui #startScreen .moon-home-voyage__copy small { color: var(--journey-accent); font: 800 10px/1.15 Consolas,"DM Mono",monospace; letter-spacing: .16em; }
+.simple-ui #startScreen .moon-home-voyage__copy strong { color: var(--home-ink); font: 700 clamp(27px,3vw,39px)/1.02 Georgia,serif; text-wrap: balance; }
+.simple-ui #startScreen .moon-home-voyage__copy em { color: var(--home-copy); font: normal 13px/1.4 inherit; }
+.simple-ui #startScreen .moon-home-voyage__origin {
+  position: absolute;
+  z-index: 7;
+  bottom: 22px;
+  left: 23px;
+  color: rgba(228,247,249,.76);
+  font: 700 9px/1 Consolas,"DM Mono",monospace;
+  letter-spacing: .14em;
+  text-shadow: 0 2px 10px #000;
+}
+.simple-ui #startScreen .moon-home-voyage__origin strong { color: #fff8d9; font-size: 11px; }
+.simple-ui #startScreen .moon-home-voyage__action {
+  position: absolute;
+  z-index: 7;
+  right: 20px;
+  bottom: 17px;
+  min-width: 154px;
+  min-height: 48px;
+  padding: 0 15px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border: 1px solid color-mix(in srgb, var(--journey-accent) 56%, transparent);
+  border-radius: 999px;
+  color: #fff9df;
+  background: rgba(2,13,25,.8);
+  box-shadow: inset 0 1px rgba(255,255,255,.08),0 9px 24px rgba(0,0,0,.34);
+  -webkit-backdrop-filter: blur(9px);
+  backdrop-filter: blur(9px);
+  pointer-events: none;
+}
+.simple-ui #startScreen .moon-home-voyage__action small { font: 800 10px/1 Consolas,"DM Mono",monospace; letter-spacing: .11em; }
+.simple-ui #startScreen .moon-home-voyage__action b { font-size: 20px; font-weight: 400; transition: transform .22s ease; }
+
+.simple-ui #startScreen .moon-home-voyage:disabled {
+  opacity: 1;
+  cursor: default;
+}
+.simple-ui #startScreen .moon-home-voyage:is(:active,:focus-visible):not(:disabled) .moon-home-voyage__rocket {
+  filter: drop-shadow(0 23px 21px rgba(0,0,0,.66)) drop-shadow(0 0 16px rgba(86,229,242,.34));
+  transform: translate(-50%,-7px) scale(1.012);
+}
+.simple-ui #startScreen .moon-home-voyage:is(:active,:focus-visible):not(:disabled) .moon-home-voyage__engine {
+  opacity: 1;
+  transform: translateX(-50%) scaleY(1.18);
+  animation: moon-home-engine 180ms ease-in-out infinite alternate;
+}
+
+.simple-ui #startScreen .moon-home-project-visit {
+  position: absolute;
+  z-index: 12;
+  right: clamp(28px, 8vw, 108px);
+  bottom: clamp(82px, 10vh, 120px);
+  min-width: 178px;
+  min-height: 50px;
+  padding: 9px 15px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border: 1px solid rgba(255, 207, 125, .46);
+  border-radius: 999px;
+  color: #fff9df;
+  background: rgba(4, 18, 31, .9);
+  box-shadow: inset 0 1px rgba(255,255,255,.08), 0 14px 32px rgba(0,0,0,.38);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  touch-action: manipulation;
+  backdrop-filter: blur(10px);
+}
+.simple-ui #startScreen .moon-home-project-visit[hidden] { display: none !important; }
+.simple-ui #startScreen .moon-home-project-visit span { display: grid; gap: 3px; }
+.simple-ui #startScreen .moon-home-project-visit small { color: #ffc875; font: 800 9px/1 Consolas,"DM Mono",monospace; letter-spacing: .12em; }
+.simple-ui #startScreen .moon-home-project-visit strong { font-size: 14px; }
+.simple-ui #startScreen .moon-home-project-visit b { font-size: 19px; font-weight: 400; transition: transform .2s ease; }
+.simple-ui #startScreen .moon-home-project-visit:is(:hover,:focus-visible) { border-color: #ffd691; background: rgba(18, 40, 52, .95); }
+.simple-ui #startScreen .moon-home-project-visit:is(:hover,:focus-visible) b { transform: translateX(4px); }
+.simple-ui #startScreen .moon-home-project-visit:focus-visible { outline: 3px solid #8ff7f2; outline-offset: 3px; }
+
+@media (hover:hover) and (pointer:fine) {
+  .simple-ui #startScreen .moon-home-voyage:is(:hover,:focus-visible) { border-color: color-mix(in srgb,var(--journey-accent) 82%,#fff 10%); box-shadow: inset 0 1px rgba(255,255,255,.12),0 30px 72px rgba(0,3,13,.5),0 0 66px color-mix(in srgb,var(--journey-accent) 18%,transparent); transform: translateY(-3px); }
+  .simple-ui #startScreen .moon-home-voyage:is(:hover,:focus-visible) .moon-home-voyage__rocket { filter: drop-shadow(0 23px 21px rgba(0,0,0,.66)) drop-shadow(0 0 14px rgba(86,229,242,.25)); transform: translate(-50%,-9px) scale(1.015); }
+  .simple-ui #startScreen .moon-home-voyage:is(:hover,:focus-visible) .moon-home-voyage__engine { opacity: 1; transform: translateX(-50%) scaleY(1.18); animation: moon-home-engine 180ms ease-in-out infinite alternate; }
+  .simple-ui #startScreen .moon-home-voyage:is(:hover,:focus-visible) .moon-home-voyage__action b { transform: translateX(5px); }
+}
+
+body.moon-project-launch-is-active { overflow: hidden; background: #000; }
+.moon-project-launch { position: fixed; z-index: 2147483000; inset: 0; overflow: hidden; opacity: 0; pointer-events: none; background: #000; transition: opacity 320ms ease; }
+.moon-project-launch[data-phase="blackout"],.moon-project-launch[data-phase="handoff"] { opacity: 1; }
+.moon-project-launch[data-phase="reveal"] { opacity: 0; pointer-events: none; }
+.moon-project-launch__sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }
+
+@keyframes moon-home-engine { from { scale: .86 1; filter: blur(.7px) drop-shadow(0 0 8px rgba(83,230,244,.56)); } to { scale: 1.08 1.15; filter: blur(1px) drop-shadow(0 0 17px rgba(83,230,244,.84)); } }
+@keyframes moon-home-orbit { to { rotate: 360deg; } }
+@keyframes moon-home-destination-float { 50% { transform: translateY(-6px); } }
+
+@media (min-width:1000px) {
+  body.simple-ui:not(.first-session) #startScreen .moon-home-voyage { grid-area: project; width: 100%; margin: 0; }
+}
+
+@media (max-width:520px) {
+  .simple-ui #startScreen .moon-home-voyage { height: clamp(370px,112vw,430px); min-height: 370px; margin-top: 16px; border-radius: 24px; }
+  .simple-ui #startScreen .moon-home-voyage__copy { top: 18px; left: 18px; width: calc(100% - 132px); gap: 4px; }
+  .simple-ui #startScreen .moon-home-voyage__copy small { font-size: 9px; letter-spacing: .12em; }
+  .simple-ui #startScreen .moon-home-voyage__copy strong { font-size: clamp(23px,7.8vw,30px); }
+  .simple-ui #startScreen .moon-home-voyage__copy em { font-size: 12px; line-height: 1.3; }
+  .simple-ui #startScreen .moon-home-voyage__destination { top: 15px; right: 13px; width: 84px; }
+  .simple-ui #startScreen .moon-home-voyage__destination small { font-size: 8px; }
+  .simple-ui #startScreen .moon-home-voyage__trajectory { top: 29%; left: 40%; width: 48%; }
+  .simple-ui #startScreen .moon-home-voyage__platform { height: 43%; }
+  .simple-ui #startScreen .moon-home-voyage__platform img { left: -35%; width: 170%; }
+  .simple-ui #startScreen .moon-home-voyage__rocket { bottom: 8%; left: 40%; width: clamp(132px,43%,174px); height: 73%; }
+  .simple-ui #startScreen .moon-home-voyage__origin { bottom: 12px; left: 12px; max-width: 72px; line-height: 1.25; }
+  .simple-ui #startScreen .moon-home-voyage__action { right: 10px; bottom: 10px; min-width: 126px; min-height: 46px; padding-inline: 12px; }
+  .simple-ui #startScreen .moon-home-voyage__action small { max-width: 87px; font-size: 9px; line-height: 1.2; letter-spacing: .08em; }
+  .simple-ui #startScreen .moon-home-project-visit { right: 20px; bottom: 76px; min-width: 158px; min-height: 46px; padding: 8px 12px; }
+}
+
+@media (orientation:landscape) and (max-width:900px) and (max-height:500px) {
+  .simple-ui #startScreen .moon-home-voyage { height: 280px; min-height: 280px; }
+  .simple-ui #startScreen .moon-home-voyage__copy { top: 18px; left: 20px; width: 38%; }
+  .simple-ui #startScreen .moon-home-voyage__copy strong { font-size: clamp(24px,4.6vw,34px); }
+  .simple-ui #startScreen .moon-home-voyage__destination { top: 18px; right: 21px; width: 80px; }
+  .simple-ui #startScreen .moon-home-voyage__platform { height: 48%; }
+  .simple-ui #startScreen .moon-home-voyage__platform img { top: -9%; }
+  .simple-ui #startScreen .moon-home-voyage__rocket { left: 51%; width: 138px; height: 88%; }
+}
+
+@media (prefers-reduced-motion:reduce) {
+  .simple-ui #startScreen .moon-home-voyage,.simple-ui #startScreen .moon-home-voyage *,.moon-project-launch,.moon-project-launch * { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; }
+}

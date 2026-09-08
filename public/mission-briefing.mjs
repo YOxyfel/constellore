@@ -1,7 +1,7 @@
 import {
   FIRST_ORBIT_COMBINATION_COUNT,
   FIRST_ORBIT_TARGET
-} from "./first-orbit.mjs?v=5.0.0-beta.1";
+} from "./first-orbit.mjs?v=5.0.0-beta.4";
 
 const MODE_RULES = {
   training: `Make ${FIRST_ORBIT_TARGET} in ${FIRST_ORBIT_COMBINATION_COUNT} combination${FIRST_ORBIT_COMBINATION_COUNT === 1 ? "" : "s"}.`,
@@ -116,7 +116,7 @@ export function buildMissionBriefing(game, { localOnly = false } = {}) {
   let limitDetail = "Take as long as you want.";
   if (timeLimit) {
     limitValue = `${timeLimit} seconds.`;
-    limitDetail = "The timer starts when you press Play.";
+    limitDetail = "The timer starts when you begin.";
   } else if (moveLimit) {
     limitValue = `${moveLimit} moves.`;
     limitDetail = mode === "weekly" && Number.isFinite(Number(game?.stage))
@@ -134,7 +134,7 @@ export function buildMissionBriefing(game, { localOnly = false } = {}) {
     division,
     emoji: String(game?.emoji || "✦"),
     instruction: mode === "explore"
-      ? "Combine any two words and see what you can make."
+      ? "Combine freely, without a target or timer. Your discoveries are saved for your next visit."
       : `Keep combining words until you make ${target}.`,
     interactionRule: "Drop one word onto another to combine them.",
     modeRule: MODE_RULES[mode] || MODE_RULES.reach,
@@ -167,7 +167,7 @@ export function buildMissionBriefing(game, { localOnly = false } = {}) {
         ? "Training uses the same combinations as the full game, but saves no rewards or leaderboard result."
         : "Play it as a Study orbit, or choose another mode for a fresh scored mission."
       : ranked
-      ? `${shuffledStart ? "These starting words are only for this game and are not added to your collection. " : ""}Route Signals are score-safe. Compass and Gift keep a reduced Open score; complete Reveal becomes Study with 0 score.`
-      : `${shuffledStart ? "These starting words are only for this game and are not added to your collection. " : ""}Route Signals are score-safe. Compass and Gift keep reduced rewards in Open; complete Reveal becomes Study with 0 score.`
+      ? `${shuffledStart ? "These starting words are only for this game and are not added to your collection. " : ""}Each Route Signal keeps 90% of the remaining maximum: 90%, then 81%, then 72.9% of score and rewards. Compass and Gift keep a reduced Open score; complete Reveal becomes Study with 0 score.`
+      : `${shuffledStart ? "These starting words are only for this game and are not added to your collection. " : ""}Each Route Signal keeps 90% of the remaining maximum: 90%, then 81%, then 72.9% of rewards. Compass and Gift keep reduced rewards in Open; complete Reveal becomes Study with 0 score.`
   };
 }

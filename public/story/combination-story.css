@@ -1,6 +1,6 @@
 .combination-story {
   width: min(560px, calc(100% - 44px));
-  height: clamp(180px, 34%, 300px);
+  height: 46px;
   position: absolute;
   z-index: 2;
   left: 50%;
@@ -41,6 +41,7 @@
 }
 
 .combination-story [data-story-scene] {
+  display: none;
   position: absolute;
   inset: 0 0 30px;
   overflow: hidden;
@@ -192,7 +193,7 @@
 @media (max-width: 700px) {
   .combination-story {
     width: calc(100% - 16px);
-    height: min(158px, 37%);
+    height: 42px;
     bottom: 54px;
     opacity: .82;
   }
@@ -211,7 +212,7 @@
 }
 
 @media (max-height: 560px) and (min-width: 520px) {
-  .combination-story { width: min(460px, 48%); height: 150px; bottom: 48px; }
+  .combination-story { width: min(460px, 48%); height: 42px; bottom: 48px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

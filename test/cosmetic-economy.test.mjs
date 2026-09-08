@@ -6,7 +6,9 @@ import { fileURLToPath } from "node:url";
 import {
   ALL_COSMETIC_BODY_CLASSES,
   COSMETIC_CATALOG,
+  COSMETIC_COLLECTION_FAMILIES,
   COSMETIC_COLLECTIONS,
+  COSMETIC_MANIFEST,
   COSMETIC_SCHEMA_VERSION,
   COSMETIC_SLOTS,
   DEFAULT_COSMETIC_LOADOUT,
@@ -47,7 +49,8 @@ const vanguard = COSMETIC_COLLECTIONS.find((entry) => entry.slug === "stellar-va
 const publicRoot = fileURLToPath(new URL("../public/", import.meta.url));
 
 test("canonical manifest has stable namespaces, complete collections, and one valid item per preset slot", () => {
-  assert.equal(COSMETIC_SCHEMA_VERSION, 10);
+  assert.equal(COSMETIC_SCHEMA_VERSION, 11);
+  assert.equal(COSMETIC_MANIFEST.schemaVersion, 11);
   assert.deepEqual(COSMETIC_SLOTS, [
     "wordPlaque", "trailSet", "boardFinish", "homeScene", "gateStyle", "uiFinish", "soundTheme"
   ]);
@@ -165,6 +168,77 @@ test("canonical manifest has stable namespaces, complete collections, and one va
     "constellore.earned.weekly-sigil.gate-style"
   ]);
   assert.ok(COSMETIC_CATALOG.every((entry) => COSMETIC_SLOTS.includes(entry.slot)));
+});
+
+test("collection families have stable catalog metadata, membership, and style labels", () => {
+  assert.equal(COSMETIC_MANIFEST.collectionFamilies, COSMETIC_COLLECTION_FAMILIES);
+  assert.deepEqual(COSMETIC_COLLECTION_FAMILIES, [
+    {
+      id: "constellore",
+      label: "Constellore Originals",
+      kicker: "Core universe",
+      description: "Signature celestial collections rooted in the world of the game.",
+      order: 1,
+      future: false
+    },
+    {
+      id: "theme-worlds",
+      label: "Theme Worlds",
+      kicker: "Genre transformations",
+      description: "Complete genre and art-style transformations with their own look and sound.",
+      order: 2,
+      future: false
+    },
+    {
+      id: "collaborations",
+      label: "Collaborations",
+      kicker: "Partner worlds",
+      description: "Official collections created with artists, studios, and partner worlds.",
+      order: 3,
+      future: true
+    },
+    {
+      id: "community-creations",
+      label: "Community Creations",
+      kicker: "Curated together",
+      description: "Curated collections designed with the Constellore community.",
+      order: 4,
+      future: true
+    }
+  ]);
+  assert.equal(new Set(COSMETIC_COLLECTION_FAMILIES.map((family) => family.id)).size, COSMETIC_COLLECTION_FAMILIES.length);
+  assert.equal(new Set(COSMETIC_COLLECTION_FAMILIES.map((family) => family.order)).size, COSMETIC_COLLECTION_FAMILIES.length);
+  assert.ok(COSMETIC_COLLECTION_FAMILIES.every(Object.isFrozen));
+
+  const familyIds = new Set(COSMETIC_COLLECTION_FAMILIES.map((family) => family.id));
+  assert.deepEqual(COSMETIC_COLLECTIONS.map(({
+    slug,
+    collectionFamily,
+    styleLabel
+  }) => ({
+    slug,
+    collectionFamily,
+    styleLabel
+  })), [
+    { slug: "celestial-atlas", collectionFamily: "constellore", styleLabel: "Classic celestial" },
+    { slug: "aurora-archive", collectionFamily: "constellore", styleLabel: "Prismatic frostglass" },
+    { slug: "solar-foundry", collectionFamily: "constellore", styleLabel: "Brass orrery" },
+    { slug: "lunar-garden", collectionFamily: "constellore", styleLabel: "Moonlit botanical" },
+    { slug: "eclipse-sovereign", collectionFamily: "constellore", styleLabel: "Eclipse prestige" },
+    { slug: "pixel-frontier", collectionFamily: "theme-worlds", styleLabel: "Retro arcade" },
+    { slug: "bubble-reef", collectionFamily: "theme-worlds", styleLabel: "Undersea storybook" },
+    { slug: "stellar-vanguard", collectionFamily: "theme-worlds", styleLabel: "Cinematic space opera" }
+  ]);
+  assert.ok(COSMETIC_COLLECTIONS.every((collection) => familyIds.has(collection.collectionFamily)));
+  assert.ok(COSMETIC_COLLECTIONS.every((collection) => collection.styleLabel.length > 0));
+  assert.deepEqual(
+    [...new Set(COSMETIC_COLLECTIONS.map((collection) => collection.collectionFamily))],
+    ["constellore", "theme-worlds"]
+  );
+  assert.deepEqual(
+    COSMETIC_COLLECTION_FAMILIES.filter((family) => family.future).map((family) => family.id),
+    ["collaborations", "community-creations"]
+  );
 });
 
 test("Lunar Garden and Eclipse Sovereign use the contracted seven-piece IDs and media paths", () => {
@@ -542,7 +616,7 @@ test("collection helpers equip complete presets, recognize custom mixes, and emi
   assert.ok(cosmeticClasses(celestial.preset).includes("theme-void"), "legacy style hooks stay available");
   assert.equal(new Set(ALL_COSMETIC_BODY_CLASSES).size, ALL_COSMETIC_BODY_CLASSES.length);
   assert.deepEqual(cosmeticAnalyticsPayload(aurora.preset), {
-    cosmeticSchema: "10",
+    cosmeticSchema: "11",
     collection: "aurora-archive",
     wordPlaque: "frostglass",
     trailSet: "aurora-ribbon",
@@ -556,7 +630,7 @@ test("collection helpers equip complete presets, recognize custom mixes, and emi
     [pixel, bubble, vanguard].map((entry) => cosmeticAnalyticsPayload(entry.preset)),
     [
       {
-        cosmeticSchema: "10",
+        cosmeticSchema: "11",
         collection: "pixel-frontier",
         wordPlaque: "cartridge-frame",
         trailSet: "scanline-spark",
@@ -567,7 +641,7 @@ test("collection helpers equip complete presets, recognize custom mixes, and emi
         soundTheme: "pixel-pulse"
       },
       {
-        cosmeticSchema: "10",
+        cosmeticSchema: "11",
         collection: "bubble-reef",
         wordPlaque: "bubble-glass",
         trailSet: "bubble-stream",
@@ -578,7 +652,7 @@ test("collection helpers equip complete presets, recognize custom mixes, and emi
         soundTheme: "bubble-beat"
       },
       {
-        cosmeticSchema: "10",
+        cosmeticSchema: "11",
         collection: "stellar-vanguard",
         wordPlaque: "vanguard-alloy",
         trailSet: "ion-crescent",
@@ -625,7 +699,7 @@ test("real-money products remain creative and never sell competitive power", () 
   assert.equal(policy.fluctuatingPricesCurrency, "star_credits");
   assert.equal(policy.personalizedPricing, false);
   assert.equal(policy.randomPaidContents, false);
-  assert.equal(policy.cosmeticSchemaVersion, 10);
+  assert.equal(policy.cosmeticSchemaVersion, 11);
 });
 
 test("play achievements unlock badges and cosmetic-only profile auras", () => {

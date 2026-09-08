@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en" data-effects="full">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#070912">
+  <title>Constellore Profile Frames</title>
+  <link rel="stylesheet" href="/play/profile-frame-showcase.css">
+</head>
+<body>
+  <header class="showcase-hero">
+    <a class="back-link" href="/play/" aria-label="Back to Constellore">
+      <span aria-hidden="true">←</span>
+      Constellore
+    </a>
+    <div class="showcase-hero__copy">
+      <span class="eyebrow">COSMETIC LAB · STANDALONE PIECES</span>
+      <h1>Profile Frames</h1>
+      <p>Twenty collectible overlays: ten full frames and ten cinematic partial effects with intentional open gaps.</p>
+    </div>
+    <div class="showcase-stats" aria-label="Collection summary">
+      <span><strong id="frameCount">20</strong> pieces</span>
+      <span><strong id="effectCount">4</strong> live effects</span>
+      <span><strong id="partialCount">10</strong> partial overlays</span>
+    </div>
+  </header>
+
+  <main>
+    <section class="showcase-toolbar" aria-label="Preview controls">
+      <div>
+        <span class="toolbar-kicker">Preview controls</span>
+        <strong>Inspect the collection in motion</strong>
+      </div>
+      <label class="motion-toggle">
+        <input id="motionToggle" type="checkbox" checked>
+        <span aria-hidden="true"></span>
+        <b>Animated effects</b>
+      </label>
+    </section>
+
+    <section class="collection-section" aria-labelledby="partialCollectionTitle">
+      <header class="collection-section__header">
+        <div>
+          <span class="toolbar-kicker">Three-island overlays</span>
+          <h2 id="partialCollectionTitle">Two outside. One clipped to the card.</h2>
+        </div>
+        <p>The larger corner pieces hang beyond the border; the slender side anchor stays contained inside it.</p>
+      </header>
+      <div
+        class="frame-grid frame-grid--partial"
+        id="partialFrameGrid"
+        aria-label="Partial profile overlays"
+      ></div>
+    </section>
+
+    <section class="collection-section" aria-labelledby="fullCollectionTitle">
+      <header class="collection-section__header">
+        <div>
+          <span class="toolbar-kicker">Complete perimeter pieces</span>
+          <h2 id="fullCollectionTitle">Full profile frames</h2>
+        </div>
+      </header>
+      <div
+        class="frame-grid frame-grid--full"
+        id="fullFrameGrid"
+        aria-label="Full profile frames"
+      ></div>
+    </section>
+  </main>
+
+  <template id="profileFrameTemplate">
+    <article class="frame-entry">
+      <div class="profile-frame-stage">
+        <section class="profile-card" aria-label="Example player profile card">
+          <div class="profile-card__banner" aria-hidden="true"></div>
+          <div class="profile-card__avatar" aria-hidden="true"><span>W</span><i></i></div>
+          <div class="profile-card__identity">
+            <span class="profile-card__rank">WAYFINDER · RANK 06</span>
+            <h2>Nova Cartographer</h2>
+            <p>Mapping impossible connections across a living universe.</p>
+          </div>
+          <div class="profile-card__facts">
+            <span><b>184</b> discoveries</span>
+            <span><b>12</b> constellations</span>
+          </div>
+          <div class="profile-card__quote">“Every strange path becomes a map.”</div>
+        </section>
+        <div class="profile-effect" aria-hidden="true">
+          <div class="effect-atmosphere"></div>
+          <div class="effect-orbit"></div>
+          <div class="effect-core"></div>
+          <div class="effect-particles"></div>
+          <div class="effect-foreground"></div>
+        </div>
+        <div class="profile-frame-art" aria-hidden="true">
+          <div class="profile-frame-islands profile-frame-islands--outside"></div>
+          <div class="profile-frame-islands profile-frame-islands--card-clipped"></div>
+          <img class="profile-frame-art__full" alt="" loading="lazy" decoding="async">
+        </div>
+      </div>
+      <footer class="frame-entry__meta">
+        <div>
+          <span class="frame-entry__eyebrow"></span>
+          <h2></h2>
+          <p></p>
+        </div>
+        <div class="frame-entry__badges">
+          <span class="frame-entry__type" hidden>Partial overlay</span>
+          <span class="frame-entry__motion" hidden>Animated</span>
+        </div>
+      </footer>
+      <div class="frame-entry__palette" aria-hidden="true"></div>
+    </article>
+  </template>
+
+  <script type="module" src="/play/profile-frame-showcase.mjs"></script>
+</body>
+</html>

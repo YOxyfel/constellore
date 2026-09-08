@@ -2,7 +2,7 @@ import {
   applyStardustPurchase,
   quoteStardustPurchase,
   sanitizeStardustStoreState
-} from "./stardust-store.mjs?v=5.0.0-beta.1";
+} from "./stardust-store.mjs?v=5.0.0-beta.4";
 
 function purchaseFailureMessage(result) {
   const label = result?.item?.label || "That supply";

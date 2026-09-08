@@ -15,6 +15,12 @@ async function connect(page, fromWord, toWord, type) {
   await page.getByRole("button", { name: "Create bond", exact: true }).click();
 }
 
+async function showPanel(page, panel) {
+  if (await page.locator(`#${panel}Panel`).isVisible()) return;
+  await page.locator(`[data-mobile-tab="${panel}"]`).click();
+  await expect(page.locator(`#${panel}Panel`)).toBeVisible();
+}
+
 test("the standalone lab builds, stresses, rewires, and previews a Concept Bloom without game APIs", async ({ page }) => {
   const apiRequests = [];
   page.on("request", (request) => {
@@ -47,6 +53,7 @@ test("the standalone lab builds, stresses, rewires, and previews a Concept Bloom
   await expect(page.locator("#coherenceValue")).toHaveText("100");
   await expect(page.locator("#overallState")).toHaveText("resilient");
 
+  await showPanel(page, "inspect");
   for (const purpose of ["shelter", "habitat", "community"]) {
     await page.locator(`#purposePicker input[value="${purpose}"]`).check();
   }
@@ -63,12 +70,14 @@ test("the standalone lab builds, stresses, rewires, and previews a Concept Bloom
     .toContainText("asserted");
   await expect(page.locator("#findingList")).toContainText("asserted");
 
+  await showPanel(page, "inspect");
   await page.getByRole("button", { name: "Rewire House · Bastion flows into Energy", exact: true }).click();
   await page.getByRole("button", { name: "Swap direction", exact: true }).click();
   await page.getByRole("button", { name: "Update bond", exact: true }).click();
   await expect(page.locator("#bondLedger .bond-entry").filter({ hasText: "Energy flows into House · Bastion" }))
     .toContainText("supported");
 
+  await showPanel(page, "inspect");
   await page.getByRole("button", { name: /Preview world consequence/i }).click();
   await expect(page.locator("#commitDialog")).toHaveJSProperty("open", true);
   await expect(page.locator("#commitTitle")).toHaveText("Shelter + Habitat + Community Bastion");

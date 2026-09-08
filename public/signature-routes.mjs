@@ -256,7 +256,8 @@ function assistanceFrom(raw, history) {
   const multiplier = hasMultiplier
     ? Math.min(policy.multiplier, Math.max(0, Math.min(1, parsedMultiplier)))
     : policy.multiplier;
-  if (multiplier < policy.multiplier) policy = policyForMultiplier(multiplier);
+  if (multiplier <= 0) policy = ASSISTANCE.training;
+  else if (multiplier < policy.multiplier && policy.id !== "tip") policy = policyForMultiplier(multiplier);
   return {
     id: policy.id,
     multiplier,
@@ -376,7 +377,7 @@ export function gradeSignatureRoute(raw = {}) {
       contextualSteps,
       rareSteps: history.filter((step) => step.rarity >= RARITY_SCORES.rare).length,
       assist: assistance.id,
-      scoreMultiplier: Math.round(assistance.multiplier * 100) / 100,
+      scoreMultiplier: Math.round(assistance.multiplier * 1_000_000) / 1_000_000,
       truncated: entries.length > history.length
     }
   };
@@ -468,9 +469,12 @@ export function sanitizeRouteSignature(raw) {
   const rawMultiplier = finiteNumber(raw.scoreMultiplier);
   const requestedEligibility = raw.scoreEligible === true;
   const scoreMultiplier = requestedEligibility && assistPolicy.eligible && Number.isFinite(rawMultiplier)
-    ? Math.round(Math.min(assistPolicy.multiplier, Math.max(0, rawMultiplier)) * 100) / 100
+    ? Math.round(Math.min(assistPolicy.multiplier, Math.max(0, rawMultiplier)) * 1_000_000) / 1_000_000
     : 0;
-  if (scoreMultiplier < assistPolicy.multiplier) {
+  if (scoreMultiplier <= 0) {
+    assistPolicy = ASSISTANCE.training;
+    assist = assistPolicy.id;
+  } else if (scoreMultiplier < assistPolicy.multiplier && assistPolicy.id !== "tip") {
     assistPolicy = policyForMultiplier(scoreMultiplier);
     assist = assistPolicy.id;
   }

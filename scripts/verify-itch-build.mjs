@@ -16,6 +16,32 @@ import { validatePublicDuelApiUrl } from "./public-duel-config.mjs";
 import { validatePublicFeedbackApiUrl } from "./public-feedback-config.mjs";
 import { createDeterministicZip, readZip, sha256 } from "./release-archive.mjs";
 import { withAssetVersion } from "./release-metadata.mjs";
+import { startupModuleFiles } from "./startup-module-files.mjs";
+import {
+  assertPlanetHubReleaseInventory,
+  buildPlanetHubRuntimeBundle,
+  buildPlanetHubRuntimeModule,
+  isPlanetHubReleaseMinifiedFile,
+  isPlanetHubRuntimeFile,
+  PLANET_HUB_ASSET_PATHS,
+  PLANET_HUB_BUNDLED_SOURCE_FILES,
+  PLANET_HUB_OPTIONAL_MODULE_FILES,
+  PLANET_HUB_RELEASE_LAZY_FILES,
+  PLANET_HUB_RELEASE_RUNTIME_FILES,
+  PLANET_HUB_RELEASE_STYLE_FILES
+} from "./planet-hub-packaging.mjs";
+import { THREE_VENDOR_FILES } from "./sync-planet-hub-vendor.mjs";
+import {
+  COMBINING_BOARD_CORE_FILES,
+  COMBINING_BOARD_LAZY_FILES,
+  PLAY_ON_DEMAND_FILES,
+  VOYAGE_PROJECTION_LAZY_FILES
+} from "../public/secondary-surface-loader.mjs";
+import {
+  VOYAGE_MEDIA_CONTRACT_SHA256,
+  VOYAGE_MEDIA_CONTRACT_VERSION,
+  VOYAGE_MEDIA_SCHEMA_VERSION
+} from "../public/cinematic/voyage-projection-media.mjs";
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const packageMetadata = JSON.parse(await readFile(join(root, "package.json"), "utf8"));
@@ -48,6 +74,15 @@ const CINEMATIC_VIDEO_PATHS = [
 ];
 const CINEMATIC_PACK_PATHS = [...CINEMATIC_RUNTIME_PATHS, ...CINEMATIC_VIDEO_PATHS];
 const CINEMATIC_PACK_MAXIMUM_BYTES = 11_000_000;
+const BIRTHDAY_VOYAGE_VIDEO_PATHS = [
+  "cinematic/lion-intro-birthday.mp4"
+];
+const BIRTHDAY_VOYAGE_VIDEO_PACK_MAXIMUM_BYTES = 4_000_000;
+const PROFILE_FRAME_PREVIEW_VIDEO_PATHS = [
+  "cinematic/profile-frame-previews/empyrean-ascension.mp4",
+  "cinematic/profile-frame-previews/infernal-dominion.mp4"
+];
+const PROFILE_FRAME_PREVIEW_VIDEO_PACK_MAXIMUM_BYTES = 13_000_000;
 const SCRAMBLE_LAZY_FILES = [
   "scramble.mjs",
   "scramble-runtime.mjs",
@@ -55,6 +90,38 @@ const SCRAMBLE_LAZY_FILES = [
   "scramble-arena.mjs",
   "forge-clash.mjs",
   "scramble.css"
+];
+const MOON_WORLDWEAVING_LAZY_FILES = [
+  "moon-worldweaving.css",
+  "moon-worldweaving-runtime.mjs",
+  "moon-result-presentation.mjs"
+];
+const MOON_OUTPOST_LAZY_FILES = [
+  "moon-outpost.css",
+  "moon-outpost-runtime.mjs",
+  "moon-outpost-presentation.mjs",
+  "moon-outpost-actions.mjs"
+];
+const MOON_PROJECT_FLIGHT_LAZY_FILES = [
+  "moon-home-project-entry.mjs",
+  "moon-project-launch.mjs"
+];
+const MOON_PROJECT_FLIGHT_STYLESHEET = "moon-project-flight.css";
+const MOON_HEART_LAZY_FILES = [
+  "moon-heart-project.css",
+  "moon-heart-project-runtime.mjs",
+  "moon-heart-project-presentation.mjs",
+  "moon-heart-actions.mjs"
+];
+const MOON_OUTPOST_CORE_FILES = [
+  "expedition.mjs",
+  "moon-heart-project.mjs",
+  "moon-outpost.mjs",
+  "salvage-cache.mjs",
+  "salvage-cosmetics.mjs"
+];
+const MOON_OUTPOST_PNG_PATHS = [
+  "art/moon-outpost/rocket-core-v1.png"
 ];
 const COSMIC_INTERLUDE_LAZY_FILE = "cosmic-interlude.css";
 const archive = await readFile(artifactPath);
@@ -66,6 +133,29 @@ assert.equal(sidecar, `${sha256(archive)}  ${artifactName}\n`, "The artifact che
 const entries = readZip(archive);
 assert.deepEqual(archive, createDeterministicZip(entries), "The itch package is not in canonical deterministic ZIP form.");
 const files = new Map(entries.map((entry) => [entry.path, entry.data]));
+assertPlanetHubReleaseInventory([...files.keys()], "itch HTML5 archive");
+const planetHubRuntimeFiles = [...files.keys()].filter(isPlanetHubRuntimeFile);
+assert.deepEqual(planetHubRuntimeFiles.sort(), [...PLANET_HUB_RELEASE_RUNTIME_FILES].sort(), "The itch archive must contain only the Planet Hub bridge and bundled runtime.");
+const planetHubLazyFiles = [...PLANET_HUB_RELEASE_LAZY_FILES];
+for (const file of PLANET_HUB_BUNDLED_SOURCE_FILES) {
+  assert.ok(!files.has(file), `${file} must be embedded in the itch Planet Hub runtime rather than shipped separately.`);
+}
+for (const file of planetHubRuntimeFiles) {
+  const built = files.get(file).toString("utf8");
+  const expected = file === "planet-hub-runtime.mjs" || file === "planet-hub-host.mjs"
+    ? await buildPlanetHubRuntimeBundle(join(root, "public", file), packageMetadata.version)
+    : await buildPlanetHubRuntimeModule(await readFile(join(root, "public", file), "utf8"), packageMetadata.version);
+  assert.equal(
+    built,
+    expected,
+    `${file} was not emitted as a deterministic minified versioned Planet Hub module.`
+  );
+}
+for (const file of PLANET_HUB_OPTIONAL_MODULE_FILES) {
+  const built = files.get(file).toString("utf8");
+  const expected = await buildPlanetHubRuntimeModule(await readFile(join(root, "public", file), "utf8"), packageMetadata.version);
+  assert.equal(built, expected, `${file} was not emitted as a deterministic minified lazy Planet Hub module.`);
+}
 const rankArtFiles = [
   "tier-01-common",
   "tier-02-dawn",
@@ -83,18 +173,116 @@ for (const required of SCRAMBLE_LAZY_FILES) {
     : withAssetVersion(source, packageMetadata.version);
   assert.equal(built, expected, `${required} was not transformed as a versioned lazy Scramble asset.`);
 }
+for (const required of MOON_WORLDWEAVING_LAZY_FILES) {
+  assert.ok(files.has(required), `The itch package is missing lazy Moon Worldweaving asset ${required}.`);
+  const source = await readFile(join(root, "public", required), "utf8");
+  const built = files.get(required).toString("utf8");
+  const expected = required.endsWith(".css")
+    ? minifyCss(source)
+    : isPlanetHubReleaseMinifiedFile(required)
+      ? await buildPlanetHubRuntimeModule(source, packageMetadata.version)
+      : withAssetVersion(source, packageMetadata.version);
+  assert.equal(built, expected, `${required} was not transformed as a versioned lazy Moon Worldweaving asset.`);
+}
+for (const required of MOON_OUTPOST_LAZY_FILES) {
+  assert.ok(files.has(required), `The itch package is missing lazy Moon Outpost asset ${required}.`);
+  const source = await readFile(join(root, "public", required), "utf8");
+  const built = files.get(required).toString("utf8");
+  const expected = required.endsWith(".css")
+    ? minifyCss(source)
+    : withAssetVersion(source, packageMetadata.version);
+  assert.equal(built, expected, `${required} was not transformed as a versioned lazy Moon Outpost asset.`);
+}
+for (const required of MOON_PROJECT_FLIGHT_LAZY_FILES) {
+  assert.ok(files.has(required), `The itch package is missing lazy Moon flight asset ${required}.`);
+  const source = await readFile(join(root, "public", required), "utf8");
+  const built = files.get(required).toString("utf8");
+  assert.equal(built, withAssetVersion(source, packageMetadata.version), `${required} was not transformed as a versioned lazy Moon flight asset.`);
+}
+{
+  const source = await readFile(join(root, "public", MOON_PROJECT_FLIGHT_STYLESHEET), "utf8");
+  const built = files.get(MOON_PROJECT_FLIGHT_STYLESHEET)?.toString("utf8");
+  assert.ok(built, "The itch package is missing Moon project flight CSS.");
+  assert.equal(built, minifyCss(source), "Moon project flight CSS was not emitted as a minified shell asset.");
+}
+for (const required of MOON_HEART_LAZY_FILES) {
+  assert.ok(files.has(required), `The itch package is missing lazy Moon Heart asset ${required}.`);
+  const source = await readFile(join(root, "public", required), "utf8");
+  const built = files.get(required).toString("utf8");
+  const expected = required.endsWith(".css")
+    ? minifyCss(source)
+    : withAssetVersion(source, packageMetadata.version);
+  assert.equal(built, expected, `${required} was not transformed as a versioned lazy Moon Heart asset.`);
+}
+for (const required of ["worldweaving.mjs", "moon-worldweaving-controller.mjs", ...MOON_OUTPOST_CORE_FILES]) {
+  assert.ok(files.has(required), `The itch package is missing ${required}.`);
+  const source = await readFile(join(root, "public", required), "utf8");
+  const built = files.get(required).toString("utf8");
+  const expected = isPlanetHubReleaseMinifiedFile(required)
+    ? await buildPlanetHubRuntimeModule(source, packageMetadata.version)
+    : withAssetVersion(source, packageMetadata.version);
+  assert.equal(built, expected, `${required} was not transformed as a deterministic versioned core module.`);
+}
 {
   const source = await readFile(join(root, "public", COSMIC_INTERLUDE_LAZY_FILE), "utf8");
   const built = files.get(COSMIC_INTERLUDE_LAZY_FILE)?.toString("utf8");
   assert.ok(built, "The itch package is missing lazy Cosmic Interlude CSS.");
   assert.equal(built, minifyCss(source), "Cosmic Interlude CSS was not emitted as a minified lazy asset.");
 }
+for (const required of ["word-orbit.mjs", "word-orbit-runtime.mjs", "word-semantic-facets.mjs", "mobile-play-shell-runtime.mjs", "word-orbit.css"]) {
+  assert.ok(files.has(required), `The itch package is missing ${required}.`);
+}
+for (const file of [...COMBINING_BOARD_CORE_FILES, ...COMBINING_BOARD_LAZY_FILES, ...VOYAGE_PROJECTION_LAZY_FILES]) {
+  assert.ok(files.has(file), `The itch package is missing Observatory asset ${file}.`);
+  const source = await readFile(join(root, "public", file), "utf8");
+  const expected = file.endsWith(".css")
+    ? minifyCss(source)
+    : file.endsWith(".json")
+      ? source
+    : COMBINING_BOARD_LAZY_FILES.includes(file) || VOYAGE_PROJECTION_LAZY_FILES.includes(file)
+      ? await buildPlanetHubRuntimeModule(source, packageMetadata.version)
+    : withAssetVersion(source, packageMetadata.version);
+  assert.equal(files.get(file).toString("utf8"), expected, `${file} was not emitted as a deterministic versioned Observatory asset.`);
+}
+{
+  const voyageMediaManifest = JSON.parse(
+    files.get("cinematic/voyage-projection-media.json").toString("utf8")
+  );
+  assert.equal(voyageMediaManifest.schemaVersion, VOYAGE_MEDIA_SCHEMA_VERSION,
+    "itch Voyage media manifest does not use the current runtime schema.");
+  assert.equal(voyageMediaManifest.contractVersion, VOYAGE_MEDIA_CONTRACT_VERSION,
+    "itch Voyage media manifest does not identify the current contract version.");
+  assert.equal(voyageMediaManifest.contractSha256, VOYAGE_MEDIA_CONTRACT_SHA256,
+    "itch Voyage media manifest does not bind the current contract digest.");
+  assert.equal(typeof voyageMediaManifest.approval, "object",
+    "itch Voyage media manifest approval must use the auditable object schema.");
+  assert.equal(typeof voyageMediaManifest.approval?.approved, "boolean",
+    "itch Voyage media manifest approval must declare an explicit approval state.");
+  assert.equal(typeof voyageMediaManifest.approval?.humanApproved, "object",
+    "itch Voyage media manifest approval must retain human-review metadata.");
+}
+for (const required of ["ui-foundation.css", "responsive-context.mjs", "fonts/Manrope-Variable.ttf", "fonts/DMMono-Medium.ttf", "fonts/OFL-Manrope.txt", "fonts/OFL-DM-Mono.txt"]) {
+  assert.ok(files.has(required), `The itch package is missing ${required}.`);
+}
+for (const required of ["planet-hub.css", ...planetHubLazyFiles, ...PLANET_HUB_ASSET_PATHS, ...THREE_VENDOR_FILES]) {
+  assert.ok(files.has(required), `The itch package is missing Planet Hub file ${required}.`);
+}
+assert.equal(files.get("planet-hub.css").toString("utf8"), minifyCss(await readFile(join(root, "public", "planet-hub.css"), "utf8")), "Planet Hub CSS was not emitted as a minified presentation asset.");
+for (const file of PLANET_HUB_RELEASE_STYLE_FILES) {
+  assert.equal(
+    files.get(file).toString("utf8"),
+    minifyCss(await readFile(join(root, "public", file), "utf8")),
+    `${file} was not emitted as a minified lazy Planet Hub stylesheet.`
+  );
+}
 for (const required of [
-  "index.html", "app.js", "default-profile.mjs", "mastery-catalog.mjs", "secondary-surface-loader.mjs", "victory-handoff.mjs", "audio-runtime.mjs", "cosmos-circuit-runtime.mjs", "cosmos-circuit.mjs", "cosmos-circuit-copy.mjs", "circuit-lobby-tabs.mjs", "circuit-live-ops.mjs", "star-path.mjs", "account-profile.mjs", "run-entry.mjs", "hero-recipes.mjs", "cosmic-gate.mjs", "cosmic-quotes.mjs", "cosmic-interludes.mjs", "cosmic-interlude-runtime.mjs", COSMIC_INTERLUDE_LAZY_FILE, "reveal-tree.mjs", "reveal-presentation.mjs", "home-menu.mjs", "home-menu-view.mjs", "profile-rank-surface.mjs", "golden-targets.mjs", "first-game-experience.mjs", "first-orbit.mjs", "second-orbit.mjs", "explore-sandbox.mjs", "combination-report-delivery.mjs", "route-distance.mjs", "path-guard.mjs", "run-iq.mjs", "adaptive-difficulty.mjs", "remix-progression.mjs", "remix-readiness.mjs", "route-remixes.mjs", "shuffled-start.mjs", "rank-board-art.mjs", "rank-board-art-runtime.mjs", "styles.css", "simple-ui.css", "cosmic-gate.css", "epic-home.css", "cosmos-circuit.css", "cosmetic-world-preview.css", "cosmetic-world-preview.mjs", "developer-console.css", "developer-console.mjs", "developer-console-runtime.mjs", "share-card-runtime.mjs", "local-beta.mjs", "local-world.mjs", "release.json", "service-worker.js", "manifest.webmanifest",
+  "index.html", "app.js", "arena-rank.mjs", "birthday-voyage.mjs", "birthday-voyage.css", "default-profile.mjs", "mastery-catalog.mjs", ...MOON_HEART_LAZY_FILES, "secondary-surface-loader.mjs", "victory-handoff.mjs", "audio-runtime.mjs", "cosmos-circuit-runtime.mjs", "cosmos-circuit.mjs", "cosmos-circuit-copy.mjs", "circuit-lobby-tabs.mjs", "circuit-live-ops.mjs", "star-path.mjs", "account-profile.mjs", "run-entry.mjs", "hero-recipes.mjs", "cosmic-gate.mjs", "cosmic-quotes.mjs", "cosmic-interludes.mjs", "cosmic-interlude-runtime.mjs", COSMIC_INTERLUDE_LAZY_FILE, "reveal-tree.mjs", "reveal-presentation.mjs", "home-menu.mjs", "home-menu-view.mjs", "profile-rank-surface.mjs", "golden-targets.mjs", "first-game-experience.mjs", "first-orbit.mjs", "second-orbit.mjs", "explore-sandbox.mjs", "combination-report-delivery.mjs", "route-distance.mjs", "path-guard.mjs", "run-iq.mjs", "adaptive-difficulty.mjs", "remix-progression.mjs", "remix-readiness.mjs", "route-remixes.mjs", "shuffled-start.mjs", "rank-board-art.mjs", "rank-board-art-runtime.mjs", "styles.css", "simple-ui.css", "mobile-play-shell.css", "concept-chemistry.css", "concept-matter.css", "concept-matter.mjs", "concept-matter-runtime.mjs", "concept-matter-app.mjs", "guided-play-app.mjs", "molecular-memory.css", "word-orbit-motion.css", "cosmic-gate.css", "epic-home.css", "cosmos-circuit.css", "cosmetic-world-preview.css", "cosmetic-world-preview.mjs", "developer-console.css", "developer-console.mjs", "developer-console-runtime.mjs", "share-card-runtime.mjs", "local-beta.mjs", "local-world.mjs", "release.json", "service-worker.js", "manifest.webmanifest",
   "signature-routes.mjs", "living-atlas.mjs", "constellation-voyages.mjs", "recipe-insight.mjs", "community-results.mjs", "cosmic-events.mjs",
-  "icon.svg", "icon-192.png", "icon-512.png", "icon-maskable-512.png", "art/celestial-atlas-bg-v1.webp", ...STORY_PACK_PATHS, ...GOLDEN_PAIR_PACK_PATHS, ...CINEMATIC_PACK_PATHS, ...COSMIC_GATE_ASSETS.map((asset) => asset.path), ...HOME_COSMOS_ASSETS.map((asset) => asset.path), ...rankArtFiles, "release-manifest.json", "SHA256SUMS.txt"
+  "icon.svg", "icon-192.png", "icon-512.png", "icon-maskable-512.png", "art/celestial-atlas-bg-v1.webp", ...STORY_PACK_PATHS, ...GOLDEN_PAIR_PACK_PATHS, ...CINEMATIC_PACK_PATHS, ...BIRTHDAY_VOYAGE_VIDEO_PATHS, ...PROFILE_FRAME_PREVIEW_VIDEO_PATHS, ...COSMIC_GATE_ASSETS.map((asset) => asset.path), ...HOME_COSMOS_ASSETS.map((asset) => asset.path), ...rankArtFiles, "release-manifest.json", "SHA256SUMS.txt"
 ]) assert.ok(files.has(required), `The itch package is missing ${required}.`);
 assert.ok(files.has("initial-app-state.mjs"), "The itch package is missing initial-app-state.mjs.");
+assert.ok(files.has("word-bloom-input-runtime.mjs"), "The itch package is missing word-bloom-input-runtime.mjs.");
+assert.ok(files.has("mobile-play-chrome.mjs"), "The itch package is missing mobile-play-chrome.mjs.");
 assert.ok(files.has("stardust-store.mjs"), "The itch package is missing stardust-store.mjs.");
 assert.ok(files.has("stardust-store.css"), "The itch package is missing stardust-store.css.");
 for (const file of STORY_PACK_PATHS) {
@@ -135,16 +323,51 @@ for (const file of CINEMATIC_VIDEO_PATHS) {
     `The itch launch video ${file} does not match the optimized source asset.`
   );
 }
-const cinematicPackBytes = [...files.entries()]
-  .filter(([path]) => path.startsWith("cinematic/"))
-  .reduce((sum, [, data]) => sum + data.length, 0);
+for (const file of BIRTHDAY_VOYAGE_VIDEO_PATHS) {
+  assert.deepEqual(
+    files.get(file),
+    await readFile(join(root, "public", file)),
+    `The itch Birthday Voyage video ${file} does not match the optimized source asset.`
+  );
+}
+for (const file of PROFILE_FRAME_PREVIEW_VIDEO_PATHS) {
+  assert.deepEqual(
+    files.get(file),
+    await readFile(join(root, "public", file)),
+    `The itch profile-frame preview ${file} does not match the optimized source asset.`
+  );
+}
+const cinematicPackBytes = CINEMATIC_PACK_PATHS
+  .reduce((sum, path) => sum + files.get(path).length, 0);
 assert.ok(cinematicPackBytes <= CINEMATIC_PACK_MAXIMUM_BYTES, `Launch cinematic exceeded its 11 MB optional-pack budget (${cinematicPackBytes} bytes).`);
+const birthdayVoyageVideoPackBytes = BIRTHDAY_VOYAGE_VIDEO_PATHS
+  .reduce((sum, path) => sum + files.get(path).length, 0);
+assert.ok(
+  birthdayVoyageVideoPackBytes <= BIRTHDAY_VOYAGE_VIDEO_PACK_MAXIMUM_BYTES,
+  `Birthday Voyage video exceeded its 4 MB optional-pack budget (${birthdayVoyageVideoPackBytes} bytes).`
+);
+const profileFramePreviewVideos = [...files.entries()]
+  .filter(([path]) => path.startsWith("cinematic/profile-frame-previews/"))
+  .sort(([left], [right]) => left.localeCompare(right, "en"));
+assert.deepEqual(
+  profileFramePreviewVideos.map(([path]) => path),
+  [...PROFILE_FRAME_PREVIEW_VIDEO_PATHS].sort((left, right) => left.localeCompare(right, "en")),
+  "The itch package has an unexpected profile-frame preview video inventory."
+);
+const profileFramePreviewVideoPackBytes = profileFramePreviewVideos
+  .reduce((sum, [, data]) => sum + data.length, 0);
+assert.ok(
+  profileFramePreviewVideoPackBytes <= PROFILE_FRAME_PREVIEW_VIDEO_PACK_MAXIMUM_BYTES,
+  `Profile-frame preview videos exceeded their 13 MB optional-pack budget (${profileFramePreviewVideoPackBytes} bytes).`
+);
 const cosmeticRuntimeFiles = [
   "cosmetic-preload-bootstrap.js",
   "cosmetic-canvas.mjs",
   "cosmetic-catalog.mjs",
   "cosmetic-economy.mjs",
   "cosmetics-observatory.css",
+  "cosmetics-observatory-full-page.css",
+  "profile-rank-frame.css",
   "cosmetics-observatory.mjs",
   "cosmetic-world-preview.css",
   "cosmetic-world-preview.mjs",
@@ -154,9 +377,21 @@ const cosmeticRuntimeFiles = [
 for (const required of cosmeticRuntimeFiles) {
   assert.ok(files.has(required), `The itch package is missing cosmetic runtime asset ${required}.`);
 }
+for (const file of ["cosmetics-observatory-full-page.css", "profile-rank-frame.css"]) {
+  assert.equal(
+    files.get(file).toString("utf8"),
+    minifyCss(await readFile(join(root, "public", file), "utf8")),
+    `${file} was not emitted as a minified lazy Observatory asset.`
+  );
+}
 const celestialAtlasArt = files.get("art/celestial-atlas-bg-v1.webp");
 assert.equal(celestialAtlasArt.subarray(0, 4).toString("ascii"), "RIFF", "The itch celestial atlas art is not a WebP RIFF file.");
 assert.equal(celestialAtlasArt.subarray(8, 12).toString("ascii"), "WEBP", "The itch celestial atlas art is not a valid WebP container.");
+for (const path of MOON_OUTPOST_PNG_PATHS) {
+  const png = files.get(path);
+  assert.ok(png?.length > 8, `The itch package is missing Moon Outpost PNG ${path}.`);
+  assert.deepEqual([...png.subarray(0, 8)], [137, 80, 78, 71, 13, 10, 26, 10], `${path} is not a PNG.`);
+}
 assert.deepEqual(
   [...files.keys()].filter((path) => path.startsWith("art/transitions/")).sort((left, right) => left.localeCompare(right, "en")),
   COSMIC_GATE_ASSETS.map((asset) => asset.path).sort((left, right) => left.localeCompare(right, "en")),
@@ -209,6 +444,7 @@ const gameApp = files.get("app.js").toString("utf8");
 const cosmeticPreloadBootstrap = files.get("cosmetic-preload-bootstrap.js").toString("utf8");
 const cosmicGateStyles = files.get("cosmic-gate.css").toString("utf8");
 const epicHomeStyles = files.get("epic-home.css").toString("utf8");
+const uiFoundationStyles = files.get("ui-foundation.css").toString("utf8");
 assert.match(html, /data-runtime="local-practice"/);
 assert.doesNotMatch(gameApp, /\b(?:ensureCosmosCircuit|openCosmosCircuit|COSMOS_CIRCUIT_RELEASE_ENABLED)\b/, "The itch shell must not ship staged Cosmos Circuit host glue.");
 assert.match(gameApp, /localStorage[.]removeItem\(COSMOS_CIRCUIT_SAVE_KEY\)/, "Legacy Cosmos Circuit state cleanup must remain available.");
@@ -230,15 +466,21 @@ assert.match(html, /<strong>LOCAL PRACTICE<\/strong>/);
 assert.match(html, /class="practice-banner__detail">SAVED ON THIS DEVICE · NO PAYMENTS<\/small>/);
 assert.match(html, /class="practice-banner__compact">SAVED HERE · NO PAYMENTS<\/small>/);
 assert.match(html, /rel="apple-touch-icon" href="[.]\/icon-192[.]png"/);
+assert.match(html, new RegExp(`href="[.]\\/ui-foundation[.]css[?]v=${releaseVersionPattern}"`));
 assert.match(html, new RegExp(`href="[.]\\/styles[.]css[?]v=${releaseVersionPattern}"`));
 assert.match(html, new RegExp(`href="[.]\\/simple-ui[.]css[?]v=${releaseVersionPattern}"`));
+assert.match(html, new RegExp(`href="[.]\\/mobile-play-shell[.]css[?]v=${releaseVersionPattern}"`));
+assert.match(html, new RegExp(`href="[.]\\/concept-chemistry[.]css[?]v=${releaseVersionPattern}"`));
+assert.match(html, new RegExp(`href="[.]\\/concept-matter[.]css[?]v=${releaseVersionPattern}"`));
+assert.match(html, new RegExp(`href="[.]\\/molecular-memory[.]css[?]v=${releaseVersionPattern}"`));
+assert.match(html, new RegExp(`href="[.]\\/word-orbit-motion[.]css[?]v=${releaseVersionPattern}"`));
 assert.match(html, new RegExp(`href="[.]\\/cosmic-gate[.]css[?]v=${releaseVersionPattern}"`));
 assert.match(html, new RegExp(`href="[.]\\/epic-home[.]css[?]v=${releaseVersionPattern}"`));
 assert.match(html, new RegExp(`href="[.]\\/cosmetics[.]css[?]v=${releaseVersionPattern}"`));
 assert.match(html, new RegExp(`src="[.]\\/cosmetic-preload-bootstrap[.]js[?]v=${releaseVersionPattern}"`));
 assert.match(html, new RegExp(`src="[.]\\/hero-recipes[.]mjs[?]v=${releaseVersionPattern}"`));
 assert.match(html, new RegExp(`src="[.]\\/app[.]js[?]v=${releaseVersionPattern}"`));
-assert.doesNotMatch(html, /<link[^>]+(?:cosmetics-observatory|cosmos-circuit|cosmic-interlude|scramble)[.]css/i, "Secondary surface CSS must not block the itch game shell.");
+assert.doesNotMatch(html, /<link[^>]+(?:cosmetics-observatory(?:-full-page)?|profile-rank-frame|cosmos-circuit|cosmic-interlude|scramble|moon-worldweaving|moon-outpost)[.]css/i, "Secondary surface CSS must not block the itch game shell.");
 const itchGameHref = "https://example.test/portable-game/";
 assertAdaptiveScenePreloadContract(html, { bootstrapSource: cosmeticPreloadBootstrap, pageHref: itchGameHref });
 const itchPreloadResult = runCosmeticPreloadBootstrap(html, { bootstrapSource: cosmeticPreloadBootstrap, pageHref: itchGameHref });
@@ -270,8 +512,8 @@ assert.doesNotMatch(`${html}\n${cosmicGateStyles}\n${epicHomeStyles}`, /cosmic-g
 assert.ok((html.match(/\bdata-update-entry(?:=|\s|>)/gi) || []).length >= 22, "The itch build must ship the complete Dev Log.");
 const latestUpdate = html.match(/<li\b(?=[^>]*\bis-latest\b)[^>]*>[\s\S]*?<\/li>/i)?.[0] || "";
 assert.match(latestUpdate, new RegExp(`VERSION ${releaseVersionPattern}`, "i"), "The itch build must identify the package version as its latest update.");
-assert.match(html, /Shape Your Constellation[\s\S]*eight complete kits[\s\S]*Pixel Frontier[\s\S]*Bubble Reef[\s\S]*Stellar Vanguard/i, "The itch update history must describe all eight complete cosmetic collections.");
-assert.match(html, /Locked looks can be previewed[\s\S]*responsive pack art now loads on demand/i, "The itch update history must describe preview, accessibility, and lazy-loading behavior.");
+assert.match(html, /Shape Your Constellation[\s\S]*eight complete collections[\s\S]*Pixel Frontier[\s\S]*Bubble Reef[\s\S]*Stellar Vanguard/i, "The itch update history must describe all eight complete cosmetic collections.");
+assert.match(html, /Locked looks can be previewed[\s\S]*responsive collection art now loads on demand/i, "The itch update history must describe preview, accessibility, and lazy-loading behavior.");
 assert.match(html, /Your Ideas Can Reach Us[\s\S]*free, anonymous feedback receiver/i, "The itch build must retain anonymous combination feedback.");
 assert.match(html, /saved locally first[\s\S]*offline retry queue/i, "The itch build must retain durable feedback delivery.");
 assert.match(html, /Golden 50[\s\S]*three-to-seven-combination routes/i, "The itch build must retain the curated opening targets update.");
@@ -282,7 +524,9 @@ assert.match(html, /Pause and Escape stay immediate/i, "The itch build must pres
 assert.match(html, /Pages and itch are deterministic local practice without live rankings, accounts, or AI/i);
 assert.doesNotMatch(html, /rel="canonical"|property="og:url"/i, "The portable itch package must not claim the Pages URL as canonical.");
 assert.doesNotMatch(html, /fonts[.]googleapis[.]com|fonts[.]gstatic[.]com/);
-for (const forbiddenPath of ['href="/manifest', 'href="/styles', 'href="/simple-ui', 'href="/cosmic-gate', 'href="/epic-home', 'href="/cosmetics', 'href="/cosmos-circuit', 'href="/icon', 'src="/cosmetic-preload-bootstrap', 'src="/hero-recipes', 'src="/app']) {
+assert.match(uiFoundationStyles, /fonts\/Manrope-Variable[.]ttf/);
+assert.match(uiFoundationStyles, /fonts\/DMMono-Medium[.]ttf/);
+for (const forbiddenPath of ['href="/manifest', 'href="/ui-foundation', 'href="/styles', 'href="/simple-ui', 'href="/mobile-play-shell', 'href="/concept-chemistry', 'href="/concept-matter', 'href="/molecular-memory', 'href="/word-orbit-motion', 'href="/cosmic-gate', 'href="/epic-home', 'href="/cosmetics', 'href="/cosmos-circuit', 'href="/icon', 'src="/cosmetic-preload-bootstrap', 'src="/hero-recipes', 'src="/app']) {
   assert.ok(!html.includes(forbiddenPath), `Root-absolute asset path remains in itch HTML: ${forbiddenPath}`);
 }
 
@@ -323,7 +567,20 @@ assert.match(localWorld, /\"problematicDeadEndLimit\":140/);
 const worker = files.get("service-worker.js").toString("utf8");
 assert.match(worker, /CACHE_PREFIX/);
 assert.match(worker, /art\/celestial-atlas-bg-v1[.]webp/);
+assert.match(worker, new RegExp(`ui-foundation[.]css[?]v=${releaseVersionPattern}`));
+assert.match(worker, /fonts\/Manrope-Variable[.]ttf/);
+assert.match(worker, /fonts\/DMMono-Medium[.]ttf/);
 assert.match(worker, new RegExp(`simple-ui[.]css[?]v=${releaseVersionPattern}`));
+assert.match(worker, new RegExp(`mobile-play-shell[.]css[?]v=${releaseVersionPattern}`));
+assert.match(worker, new RegExp(`concept-chemistry[.]css[?]v=${releaseVersionPattern}`));
+assert.match(worker, new RegExp(`concept-matter[.]css[?]v=${releaseVersionPattern}`));
+assert.match(worker, new RegExp(`concept-matter[.]mjs[?]v=${releaseVersionPattern}`));
+assert.match(worker, new RegExp(`concept-matter-runtime[.]mjs[?]v=${releaseVersionPattern}`));
+assert.match(worker, new RegExp(`concept-matter-app[.]mjs[?]v=${releaseVersionPattern}`));
+assert.match(worker, new RegExp(`guided-play-app[.]mjs[?]v=${releaseVersionPattern}`));
+assert.match(worker, new RegExp(`molecular-memory[.]css[?]v=${releaseVersionPattern}`));
+assert.match(worker, new RegExp(`word-orbit-motion[.]css[?]v=${releaseVersionPattern}`));
+assert.match(worker, new RegExp(`word-bloom-input-runtime[.]mjs[?]v=${releaseVersionPattern}`));
 assert.match(worker, new RegExp(`cosmic-gate[.]css[?]v=${releaseVersionPattern}`));
 assert.match(worker, new RegExp(`epic-home[.]css[?]v=${releaseVersionPattern}`));
 assert.match(worker, new RegExp(`home-menu[.]mjs[?]v=${releaseVersionPattern}`));
@@ -346,6 +603,8 @@ assert.match(worker, new RegExp(`cosmetic-canvas[.]mjs[?]v=${releaseVersionPatte
 assert.match(worker, new RegExp(`cosmetic-catalog[.]mjs[?]v=${releaseVersionPattern}`));
 assert.match(worker, new RegExp(`cosmetics-observatory[.]mjs[?]v=${releaseVersionPattern}`));
 assert.match(worker, new RegExp(`cosmetics-observatory[.]css[?]v=${releaseVersionPattern}`));
+assert.match(worker, new RegExp(`cosmetics-observatory-full-page[.]css[?]v=${releaseVersionPattern}`));
+assert.match(worker, new RegExp(`profile-rank-frame[.]css[?]v=${releaseVersionPattern}`));
 assert.match(worker, new RegExp(`cosmetic-world-preview[.]mjs[?]v=${releaseVersionPattern}`));
 assert.match(worker, new RegExp(`cosmetic-world-preview[.]css[?]v=${releaseVersionPattern}`));
 assert.match(worker, new RegExp(`cosmetics[.]css[?]v=${releaseVersionPattern}`));
@@ -362,6 +621,27 @@ for (const file of SCRAMBLE_LAZY_FILES) {
     `${file} must be available through the itch worker's exact lazy-file allowlist.`
   );
 }
+for (const file of MOON_OUTPOST_LAZY_FILES) {
+  assert.match(
+    worker,
+    new RegExp(`${file.replaceAll(".", "[.]")}[?]v=${releaseVersionPattern}`),
+    `${file} must be available through the itch worker's exact lazy-file allowlist.`
+  );
+}
+for (const file of MOON_PROJECT_FLIGHT_LAZY_FILES) {
+  assert.match(
+    worker,
+    new RegExp(`${file.replaceAll(".", "[.]")}[?]v=${releaseVersionPattern}`),
+    `${file} must be available through the itch worker's exact lazy-file allowlist.`
+  );
+}
+for (const file of MOON_HEART_LAZY_FILES) {
+  assert.match(
+    worker,
+    new RegExp(`${file.replaceAll(".", "[.]")}[?]v=${releaseVersionPattern}`),
+    `${file} must be available through the itch worker's exact lazy-file allowlist.`
+  );
+}
 assertCosmeticPacksAreLazy(worker);
 assert.match(worker, new RegExp(`account-profile[.]mjs[?]v=${releaseVersionPattern}`));
 assert.match(worker, new RegExp(`first-game-experience[.]mjs[?]v=${releaseVersionPattern}`));
@@ -370,25 +650,76 @@ assert.match(worker, /[.]\/art\/transitions\//);
 assert.match(worker, /[.]\/art\/home\//);
 assert.doesNotMatch(worker, /const SHELL = [^;]+tier-0[1-6]-/);
 const workerShell = worker.match(/const SHELL = ([^;]+);/)?.[1] || "";
+const startupShellFiles = new Set(JSON.parse(workerShell.match(/^(\[.*?\])/)?.[1] || "[]")
+  .map((path) => path.split("?", 1)[0].replace(/^\.\//, "").replace(/^\//, "")));
+const missingStartupFiles = (await startupModuleFiles(join(root, "public")))
+  .filter((file) => !startupShellFiles.has(file));
+assert.deepEqual(missingStartupFiles, [], `The itch offline shell must include every static startup dependency: ${missingStartupFiles.join(", ")}`);
+assert.match(workerShell, /word-semantic-facets[.]mjs/, "The Bloom semantic facet catalog must be available in the itch offline shell.");
+for (const file of COMBINING_BOARD_CORE_FILES) {
+  assert.match(workerShell, new RegExp(file.replaceAll(".", "[.]")), `${file} must be available in the itch offline shell.`);
+}
 const workerLazyFiles = worker.match(/const LAZY_FILES = new Set\(([^;]+)\);/)?.[1] || "";
+for (const file of COMBINING_BOARD_LAZY_FILES) {
+  assert.match(workerLazyFiles, new RegExp(file.replaceAll(".", "[.]")), `${file} is missing from the itch lazy-file cache boundary.`);
+  assert.doesNotMatch(workerShell, new RegExp(file.replaceAll(".", "[.]")), `${file} must not block the itch install shell.`);
+}
+for (const file of PLAY_ON_DEMAND_FILES) {
+  assert.match(workerLazyFiles, new RegExp(file.replaceAll(".", "[.]")), `${file} is missing from the itch play-on-demand cache boundary.`);
+  assert.doesNotMatch(workerShell, new RegExp(file.replaceAll(".", "[.]")), `${file} must not block the itch install shell.`);
+}
+for (const file of VOYAGE_PROJECTION_LAZY_FILES) {
+  assert.match(workerLazyFiles, new RegExp(file.replaceAll(".", "[.]")), `${file} is missing from the itch lazy-file cache boundary.`);
+  assert.doesNotMatch(workerShell, new RegExp(file.replaceAll(".", "[.]")), `${file} must not block the itch install shell.`);
+}
 for (const file of SCRAMBLE_LAZY_FILES) {
   assert.match(workerLazyFiles, new RegExp(file.replaceAll(".", "[.]")), `${file} is missing from the itch lazy-file cache boundary.`);
 }
+for (const file of MOON_OUTPOST_LAZY_FILES) {
+  assert.match(workerLazyFiles, new RegExp(file.replaceAll(".", "[.]")), `${file} is missing from the itch lazy-file cache boundary.`);
+}
+for (const file of MOON_PROJECT_FLIGHT_LAZY_FILES) {
+  assert.match(workerLazyFiles, new RegExp(file.replaceAll(".", "[.]")), `${file} is missing from the itch lazy-file cache boundary.`);
+}
+for (const file of MOON_HEART_LAZY_FILES) {
+  assert.match(workerLazyFiles, new RegExp(file.replaceAll(".", "[.]")), `${file} is missing from the itch lazy-file cache boundary.`);
+}
 assert.match(workerLazyFiles, /cosmic-interlude[.]css/, "Cosmic Interlude CSS is missing from the itch lazy-file cache boundary.");
+assert.match(workerLazyFiles, /cosmetics-observatory-full-page[.]css/, "Full-page Observatory CSS is missing from the itch lazy-file cache boundary.");
+assert.match(workerLazyFiles, /profile-rank-frame[.]css/, "Arena frame preview CSS is missing from the itch lazy-file cache boundary.");
 assert.match(workerLazyFiles, /cosmetic-world-preview[.]mjs/, "The immersive cosmetic preview runtime is missing from the itch lazy-file cache boundary.");
 assert.match(workerLazyFiles, /cosmetic-world-preview[.]css/, "The immersive cosmetic preview CSS is missing from the itch lazy-file cache boundary.");
+for (const file of planetHubLazyFiles) {
+  assert.match(workerLazyFiles, new RegExp(file.replaceAll(".", "[.]")), `${file} is missing from the itch lazy-file cache boundary.`);
+}
+assert.match(worker, /[.]\/art\/planet-hub\//, "Planet Hub assets are missing from the itch lazy-pack boundary.");
+assert.match(worker, /[.]\/vendor\/three\//, "The local Three.js modules are missing from the itch lazy-pack boundary.");
+assert.doesNotMatch(workerShell, /planet-hub(?:-[a-z0-9-]+)?[.]mjs|planet-hub-cinematic[.]css|art\/planet-hub|vendor\/three/, "Planet Hub cinematic modules, styles, and assets must not block the itch install shell.");
+for (const file of PLANET_HUB_OPTIONAL_MODULE_FILES) {
+  assert.doesNotMatch(workerShell, new RegExp(file.replaceAll(".", "[.]")), `${file} must not block the itch install shell.`);
+}
 assert.doesNotMatch(workerShell, /cosmic-interlude[.]css/, "Cosmic Interlude CSS must not block the itch install shell.");
+assert.doesNotMatch(workerShell, /(?:cosmetics-observatory-full-page|profile-rank-frame)[.]css/, "Optional Cosmetic Lab layout and frame CSS must not block the itch install shell.");
 assert.doesNotMatch(workerShell, /cosmetic-world-preview[.](?:mjs|css)/, "The immersive cosmetic preview must not block the itch install shell.");
 assert.doesNotMatch(workerShell, /(?:scramble(?:-(?:runtime|arena))?|forge-clash)[.](?:mjs|css)/, "Scramble must not block the itch install shell.");
+assert.doesNotMatch(workerShell, /moon-outpost-(?:runtime|presentation)[.]mjs|moon-outpost[.]css/, "Moon Outpost presentation must not block the itch install shell.");
+assert.doesNotMatch(workerShell, /moon-heart-project-(?:runtime|presentation)[.]mjs|moon-heart-project[.]css/, "Moon Heart presentation must not block the itch install shell.");
+for (const file of MOON_OUTPOST_CORE_FILES) {
+  assert.match(workerShell, new RegExp(file.replaceAll(".", "[.]")), `${file} must be available offline with app.js.`);
+}
+assert.match(workerShell, /arena-rank[.]mjs/, "The eager Arena Rank presentation must be available offline with app.js.");
 assert.match(workerShell, /victory-handoff[.]mjs/, "The core victory handoff policy must be available offline with app.js.");
+assert.match(workerShell, /guided-play-app[.]mjs/, "The guided-play controller must be available offline with app.js.");
 assert.doesNotMatch(workerShell, /art\/transitions\//, "Responsive Cosmic Gate art must stay out of the itch install shell.");
 assert.doesNotMatch(workerShell, /art\/home\//, "Responsive Home Cosmos art must stay out of the itch install shell.");
+assert.doesNotMatch(workerShell, /art\/moon-outpost\//, "Moon Outpost art must stay out of the itch install shell.");
 assert.doesNotMatch(workerShell, /audio\//, "Soundtracks and SFX banks must stay out of the itch install shell.");
-assert.doesNotMatch(workerShell, /story\//, "Combination Story must stay out of the itch install shell.");
+assert.doesNotMatch(workerShell, /story\/(?:combination-story|golden-fusions\/)/, "Optional story presentation must stay out of the itch install shell.");
 assert.doesNotMatch(workerShell, /cinematic\//, "The first-open cinematic must stay out of the itch install shell.");
 assert.match(worker, /[.]\/audio\//, "Audio packs must be runtime-cached after playback activation.");
 assert.match(worker, /const LAZY_PREFIXES = [^;]*[.]\/story\//, "Combination Story must be runtime-cached only after activation.");
 assert.match(worker, /const LAZY_PREFIXES = [^;]*[.]\/cinematic\//, "The first-open cinematic must be runtime-cached only after activation.");
+assert.match(worker, /const LAZY_PREFIXES = [^;]*[.]\/art\/moon-outpost\//, "Moon Outpost art must be runtime-cached only after activation.");
 assert.match(worker, /headers[.]has\("range"\)/, "Range media requests must bypass Cache API writes.");
 assert.match(worker, /key[.]startsWith\(CACHE_PREFIX\)/);
 assert.match(worker, /response[.]ok/);

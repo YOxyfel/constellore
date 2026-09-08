@@ -4,6 +4,11 @@ import { mkdtemp, readFile, readdir } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { CREATIVE_COMMERCE_CATALOG, GameStore, RunRegistry } from "../game-services.mjs";
+import { cosmeticById } from "../public/cosmetic-economy.mjs";
+import { createExpeditionState, recordExpeditionArrival } from "../public/expedition.mjs";
+import { recipeKey } from "../public/recipe-mastery.mjs";
+import { SALVAGE_COSMETIC_IDS } from "../public/salvage-cosmetics.mjs";
+import { createWorldweavingState } from "../public/worldweaving.mjs";
 
 test("anonymous recovery kits are one-time, rotated, persisted, and never stored raw", async () => {
   const directory = await mkdtemp(join(tmpdir(), "constellore-recovery-"));
@@ -56,7 +61,9 @@ test("cloud profiles use a strict allowlist and optimistic version conflicts", a
       sound: true,
       music: true,
       haptics: false,
+      helpNudges: false,
       resultDetails: true,
+      fusionAnimation: "faster",
       muted: false,
       volume: 0.5,
       musicVolume: 0.35,
@@ -68,15 +75,19 @@ test("cloud profiles use a strict allowlist and optimistic version conflicts", a
       version: 1,
       recipes: [{ key: '["earth","water","mud"]', a: "Earth", b: "Water", word: "Mud", discoveries: 1, stars: 1, proofs: ["p-123abcd"] }]
     },
-    weekly: { key: "2026-W29", stage: 2, complete: false }
+    weekly: { key: "2026-W29", stage: 2, complete: false },
+    journeys: { worldweaving: createWorldweavingState() }
   };
   const updated = await store.updateCloudProfile(player.id, 0, allowed);
   assert.equal(updated.version, 1);
   assert.deepEqual(updated.profile.discovered, ["Earth", "Water"]);
   assert.deepEqual(updated.profile.firstOrbit, { seen: true, completed: true });
   assert.equal(updated.profile.feedbackPreferences.resultDetails, true);
+  assert.equal(updated.profile.feedbackPreferences.helpNudges, false);
+  assert.equal(updated.profile.feedbackPreferences.fusionAnimation, "faster");
   assert.equal(updated.profile.feedbackPreferences.musicVolume, 0.35);
   assert.equal(updated.profile.feedbackPreferences.sfxVolume, 0.8);
+  assert.deepEqual(updated.profile.journeys.worldweaving, createWorldweavingState());
 
   await assert.rejects(
     store.updateCloudProfile(player.id, 0, { theme: "void" }),
@@ -84,8 +95,14 @@ test("cloud profiles use a strict allowlist and optimistic version conflicts", a
   );
   await assert.rejects(store.updateCloudProfile(player.id, 1, { credits: 999_999 }), (error) => error.serviceCode === "invalid_cloud_profile");
   await assert.rejects(store.updateCloudProfile(player.id, 1, { feedbackPreferences: { resultDetails: "true" } }), (error) => error.serviceCode === "invalid_cloud_profile");
+  await assert.rejects(store.updateCloudProfile(player.id, 1, { feedbackPreferences: { helpNudges: "false" } }), (error) => error.serviceCode === "invalid_cloud_profile");
+  await assert.rejects(store.updateCloudProfile(player.id, 1, { feedbackPreferences: { fusionAnimation: "instant" } }), (error) => error.serviceCode === "invalid_cloud_profile");
   await assert.rejects(store.updateCloudProfile(player.id, 1, { cosmetics: { board: "void", scoreBoost: "yes" } }), (error) => error.serviceCode === "invalid_cloud_profile");
   await assert.rejects(store.updateCloudProfile(player.id, 1, { firstOrbit: { seen: false, completed: true } }), (error) => error.serviceCode === "invalid_cloud_profile");
+  await assert.rejects(
+    store.updateCloudProfile(player.id, 1, { journeys: { worldweaving: { ...createWorldweavingState(), rewardCredits: 999 } } }),
+    (error) => error.serviceCode === "invalid_cloud_profile"
+  );
 
   for (const field of ["volume", "musicVolume", "sfxVolume"]) {
     for (const value of [-0.01, 1.01, Number.NaN, Number.POSITIVE_INFINITY, "0.5"]) {
@@ -107,8 +124,146 @@ test("cloud profiles use a strict allowlist and optimistic version conflicts", a
     muted: true,
     volume: 0.2,
     musicVolume: 0.35,
-    sfxVolume: 0.8
+    sfxVolume: 0.8,
+    fusionAnimation: "faster"
   });
+});
+
+test("cloud expedition snapshots are canonical and cache-earned cosmetics survive reload", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "constellore-expedition-cloud-"));
+  const path = join(directory, "constellore.json");
+  const store = await new GameStore(path).init();
+  const player = await store.registerPlayer();
+  const worldweaving = createWorldweavingState();
+  const expedition = recordExpeditionArrival(createExpeditionState(worldweaving), "moon", {
+    worldweaving,
+    at: new Date("2026-08-01T12:00:00.000Z")
+  });
+  const cosmeticId = SALVAGE_COSMETIC_IDS[0];
+  const cosmetic = cosmeticById(cosmeticId);
+  assert.ok(cosmetic?.slot);
+  expedition.salvageCosmeticIds = [cosmeticId];
+
+  await assert.rejects(
+    store.updateCloudProfile(player.id, 0, { cosmetics: { [cosmetic.slot]: cosmeticId } }),
+    (error) => error.serviceCode === "cosmetic_entitlement_required",
+    "a cache-eligible item is not owned until the expedition ledger contains it"
+  );
+
+  const updated = await store.updateCloudProfile(player.id, 0, {
+    journeys: { worldweaving, expedition },
+    cosmetics: { [cosmetic.slot]: cosmeticId }
+  });
+  assert.equal(updated.profile.cosmetics[cosmetic.slot], cosmeticId);
+  assert.deepEqual(updated.profile.journeys.expedition, expedition);
+
+  const projectPlayer = await store.registerPlayer();
+  const projectExpedition = recordExpeditionArrival(createExpeditionState(worldweaving), "moon", {
+    worldweaving,
+    at: new Date("2026-08-01T12:30:00.000Z")
+  });
+  projectExpedition.worlds.moon.outpost.projects.entries[0].evidence = [{
+    milestoneId: "finding:living-spark",
+    recipeKey: recipeKey("Energy", "Swamp", "Life"),
+    routeKey: "route:ccccccc",
+    completedAt: "2026-08-01T12:20:00.000Z"
+  }];
+  const projectRoundTrip = await store.updateCloudProfile(projectPlayer.id, 0, {
+    journeys: { worldweaving, expedition: projectExpedition }
+  });
+  assert.deepEqual(projectRoundTrip.profile.journeys.expedition, projectExpedition);
+
+  for (const malformed of [
+    { ...expedition, adminBalance: 1_000_000 },
+    { ...expedition, creditedCollectionIds: undefined },
+    {
+      ...expedition,
+      salvage: { ...expedition.salvage, selectionShards: -1 }
+    },
+    {
+      ...expedition,
+      worlds: {
+        moon: { ...expedition.worlds.moon, launches: 1.5 }
+      }
+    },
+    {
+      ...expedition,
+      worlds: {
+        moon: {
+          ...expedition.worlds.moon,
+          outpost: {
+            ...expedition.worlds.moon.outpost,
+            projects: { ...expedition.worlds.moon.outpost.projects, admin: true }
+          }
+        }
+      }
+    },
+    {
+      ...expedition,
+      worlds: {
+        moon: {
+          ...expedition.worlds.moon,
+          outpost: {
+            ...expedition.worlds.moon.outpost,
+            projects: {
+              ...expedition.worlds.moon.outpost.projects,
+              entries: [{
+                ...expedition.worlds.moon.outpost.projects.entries[0],
+                evidence: [{
+                  milestoneId: "finding:living-spark",
+                  recipeKey: "forged",
+                  routeKey: "route:ddddddd",
+                  completedAt: "2026-08-01T12:00:00.000Z"
+                }]
+              }]
+            }
+          }
+        }
+      }
+    },
+    { ...expedition, salvageCosmeticIds: [...expedition.salvageCosmeticIds, "forged.cosmetic"] }
+  ]) {
+    await assert.rejects(
+      store.updateCloudProfile(player.id, 1, { journeys: { worldweaving, expedition: malformed } }),
+      (error) => error.serviceCode === "invalid_cloud_profile"
+    );
+  }
+
+  const legacyPlayer = await store.registerPlayer();
+  const legacyExpedition = structuredClone(expedition);
+  legacyExpedition.worlds.moon.outpost.version = 1;
+  delete legacyExpedition.worlds.moon.outpost.projects;
+  const legacyJourney = await store.updateCloudProfile(legacyPlayer.id, 0, {
+    journeys: { worldweaving, expedition: legacyExpedition }
+  });
+  assert.deepEqual(
+    legacyJourney.profile.journeys.expedition,
+    expedition,
+    "an exact v1 Outpost is upgraded before it is written back to cloud storage"
+  );
+
+  const storedOutpost = store.data.players[player.id].cloudProfile.data.journeys.expedition.worlds.moon.outpost;
+  storedOutpost.version = 1;
+  delete storedOutpost.projects;
+  await store.persist();
+  const reloaded = await new GameStore(path).init();
+  assert.equal(
+    reloaded.cloudProfile(player.id).profile.journeys.expedition.worlds.moon.outpost.version,
+    2,
+    "startup migration upgrades already-stored v1 Outposts"
+  );
+  assert.equal(
+    reloaded.cloudProfile(player.id).profile.cosmetics[cosmetic.slot],
+    cosmeticId,
+    "startup migration must include cache-earned ownership when validating the equipped loadout"
+  );
+
+  const legacy = await reloaded.registerPlayer();
+  const legacyUpdated = await reloaded.updateCloudProfile(legacy.id, 0, {
+    feedbackPreferences: { sound: false }
+  });
+  assert.equal(legacyUpdated.version, 1, "journey-less legacy profiles remain valid");
+  assert.equal("journeys" in legacyUpdated.profile, false);
 });
 
 test("real-money fulfillment is creative-only while earned credits and Word Vault ownership remain server-authoritative", async () => {

@@ -7,7 +7,8 @@ const releaseVersion = JSON.parse(
 ).version;
 const releaseVersionPattern = releaseVersion.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 const RAIN_CHALLENGE_URL = "/play/?challenge=1&target=Rain&seed=73";
-const FULL_MOTION_HIDE_CEILING_MS = 1_100;
+const FULL_MOTION_HIDE_FLOOR_MS = 3_100;
+const FULL_MOTION_HIDE_CEILING_MS = 3_900;
 const REDUCED_MOTION_HIDE_CEILING_MS = 650;
 
 test.skip(({ browserName }) => browserName !== "chromium", "Golden Pair geometry and motion are covered on Chromium phone and desktop.");
@@ -24,6 +25,7 @@ test.beforeEach(async ({ page }) => {
     };
     localStorage.setItem("constellore-profile-v1", JSON.stringify(profile));
     localStorage.setItem("constellore-local-profile-v1", JSON.stringify(profile));
+    sessionStorage.setItem("constellore-birthday-voyage-prompt-v1", "shown");
   });
   await installSeenIntroFixture(page);
 });
@@ -133,6 +135,8 @@ async function installGoldenPairCapture(page) {
           at: performance.now(),
           id: root.getAttribute("data-golden-id"),
           motion: root.getAttribute("data-golden-motion"),
+          presentation: root.getAttribute("data-golden-presentation"),
+          authored: root.getAttribute("data-golden-authored"),
           motionMode: root.getAttribute("data-golden-motion-mode"),
           phase: root.getAttribute("data-golden-phase"),
           ariaHidden: root.getAttribute("aria-hidden"),
@@ -142,6 +146,7 @@ async function installGoldenPairCapture(page) {
           beats: [...root.querySelectorAll("[data-golden-beat]")].map(normalizedText),
           result: normalizedText(root.querySelector("[data-golden-result-word]")),
           sourceWords: [...root.querySelectorAll("[data-golden-source-word]")].map(normalizedText),
+          meteorTrails: root.querySelectorAll("[data-golden-meteor-trail]").length,
           rootBounds,
           boardBounds,
           sceneBounds,
@@ -195,7 +200,7 @@ async function capturedGoldenPair(page) {
 async function completedGoldenPair(page) {
   await expect.poll(
     () => page.evaluate(() => Boolean(window.__goldenPairE2ECapture?.capture?.hidden)),
-    { message: "the Golden Pair scene should return to its hidden idle phase", timeout: 1_500 }
+    { message: "the Golden Pair scene should return to its hidden idle phase", timeout: 5_000 }
   ).toBe(true);
   return page.evaluate(() => {
     const { active, hidden } = window.__goldenPairE2ECapture.capture;
@@ -245,6 +250,8 @@ test("Cloud + Water plays the bounded Rain scene without replacing the responsiv
   const scene = await capturedGoldenPair(page);
   expect(scene.id).toBe("golden-01");
   expect(scene.motion).toBe("fall");
+  expect(scene.presentation).toBe("authored");
+  expect(scene.authored).toBe("true");
   expect(scene.motionMode).toBe("full");
   expect(scene.phase).toBe("active");
   expect(scene.beats).toEqual(["CONDENSE", "RELEASE", "RIPPLE"]);
@@ -253,6 +260,7 @@ test("Cloud + Water plays the bounded Rain scene without replacing the responsiv
   expect(scene.ariaHidden).toBe("true");
   expect(scene.pointerEvents).toBe("none");
   expect(scene.interactiveDescendants).toBe(0);
+  expect(scene.meteorTrails).toBe(2);
   expectSceneInsideBoard(scene);
   expectPreservedBoardAndHud(scene);
 
@@ -260,17 +268,44 @@ test("Cloud + Water plays the bounded Rain scene without replacing the responsiv
   expect(completed.hidden).toBe(true);
   expect(completed.phase).toBe("idle");
   expect(completed.reason).toBe("complete");
+  expect(completed.elapsed).toBeGreaterThanOrEqual(FULL_MOTION_HIDE_FLOOR_MS);
   expect(completed.elapsed).toBeLessThanOrEqual(FULL_MOTION_HIDE_CEILING_MS);
 
   const resultDialog = page.locator("#resultDialog");
   await expect(resultDialog).toHaveJSProperty("open", false);
-  await page.waitForTimeout(1_400);
-  await expect(resultDialog).toHaveJSProperty("open", false);
-  await expect(resultDialog).toHaveJSProperty("open", true, { timeout: 8_000 });
+  await expect(resultDialog).toHaveJSProperty("open", true, { timeout: 3_000 });
   const resultElapsed = await page.evaluate(() =>
     performance.now() - window.__goldenPairE2ECapture.capture.active.at
   );
-  expect(resultElapsed).toBeGreaterThanOrEqual(2_600);
+  expect(resultElapsed).toBeGreaterThanOrEqual(3_600);
+});
+
+test("a foundational fusion crosses the board as two meteors and lifts the discovery", async ({ page }) => {
+  await startRainChallenge(page);
+  await installGoldenPairCapture(page);
+
+  await combineInventoryWords(page, "Earth", "Water", "Mud");
+
+  const scene = await capturedGoldenPair(page);
+  expect(scene.id).toBe("major-meteor");
+  expect(scene.presentation).toBe("generic");
+  expect(scene.authored).toBe("false");
+  expect(scene.motion).toBe("pulse");
+  expect(scene.beats).toEqual(["APPROACH", "IMPACT", "ASCEND"]);
+  expect(scene.result).toBe("Mud");
+  expect([...scene.sourceWords].sort()).toEqual(["Earth", "Water"].sort());
+  expect(scene.meteorTrails).toBe(2);
+  expect(scene.ariaHidden).toBe("true");
+  expect(scene.pointerEvents).toBe("none");
+  expect(scene.interactiveDescendants).toBe(0);
+  expectSceneInsideBoard(scene);
+
+  const completed = await completedGoldenPair(page);
+  expect(completed.hidden).toBe(true);
+  expect(completed.phase).toBe("idle");
+  expect(completed.reason).toBe("complete");
+  expect(completed.elapsed).toBeGreaterThanOrEqual(FULL_MOTION_HIDE_FLOOR_MS);
+  expect(completed.elapsed).toBeLessThanOrEqual(FULL_MOTION_HIDE_CEILING_MS);
 });
 
 test("reduced motion shows the same Rain discovery as a short static frame", async ({ page }) => {

@@ -6,18 +6,18 @@ import {
   developerModeAvailability,
   normalizeDeveloperDifficultyLevel,
   verifyDeveloperCredentials
-} from "./developer-console.mjs?v=5.0.0-beta.1";
-import { sanitizeAdaptiveDifficultyState } from "./adaptive-difficulty.mjs?v=5.0.0-beta.1";
-import { sanitizeFirstOrbitState } from "./first-orbit.mjs?v=5.0.0-beta.1";
-import { sanitizeSecondOrbitState } from "./second-orbit.mjs?v=5.0.0-beta.1";
+} from "./developer-console.mjs?v=5.0.0-beta.4";
+import { sanitizeAdaptiveDifficultyState } from "./adaptive-difficulty.mjs?v=5.0.0-beta.4";
+import { sanitizeFirstOrbitState } from "./first-orbit.mjs?v=5.0.0-beta.4";
+import { sanitizeSecondOrbitState } from "./second-orbit.mjs?v=5.0.0-beta.4";
 import {
   getRemixRankPresentation,
   sanitizeRemixProgressionState
-} from "./remix-progression.mjs?v=5.0.0-beta.1";
+} from "./remix-progression.mjs?v=5.0.0-beta.4";
 import {
   createRemixReadinessState,
   sanitizeRemixReadinessState
-} from "./remix-readiness.mjs?v=5.0.0-beta.1";
+} from "./remix-readiness.mjs?v=5.0.0-beta.4";
 
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
@@ -32,7 +32,7 @@ const developerStylesReady = typeof document === "undefined"
       const link = existing || document.createElement("link");
       link.rel = "stylesheet";
       link.href = new URL(
-        "./developer-console.css?v=5.0.0-beta.1",
+        "./developer-console.css?v=5.0.0-beta.4",
         import.meta.url
       ).href;
       link.dataset.developerConsoleStyles = "true";
@@ -376,7 +376,10 @@ export function createDeveloperConsoleController(services) {
       return;
     }
     if (state.game || state.pendingMission) returnHome({ skipForfeit: true });
-    if (mode === "daily") profile.dailyCompleted = "";
+    if (mode === "daily") {
+      profile.dailyCompleted = "";
+      profile.dailyPlayed = "";
+    }
     if (mode === "weekly") {
       profile.weekly = { key: currentWeekKey(), stage: 0, complete: false };
     }

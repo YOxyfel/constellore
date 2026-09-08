@@ -47,9 +47,13 @@ class FakeElement {
 
 function feedbackDocument() {
   const nodes = new Map();
-  for (const id of ["soundPreference", "musicPreference", "hapticPreference", "resultDetailsPreference"]) {
+  for (const id of ["soundPreference", "musicPreference", "hapticPreference", "resultDetailsPreference", "helpNudgesPreference"]) {
     nodes.set(id, new FakeElement({ small: new FakeElement() }));
   }
+  for (const id of [
+    "fusionAnimationNormal", "fusionAnimationFaster", "fusionAnimationOff",
+    "pauseFusionAnimationNormal", "pauseFusionAnimationFaster", "pauseFusionAnimationOff"
+  ]) nodes.set(id, new FakeElement());
   nodes.set("feedbackToggle", new FakeElement({ span: new FakeElement() }));
   nodes.set("resultDetails", new FakeElement());
   for (const stem of ["master", "music", "sfx"]) {
@@ -106,6 +110,8 @@ test("feedback preference UI mirrors persistent mixers, previews live, and commi
   assert.equal(nodes.get("pauseSfxVolumeValue").textContent, "25%");
   assert.equal(nodes.get("circuitMusicVolumeValue").textContent, "100%");
   assert.equal(nodes.get("resultDetails").hidden, true);
+  assert.equal(nodes.get("fusionAnimationNormal").getAttribute("aria-pressed"), "true");
+  assert.equal(nodes.get("pauseFusionAnimationNormal").getAttribute("aria-pressed"), "true");
 
   const master = nodes.get("playMasterVolumePreference");
   master.value = ".55";
@@ -134,7 +140,19 @@ test("feedback preference UI mirrors persistent mixers, previews live, and commi
   nodes.get("soundPreference").dispatch("click");
   assert.equal(preferences.sound, false);
   assert.equal(saves, 3);
-  assert.deepEqual(tracked, [["audio_toggled", { enabled: false }]]);
+  nodes.get("helpNudgesPreference").dispatch("click");
+  assert.equal(preferences.helpNudges, false);
+  assert.equal(saves, 4);
+  nodes.get("pauseFusionAnimationFaster").dispatch("click");
+  assert.equal(preferences.fusionAnimation, "faster");
+  assert.equal(nodes.get("fusionAnimationFaster").getAttribute("aria-pressed"), "true");
+  assert.equal(nodes.get("pauseFusionAnimationNormal").getAttribute("aria-pressed"), "false");
+  assert.equal(saves, 5);
+  assert.deepEqual(tracked, [
+    ["audio_toggled", { enabled: false }],
+    ["help_nudges_toggled", { enabled: false }],
+    ["fusion_animation_changed", { value: "faster" }]
+  ]);
 });
 
 test("master steppers clamp at their bounds and keep all playable surfaces synchronized", () => {
@@ -162,6 +180,17 @@ test("master steppers clamp at their bounds and keep all playable surfaces synch
   assert.equal(nodes.get("pauseMasterVolumeQuickValue").textContent, "5%");
   assert.equal(nodes.get("playVolumeDown").disabled, false);
   assert.equal(saves, 1);
+});
+
+test("Settings and Pause expose the same persisted combination-animation choices", () => {
+  for (const id of [
+    "fusionAnimationNormal", "fusionAnimationFaster", "fusionAnimationOff",
+    "pauseFusionAnimationNormal", "pauseFusionAnimationFaster", "pauseFusionAnimationOff"
+  ]) assert.ok(page.includes(`id="${id}"`), `missing #${id}`);
+  assert.match(page, /Combination visuals[\s\S]*Cinematic[\s\S]*Faster[\s\S]*Off/);
+  assert.match(page, /Choose the pace of the large meteor fusion moment[.] Regular board feedback stays on[.]/);
+  assert.match(simpleStyles, /[.]fusion-animation-options\s*\{[^}]*grid-template-columns:\s*repeat\(3, minmax\(0, 1fr\)\)/);
+  assert.match(simpleStyles, /[.]fusion-animation-options button\[aria-pressed="true"\]/);
 });
 
 test("every playable surface exposes visible master controls and the same three-channel mixer", () => {

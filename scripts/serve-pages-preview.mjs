@@ -17,6 +17,9 @@ const mime = {
   ".webmanifest": "application/manifest+json; charset=utf-8",
   ".png": "image/png",
   ".webp": "image/webp",
+  ".glb": "model/gltf-binary",
+  ".mp4": "video/mp4",
+  ".webm": "video/webm",
   ".svg": "image/svg+xml",
   ".txt": "text/plain; charset=utf-8",
   ".xml": "application/xml; charset=utf-8"

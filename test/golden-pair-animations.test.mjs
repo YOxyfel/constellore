@@ -3,6 +3,9 @@ import assert from "node:assert/strict";
 import {
   ANIMATIONS,
   COUNT,
+  GENERIC_MAJOR_DURATION_MS,
+  GOLDEN_PAIR_FULL_MAX_DURATION_MS,
+  GOLDEN_PAIR_FULL_MIN_DURATION_MS,
   MOTIONS,
   VERSION,
   buildGoldenPairAnimation,
@@ -135,7 +138,8 @@ test("motion, copy, glyph, palette, and timing values stay bounded for rendering
     assert.match(entry.palette, /^[a-z][a-z0-9-]{0,31}$/u);
     assert.equal(motionSet.has(entry.motion), true);
     assert.equal(Number.isInteger(entry.duration), true);
-    assert.ok(entry.duration > 0 && entry.duration <= 850);
+    assert.ok(entry.duration >= GOLDEN_PAIR_FULL_MIN_DURATION_MS);
+    assert.ok(entry.duration <= GOLDEN_PAIR_FULL_MAX_DURATION_MS);
     assert.equal(entry.beats.length, 3);
     assert.equal(entry.glyphs.length, 3);
 
@@ -180,6 +184,8 @@ test("builder uses sanitized live word and emoji objects deterministically", () 
   assert.ok(first);
   assert.deepEqual(second, first);
   assert.equal(first.id, "golden-01");
+  assert.equal(first.presentation, "authored");
+  assert.equal(first.authored, true);
   assert.deepEqual(first.a, { word: "Cloud", emoji: "☁️" });
   assert.deepEqual(first.b, { word: "Water", emoji: "💧" });
   assert.deepEqual(first.result, { word: "Rain", emoji: "🌧️" });
@@ -206,6 +212,70 @@ test("builder uses sanitized live word and emoji objects deterministically", () 
   for (const value of allStrings(first)) {
     assert.doesNotMatch(value, /[\u0000-\u001f\u007f<>]/u);
   }
+});
+
+test("generic meteor fallback is explicit, sanitized, bounded, and never replaces an authored scene", () => {
+  const ordinary = {
+    a: { word: " Earth ", emoji: " 🌍 ", privateNote: "<secret>" },
+    b: { word: "Water", emoji: "💧", playerId: "private-player" },
+    result: { word: "Mud", emoji: "🟤", html: "<img onerror=alert(1)>" }
+  };
+
+  assert.equal(buildGoldenPairAnimation(ordinary), null);
+  assert.equal(buildGoldenPairAnimation({ ...ordinary, major: 1 }), null);
+  assert.equal(buildGoldenPairAnimation({ ...ordinary, major: "true" }), null);
+
+  const generic = buildGoldenPairAnimation({ ...ordinary, major: true });
+  assert.ok(generic);
+  assert.equal(generic.id, "major-meteor");
+  assert.equal(generic.presentation, "generic");
+  assert.equal(generic.authored, false);
+  assert.equal(generic.authoredPair, null);
+  assert.equal(generic.family, "major");
+  assert.equal(generic.motion, "pulse");
+  assert.equal(generic.palette, "meteor-cyan");
+  assert.equal(generic.duration, GENERIC_MAJOR_DURATION_MS);
+  assert.ok(generic.duration >= GOLDEN_PAIR_FULL_MIN_DURATION_MS);
+  assert.ok(generic.duration <= GOLDEN_PAIR_FULL_MAX_DURATION_MS);
+  assert.deepEqual(generic.a, { word: "Earth", emoji: "🌍" });
+  assert.deepEqual(generic.b, { word: "Water", emoji: "💧" });
+  assert.deepEqual(generic.result, { word: "Mud", emoji: "🟤" });
+  assert.deepEqual(generic.beats, ["APPROACH", "IMPACT", "ASCEND"]);
+  assert.equal(generic.announcement, "Earth and Water combine to create Mud.");
+  assert.equal("privateNote" in generic.a, false);
+  assert.equal("playerId" in generic.b, false);
+  assert.equal("html" in generic.result, false);
+  assertDeepFrozen(generic);
+
+  const unsafeEmoji = buildGoldenPairAnimation({
+    a: { word: "Earth", emoji: "<img src=x>" },
+    b: { word: "Water", emoji: "water" },
+    result: { word: "Mud", emoji: "\"mud\"" },
+    major: true
+  });
+  assert.deepEqual(
+    [unsafeEmoji.a.emoji, unsafeEmoji.b.emoji, unsafeEmoji.result.emoji],
+    ["", "", ""]
+  );
+  assert.doesNotMatch(JSON.stringify(unsafeEmoji), /img src|[<>]/iu);
+
+  const authored = buildGoldenPairAnimation({
+    a: { word: "Cloud", emoji: "☁️" },
+    b: { word: "Water", emoji: "💧" },
+    result: { word: "Rain", emoji: "🌧️" },
+    major: true
+  });
+  assert.equal(authored.id, "golden-01");
+  assert.equal(authored.presentation, "authored");
+  assert.equal(authored.authored, true);
+
+  const hostileMajor = buildGoldenPairAnimation({
+    ...ordinary,
+    get major() {
+      throw new Error("hostile major getter");
+    }
+  });
+  assert.equal(hostileMajor, null);
 });
 
 test("builder drops unsafe emoji and rejects malformed or mismatched payloads", () => {

@@ -11,8 +11,13 @@ body.simple-ui {
   --line: var(--ui-line);
   --text: var(--ui-text);
   --muted: var(--ui-muted);
+  font-family: var(--ui-font-body, Manrope, Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif);
   font-size: 18px;
   line-height: 1.5;
+}
+
+body.simple-ui:has(dialog[open]) {
+  overflow: hidden;
 }
 
 .simple-ui .simple-hidden {
@@ -321,6 +326,7 @@ body.simple-ui {
   align-self: start;
   color: var(--muted);
   font-size: 15px;
+  font-weight: 400;
   line-height: 1.3;
 }
 
@@ -328,6 +334,10 @@ body.simple-ui {
   grid-column: 3;
   grid-row: 1 / 3;
   justify-self: end;
+}
+
+.simple-ui .hub-menu-grid > #scrambleMenuButton {
+  grid-column: 1 / -1;
 }
 
 .simple-ui .developer-menu-trigger {
@@ -407,7 +417,7 @@ body.simple-ui {
   letter-spacing: 0;
 }
 
-.simple-ui .mode-card h2 {
+.simple-ui .mode-card h3 {
   margin: 8px 0 5px;
   font-size: 23px;
 }
@@ -567,6 +577,26 @@ body.simple-ui {
   border-radius: 13px;
 }
 
+/* Pause keeps the mixer action explicit, including on touch screens. */
+.simple-ui #pauseVolumeControl {
+  grid-template-columns: 44px minmax(48px, 1fr) 44px max-content;
+}
+
+.simple-ui #pauseVolumeControl .vdet > summary {
+  width: auto;
+  min-width: 88px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 7px;
+  padding-inline: 10px;
+}
+
+.simple-ui #pauseVolumeControl .vdet > summary b {
+  display: inline;
+  font: 600 12px/1.3 Manrope, system-ui, sans-serif;
+}
+
 /* Game: Menu, target, and only the relevant counter */
 .simple-ui .game-nav {
   height: calc(72px + env(safe-area-inset-top));
@@ -630,7 +660,7 @@ body.simple-ui {
   }
 
   .simple-ui .game-target #lawPill.path-guard-status:not([hidden])::after {
-    content: "◇ GUARD ON";
+    content: "Р Р†РІР‚вЂќРІР‚РЋ GUARD ON";
     font: 650 11px/1.1 "DM Mono", Consolas, monospace;
     letter-spacing: .035em;
   }
@@ -654,7 +684,10 @@ body.simple-ui {
   border-radius: 999px;
   color: var(--atlas-gold-bright);
   background: rgba(241, 202, 120, .08);
-  font: 650 15px/1.2 inherit;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 650;
+  line-height: 1.2;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -668,7 +701,10 @@ body.simple-ui {
   padding: 4px 9px;
   color: var(--atlas-gold-bright);
   background: rgba(241, 202, 120, .1);
-  font: 700 15px/1 inherit;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1;
   letter-spacing: .01em;
 }
 
@@ -850,34 +886,636 @@ body.simple-ui {
   100% { opacity: 0; transform: translateY(-7px) scale(.94); }
 }
 
-.simple-ui .game-hud .powerup-shortcuts > :not(#senseButton) {
+.simple-ui .board-assistance-rail {
+  --assist-rail-size: 50px;
+  position: absolute;
+  z-index: 12;
+  left: max(10px, env(safe-area-inset-left));
+  top: 50%;
+  width: calc(var(--assist-rail-size) + 8px);
+  max-height: calc(100% - 24px);
+  box-sizing: border-box;
+  padding: 8px 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid rgba(105, 216, 204, .22);
+  border-radius: 999px;
+  color: var(--text);
+  background:
+    linear-gradient(180deg, rgba(105, 216, 204, .08), transparent 24% 76%, rgba(241, 202, 120, .06)),
+    rgba(3, 20, 28, .82);
+  box-shadow: 0 16px 42px rgba(0, 7, 12, .4), inset 0 0 24px rgba(105, 216, 204, .035);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  transform: translateY(-50%);
+  pointer-events: none;
+  isolation: isolate;
+}
+
+.simple-ui .board-assistance-rail__signal {
+  position: absolute;
+  z-index: -1;
+  inset: 18px 50% 18px auto;
+  width: 1px;
+  background: linear-gradient(transparent, rgba(105, 216, 204, .42) 17%, rgba(241, 202, 120, .28) 78%, transparent);
+  box-shadow: 0 0 12px rgba(105, 216, 204, .34);
+  pointer-events: none;
+}
+
+.simple-ui :is(.assist-rail-action, .assist-rail-info) {
+  --assist-tone: var(--atlas-teal, var(--cyan));
+  position: relative;
+  width: var(--assist-rail-size);
+  min-width: var(--assist-rail-size);
+  height: var(--assist-rail-size);
+  min-height: var(--assist-rail-size);
+  box-sizing: border-box;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  overflow: visible;
+  border: 1px solid color-mix(in srgb, var(--assist-tone) 40%, rgba(173, 213, 211, .22));
+  border-radius: 50%;
+  color: color-mix(in srgb, var(--assist-tone) 72%, white);
+  background:
+    radial-gradient(circle at 42% 35%, color-mix(in srgb, var(--assist-tone) 15%, transparent), transparent 56%),
+    rgba(7, 31, 40, .94);
+  box-shadow: inset 0 0 0 4px rgba(2, 16, 23, .62), 0 5px 17px rgba(0, 7, 12, .32);
+  cursor: pointer;
+  pointer-events: auto;
+  transition: border-color 180ms ease, box-shadow 180ms ease, color 180ms ease, transform 180ms ease, opacity 180ms ease;
+  animation: assist-rail-arrive 500ms cubic-bezier(.2, .8, .2, 1) both;
+}
+
+.simple-ui .assist-rail-action:nth-of-type(2) { animation-delay: 45ms; }
+.simple-ui .assist-rail-action:nth-of-type(3) { animation-delay: 90ms; }
+.simple-ui .assist-rail-action:nth-of-type(4) { animation-delay: 135ms; }
+.simple-ui .assist-rail-info { animation-delay: 180ms; }
+
+.simple-ui .assist-rail-action--compass { --assist-tone: #b7a3ff; }
+.simple-ui .assist-rail-action--gift { --assist-tone: var(--atlas-gold, var(--amber)); }
+.simple-ui .assist-rail-action--reveal { --assist-tone: #ef9b91; }
+.simple-ui .assist-rail-info { --assist-tone: #8fe4d8; }
+
+.simple-ui :is(.assist-rail-action, .assist-rail-info):hover:not(:disabled),
+.simple-ui :is(.assist-rail-action, .assist-rail-info):focus-visible {
+  border-color: color-mix(in srgb, var(--assist-tone) 82%, white);
+  color: #fff;
+  box-shadow: inset 0 0 0 4px rgba(2, 16, 23, .56), 0 0 0 3px color-mix(in srgb, var(--assist-tone) 13%, transparent), 0 0 25px color-mix(in srgb, var(--assist-tone) 27%, transparent);
+  transform: translateX(2px);
+}
+
+.simple-ui :is(.assist-rail-action, .assist-rail-info):focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--assist-tone) 82%, white);
+  outline-offset: 3px;
+}
+
+.simple-ui :is(.assist-rail-action, .assist-rail-info):disabled {
+  opacity: .38;
+  cursor: default;
+  filter: saturate(.55);
+}
+
+.simple-ui .assist-rail-icon,
+.simple-ui .assist-rail-info > span:first-child {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  font: 700 21px/1 "DM Mono", monospace;
+  filter: drop-shadow(0 0 8px color-mix(in srgb, var(--assist-tone) 58%, transparent));
+}
+
+.simple-ui .assist-rail-icon--word {
+  font-size: 14px;
+  letter-spacing: -.08em;
+}
+
+.simple-ui .assist-rail-action kbd {
+  position: absolute;
+  left: -3px;
+  top: -3px;
+  min-width: 18px;
+  height: 18px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(192, 225, 222, .34);
+  border-radius: 50%;
+  color: rgba(227, 243, 240, .82);
+  background: #071821;
+  box-shadow: 0 3px 8px rgba(0, 7, 12, .4);
+  font: 700 10px/1 "DM Mono", monospace;
+}
+
+.simple-ui .assist-rail-action > em {
+  position: absolute;
+  right: -5px;
+  top: -5px;
+  min-width: 22px;
+  height: 22px;
+  box-sizing: border-box;
+  display: grid;
+  place-items: center;
+  padding: 0 5px;
+  border: 2px solid #061821;
+  border-radius: 999px;
+  color: #06151c;
+  background: color-mix(in srgb, var(--assist-tone) 84%, white);
+  box-shadow: 0 3px 10px rgba(0, 7, 12, .5), 0 0 11px color-mix(in srgb, var(--assist-tone) 22%, transparent);
+  font: 800 11px/1 "DM Mono", monospace;
+  font-style: normal;
+}
+
+.simple-ui .assist-rail-action.is-empty > em {
+  color: #041217;
+  background: var(--atlas-gold-bright, #f5d88c);
+  box-shadow: 0 0 0 2px rgba(241, 202, 120, .11), 0 0 15px rgba(241, 202, 120, .34);
+}
+
+.simple-ui .assist-rail-action.is-used:not(.is-empty) {
+  opacity: .68;
+}
+
+.simple-ui .assist-rail-action.is-armed {
+  border-color: var(--atlas-gold-bright, #f5d88c);
+  color: #fff4cf;
+  box-shadow: inset 0 0 0 4px rgba(2, 16, 23, .5), 0 0 0 4px rgba(241, 202, 120, .1), 0 0 28px rgba(241, 202, 120, .38);
+  animation: assist-rail-armed 760ms ease-in-out infinite alternate;
+}
+
+.simple-ui .assist-rail-label {
+  position: absolute;
+  z-index: 3;
+  left: calc(100% + 11px);
+  top: 50%;
+  width: max-content;
+  max-width: min(210px, calc(100vw - 96px));
+  box-sizing: border-box;
+  padding: 7px 10px;
+  border: 1px solid color-mix(in srgb, var(--assist-tone) 32%, var(--ui-line));
+  border-radius: 8px;
+  color: var(--text);
+  background: rgba(3, 20, 28, .95);
+  box-shadow: 0 8px 22px rgba(0, 7, 12, .38);
+  font: 700 12px/1.2 "DM Mono", monospace;
+  letter-spacing: .015em;
+  text-align: left;
+  white-space: nowrap;
+  opacity: 0;
+  visibility: hidden;
+  transform: translate(-5px, -50%);
+  transition: opacity 140ms ease, transform 140ms ease, visibility 140ms ease;
+  pointer-events: none;
+}
+
+.simple-ui :is(.assist-rail-action, .assist-rail-info):is(:hover, :focus-visible) .assist-rail-label {
+  opacity: 1;
+  visibility: visible;
+  transform: translate(0, -50%);
+}
+
+.simple-ui .assist-rail-separator {
+  width: 26px;
+  height: 1px;
+  margin: 1px 0;
+  background: linear-gradient(90deg, transparent, rgba(169, 214, 209, .38), transparent);
+}
+
+@keyframes assist-rail-arrive {
+  from { opacity: 0; transform: translateX(-10px) scale(.84); }
+  to { opacity: 1; transform: translateX(0) scale(1); }
+}
+
+@keyframes assist-rail-armed {
+  from { transform: scale(1); }
+  to { transform: scale(1.045); }
+}
+
+.simple-ui .game-screen:is(.training-orbit, .second-orbit, .explore-orbit, .scramble-orbit) .board-assistance-rail {
   display: none !important;
 }
 
-.simple-ui .game-hud #senseButton {
-  width: auto;
-  min-width: 78px;
-  min-height: 50px;
-  border: 1px solid var(--ui-line);
-  border-radius: 10px;
-  padding: 0 14px;
-  color: var(--text);
-  font-size: 17px;
+@media (max-width: 700px) {
+  .simple-ui .board-assistance-rail {
+    --assist-rail-size: 46px;
+    left: max(6px, env(safe-area-inset-left));
+    gap: 6px;
+    padding: 7px 3px;
+  }
+
+  .simple-ui .assist-rail-label {
+    left: calc(100% + 8px);
+    max-width: min(180px, calc(100vw - 78px));
+    font-size: 11px;
+  }
+}
+
+@media (max-height: 480px) and (min-width: 521px) {
+  .simple-ui .board-assistance-rail {
+    --assist-rail-size: 44px;
+    max-height: calc(100% - 12px);
+    gap: 4px;
+    padding-block: 5px;
+  }
+
+  .simple-ui .assist-rail-separator {
+    margin: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .simple-ui :is(.assist-rail-action, .assist-rail-info) {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+body[data-cosmetic-effects="reduced"].simple-ui :is(.assist-rail-action, .assist-rail-info),
+body[data-cosmetic-effects="off"].simple-ui :is(.assist-rail-action, .assist-rail-info) {
+  animation: none;
+}
+
+body[data-cosmetic-effects="off"].simple-ui .board-assistance-rail__signal {
   box-shadow: none;
 }
 
-.simple-ui .game-hud #senseButton b {
-  display: inline;
-  font-size: 17px;
+@media (forced-colors: active) {
+  .simple-ui .board-assistance-rail,
+  .simple-ui :is(.assist-rail-action, .assist-rail-info),
+  .simple-ui .assist-rail-action :is(kbd, em),
+  .simple-ui .assist-rail-label {
+    border-color: ButtonText;
+    color: ButtonText;
+    background: Canvas;
+    box-shadow: none;
+    forced-color-adjust: auto;
+  }
 }
 
-.simple-ui .game-hud #senseButton span {
+/* Final dialog composition: keep shared modal paint while preserving the
+   scroll/sticky regions introduced by the responsive shell. */
+body.simple-ui .pause-modal[open] {
+  width: min(500px, calc(100% - 28px));
+  max-height: min(760px, calc(var(--ui-vv-height, 100dvh) - var(--safe-top) - var(--safe-bottom) - 18px));
+  padding: 0;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  overflow: hidden;
+}
+
+html[data-ui-layout="stacked"] body.simple-ui .pause-modal[open] {
+  width: min(100%, 430px);
+  max-height: calc(var(--ui-vv-height, 100dvh) - var(--safe-top) - var(--safe-bottom));
+  padding: 0;
+}
+
+html[data-ui-layout="short-landscape"] body.simple-ui .pause-modal[open] {
+  width: min(720px, calc(100% - var(--safe-left) - var(--safe-right) - 12px));
+  height: calc(var(--ui-vv-height, 100dvh) - var(--safe-top) - var(--safe-bottom) - 8px);
+  padding: 0;
+  grid-template-columns: minmax(0, 1fr) 190px;
+  grid-template-rows: minmax(0, 1fr);
+}
+
+body.simple-ui .reveal-modal[open] {
+  max-height: min(620px, calc(var(--ui-vv-height, 100dvh) - var(--safe-top) - var(--safe-bottom) - 18px));
+  padding-bottom: 0;
+  overflow: hidden auto;
+}
+
+/* --------------------------------------------------------------------------
+   Shared responsive-density polish
+
+   These rules consume the application-wide responsive context. They replace
+   height compression with alternate compositions for dialogs and utilities.
+   -------------------------------------------------------------------------- */
+
+.simple-ui .hub-menu-heading {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto 54px;
+  align-items: center;
+  gap: 12px;
+}
+
+.simple-ui .hub-menu-heading > :first-child {
+  min-width: 0;
+}
+
+.simple-ui .hub-menu-heading #hubMenuTitle {
+  max-width: none;
+  overflow: visible;
+  text-overflow: clip;
+  white-space: normal;
+}
+
+.simple-ui .hub-menu-modal > .modal-close {
+  z-index: 4;
+}
+
+.simple-ui .pause-modal {
+  max-height: min(760px, calc(var(--ui-vv-height, 100dvh) - var(--safe-top) - var(--safe-bottom) - 18px));
+  padding: 0;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  overflow: hidden;
+}
+
+.simple-ui .pause-scroll {
+  min-height: 0;
+  padding: 28px 30px 10px;
+  overflow: hidden auto;
+  overscroll-behavior: contain;
+}
+
+.simple-ui .pause-actions--secondary {
+  margin: 14px 0 0;
+}
+
+.simple-ui .pause-actions--sticky {
+  margin: 0;
+  padding: 10px 30px max(18px, var(--safe-bottom));
+  border-top: 1px solid var(--ui-line);
+  background: color-mix(in srgb, var(--ui-bg-raised) 94%, transparent);
+  box-shadow: 0 -14px 32px rgba(0, 8, 12, .22);
+}
+
+.simple-ui .pause-actions--sticky > button {
+  min-height: 50px;
+}
+
+.simple-ui .reveal-modal {
+  max-height: min(620px, calc(var(--ui-vv-height, 100dvh) - var(--safe-top) - var(--safe-bottom) - 18px));
+  padding-bottom: 0;
+  overflow: hidden auto;
+}
+
+.simple-ui .reveal-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  margin: 16px -30px 0;
+  padding: 10px 30px max(18px, var(--safe-bottom));
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(110px, .62fr);
+  gap: 9px;
+  border-top: 1px solid var(--ui-line);
+  background: color-mix(in srgb, var(--ui-bg-raised) 96%, transparent);
+  box-shadow: 0 -14px 32px rgba(0, 8, 12, .2);
+}
+
+.simple-ui .reveal-actions > button {
+  width: 100%;
+  min-height: 48px;
+  margin: 0;
+}
+
+.simple-ui .stardust-dialog-tabs {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  margin: 12px 0 14px;
+  background: color-mix(in srgb, var(--ui-bg-raised) 96%, transparent);
+  backdrop-filter: blur(14px);
+}
+
+.simple-ui .stardust-dialog-tabs > button {
+  color: var(--ui-muted);
+  background: transparent;
+}
+
+.simple-ui .stardust-dialog-tabs > button[aria-selected="true"] {
+  border-color: color-mix(in srgb, var(--ui-teal) 68%, transparent);
+  color: var(--ui-text);
+  background: color-mix(in srgb, var(--ui-teal) 14%, var(--ui-control));
+}
+
+.simple-ui .stardust-dialog-panel[hidden] {
+  display: none !important;
+}
+
+.simple-ui .stardust-dialog-panel {
+  min-height: 0;
+}
+
+.simple-ui .stardust-dialog-panel :is(button, [tabindex="-1"]) {
+  scroll-margin-block: 92px 24px;
+}
+
+html[data-ui-layout="stacked"] body.simple-ui .hub-menu-modal,
+html[data-ui-layout="short-landscape"] body.simple-ui .hub-menu-modal {
+  padding-top: calc(12px + var(--safe-top));
+}
+
+html[data-ui-layout="stacked"] body.simple-ui .hub-menu-heading,
+html[data-ui-layout="short-landscape"] body.simple-ui .hub-menu-heading {
+  grid-template-columns: minmax(0, 1fr) var(--hit-default);
+  grid-template-rows: auto auto;
+  align-items: start;
+  padding-right: 0;
+}
+
+html[data-ui-layout="stacked"] body.simple-ui .hub-menu-heading > :first-child,
+html[data-ui-layout="short-landscape"] body.simple-ui .hub-menu-heading > :first-child {
+  grid-column: 1;
+  grid-row: 1;
+  min-height: var(--hit-default);
+  display: flex;
+  align-items: center;
+}
+
+html[data-ui-layout="stacked"] body.simple-ui .hub-menu-heading .eyebrow,
+html[data-ui-layout="short-landscape"] body.simple-ui .hub-menu-heading .eyebrow {
   display: none;
 }
 
-.simple-ui .game-screen.training-orbit .game-hud #senseButton,
-.simple-ui .game-screen.second-orbit .game-hud #senseButton {
-  display: none !important;
+html[data-ui-layout="stacked"] body.simple-ui .hub-menu-heading .stardust-wallet--menu,
+html[data-ui-layout="short-landscape"] body.simple-ui .hub-menu-heading .stardust-wallet--menu {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  width: 100%;
+  min-height: var(--hit-compact);
+  justify-content: flex-start;
+}
+
+html[data-ui-layout="stacked"] body.simple-ui .hub-menu-modal > .modal-close,
+html[data-ui-layout="short-landscape"] body.simple-ui .hub-menu-modal > .modal-close {
+  top: calc(10px + var(--safe-top));
+  right: calc(10px + var(--safe-right));
+  width: var(--hit-default);
+  height: var(--hit-default);
+}
+
+html[data-ui-layout="stacked"] body.simple-ui .hub-menu-modal > p,
+html[data-ui-layout="short-landscape"] body.simple-ui .hub-menu-modal > p {
+  margin-top: 10px;
+}
+
+html[data-ui-layout="stacked"] body.simple-ui :is(.pause-modal, .reveal-modal, .stardust-modal),
+html[data-ui-layout="short-landscape"] body.simple-ui :is(.pause-modal, .reveal-modal, .stardust-modal) {
+  width: min(100%, 430px);
+  max-height: calc(var(--ui-vv-height, 100dvh) - var(--safe-top) - var(--safe-bottom));
+  border-radius: var(--radius-dialog);
+}
+
+html[data-ui-layout="stacked"] body.simple-ui .pause-scroll {
+  padding: 22px 16px 8px;
+}
+
+html[data-ui-layout="stacked"] body.simple-ui .pause-actions--sticky {
+  grid-template-columns: minmax(0, 1fr) minmax(104px, .5fr);
+  padding: 9px 16px max(12px, var(--safe-bottom));
+}
+
+html[data-ui-layout="stacked"] body.simple-ui .pause-actions--sticky .pause-exit {
+  min-width: 104px;
+}
+
+html[data-ui-layout="stacked"] body.simple-ui .pause-fusion-animation .fusion-animation-options button b {
+  overflow: visible;
+  font-size: 12px;
+  text-overflow: clip;
+}
+
+html[data-ui-layout="stacked"] body.simple-ui .reveal-modal {
+  padding-inline: 18px;
+}
+
+html[data-ui-layout="stacked"] body.simple-ui .reveal-actions {
+  margin-inline: -18px;
+  padding-inline: 18px;
+}
+
+html[data-ui-layout="short-landscape"] body.simple-ui .pause-modal {
+  width: min(720px, calc(100% - var(--safe-left) - var(--safe-right) - 12px));
+  height: calc(var(--ui-vv-height, 100dvh) - var(--safe-top) - var(--safe-bottom) - 8px);
+  grid-template-columns: minmax(0, 1fr) 190px;
+  grid-template-rows: minmax(0, 1fr);
+}
+
+html[data-ui-layout="short-landscape"] body.simple-ui .pause-scroll {
+  padding: 14px 16px;
+}
+
+/* A nested popover cannot fit below the mixer in a short viewport. Let its
+   existing disclosure expand into the pause scroll area instead. */
+html[data-ui-layout="short-landscape"] body.simple-ui #pauseVolumeControl .vdet[open] {
+  grid-column: 1 / -1;
+}
+
+html[data-ui-layout="short-landscape"] body.simple-ui #pauseVolumeControl .vpanel {
+  position: static;
+  inset: auto;
+  width: 100%;
+  min-width: 0;
+  max-width: none;
+  max-height: none;
+  margin-top: 6px;
+  box-shadow: none;
+}
+
+/* Modern details content can span the control grid without moving its toggle. */
+@supports selector(details::details-content) {
+  html[data-ui-layout="short-landscape"] body.simple-ui #pauseVolumeControl .vdet[open] {
+    display: contents;
+  }
+  html[data-ui-layout="short-landscape"] body.simple-ui #pauseVolumeControl .vdet > summary {
+    grid-column: 4;
+    grid-row: 1;
+  }
+  html[data-ui-layout="short-landscape"] body.simple-ui #pauseVolumeControl .vdet::details-content {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+}
+
+html[data-ui-layout="short-landscape"] body.simple-ui .pause-heading h2 {
+  margin-bottom: 8px;
+  font-size: clamp(26px, 6vh, 38px);
+}
+
+html[data-ui-layout="short-landscape"] body.simple-ui .pause-target {
+  padding-block: 9px;
+}
+
+html[data-ui-layout="short-landscape"] body.simple-ui .pause-fusion-animation {
+  margin-top: 8px;
+}
+
+html[data-ui-layout="short-landscape"] body.simple-ui .pause-fusion-animation .fusion-animation-options {
+  grid-template-columns: repeat(3, minmax(72px, 1fr));
+}
+
+html[data-ui-layout="short-landscape"] body.simple-ui .pause-fusion-animation .fusion-animation-options button {
+  min-height: var(--hit-compact);
+  padding: 4px 7px;
+}
+
+html[data-ui-layout="short-landscape"] body.simple-ui .pause-actions--sticky {
+  padding: 14px 12px;
+  align-content: center;
+  border-top: 0;
+  border-left: 1px solid var(--ui-line);
+}
+
+html[data-ui-layout="short-landscape"] body.simple-ui .pause-actions--sticky > button {
+  min-height: var(--hit-default);
+}
+
+html[data-ui-layout="short-landscape"] body.simple-ui .reveal-modal {
+  width: min(680px, calc(100% - var(--safe-left) - var(--safe-right) - 12px));
+  padding: 16px 176px 14px 18px;
+}
+
+html[data-ui-layout="short-landscape"] body.simple-ui .reveal-modal :is(h2, p, .reveal-consequence) {
+  margin-block: 0 8px;
+}
+
+html[data-ui-layout="short-landscape"] body.simple-ui .reveal-actions {
+  position: absolute;
+  inset: 0 0 0 auto;
+  width: 164px;
+  margin: 0;
+  padding: 14px 10px;
+  grid-template-columns: 1fr;
+  align-content: center;
+  border-top: 0;
+  border-left: 1px solid var(--ui-line);
+}
+
+html[data-ui-layout="short-landscape"] body.simple-ui .stardust-modal {
+  width: min(780px, calc(100% - var(--safe-left) - var(--safe-right) - 12px));
+  padding: 14px 18px max(12px, var(--safe-bottom));
+}
+
+html[data-ui-layout="short-landscape"] body.simple-ui .stardust-dialog-heading {
+  padding-right: var(--hit-default);
+}
+
+html[data-ui-layout="short-landscape"] body.simple-ui .stardust-modal > #stardustDialogIntro,
+html[data-ui-layout="short-landscape"] body.simple-ui .stardust-dialog-context-row {
+  margin-block: 5px;
+}
+
+html[data-ui-density="compact-height"] body.simple-ui .hub-menu-grid > .hub-menu-action {
+  min-height: 64px;
+}
+
+@media (max-width: 360px) {
+  .simple-ui .hub-menu-heading #hubMenuTitle {
+    font-size: 32px;
+  }
+
+  html[data-ui-layout="stacked"] body.simple-ui .pause-fusion-animation .fusion-animation-options {
+    gap: 4px;
+  }
+
+  html[data-ui-layout="stacked"] body.simple-ui .pause-fusion-animation .fusion-animation-options button {
+    padding-inline: 5px;
+  }
 }
 
 .simple-ui :is(.rival-ghost, .ghost-preview) {
@@ -1001,6 +1639,140 @@ body.simple-ui {
 }
 
 /* Dialogs */
+:where(body.simple-ui dialog[open]:not(.cosmetics-observatory):not(.cosmetic-world-preview):not(.cosmic-dialog-transition[data-phase])) {
+  transform-origin: 50% 50%;
+  animation: ui-window-enter 380ms cubic-bezier(.16, .82, .24, 1) both;
+}
+
+:where(body.simple-ui .mission-briefing-modal[open]) {
+  animation-name: ui-centered-window-enter;
+}
+
+:where(body.simple-ui dialog[open]:not(.cosmetics-observatory):not(.cosmic-dialog-transition[data-phase]))::backdrop {
+  animation: ui-window-backdrop-enter 260ms ease-out both;
+}
+
+:where(body.simple-ui .cosmetic-world-preview[open] .cosmetic-world-preview__bar) {
+  transform-origin: 50% 100%;
+  animation: ui-preview-window-enter 300ms cubic-bezier(.16, .82, .24, 1) both;
+}
+
+:where(body.simple-ui [role="alertdialog"]:not([hidden])) {
+  transform-origin: 50% 50%;
+  animation: ui-subwindow-enter 280ms cubic-bezier(.16, .82, .24, 1) both;
+}
+
+@keyframes ui-window-enter {
+  from {
+    opacity: 0;
+    scale: .84;
+  }
+  to {
+    opacity: 1;
+    scale: 1;
+  }
+}
+
+@keyframes ui-preview-window-enter {
+  from {
+    opacity: 0;
+    scale: .94;
+  }
+  to {
+    opacity: 1;
+    scale: 1;
+  }
+}
+
+@keyframes ui-centered-window-enter {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(.84);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+@keyframes ui-subwindow-enter {
+  from {
+    opacity: 0;
+    scale: .9;
+    translate: 0 8px;
+  }
+  to {
+    opacity: 1;
+    scale: 1;
+    translate: 0 0;
+  }
+}
+
+@keyframes ui-window-backdrop-enter {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes ui-window-enter-reduced {
+  from {
+    opacity: .58;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes ui-full-window-enter {
+  from {
+    opacity: 0;
+    scale: .96;
+    translate: 0 12px;
+  }
+  to {
+    opacity: 1;
+    scale: 1;
+    translate: 0 0;
+  }
+}
+
+@media (max-width: 700px) {
+  :where(body.simple-ui dialog[open]:is(
+    .hub-menu-modal,
+    .sense-modal,
+    .profile-modal,
+    .atlas-modal,
+    .exchange-modal,
+    .leaderboard-modal,
+    .journey-modal,
+    .result-modal
+  )) {
+    animation-name: ui-full-window-enter;
+    animation-duration: 300ms;
+  }
+}
+
+:where(body.simple-ui[data-cosmetic-effects="reduced"] dialog[open]:not(.cosmetics-observatory)),
+:where(body.simple-ui[data-cosmetic-effects="reduced"] .cosmetic-world-preview[open] .cosmetic-world-preview__bar),
+:where(body.simple-ui[data-cosmetic-effects="reduced"] [role="alertdialog"]:not([hidden])) {
+  animation: ui-window-enter-reduced 180ms ease-out both !important;
+}
+
+:where(body.simple-ui[data-cosmetic-effects="off"] dialog[open]),
+:where(body.simple-ui[data-cosmetic-effects="off"] dialog[open])::backdrop,
+:where(body.simple-ui[data-cosmetic-effects="off"] .cosmetic-world-preview[open] .cosmetic-world-preview__bar),
+:where(body.simple-ui[data-cosmetic-effects="off"] [role="alertdialog"]:not([hidden])) {
+  animation: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :where(body.simple-ui dialog[open]),
+  :where(body.simple-ui dialog[open])::backdrop,
+  :where(body.simple-ui .cosmetic-world-preview[open] .cosmetic-world-preview__bar),
+  :where(body.simple-ui [role="alertdialog"]:not([hidden])) {
+    animation: none !important;
+  }
+}
+
 .simple-ui .modal {
   border: 1px solid var(--ui-line-strong);
   border-radius: 14px;
@@ -1192,7 +1964,7 @@ body.simple-ui {
 }
 
 .simple-ui .mission-remix-summary li::before {
-  content: "✦";
+  content: "Р Р†РЎС™Р’В¦";
   position: absolute;
   left: 0;
   color: var(--atlas-gold);
@@ -1566,7 +2338,7 @@ body.simple-ui {
 }
 
 .simple-ui .profile-core-grid {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   border: 1px solid var(--ui-line);
   border-radius: 10px;
   overflow: hidden;
@@ -1589,6 +2361,22 @@ body.simple-ui {
   font-size: 16px;
 }
 
+.simple-ui .profile-core-grid .profile-total {
+  border-color: color-mix(in srgb, var(--atlas-gold) 42%, var(--ui-line));
+  background:
+    radial-gradient(circle at 50% 0, rgba(241, 202, 120, .1), transparent 55%),
+    rgba(5, 26, 34, .62);
+}
+
+.simple-ui .profile-core-grid .profile-total small {
+  display: block;
+  margin-top: 2px;
+  color: var(--atlas-muted);
+  font: 650 9px/1.15 Consolas, monospace;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+}
+
 .simple-ui .profile-more {
   border: 1px solid var(--ui-line);
   border-radius: 10px;
@@ -1609,7 +2397,7 @@ body.simple-ui {
 }
 
 .simple-ui .profile-more[open] > summary::after {
-  content: "−";
+  content: "Р Р†РІвЂљВ¬РІР‚в„ў";
 }
 
 .simple-ui .profile-more-content {
@@ -1743,12 +2531,12 @@ body.simple-ui {
   }
 
   .simple-ui .profile-core-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .simple-ui .profile-core-grid div {
     min-height: 66px;
-    border-right: 0;
+    border-right: 1px solid var(--line);
     border-bottom: 1px solid var(--line);
   }
 
@@ -1840,7 +2628,7 @@ body.simple-ui {
   }
 
   .simple-ui .profile-core-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .simple-ui .profile-core-grid div {
@@ -1937,6 +2725,18 @@ body.simple-ui {
   --ui-primary-ink: #17231f;
   --ui-accent-soft: rgba(105, 216, 204, .12);
   --ui-focus: var(--atlas-teal);
+  --ui-danger: var(--atlas-coral);
+  --ui-font-body: Manrope, Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --ui-font-display: Georgia, "Times New Roman", serif;
+  --ui-font-label: "DM Mono", Consolas, ui-monospace, SFMono-Regular, Menlo, Monaco, monospace;
+  --ui-radius-control: 10px;
+  --ui-radius-card: 14px;
+  --ui-radius-feature: 18px;
+  --ui-radius-dialog: 22px;
+  --ui-dialog-shadow:
+    inset 0 1px rgba(255, 255, 255, .04),
+    0 32px 90px rgba(0, 7, 11, .52);
+  --ui-dialog-backdrop: rgba(2, 13, 19, .76);
   --panel: rgba(11, 38, 49, .95);
   --panel-solid: var(--atlas-surface);
   --line-hot: rgba(105, 216, 204, .48);
@@ -1953,7 +2753,7 @@ body.simple-ui {
 }
 
 .simple-ui :is(.start-copy h1, .modal h2, .primary-orbit-panel h2, .result-route-card strong) {
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: var(--ui-font-display);
   font-weight: 600;
   letter-spacing: -.035em;
 }
@@ -2028,6 +2828,40 @@ body.simple-ui {
 .simple-ui :is(.quiet-action, .modal-close) {
   background: transparent;
   box-shadow: none;
+}
+
+/* Leaving a run is a safe return home, not a destructive action. */
+.simple-ui .pause-actions > .pause-exit {
+  border: 1px solid rgba(179, 255, 239, .76) !important;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, .2), transparent 48%),
+    linear-gradient(135deg, #8ee8d6, #59cfc2 58%, #3eb1b3);
+  color: #06262a;
+  font-weight: 750;
+  justify-content: center;
+  box-shadow:
+    inset 0 1px rgba(255, 255, 255, .5),
+    inset 0 -1px rgba(2, 66, 69, .22),
+    0 11px 26px rgba(40, 178, 163, .2);
+}
+
+.simple-ui .pause-actions > .pause-exit:hover:not(:disabled) {
+  border-color: #dcfff5 !important;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, .28), transparent 48%),
+    linear-gradient(135deg, #a9f5e2, #70dfd1 58%, #4cc4c1);
+  color: #041f22;
+  box-shadow:
+    inset 0 1px rgba(255, 255, 255, .62),
+    0 14px 32px rgba(48, 196, 179, .28),
+    0 0 24px rgba(105, 216, 204, .15);
+  transform: translateY(-1px);
+}
+
+.simple-ui .pause-actions > .pause-exit:active:not(:disabled) {
+  background: linear-gradient(135deg, #70d8c8, #49bfb7 62%, #37a3a7);
+  box-shadow: inset 0 2px 4px rgba(1, 48, 52, .2);
+  transform: translateY(0);
 }
 
 /* The illustrated atlas frames the home screen; the centre stays calm. */
@@ -2116,7 +2950,8 @@ body.simple-ui {
   width: min(100%, 470px);
   max-width: 100%;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto minmax(0, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
   justify-items: center;
   border: 1px solid rgba(181, 218, 214, .22);
   background:
@@ -2124,10 +2959,6 @@ body.simple-ui {
     rgba(7, 31, 40, .76);
   box-shadow: inset 0 1px rgba(255, 255, 255, .035), 0 16px 40px rgba(0, 9, 14, .18);
   backdrop-filter: blur(9px);
-}
-
-.simple-ui .recipe-example i {
-  color: var(--atlas-muted);
 }
 
 .simple-ui .recipe-example strong {
@@ -2293,6 +3124,8 @@ body.simple-ui {
 
 /* The board is chart paper, while draggable pieces stay crisp and fast. */
 .simple-ui .game-screen {
+  --words-pane-width: clamp(260px, 24vw, 310px);
+  --words-pane-half: clamp(130px, 12vw, 155px);
   background: var(--atlas-deep);
 }
 
@@ -2322,7 +3155,7 @@ body.simple-ui {
 }
 
 .simple-ui .game-target > div::before {
-  content: "✦";
+  content: "Р Р†РЎС™Р’В¦";
   flex: 0 0 30px;
   width: 30px;
   height: 30px;
@@ -2346,7 +3179,25 @@ body.simple-ui {
 }
 
 .simple-ui .game-layout {
-  grid-template-columns: minmax(0, 1fr) clamp(260px, 24vw, 310px);
+  grid-template-columns: minmax(0, 1fr) var(--words-pane-width);
+}
+
+@media (min-width: 901px), (min-width: 701px) and (orientation: landscape) {
+  body.simple-ui:not(.scramble-active) .game-nav {
+    position: relative;
+  }
+
+  body.simple-ui:not(.scramble-active) .game-target {
+    width: min(560px, calc(100% - var(--words-pane-width) - 260px));
+    max-width: calc(100% - var(--words-pane-width) - 260px);
+    grid-column: 1 / -1;
+    position: absolute;
+    top: env(safe-area-inset-top);
+    bottom: 0;
+    left: calc(50% - var(--words-pane-half));
+    justify-content: center;
+    transform: translateX(-50%);
+  }
 }
 
 .simple-ui .cosmos-board {
@@ -2578,7 +3429,7 @@ body.simple-ui {
 }
 
 .simple-ui .inventory-word.tutorial-hot::after {
-  content: "✦";
+  content: "Р Р†РЎС™Р’В¦";
   position: absolute;
   z-index: 1;
   top: 6px;
@@ -2620,6 +3471,145 @@ body.simple-ui {
   .simple-ui .inventory-word:focus-visible { outline-color: Highlight; }
 }
 
+/* Optional low-rank guidance waits for real inactivity, then floats at the board edge. */
+.simple-ui .help-nudge {
+  width: min(286px, calc(100% - 24px));
+  position: absolute;
+  z-index: 12;
+  right: clamp(12px, 2.4vw, 30px);
+  top: clamp(142px, 46%, calc(100% - 128px));
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 44px;
+  align-items: stretch;
+  gap: 5px;
+  pointer-events: auto;
+  transform: translateY(-50%);
+  animation: help-nudge-arrive .28s ease-out both, help-nudge-drift 3.8s .28s ease-in-out infinite alternate;
+}
+
+.simple-ui .help-nudge[hidden] {
+  display: none !important;
+}
+
+.simple-ui .help-nudge.is-positioning {
+  visibility: hidden;
+}
+
+.simple-ui .help-nudge-action,
+.simple-ui .help-nudge-dismiss {
+  min-height: 48px;
+  border: 1px solid rgba(105, 216, 204, .5);
+  color: var(--atlas-ivory);
+  background: linear-gradient(145deg, rgba(18, 62, 70, .97), rgba(4, 26, 35, .98));
+  box-shadow: 0 14px 38px rgba(0, 8, 12, .42), 0 0 28px rgba(105, 216, 204, .14);
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.simple-ui .help-nudge-action {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  align-items: center;
+  gap: 9px;
+  padding: 5px 11px 5px 5px;
+  border-radius: 999px 15px 15px 999px;
+  text-align: left;
+}
+
+.simple-ui .help-nudge-star {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(241, 202, 120, .64);
+  border-radius: 50%;
+  color: var(--atlas-gold-bright);
+  background: radial-gradient(circle, rgba(241, 202, 120, .2), rgba(105, 216, 204, .06) 58%, transparent 60%);
+  box-shadow: 0 0 0 4px rgba(241, 202, 120, .07), 0 0 22px rgba(241, 202, 120, .28);
+  font-size: 20px;
+}
+
+.simple-ui .help-nudge-action > span:last-child {
+  min-width: 0;
+}
+
+.simple-ui .help-nudge-action strong,
+.simple-ui .help-nudge-action small {
+  display: block;
+}
+
+.simple-ui .help-nudge-action strong {
+  font-size: 15px;
+  line-height: 1.15;
+}
+
+.simple-ui .help-nudge-action small {
+  margin-top: 3px;
+  overflow-wrap: anywhere;
+  color: rgba(210, 230, 225, .76);
+  font-size: 12px;
+  line-height: 1.2;
+}
+
+.simple-ui .help-nudge-dismiss {
+  width: 44px;
+  min-width: 44px;
+  padding: 0;
+  border-radius: 14px;
+  color: rgba(221, 234, 229, .74);
+  font-size: 22px;
+}
+
+.simple-ui .help-nudge :is(button:hover, button:focus-visible) {
+  border-color: var(--atlas-teal);
+  color: #fffdf6;
+  background-color: rgba(22, 72, 78, .98);
+}
+
+.simple-ui .help-nudge button:focus-visible {
+  outline: 3px solid var(--atlas-teal);
+  outline-offset: 2px;
+}
+
+.simple-ui .cosmos-board:has(.help-nudge:not([hidden])) .board-guide {
+  opacity: 0;
+}
+
+@keyframes help-nudge-arrive {
+  from { opacity: 0; filter: blur(4px); }
+  to { opacity: 1; filter: none; }
+}
+
+@keyframes help-nudge-drift {
+  from { transform: translateY(calc(-50% - 3px)); }
+  to { transform: translateY(calc(-50% + 3px)); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .simple-ui .help-nudge {
+    animation: none;
+  }
+}
+
+body.simple-ui[data-cosmetic-effects="reduced"] .help-nudge,
+body.simple-ui[data-cosmetic-effects="off"] .help-nudge {
+  animation: none;
+}
+
+@media (forced-colors: active) {
+  .simple-ui .help-nudge-action,
+  .simple-ui .help-nudge-dismiss,
+  .simple-ui .help-nudge-star {
+    border: 1px solid ButtonText;
+    color: ButtonText;
+    background: ButtonFace;
+    box-shadow: none;
+    forced-color-adjust: auto;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .simple-ui .inventory-word.tutorial-hot {
     animation: none !important;
@@ -2634,18 +3624,34 @@ body.simple-ui {
 .simple-ui .modal {
   --modal-accent: var(--atlas-teal);
   overflow: hidden auto;
+  border-radius: var(--ui-radius-dialog);
   border-color: color-mix(in srgb, var(--modal-accent) 34%, rgba(177, 218, 213, .2));
   background:
     radial-gradient(circle at 100% 0, color-mix(in srgb, var(--modal-accent) 11%, transparent), transparent 32%),
     linear-gradient(145deg, rgba(18, 53, 62, .99), rgba(6, 27, 36, .99));
-  box-shadow:
-    inset 0 1px rgba(255, 255, 255, .04),
-    0 32px 90px rgba(0, 7, 11, .52);
+  box-shadow: var(--ui-dialog-shadow);
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--modal-accent) 42%, transparent) transparent;
 }
 
 .simple-ui .modal::backdrop {
-  background: rgba(2, 13, 19, .76);
+  background: var(--ui-dialog-backdrop);
   backdrop-filter: blur(7px);
+}
+
+.simple-ui .modal::-webkit-scrollbar {
+  width: 8px;
+}
+
+.simple-ui .modal::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.simple-ui .modal::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--modal-accent) 42%, transparent);
+  background-clip: padding-box;
 }
 
 .simple-ui :is(.mission-briefing-modal, .result-modal) {
@@ -2661,8 +3667,136 @@ body.simple-ui {
 }
 
 .simple-ui .modal-close {
+  border-radius: var(--ui-radius-control);
   border-color: rgba(168, 210, 205, .18);
   color: var(--atlas-muted);
+}
+
+.simple-ui :is(
+  .feedback-picker button,
+  .cloud-account-actions button,
+  .training-replay-card button,
+  .local-diagnostics button,
+  .diagnostics-preference button
+) {
+  min-height: 48px;
+  border: 1px solid var(--ui-line);
+  border-radius: var(--ui-radius-control);
+  color: var(--ui-text);
+  background: var(--ui-control);
+  font-family: var(--ui-font-body);
+  font-size: 16px;
+}
+
+.simple-ui :is(
+  .feedback-picker button,
+  .cloud-account-actions button,
+  .training-replay-card button,
+  .local-diagnostics button,
+  .diagnostics-preference button
+):hover:not(:disabled) {
+  border-color: var(--ui-line-strong);
+  background: var(--ui-control-hover);
+}
+
+.simple-ui .fusion-animation-picker > p {
+  margin: 0 0 11px;
+  color: var(--atlas-muted);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.simple-ui :is(.word-selector-picker, .pause-spatial-bloom-picker) > p {
+  margin: 0 0 11px;
+  color: var(--atlas-muted);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.simple-ui .pause-spatial-bloom-picker {
+  margin-top: 13px;
+}
+
+html:is([data-ui-layout="stacked"], [data-ui-layout="short-landscape"]) body.simple-ui .desktop-selector-preference {
+  display: none !important;
+}
+
+.simple-ui .fusion-animation-options {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.simple-ui .feedback-picker .fusion-animation-options button,
+.simple-ui .pause-fusion-animation .fusion-animation-options button {
+  width: auto;
+  min-width: 0;
+  min-height: 54px;
+  padding: 8px 10px;
+  border: 1px solid rgba(164, 208, 203, .18);
+  border-radius: 10px;
+  color: var(--atlas-muted);
+  background: rgba(7, 31, 40, .58);
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 7px;
+  text-align: left;
+}
+
+.simple-ui .pause-fusion-animation .fusion-animation-options button {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.simple-ui .fusion-animation-options button b {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 14px;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.simple-ui .fusion-animation-options button small {
+  color: inherit;
+  font: 650 12px/1 "DM Mono", Consolas, monospace;
+  letter-spacing: .035em;
+}
+
+.simple-ui .fusion-animation-options button[aria-pressed="true"] {
+  border-color: rgba(105, 216, 204, .66);
+  color: var(--atlas-gold-bright);
+  background:
+    radial-gradient(circle at 20% 50%, rgba(105, 216, 204, .14), transparent 56%),
+    rgba(10, 43, 52, .9);
+  box-shadow: inset 0 0 0 1px rgba(105, 216, 204, .1), 0 0 22px rgba(105, 216, 204, .08);
+}
+
+.simple-ui .pause-fusion-animation {
+  margin: 13px 0 0;
+  padding: 0;
+  border: 0;
+}
+
+.simple-ui .pause-fusion-animation legend {
+  margin-bottom: 8px;
+  color: var(--atlas-muted);
+  font: 650 12px/1.2 "DM Mono", Consolas, monospace;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.simple-ui :is(
+  .result-route-card,
+  .mastery-result-card,
+  .signature-result-card,
+  .community-result-card,
+  .partial-assist-result-card,
+  .assist-result-card,
+  .reward-card,
+  .rank-result-card
+) {
+  border-radius: var(--ui-radius-card);
 }
 
 .simple-ui .mission-target-lockup {
@@ -2706,7 +3840,7 @@ body.simple-ui {
 .simple-ui .pause-heading::before,
 .simple-ui .powerups-heading::before,
 .simple-ui .profile-heading::before {
-  content: "✦";
+  content: none;
   width: 50px;
   height: 50px;
   display: grid;
@@ -2882,7 +4016,7 @@ body.simple-ui {
   place-items: center;
   flex: 0 0 auto;
   border: 1px solid rgba(168, 210, 205, .24);
-  border-radius: 50%;
+  border-radius: var(--ui-radius-control);
   color: var(--atlas-text, #f4f6ef);
   background: rgba(4, 18, 31, .9);
   box-shadow: 0 8px 28px rgba(0, 7, 11, .34);
@@ -3332,6 +4466,7 @@ body.simple-ui {
 
 .simple-ui .cosmos-board.reveal-active :is(
   .board-quick-tools,
+  .board-assistance-rail,
   .board-guide,
   .run-milestone,
   .hint-objective,
@@ -4390,4 +5525,311 @@ body.simple-ui .cosmos-board .board-word {
     color: CanvasText;
     background: Canvas;
   }
+}
+
+/* Responsive play header: each control owns one grid track, so the centered
+   mission can never push sound away from the top-right corner. */
+.simple-ui .game-nav {
+  grid-template-rows: minmax(0, 1fr);
+  align-items: center;
+}
+
+.simple-ui .game-nav > .pause-run-button {
+  grid-column: 1;
+  grid-row: 1;
+  align-self: center;
+  justify-self: start;
+}
+
+.simple-ui .game-target {
+  min-height: 0;
+  max-height: 100%;
+  grid-column: 2;
+  grid-row: 1;
+  align-self: center;
+}
+
+.simple-ui .game-hud {
+  width: max-content;
+  max-width: 100%;
+  grid-column: 3;
+  grid-row: 1;
+  align-self: center;
+  justify-self: end;
+}
+
+/* Medium screens have enough room for the full sound dock, but not for the
+   target, decorative star, and Guard copy on one long line. Keep this
+   orientation-agnostic: tablet portrait uses an older stacked-target rule. */
+@media (min-width: 701px) and (max-width: 1000px) {
+  body.simple-ui:not(.scramble-active) .board-top-hud {
+    left: 64px;
+    right: 14px;
+  }
+
+  body.simple-ui:not(.scramble-active) .game-target > div {
+    width: 100%;
+    min-height: 0;
+    max-height: 100%;
+    overflow: hidden;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    text-align: center;
+  }
+
+  body.simple-ui:not(.scramble-active) .game-target > div::before {
+    display: none;
+  }
+
+  body.simple-ui:not(.scramble-active) .game-target strong {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  body.simple-ui:not(.scramble-active) .game-target #lawPill.path-guard-status:not([hidden]) {
+    max-width: 100%;
+    border-left: 0;
+    padding-left: 0;
+    font-size: 11px;
+    line-height: 1.1;
+  }
+}
+
+/* Ultra-short landscape phones used to fall between the phone and compact
+   landscape layouts. Keep one header row, sound at the right edge, and words
+   in a narrow side tray so the board retains real height. */
+@media (max-width: 700px) and (max-height: 500px) and (orientation: landscape) {
+  .simple-ui .game-nav:has(#playVolumeControl) {
+    height: calc(58px + env(safe-area-inset-top));
+    flex-basis: calc(58px + env(safe-area-inset-top));
+    grid-template-columns: 64px minmax(0, 1fr) auto;
+    grid-template-rows: 58px;
+    gap: 6px;
+    padding: env(safe-area-inset-top) 8px 0;
+  }
+
+  .simple-ui .game-nav > .game-target {
+    min-width: 0;
+    align-self: stretch;
+    justify-self: stretch;
+    justify-content: center;
+  }
+
+  .simple-ui .game-target > div {
+    width: 100%;
+    overflow: hidden;
+    align-items: center;
+    gap: 0;
+    text-align: center;
+  }
+
+  .simple-ui .game-target strong {
+    width: 100%;
+    max-width: 100%;
+    font-size: 16px;
+    text-align: center;
+  }
+
+  .simple-ui .game-target #lawPill.path-guard-status:not([hidden]) {
+    display: none !important;
+  }
+
+  .simple-ui .game-nav .vplay {
+    position: relative;
+    inset: auto;
+  }
+
+  .simple-ui .game-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(144px, 32vw);
+    grid-template-rows: minmax(0, 1fr);
+  }
+
+  .simple-ui .board-top-hud {
+    left: 60px;
+    right: 6px;
+  }
+
+  .simple-ui .board-quick-tools button {
+    padding-inline: 4px;
+  }
+
+  .simple-ui .board-quick-tools button > b {
+    display: none;
+  }
+
+  .simple-ui .board-guide {
+    display: none;
+  }
+
+  .simple-ui .inventory {
+    min-width: 0;
+    min-height: 0;
+    max-height: none;
+    overflow: hidden;
+    padding: 7px 8px 6px;
+    border-top: 0;
+    border-left: 1px solid var(--line);
+  }
+
+  .simple-ui .inventory-head {
+    min-height: 25px;
+    padding: 0 2px 3px;
+  }
+
+  .simple-ui .inventory-search {
+    flex-basis: 38px;
+    min-height: 38px;
+    margin: 3px 0;
+  }
+
+  .simple-ui .word-list {
+    display: block;
+    overflow-x: hidden;
+    overflow-y: auto;
+    padding: 8px 5px 10px;
+  }
+
+  .simple-ui .word-list > .inventory-word + .inventory-word {
+    margin-top: 6px;
+  }
+
+  .simple-ui .inventory-word {
+    width: 100%;
+    min-width: 0;
+    min-height: 48px;
+    padding: 5px 4px;
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: 7px;
+    text-align: left;
+    touch-action: pan-y;
+  }
+
+  .simple-ui .inventory-word:hover {
+    padding-left: 7px;
+  }
+
+  .simple-ui .inventory-word .word {
+    max-width: none;
+  }
+
+  .simple-ui .inventory-word :is(.source-tag, .mastery-tag) {
+    position: static;
+    margin-left: auto;
+  }
+}
+
+/* Modern game dialogs: one readable surface and a clear primary action. */
+body.simple-ui :is(#hubMenuDialog,#pauseDialog,#missionBriefingDialog,#resultDialog,#senseDialog){--modal-accent:#afe7cf;--home-gold:#afe7cf;--violet:#afe7cf;--text:#f3f5f3;--muted:#aebdbd;--atlas-gold-bright:#afe7cf;--atlas-gold:#afe7cf;--ui-surface:#101920;--line:#2b393e;background:#101920;color:var(--text);border:1px solid #2b393e;border-radius:20px;box-shadow:0 24px 80px #0008;font-family:Manrope,Inter,system-ui,sans-serif}
+body.simple-ui :is(#hubMenuDialog,#pauseDialog,#missionBriefingDialog,#resultDialog,#senseDialog)::backdrop{background:#02080dc7;backdrop-filter:blur(10px)}
+body.simple-ui :is(#hubMenuDialog,#pauseDialog,#missionBriefingDialog,#resultDialog,#senseDialog)::before{display:none}
+body.simple-ui :is(#hubMenuDialog,#pauseDialog,#missionBriefingDialog,#resultDialog,#senseDialog) :is(h2,h3,strong,b,small,button,summary,.eyebrow){font-family:inherit;letter-spacing:normal;text-shadow:none}
+body.simple-ui :is(#hubMenuDialog,#pauseDialog,#missionBriefingDialog,#resultDialog,#senseDialog) h2{font-size:32px;font-weight:700;line-height:1.18}
+body.simple-ui :is(#hubMenuDialog,#pauseDialog,#missionBriefingDialog,#resultDialog,#senseDialog) :is(button,summary){min-height:44px;border-radius:10px;box-shadow:none;transition:background .16s,color .16s,border-color .16s}
+body.simple-ui :is(#hubMenuDialog,#pauseDialog,#missionBriefingDialog,#resultDialog,#senseDialog) :is(.primary-action,.secondary-action,.quiet-action){font-size:15px;font-weight:700;min-height:50px;background:#1a292f;color:#f3f5f3;border:1px solid #34454b}
+body.simple-ui :is(#hubMenuDialog,#pauseDialog,#missionBriefingDialog,#resultDialog,#senseDialog) .primary-action{background:#afe7cf;color:#12281f;border-color:#afe7cf}
+body.simple-ui :is(#hubMenuDialog,#pauseDialog,#missionBriefingDialog,#resultDialog,#senseDialog) :is(.quiet-action,.pause-exit){background:transparent;border-color:transparent;color:#b8c7c7}
+body.simple-ui :is(#hubMenuDialog,#pauseDialog,#missionBriefingDialog,#resultDialog,#senseDialog) button:hover:not(:disabled){filter:brightness(1.12);transform:none}
+body.simple-ui :is(#hubMenuDialog,#pauseDialog,#missionBriefingDialog,#resultDialog,#senseDialog) :focus-visible{outline:2px solid #afe7cf;outline-offset:3px}
+body.simple-ui #hubMenuDialog{padding:24px;width:min(680px,calc(100% - 24px))}
+body.simple-ui #hubMenuDialog .hub-menu-heading{width:100%;display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-rows:auto;padding:0 50px 12px 0;gap:12px;position:sticky;top:-24px;background:#101920;z-index:3;min-height:64px}
+body.simple-ui #hubMenuDialog .hub-menu-heading>div:first-child{grid-area:1/1;min-height:0;display:block}
+body.simple-ui #startScreen #hubMenuDialog .eyebrow{display:none}
+body.simple-ui #hubMenuDialog .stardust-wallet--menu{position:static;grid-area:1/2;width:auto;min-width:0;min-height:40px;padding:8px 12px;border:0;border-radius:10px;background:#1a292f;box-shadow:none}
+body.simple-ui #hubMenuDialog .stardust-wallet__icon{display:none}
+body.simple-ui #hubMenuDialog>.modal-close{position:sticky;top:0;float:right;margin:0 0 -44px;z-index:5;right:auto}
+body.simple-ui #hubMenuDialog>p{clear:both;width:100%;font-size:14px;line-height:1.5;color:#aebdbd;margin:0 0 18px}
+body.simple-ui #hubMenuDialog .hub-menu-grid{gap:0 20px}
+body.simple-ui #hubMenuDialog .hub-menu-action{min-height:72px;padding:12px 0;grid-template-columns:minmax(0,1fr) 16px;background:transparent;border:0;border-bottom:1px solid #27363c;border-radius:0}
+body.simple-ui #hubMenuDialog .hub-menu-action>span{display:none}
+body.simple-ui #hubMenuDialog .hub-menu-action :is(b,small){grid-column:1;font-size:15px}
+body.simple-ui #hubMenuDialog .hub-menu-action small{font-size:13px;color:#aebdbd}
+body.simple-ui #hubMenuDialog .hub-menu-action i{grid-column:2;color:#afe7cf}
+body.simple-ui #hubMenuDialog .hub-menu-settings{margin:12px 0 24px;padding:0;border:0}
+body.simple-ui #hubMenuDialog .menu-disclosure{border:0;border-radius:10px;background:#18262d}
+body.simple-ui #hubMenuDialog .menu-disclosure>summary{padding:12px 14px;background:#18262d;border:0}
+body.simple-ui #hubMenuDialog .menu-disclosure>summary small{color:#aebdbd;font-size:13px}
+body.simple-ui #hubMenuDialog :is(.training-replay-card,.feedback-picker>button,.feedback-mixer){background:#18262d;border-color:#34454b;border-radius:10px}
+body.simple-ui #hubMenuDialog :is(button,summary)>:is(span,small,b){color:inherit}
+body.simple-ui #hubMenuDialog button[aria-pressed="true"]{background:#233f39;color:#c8f2e0;border-color:#527d6e}
+body.simple-ui #hubMenuDialog .feedback-volume output{color:#afe7cf}
+body.simple-ui #pauseDialog{padding:0}
+body.simple-ui #pauseDialog .pause-heading::before{display:none}
+body.simple-ui #pauseDialog .pause-actions--sticky{background:#101920;border-color:#2b393e}
+body.simple-ui #pauseDialog .pause-target{border:0;background:#1a292f}
+body.simple-ui #missionBriefingDialog .mission-target-lockup strong{color:#afe7cf}
+body.simple-ui #resultDialog .result-emoji{filter:none}
+@media(max-width:520px){body.simple-ui :is(#hubMenuDialog,#pauseDialog,#missionBriefingDialog,#resultDialog,#senseDialog){width:100%;max-width:100%;height:auto;max-height:calc(100dvh - 24px);border-radius:22px 22px 0 0;inset:auto 0 0;margin:0;transform:none}body.simple-ui #hubMenuDialog{padding:20px}body.simple-ui #hubMenuDialog .hub-menu-heading{top:-20px}body.simple-ui #hubMenuDialog .hub-menu-grid{grid-template-columns:1fr}body.simple-ui :is(#missionBriefingDialog,#resultDialog){padding:28px 20px max(20px,env(safe-area-inset-bottom))}}
+
+/* A bottom sheet must not retain the centered desktop entrance transform. */
+@media(max-width:520px){body.simple-ui #missionBriefingDialog[open]{animation-name:ui-window-enter;transform:none}}
+
+/* Mission constraints remain readable alongside the objective. */
+.simple-ui #missionBriefingDialog .mission-adaptive-note.path-guard-note {
+  width: auto;
+  max-width: 100%;
+  min-width: 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(184, 230, 210, .08);
+  color: #b8e6d2;
+  font: 500 12px/1.5 Manrope, system-ui, sans-serif;
+  text-transform: none;
+  letter-spacing: 0;
+  white-space: normal;
+}
+
+.simple-ui #missionBriefingDialog .mission-constraint {
+  margin: 12px 0;
+  color: var(--play-muted, #a5b4bb);
+  font: 500 13px/1.5 Manrope, system-ui, sans-serif;
+}
+
+.simple-ui #powerupShopShortcut { min-height: 44px; }
+
+/* Help uses the same calm surface and legible hierarchy as the play workspace. */
+body.simple-ui #senseDialog .powerups-heading::before,
+body.simple-ui #senseDialog .powerup-card::before,
+body.simple-ui #senseDialog .powerup-card::after {
+  content: none;
+  display: none;
+}
+body.simple-ui #senseDialog .powerups-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+body.simple-ui #senseDialog .powerups-heading > div { flex: 1; min-width: 160px; }
+body.simple-ui #senseDialog .powerups-heading small { display: none; }
+body.simple-ui #senseDialog #powerupsIntro { font-size: 14px; line-height: 1.55; color: #aebdbd; }
+body.simple-ui #senseDialog .assistance-ladder { gap: 12px; }
+body.simple-ui #senseDialog :is(.powerup-card,.guidance-reveal-step) {
+  padding: 16px;
+  border: 1px solid #2b393e;
+  border-radius: 12px;
+  background: #15232a;
+  box-shadow: none;
+}
+body.simple-ui #senseDialog .assistance-step-number {
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 8px;
+  background: #223630;
+  color: #afe7cf;
+  box-shadow: none;
+}
+body.simple-ui #senseDialog h3 { font-size: 18px; }
+body.simple-ui #senseDialog .powerup-card > p { font-size: 14px; line-height: 1.5; }
+body.simple-ui #senseDialog :is(.powerup-action,.powerups-supplies-link,.reveal-trigger) {
+  min-height: 44px;
+  border: 1px solid #34454b;
+  border-radius: 10px;
+  background: #1a292f;
+  color: #f3f5f3;
+  box-shadow: none;
 }

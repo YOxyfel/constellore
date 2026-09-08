@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "contractId": "constellore-voyage-projection-cinematic",
+  "contractVersion": "1.2.0",
+  "contractSha256": "0459b858503d99cc30d04139b5aa6144d03fb81e4b2e95fb9be4973f149b1416",
+  "status": "non-shipping-look-development",
+  "generatedAt": "2026-08-06",
+  "generator": "OpenAI built-in image generation",
+  "authorityPolicy": "scripts/voyage-projection-cinematic.v1.json#authorityPolicy",
+  "releaseEligible": false,
+  "releaseRestriction": "These RGB references are not alpha-bearing, are not constrained by an authoritative 3D object-ID matte, and must never be copied to public/cinematic or used as final posters. Shipping posters must be extracted from the final graded master.",
+  "assets": [
+    {
+      "id": "far-field-nebula",
+      "path": "production/voyage-projection/lookdev/vfx-lookdev-far-field-nebula.png",
+      "width": 1672,
+      "height": 941,
+      "bytes": 2479091,
+      "sha256": "e2f7042c249fad1f6bc2ac4fe5fb6c5bd3e007301ff265fe6ceb93c0a42659b0",
+      "allowedElements": ["far-field-nebula", "background-star-haze", "masked-dust-volume"],
+      "prompt": "Use case: stylized-concept. Asset type: non-shipping VFX look-development plate for a cinematic 3D space voyage. Create a widescreen background-only far-field nebula and background star-haze layer suitable for compositing behind an authoritative 3D scene. Very deep outer space on a clean near-black field, fine physically plausible star density, faint immense blue-cyan ionized dust sheets, restrained champagne-gold particulate highlights, subtle parallax-ready depth bands, and no obvious rectangular framing. Hyperreal cinematic astrophotography and premium science-fiction VFX look-development, modern high dynamic range, elegant rather than noisy. 16:9 landscape with a generous dark central flight corridor and richer atmospheric depth at the far edges and upper thirds. VFX background layer only: no rocket, spacecraft, planets, planet limbs, orbital paths, route line, black hole, typography, people, logos, UI, or watermark."
+    },
+    {
+      "id": "warp-caustics",
+      "path": "production/voyage-projection/lookdev/vfx-lookdev-warp-caustics.png",
+      "width": 1672,
+      "height": 941,
+      "bytes": 1867943,
+      "sha256": "64d8d9d82e7be3532014dec3c6ef14d337cde540a76ca428a2353dd93c38894d",
+      "allowedElements": ["background-star-haze", "masked-warp-caustics"],
+      "prompt": "Use case: stylized-concept. Asset type: non-shipping VFX look-development plate for a cinematic 3D space voyage. Create a widescreen masked-warp-caustics concept layer with elongated stellar refraction, gravitational caustic ribbons, and layered particulate streaks converging toward a calm navigable vanishing corridor. Near-black deep space with no physical tunnel walls; optical distortion and light only. Hyperreal premium cinematic VFX, modern science-fiction, volumetric and dimensional rather than a flat radial blur. 16:9 landscape with the vanishing point slightly above center and the central 18 percent comparatively dark for the authoritative rocket silhouette. VFX-only background: no rocket, spacecraft, planets, planet limbs, orbital paths, route lines, typography, UI, logos, people, faces, franchise resemblance, or watermark."
+    },
+    {
+      "id": "singularity-corona",
+      "path": "production/voyage-projection/lookdev/vfx-lookdev-singularity-corona.png",
+      "width": 1672,
+      "height": 941,
+      "bytes": 2123778,
+      "sha256": "c453856165463e3cac7ac6f2678364d9cdc01384eacca30d51d6dbfc491f8400",
+      "allowedElements": ["background-star-haze", "masked-accretion-glow", "masked-singularity-corona", "masked-beyond-color-field"],
+      "prompt": "Use case: stylized-concept. Asset type: non-shipping VFX look-development plate for a cinematic 3D space-voyage finale. Create a widescreen singularity-corona and beyond-color-field concept layer for compositing around an authoritative 3D black-hole or singularity render. Near-black cosmic field with a large intentionally empty central aperture, razor-fine gravitational lensing, luminous dust filaments, restrained accretion glow, and an elegant unresolved color field beyond the ring. Hyperreal cinematic astrophysical VFX with modern science-fiction polish. 16:9 landscape with broad negative space for authoritative geometry and rocket. Atmosphere and light effects only: no rocket, spacecraft, planet, planetary limb, orbital line, route spline, rendered black-hole body, typography, UI, person, face, logo, franchise resemblance, or watermark."
+    },
+    {
+      "id": "beyond-color-field",
+      "path": "production/voyage-projection/lookdev/vfx-lookdev-beyond-color-field.png",
+      "width": 1672,
+      "height": 941,
+      "bytes": 2240050,
+      "sha256": "34f1efbd5849055ca30e356a811bbecf741cab464f06c97a07c627622906c91a",
+      "allowedElements": ["background-star-haze", "masked-beyond-color-field"],
+      "prompt": "Use case: stylized-concept. Asset type: NON-SHIPPING VFX look-development plate for a cinematic 3D space-voyage completion reveal. Create a 16:9 widescreen BACKGROUND-ONLY view of an unnamed region beyond a singularity: vast near-black cosmic depth opening into subtle translucent teal, indigo, violet, and restrained champagne-gold volumetric veils; sparse unfamiliar star clusters; gentle gravitational caustic arcs and fine particulate depth; an expansive calm central flight corridor and layered parallax-ready depth at the edges. The emotional read is awe, quiet discovery, and continuation—not victory, heaven, a portal, or a tunnel. Hyperreal premium modern astrophotography/VFX, cinematic HDR, elegant and physically plausible, no low-poly geometry, no obvious symmetry, no rectangular frame. CRITICAL EXCLUSIONS: no rocket, spacecraft, planets, moons, suns, opaque spheres, black hole, event horizon, singularity body, portal, ring, orbital path, route line, wireframe, text, typography, UI, logo, person, face, franchise resemblance, or watermark."
+    }
+  ]
+}

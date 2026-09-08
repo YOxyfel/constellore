@@ -1,5 +1,5 @@
-import { feedbackCuePolicy, sanitizeFeedbackPreferences } from "./engagement-features.mjs?v=5.0.0-beta.1";
-import { DEFAULT_COSMETIC_LOADOUT, cosmeticById, transformFeedbackAudio } from "./cosmetic-economy.mjs?v=5.0.0-beta.1";
+import { feedbackCuePolicy, sanitizeFeedbackPreferences } from "./engagement-features.mjs?v=5.0.0-beta.4";
+import { DEFAULT_COSMETIC_LOADOUT, cosmeticById, transformFeedbackAudio } from "./cosmetic-economy.mjs?v=5.0.0-beta.4";
 
 const CUE_ORDER = Object.freeze([
   "place",
@@ -174,6 +174,7 @@ export function createAudioRuntime({
   const sfxBuffers = new Map();
   const activeVoices = new Set();
   const lastCueAt = new Map();
+  const auxiliaryChannels = new Set();
 
   function ensureGraph() {
     if (context) return context;
@@ -194,6 +195,73 @@ export function createAudioRuntime({
 
   function preferences() {
     return sanitizeFeedbackPreferences(getPreferences());
+  }
+
+  function desiredAuxiliaryGain(channel) {
+    const prefs = preferences();
+    if (suspended || prefs.muted || prefs.volume <= 0) return 0;
+    if (channel.kind === "music") {
+      if (!prefs.music || prefs.musicVolume <= 0) return 0;
+      return channel.level * prefs.volume * prefs.musicVolume;
+    }
+    if (!prefs.sound || prefs.sfxVolume <= 0) return 0;
+    return channel.level * prefs.volume * prefs.sfxVolume;
+  }
+
+  function syncAuxiliaryChannel(channel, seconds = 0.08) {
+    if (!context || channel.closed) return 0;
+    const now = context.currentTime;
+    const target = Math.max(0, Math.min(1, desiredAuxiliaryGain(channel)));
+    channel.node.gain.cancelScheduledValues(now);
+    channel.node.gain.setValueAtTime(channel.node.gain.value, now);
+    if (suspended || seconds <= 0) channel.node.gain.setValueAtTime(target, now);
+    else channel.node.gain.linearRampToValueAtTime(target, now + Math.max(0.01, seconds));
+    return target;
+  }
+
+  function syncAuxiliaryChannels(seconds = 0.08) {
+    for (const channel of auxiliaryChannels) syncAuxiliaryChannel(channel, seconds);
+  }
+
+  // Lazy presentation systems can share the authoritative AudioContext and
+  // compressor without learning how profile preferences are stored. The
+  // caller owns every node connected to `input`; this runtime owns only the
+  // preference-aware channel gain and guarantees cleanup on dispose.
+  function createAuxiliaryChannel({ kind = "effects", level = 1 } = {}) {
+    const activeContext = ensureGraph();
+    if (!activeContext || !output) return null;
+    const normalizedKind = kind === "music" ? "music" : "effects";
+    const node = activeContext.createGain();
+    const channel = {
+      closed: false,
+      kind: normalizedKind,
+      level: Math.max(0, Math.min(1, Number(level) || 0)),
+      node
+    };
+    node.gain.setValueAtTime(0, activeContext.currentTime);
+    node.connect(output);
+    auxiliaryChannels.add(channel);
+    syncAuxiliaryChannel(channel, 0.04);
+    return Object.freeze({
+      context: activeContext,
+      input: node,
+      kind: normalizedKind,
+      setLevel(value, seconds = 0.08) {
+        if (channel.closed) return 0;
+        channel.level = Math.max(0, Math.min(1, Number(value) || 0));
+        return syncAuxiliaryChannel(channel, seconds);
+      },
+      sync(seconds = 0.08) {
+        return syncAuxiliaryChannel(channel, seconds);
+      },
+      close() {
+        if (channel.closed) return false;
+        channel.closed = true;
+        auxiliaryChannels.delete(channel);
+        try { node.disconnect(); } catch { /* Optional cleanup. */ }
+        return true;
+      }
+    });
   }
 
   function desiredTheme() {
@@ -710,6 +778,7 @@ export function createAudioRuntime({
       setMusicGain(0);
     }
     else if (primed) void switchMusic(desiredTheme());
+    syncAuxiliaryChannels();
   }
 
   function setIntensity(value) {
@@ -747,6 +816,7 @@ export function createAudioRuntime({
   function setSuspended(value) {
     suspended = Boolean(value);
     if (!context) return;
+    syncAuxiliaryChannels(suspended ? 0 : 0.12);
     if (suspended) {
       context.suspend().catch(() => {});
     } else if (primed) {
@@ -765,6 +835,11 @@ export function createAudioRuntime({
     previewBufferState = null;
     stopMusic(0.05);
     [...activeVoices].forEach(stopVoice);
+    for (const channel of [...auxiliaryChannels]) {
+      channel.closed = true;
+      try { channel.node.disconnect(); } catch { /* Optional cleanup. */ }
+    }
+    auxiliaryChannels.clear();
     if (context) context.close().catch(() => {});
     context = null;
     output = null;
@@ -773,6 +848,7 @@ export function createAudioRuntime({
   }
 
   return Object.freeze({
+    createAuxiliaryChannel,
     dispose,
     endPreview,
     playFeedback,

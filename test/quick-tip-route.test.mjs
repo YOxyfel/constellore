@@ -5,21 +5,22 @@ import { copyFile, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
-import { GameStore, RunRegistry } from "../game-services.mjs";
-import { QUICK_TIP_LIMIT, selectRouteNavigationTip } from "../public/engagement-features.mjs";
+import { GameStore, RunRegistry, calculateStarscore, runPublishedAssist, runPublishedDivision, runScoreMultiplier } from "../game-services.mjs";
+import { QUICK_TIP_LIMIT, scoreMultiplierAfterNudges, selectRouteNavigationTip } from "../public/engagement-features.mjs";
 import { server, solutionRoute } from "../server.mjs";
 import { writeLocalWorldModule } from "../scripts/build-local-world.mjs";
 
-const PUBLIC_TIP_KEYS = ["available", "remaining", "scoreSafe", "text", "used"];
+const PUBLIC_TIP_KEYS = ["available", "remaining", "scoreMultiplier", "scoreSafe", "text", "used"];
 
 function assertPublicTip(payload, { available = true } = {}) {
   assert.deepEqual(Object.keys(payload).sort(), PUBLIC_TIP_KEYS);
   assert.equal(payload.available, available);
-  assert.equal(payload.scoreSafe, true);
+  assert.equal(payload.scoreSafe, false);
   assert.equal(typeof payload.text, "string");
   assert.ok(payload.text.length > 0 && payload.text.length <= 240);
   assert.ok(Number.isInteger(payload.used) && payload.used >= 0 && payload.used <= QUICK_TIP_LIMIT);
   assert.equal(payload.remaining, QUICK_TIP_LIMIT - payload.used);
+  assert.equal(payload.scoreMultiplier, scoreMultiplierAfterNudges({ nudgesUsed: payload.used }));
   for (const forbidden of ["anchor", "category", "id", "ingredients", "partner", "recipe", "result", "route", "target"]) {
     assert.equal(Object.hasOwn(payload, forbidden), false, `public tip response must not expose ${forbidden}`);
   }
@@ -71,7 +72,19 @@ test("route navigation tips expose one stable discovered anchor without completi
   assert.doesNotThrow(() => selectRouteNavigationTip({ words: starters, route, target: Symbol("target"), seed: Symbol("seed"), moves: Symbol("moves") }));
 });
 
-test("RunRegistry makes Quick Tips durable, bounded, idempotent, and score safe", async (context) => {
+test("Quick Tip score multipliers keep ninety percent of the remaining maximum per accepted tip", () => {
+  assert.deepEqual([0, 1, 2, 3, 99].map((nudgesUsed) => scoreMultiplierAfterNudges({ nudgesUsed })), [1, .9, .81, .729, .729]);
+  assert.equal(scoreMultiplierAfterNudges({ baseMultiplier: .5, nudgesUsed: 1 }), .45);
+  const game = { tier: 1 };
+  const pure = calculateStarscore({ game, moves: 6, elapsedSeconds: 0 });
+  assert.equal(calculateStarscore({ game, moves: 6, elapsedSeconds: 0, tipsUsed: 1 }), Math.round(pure * .9));
+  assert.equal(calculateStarscore({ game, moves: 6, elapsedSeconds: 0, tipsUsed: 2 }), Math.round(pure * .81));
+  assert.equal(calculateStarscore({ game, moves: 6, elapsedSeconds: 0, tipsUsed: 3 }), Math.round(pure * .729));
+  assert.equal(calculateStarscore({ game, moves: 6, elapsedSeconds: 0, assist: "gift", tipsUsed: 1 }), Math.round(pure * .45));
+  assert.equal(runScoreMultiplier({ assist: "gift", tipRecords: [{ id: "tip-1", text: "A direction." }] }), .45);
+});
+
+test("RunRegistry makes Quick Tips durable, bounded, idempotent, and score-reducing", async (context) => {
   const directory = await mkdtemp(join(tmpdir(), "constellore-tip-store-"));
   const path = join(directory, "store.json");
   context.after(() => rm(directory, { recursive: true, force: true }));
@@ -92,16 +105,24 @@ test("RunRegistry makes Quick Tips durable, bounded, idempotent, and score safe"
   assert.equal(selections, 1);
   assertPublicTip(first);
   assert.equal(first.used, 1);
-  registry.tip(started.run, 1, select);
-  registry.tip(started.run, 2, select);
+  assert.equal(first.scoreMultiplier, .9);
+  const second = registry.tip(started.run, 1, select);
+  const third = registry.tip(started.run, 2, select);
+  assert.equal(second.scoreMultiplier, .81);
+  assert.equal(third.scoreMultiplier, .729);
   const exhausted = registry.tip(started.run, 3, select);
   assertPublicTip(exhausted, { available: false });
   assert.equal(selections, QUICK_TIP_LIMIT);
   assert.equal(started.run.assist, "none");
+  assert.equal(runPublishedAssist(started.run), "tip");
+  assert.equal(runPublishedDivision(started.run), "open");
   assert.equal(started.run.scoringDisabled, false);
   assert.equal(started.run.forfeited, false);
   const progress = registry.progress(started.run);
   assert.equal(progress.tipsUsed, QUICK_TIP_LIMIT);
+  assert.equal(progress.scoreMultiplier, .729);
+  assert.equal(progress.division, "open");
+  assert.equal(runScoreMultiplier(started.run), .729);
   assert.equal(Object.hasOwn(progress, "tipRecords"), false);
   assert.equal(Object.hasOwn(progress, "tipIds"), false);
   await registry.persist(started.run);
@@ -111,11 +132,13 @@ test("RunRegistry makes Quick Tips durable, bounded, idempotent, and score safe"
   const restored = reloadedRegistry.get(started.run.runId, player.id, started.token);
   assert.equal(restored.tipRecords.length, QUICK_TIP_LIMIT);
   assert.equal(reloadedRegistry.progress(restored).tipsUsed, QUICK_TIP_LIMIT);
+  assert.equal(reloadedRegistry.progress(restored).scoreMultiplier, .729);
+  assert.equal(reloadedRegistry.progress(restored).division, "open");
   assert.equal(restored.assist, "none");
   assert.equal(restored.scoringDisabled, false);
 });
 
-test("the authenticated Quick Tip endpoint is exact, idempotent, and leaves ranked scoring intact", async (context) => {
+test("the authenticated Quick Tip endpoint is exact, idempotent, and keeps ranked scoring eligible at a reduced multiplier", async (context) => {
   server.listen(0, "127.0.0.1");
   await once(server, "listening");
   context.after(async () => {
@@ -175,16 +198,53 @@ test("the authenticated Quick Tip endpoint is exact, idempotent, and leaves rank
   assert.equal(resumed.payload.progress.tipsUsed, 1);
   assert.equal(Object.hasOwn(resumed.payload.progress, "tipRecords"), false);
   assert.equal(resumed.payload.run.assist, "none");
+  assert.equal(resumed.payload.run.division, "open");
   assert.equal(resumed.payload.run.scoringDisabled, false);
   assert.equal(resumed.payload.run.scoreEligible, true);
   assert.equal(resumed.payload.run.leaderboardEligible, true);
+  assert.equal(resumed.payload.run.scoreMultiplier, .9);
+  assert.equal(resumed.payload.progress.scoreMultiplier, .9);
+  assert.equal(resumed.payload.progress.division, "open");
+
+  let finalCombination = null;
+  for (const step of route) {
+    // Long Daily routes must not make this reward fixture look like an automated submission.
+    if (route.length >= 12) await new Promise((resolve) => setTimeout(resolve, 30));
+    const combined = await request("/api/combine", { body: { ...credentials, a: step.a, b: step.b } });
+    assert.equal(combined.response.status, 200);
+    assert.equal(combined.payload.assist, "none", "a hint does not become a major internal assist");
+    assert.equal(combined.payload.division, "open", "the published run remains guided/Open");
+    finalCombination = combined.payload;
+  }
+  assert.equal(finalCombination?.completed, true);
+  const submitted = await request("/api/run/submit", { body: credentials });
+  assert.equal(submitted.response.status, 201);
+  assert.equal(submitted.payload.placement.entry.assist, "tip");
+  assert.equal(submitted.payload.placement.entry.division, "open");
+  assert.equal(submitted.payload.placement.entry.signature.assist, "tip");
+  assert.equal(submitted.payload.placement.entry.challenge.assistanceClass, "open");
+  assert.equal(submitted.payload.creditReward, 9, "one accepted Daily hint reduces the ten-credit maximum by ten percent");
+  const tippedCeiling = calculateStarscore({
+    game: started.payload.game,
+    moves: route.length,
+    elapsedSeconds: 0,
+    tipsUsed: 1
+  });
+  assert.ok(submitted.payload.placement.entry.score > 0);
+  assert.ok(submitted.payload.placement.entry.score <= tippedCeiling);
+
+  const recovered = await request("/api/run/submit", { body: credentials });
+  assert.equal(recovered.response.status, 200);
+  assert.equal(recovered.payload.recovered, true);
+  assert.equal(recovered.payload.placement.entry.assist, "tip");
+  assert.equal(recovered.payload.placement.entry.division, "open");
 });
 
-test("local Pages Quick Tips mirror the safe contract and restore only the used count", async (context) => {
+test("local Pages Quick Tips mirror the reduced-score contract and restore only the used count", async (context) => {
   const directory = await mkdtemp(join(tmpdir(), "constellore-local-tips-"));
   context.after(() => rm(directory, { recursive: true, force: true }));
   await writeLocalWorldModule(join(directory, "local-world.mjs"));
-  for (const file of ["local-beta.mjs", "cosmic-twists.mjs", "engagement-features.mjs", "universe-director.mjs", "recipe-feedback.mjs", "adaptive-difficulty.mjs", "remix-progression.mjs", "remix-readiness.mjs", "path-guard.mjs", "route-remixes.mjs", "shuffled-start.mjs"]) {
+  for (const file of ["local-beta.mjs", "concept-chemistry.mjs", "cosmic-twists.mjs", "engagement-features.mjs", "universe-director.mjs", "recipe-feedback.mjs", "adaptive-difficulty.mjs", "remix-progression.mjs", "remix-readiness.mjs", "path-guard.mjs", "route-remixes.mjs", "shuffled-start.mjs"]) {
     await copyFile(new URL(`../public/${file}`, import.meta.url), join(directory, file));
   }
   const moduleUrl = pathToFileURL(join(directory, "local-beta.mjs")).href;
@@ -213,8 +273,12 @@ test("local Pages Quick Tips mirror the safe contract and restore only the used 
   assert.equal(resumed.progress.tipsUsed, 1);
   assert.equal(Object.hasOwn(resumed.progress, "tipRecords"), false);
   assert.equal(resumed.run.assist, "none");
+  assert.equal(resumed.run.division, "open");
   assert.equal(resumed.run.scoringDisabled, false);
   assert.equal(resumed.run.scoreEligible, true);
+  assert.equal(resumed.run.scoreMultiplier, .9);
+  assert.equal(resumed.progress.scoreMultiplier, .9);
+  assert.equal(resumed.progress.division, "open");
 
   const snapshot = { version: 1, game: started.game, run: started.run, progress: resumed.progress };
   const secondRuntime = await import(`${moduleUrl}?test=tips-restore-${Date.now()}`);
@@ -251,6 +315,7 @@ test("local Pages Quick Tips mirror the safe contract and restore only the used 
     body: JSON.stringify({ ...credentials, a: firstRouteStep.a, b: firstRouteStep.b })
   });
   assert.equal(combined.completed, false, "the regression needs a later frontier after resolving signal one");
+  assert.equal(combined.division, "open");
   const progressed = await secondRuntime.localRequest("/api/run/resume", { method: "POST", body: JSON.stringify(credentials) });
   const progressedSnapshot = { version: 1, game: started.game, run: started.run, progress: progressed.progress };
   const thirdRuntime = await import(`${moduleUrl}?test=tips-progress-restore-${Date.now()}`);
@@ -264,5 +329,6 @@ test("local Pages Quick Tips mirror the safe contract and restore only the used 
   });
   assertPublicTip(nextFrontier);
   assert.equal(nextFrontier.used, 2, "progress before reload must unlock a signal for the newly reachable frontier");
+  assert.equal(nextFrontier.scoreMultiplier, .81);
   assert.doesNotMatch(nextFrontier.text, /still active/i);
 });

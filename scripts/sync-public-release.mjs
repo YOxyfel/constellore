@@ -1,3 +1,4 @@
+import { startupModuleFiles } from "./startup-module-files.mjs";
 import { readFile, readdir, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -6,14 +7,33 @@ import { validateAudioPacks } from "./audio-assets.mjs";
 import { packageMetadata, withAssetVersion, writeReleaseMetadata } from "./release-metadata.mjs";
 import { renderServiceWorker } from "./service-worker-source.mjs";
 import { generateReleaseAssets } from "./generate-release-assets.mjs";
-import { SECONDARY_SURFACE_FILES } from "../public/secondary-surface-loader.mjs";
+import {
+  COMBINING_BOARD_CORE_FILES,
+  COMBINING_BOARD_LAZY_FILES,
+  PLAY_ON_DEMAND_FILES,
+  SECONDARY_SURFACE_FILES,
+  VOYAGE_PROJECTION_LAZY_FILES
+} from "../public/secondary-surface-loader.mjs";
+import {
+  assertPlanetHubSourceRuntimeInventory,
+  isPlanetHubSourceLazyFile,
+  isPlanetHubRuntimeFile,
+  validatePlanetHubAssets
+} from "./planet-hub-packaging.mjs";
 
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const publicDirectory = join(root, "public");
 const websiteDirectory = join(root, "Website");
 const pkg = await packageMetadata();
+const PROFILE_FRAME_REVIEW_FILES = new Set([
+  "profile-frame-showcase.css",
+  "profile-frame-showcase.mjs",
+  "profile-frames.html",
+  "art/profile-frame-placement-variations.png"
+]);
 await validateCosmeticPacks(publicDirectory);
 await validateAudioPacks(publicDirectory);
+await validatePlanetHubAssets(publicDirectory);
 
 async function listRelativeFiles(directory, prefix = "") {
   const files = [];
@@ -42,6 +62,7 @@ function setBodyDataAttribute(document, name, value) {
 }
 
 const publicEntries = (await readdir(publicDirectory)).sort((left, right) => left.localeCompare(right, "en"));
+assertPlanetHubSourceRuntimeInventory(publicEntries, "server Planet Hub source");
 for (const name of ["index.html", "app.js", ...publicEntries.filter((entry) => entry.endsWith(".mjs"))]) {
   const path = join(publicDirectory, name);
   let source = withAssetVersion(await readFile(path, "utf8"), pkg.version);
@@ -88,30 +109,57 @@ for (const name of ["index.html", "privacy.html", "terms.html", "support.html"])
 await generateReleaseAssets();
 await writeReleaseMetadata(join(publicDirectory, "release.json"), { channel: "server-beta", runtime: "server", revision: "source" });
 const secondarySurfaceAssets = new Set(SECONDARY_SURFACE_FILES);
+const playOnDemandAssets = new Set(PLAY_ON_DEMAND_FILES);
+const planetHubLazyFiles = publicEntries.filter(isPlanetHubSourceLazyFile);
+const startupAssets = new Set(await startupModuleFiles(publicDirectory));
 const runtimeAssets = (await listRelativeFiles(publicDirectory))
-  .filter((name) => (
+  .filter((name) => startupAssets.has(name) || (
     name !== "index.html"
     && name !== "service-worker.js"
+    && !PROFILE_FRAME_REVIEW_FILES.has(name)
     && !secondarySurfaceAssets.has(name)
+    && !playOnDemandAssets.has(name)
+    && !isPlanetHubRuntimeFile(name)
+    && !isPlanetHubSourceLazyFile(name)
     && !name.startsWith("social-card")
     && !name.startsWith("screenshots/")
     && !name.startsWith("art/ranks/")
     && !name.startsWith("art/transitions/")
     && !name.startsWith("art/home/")
     && !name.startsWith("art/cosmetics/")
+    && !name.startsWith("art/profile-frames/")
+    && !name.startsWith("art/moon-outpost/")
+    && !name.startsWith("art/planet-hub/")
+    && !name.startsWith("vendor/three/")
     && !name.startsWith("audio/")
     && !name.startsWith("story/")
     && !name.startsWith("cinematic/")
   ))
   .map((name) => `/${name}${/\.(?:css|js|mjs)$/.test(name) ? `?v=${pkg.version}` : ""}`)
   .sort((left, right) => left.localeCompare(right, "en"));
+for (const name of COMBINING_BOARD_CORE_FILES) {
+  if (!runtimeAssets.some((asset) => asset.startsWith(`/${name}`))) {
+    throw new Error(`Server core board asset is missing from the install shell: ${name}`);
+  }
+}
+for (const name of COMBINING_BOARD_LAZY_FILES) {
+  if (runtimeAssets.some((asset) => asset.startsWith(`/${name}`))) {
+    throw new Error(`Combining Board JavaScript escaped its lazy boundary: ${name}`);
+  }
+}
+for (const name of VOYAGE_PROJECTION_LAZY_FILES) {
+  if (runtimeAssets.some((asset) => asset.startsWith(`/${name}`))) {
+    throw new Error(`Voyage Projection asset escaped its lazy boundary: ${name}`);
+  }
+}
 const worker = renderServiceWorker({
   cachePrefix: "constellore-play-",
   version: pkg.version,
   assets: runtimeAssets,
-  lazyAssets: ["/art/ranks/", "/art/transitions/", "/art/home/", "/story/", "/cinematic/"],
-  lazyFiles: SECONDARY_SURFACE_FILES.map((name) => `/${name}?v=${pkg.version}`),
-  lazyPacks: ["/art/cosmetics/", "/audio/"],
+  lazyAssets: ["/art/ranks/", "/art/transitions/", "/art/home/", "/art/profile-frames/", "/art/moon-outpost/", "/story/", "/cinematic/"],
+  lazyFiles: SECONDARY_SURFACE_FILES.concat(PLAY_ON_DEMAND_FILES).map((name) => `/${name}?v=${pkg.version}`)
+    .concat(planetHubLazyFiles.map((name) => `/${name}?v=${pkg.version}`)),
+  lazyPacks: ["/art/cosmetics/", "/art/planet-hub/", "/audio/", "/vendor/three/"],
   navigationPath: "/play/",
   legacyCaches: ["constellore-shell-v24", "constellore-play-v27"]
 });

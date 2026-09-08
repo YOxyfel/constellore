@@ -1,0 +1,115 @@
+{
+  "schemaVersion": 1,
+  "contractSha256": "0459b858503d99cc30d04139b5aa6144d03fb81e4b2e95fb9be4973f149b1416",
+  "recordPurpose": "Blocking evidence checklist; null entries must never be interpreted as approval.",
+  "records": [
+    {
+      "id": "ai-vfx-renderer",
+      "kind": "ai-vfx-tool",
+      "manifestStatus": "pending-tool-selection",
+      "status": "blocked-template",
+      "releaseReady": false,
+      "commercialUseDocumented": false,
+      "evidence": [
+        {
+          "requirement": "provider and exact model/version",
+          "status": "missing",
+          "artifactPath": null,
+          "sha256": null
+        },
+        {
+          "requirement": "subscription or license terms at generation date",
+          "status": "missing",
+          "artifactPath": null,
+          "sha256": null
+        },
+        {
+          "requirement": "generation date",
+          "status": "missing",
+          "artifactPath": null,
+          "sha256": null
+        },
+        {
+          "requirement": "seed, prompt, input hashes, output hashes",
+          "status": "missing",
+          "artifactPath": null,
+          "sha256": null
+        },
+        {
+          "requirement": "authoritative mask source and hash",
+          "status": "missing",
+          "artifactPath": null,
+          "sha256": null
+        },
+        {
+          "requirement": "human compositing approval",
+          "status": "missing",
+          "artifactPath": null,
+          "sha256": null
+        }
+      ]
+    },
+    {
+      "id": "navigation-voice",
+      "kind": "voice-performance",
+      "manifestStatus": "pending-casting",
+      "status": "blocked-template",
+      "releaseReady": false,
+      "commercialUseDocumented": false,
+      "evidence": [
+        {
+          "requirement": "performer release or synthesis provider commercial terms",
+          "status": "missing",
+          "artifactPath": null,
+          "sha256": null
+        },
+        {
+          "requirement": "confirmation that no living performer is imitated without consent",
+          "status": "missing",
+          "artifactPath": null,
+          "sha256": null
+        },
+        {
+          "requirement": "recording or generation date",
+          "status": "missing",
+          "artifactPath": null,
+          "sha256": null
+        },
+        {
+          "requirement": "source and mastered audio hashes",
+          "status": "missing",
+          "artifactPath": null,
+          "sha256": null
+        }
+      ]
+    },
+    {
+      "id": "score-and-sound-design",
+      "kind": "audio-production",
+      "manifestStatus": "pending-production",
+      "status": "blocked-template",
+      "releaseReady": false,
+      "commercialUseDocumented": false,
+      "evidence": [
+        {
+          "requirement": "composer or library license",
+          "status": "missing",
+          "artifactPath": null,
+          "sha256": null
+        },
+        {
+          "requirement": "cue sheet",
+          "status": "missing",
+          "artifactPath": null,
+          "sha256": null
+        },
+        {
+          "requirement": "source and mastered audio hashes",
+          "status": "missing",
+          "artifactPath": null,
+          "sha256": null
+        }
+      ]
+    }
+  ]
+}

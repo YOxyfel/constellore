@@ -40,7 +40,7 @@ test("the home and board expose one plain core loop and one Help action", () => 
   assert.match(page, /id="primaryOrbitButton"/);
   assert.match(page, /id="modePicker"[\s\S]*Choose a game[\s\S]*Relaxed[\s\S]*Timed[\s\S]*Limited moves/);
   assert.match(page, /id="exploreHub"[\s\S]*Today.s word[\s\S]*FREE PLAY[\s\S]*Choose a word/);
-  assert.match(page, /id="senseButton"[\s\S]*<b>Help<\/b>/);
+  assert.match(page, /id="senseButton"[^>]*aria-controls="senseDialog"[\s\S]*<b class="assist-rail-label">Need help[?]<\/b>/);
   assert.match(page, /class="run-division-pill practice simple-hidden" id="runDivisionPill"/);
   assert.match(page, /class="run-milestone" id="runMilestone"[\s\S]*id="routeProgressTrail"/);
   assert.match(simpleStyles, /:is\([.]rival-ghost, [.]ghost-preview\)\s*\{[^}]*display:\s*none !important/);
@@ -75,14 +75,14 @@ test("launch intents preserve challenge precedence and use gated post-load objec
   assert.match(startup, /const startupResumeSnapshot = selectStartupResumeSnapshot\(\{\s*snapshot: readActiveRunSnapshot\(\),\s*sharedChallenge: startupSharedChallenge,\s*modeIntent: startupModeIntent\s*\}\)/);
   assert.ok(
     startup.indexOf("const startupResumeSnapshot")
-      < startup.indexOf('await import("./cinematic/first-open-cinematic.mjs?v='),
-    "same/matching active-run URLs must be resolved before cinematic playback"
+      < startup.indexOf("if (startupOpensHome) void handoffLaunchMenu()"),
+    "same/matching active-run URLs must be resolved before the home handoff"
   );
   assert.match(boot, /const sharedChallenge = parseConstelloreChallengeUrl\(params, todayKey\)/);
   assert.match(boot, /const savedRun = startupResumeSnapshot/);
   assert.match(boot, /const restored = firstGameStarted\s*\?\s*false\s*:\s*await restoreInterruptedRun\(savedRun\)/);
-  assert.match(boot, /const launchMenuHandoff = launchCinematicOutcome[.]menuHandoff === true/);
-  assert.match(boot, /else if \(!restored && !firstGameStarted && sharedChallenge\)[\s\S]*void beginMode\(mode,[\s\S]*const launchHandled = await handleLaunchIntent\(params\)[\s\S]*!launchHandled && !launchMenuHandoff && firstGameRequired\(profile\)/);
+  assert.match(boot, /const launchMenuHandoff = startupOpensHome/);
+  assert.match(boot, /else if \(!restored && !firstGameStarted && sharedChallenge\)[\s\S]*!homeMenuState\(\)[.]onboardingComplete[\s\S]*startRequiredOpeningLesson[\s\S]*void beginMode\(mode,[\s\S]*const launchHandled = await handleLaunchIntent\(params\)[\s\S]*!launchHandled && !launchMenuHandoff && firstGameRequired\(profile\)/);
   assert.match(app, /function beginMode\([\s\S]*enterPreparedMission/);
   assert.match(app, /function enterPreparedMission\([\s\S]*ready:[\s\S]*openMissionBriefing/);
 });

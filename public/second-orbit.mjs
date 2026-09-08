@@ -5,8 +5,8 @@ const ROUTE = [
     word: "Lava",
     title: "Make Lava",
     instruction: "Earth is useful. Try adding heat.",
-    tip: "You can try other pairs too.",
-    spotlightWords: ["Earth"]
+    tip: "Choose Earth, then Fire to make Lava.",
+    spotlightWords: ["Earth", "Fire"]
   },
   {
     a: "Lava",
@@ -14,8 +14,8 @@ const ROUTE = [
     word: "Stone",
     title: "Make Stone",
     instruction: "Lava is useful. Try cooling it.",
-    tip: "New words can combine with the starting words.",
-    spotlightWords: ["Lava"]
+    tip: "Choose your new Lava, then add Water.",
+    spotlightWords: ["Lava", "Water"]
   },
   {
     a: "Stone",
@@ -76,8 +76,8 @@ export function sanitizeSecondOrbitState(value) {
 }
 
 /**
- * Unrelated discoveries are intentionally ignored. Second Orbit is a bridge
- * into free play, so the player can experiment without breaking the lesson.
+ * Legacy snapshots may contain unrelated discoveries, so progress still scans
+ * defensively. Live Second Orbit play now enforces this authored sequence.
  */
 export function secondOrbitProgress(history) {
   let index = 0;

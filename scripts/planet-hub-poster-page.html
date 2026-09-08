@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <style>
+      html, body, canvas { width: 1024px; height: 1024px; margin: 0; overflow: hidden; background: transparent; }
+    </style>
+    <script type="importmap">
+      {"imports":{"three":"/node_modules/three/build/three.module.js"}}
+    </script>
+  </head>
+  <body>
+    <script type="module">
+      import * as THREE from 'three';
+      import { GLTFLoader } from '/node_modules/three/examples/jsm/loaders/GLTFLoader.js';
+      import { createThreePlanetHubRenderer } from '/public/planet-hub-renderer.mjs';
+      import { createPosterTextureTracker, posterDetailUrls, waitForPosterDetails } from './planet-hub-poster-readiness.mjs';
+
+      // The interactive Home renderer owns an opaque full-viewport canvas,
+      // while its generated poster is deliberately composited over the HTML
+      // fallback sky. Adapt only the build-time renderer so transparent poster
+      // pixels survive without weakening the production framebuffer contract.
+      class TransparentPosterRenderer extends THREE.WebGLRenderer {
+        constructor(options = {}) {
+          super({ ...options, alpha: true });
+          // WebGLRenderer installs setClearColor as an own method, so a class
+          // prototype override would be shadowed by the instance method.
+          const setClearColor = this.setClearColor.bind(this);
+          this.setClearColor = (color) => setClearColor(color, 0);
+        }
+      }
+      const detailTracker = createPosterTextureTracker(THREE.TextureLoader);
+      const POSTER_THREE = Object.freeze({
+        ...THREE, WebGLRenderer: TransparentPosterRenderer, TextureLoader: detailTracker.TextureLoader
+      });
+
+      const params = new URLSearchParams(location.search);
+      const worldId = params.get('world');
+      const destination = params.get('destination');
+      if (!['earth', 'moon'].includes(worldId) || !['forge', 'journey', 'arena'].includes(destination)) {
+        throw new TypeError('A supported world and destination are required.');
+      }
+
+      const manifest = await fetch('/public/art/planet-hub/manifest.json', { cache: 'no-store' }).then((response) => {
+        if (!response.ok) throw new Error(`Manifest request failed (${response.status}).`);
+        return response.json();
+      });
+      const canvas = document.createElement('canvas');
+      canvas.width = 1024;
+      canvas.height = 1024;
+      canvas.addEventListener('webglcontextlost', (event) => {
+        event.preventDefault();
+        document.documentElement.dataset.captureFailure = 'webgl-context-lost';
+      }, { once: true });
+      document.body.append(canvas);
+      try {
+      const presentation = await createThreePlanetHubRenderer({
+        canvas,
+        manifest,
+        worldId,
+        quality: 'standard',
+        modules: { THREE: POSTER_THREE, GLTFLoader },
+        availableDestinations: ['forge', 'journey', 'arena'],
+        activeDestination: destination,
+        assetBaseUrl: new URL('/public/', location.href).href,
+        documentRef: document,
+        windowRef: window,
+        reducedMotion: true,
+        // Poster assets are composited over the HTML Home fallback. Keep the
+        // procedural WebGL sky out of the capture so the fallback retains a
+        // genuinely transparent background instead of baking a second noisy
+        // space layer into almost every pixel.
+        effectsLevel: 'off'
+      });
+      // The runtime deliberately resolves before optional detail transfer.
+      // Build captures must observe every declared texture loaded, then allow
+      // its attachment and two rendered frames before freezing the canvas.
+      const expectedDetails = posterDetailUrls(manifest, {
+        worldId, quality: 'standard', assetBaseUrl: new URL('/public/', location.href).href
+      });
+      document.documentElement.dataset.captureDetailState = 'waiting';
+      window.posterDetailReadiness = await waitForPosterDetails(detailTracker.states, expectedDetails);
+      document.documentElement.dataset.captureDetailState = 'loaded';
+      await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      presentation.suspend();
+      const context = canvas.getContext('webgl2');
+      if (!context || context.isContextLost()) {
+        document.documentElement.dataset.captureFailure = 'webgl-context-lost';
+      } else {
+        document.documentElement.dataset.ready = 'true';
+      }
+      } catch (error) {
+        document.documentElement.dataset.captureFailure = String(error?.message || error);
+        throw error;
+      }
+    </script>
+  </body>
+</html>

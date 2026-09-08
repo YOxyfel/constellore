@@ -1,0 +1,2550 @@
+{
+  "schemaVersion": 1,
+  "contractSha256": "0459b858503d99cc30d04139b5aa6144d03fb81e4b2e95fb9be4973f149b1416",
+  "authority": "authored-3d-scene",
+  "sourceModule": "public/voyage-projection-scene.mjs",
+  "mediaGenerated": false,
+  "technical": {
+    "width": 3840,
+    "height": 2160,
+    "fps": 24,
+    "workingColorSpace": "ACEScg",
+    "deliveryColorSpace": "Rec.709 Gamma 2.4",
+    "deterministicSeed": 314159,
+    "simulationMustBeBaked": true
+  },
+  "jobs": [
+    {
+      "id": "promise:earth:beauty-3d",
+      "variantId": "promise",
+      "shotId": "earth",
+      "passId": "beauty-3d",
+      "passKind": "authoritative-3d",
+      "frameRange": {
+        "startFrame": 0,
+        "endFrameExclusive": 168,
+        "lastFrame": 167
+      },
+      "output": {
+        "format": "openexr-half-float",
+        "channels": [
+          "RGBA"
+        ],
+        "sequencePattern": "output/voyage-projection/renders/promise/earth/beauty-3d/frame-%04d.exr",
+        "sha256": null
+      },
+      "execution": {
+        "status": "planned-not-rendered",
+        "renderer": null,
+        "command": null
+      }
+    },
+    {
+      "id": "promise:earth:depth-3d",
+      "variantId": "promise",
+      "shotId": "earth",
+      "passId": "depth-3d",
+      "passKind": "authoritative-data",
+      "frameRange": {
+        "startFrame": 0,
+        "endFrameExclusive": 168,
+        "lastFrame": 167
+      },
+      "output": {
+        "format": "openexr-float",
+        "channels": [
+          "Z"
+        ],
+        "sequencePattern": "output/voyage-projection/renders/promise/earth/depth-3d/frame-%04d.exr",
+        "sha256": null
+      },
+      "execution": {
+        "status": "planned-not-rendered",
+        "renderer": null,
+        "command": null
+      }
+    },
+    {
+      "id": "promise:earth:normal-3d",
+      "variantId": "promise",
+      "shotId": "earth",
+      "passId": "normal-3d",
+      "passKind": "authoritative-data",
+      "frameRange": {
+        "startFrame": 0,
+        "endFrameExclusive": 168,
+        "lastFrame": 167
+      },
+      "output": {
+        "format": "openexr-half-float",
+        "channels": [
+          "XYZ"
+        ],
+        "sequencePattern": "output/voyage-projection/renders/promise/earth/normal-3d/frame-%04d.exr",
+        "sha256": null
+      },
+      "execution": {
+        "status": "planned-not-rendered",
+        "renderer": null,
+        "command": null
+      }
+    },
+    {
+      "id": "promise:earth:motion-vector-3d",
+      "variantId": "promise",
+      "shotId": "earth",
+      "passId": "motion-vector-3d",
+      "passKind": "authoritative-data",
+      "frameRange": {
+        "startFrame": 0,
+        "endFrameExclusive": 168,
+        "lastFrame": 167
+      },
+      "output": {
+        "format": "openexr-half-float",
+        "channels": [
+          "XY"
+        ],
+        "sequencePattern": "output/voyage-projection/renders/promise/earth/motion-vector-3d/frame-%04d.exr",
+        "sha256": null
+      },
+      "execution": {
+        "status": "planned-not-rendered",
+        "renderer": null,
+        "command": null
+      }
+    },
+    {
+      "id": "promise:earth:object-id-3d",
+      "variantId": "promise",
+      "shotId": "earth",
+      "passId": "object-id-3d",
+      "passKind": "authoritative-data",
+      "frameRange": {
+        "startFrame": 0,
+        "endFrameExclusive": 168,
+        "lastFrame": 167
+      },
+      "output": {
+        "format": "openexr-uint",
+        "channels": [
+          "object-id"
+        ],
+        "sequencePattern": "output/voyage-projection/renders/promise/earth/object-id-3d/frame-%04d.exr",
+        "sha256": null
+      },
+      "execution": {
+        "status": "planned-not-rendered",
+        "renderer": null,
+        "command": null
+      }
+    },
+    {
+      "id": "promise:earth:far-field-matte-3d",
+      "variantId": "promise",
+      "shotId": "earth",
+      "passId": "far-field-matte-3d",
+      "passKind": "authoritative-mask",
+      "frameRange": {
+        "startFrame": 0,
+        "endFrameExclusive": 168,
+        "lastFrame": 167
+      },
+      "output": {
+        "format": "openexr-half-float",
+        "channels": [
+          "A"
+        ],
+        "sequencePattern": "output/voyage-projection/renders/promise/earth/far-field-matte-3d/frame-%04d.exr",
+        "sha256": null
+      },
+      "execution": {
+        "status": "planned-not-rendered",
+        "renderer": null,
+        "command": null
+      }
+    },
+    {
+      "id": "promise:earth:dust-matte-3d",
+      "variantId": "promise",
+      "shotId": "earth",
+      "passId": "dust-matte-3d",
+      "passKind": "authoritative-mask",
+      "frameRange": {
+        "startFrame": 0,
+        "endFrameExclusive": 168,
+        "lastFrame": 167
+      },
+      "output": {
+        "format": "openexr-half-float",
+        "channels": [
+          "A"
+        ],
+        "sequencePattern": "output/voyage-projection/renders/promise/earth/dust-matte-3d/frame-%04d.exr",
+        "sha256": null
+      },
+      "execution": {
+        "status": "planned-not-rendered",
+        "renderer": null,
+        "command": null
+      }
+    },
+    {
+      "id": "promise:solar:beauty-3d",
+      "variantId": "promise",
+      "shotId": "solar",
+      "passId": "beauty-3d",
+      "passKind": "authoritative-3d",
+      "frameRange": {
+        "startFrame": 168,
+        "endFrameExclusive": 480,
+        "lastFrame": 479
+      },
+      "output": {
+        "format": "openexr-half-float",
+        "channels": [
+          "RGBA"
+        ],
+        "sequencePattern": "output/voyage-projection/renders/promise/solar/beauty-3d/frame-%04d.exr",
+        "sha256": null
+      },
+      "execution": {
+        "status": "planned-not-rendered",
+        "renderer": null,
+        "command": null
+      }
+    },
+    {
+      "id": "promise:solar:depth-3d",
+      "variantId": "promise",
+      "shotId": "solar",
+      "passId": "depth-3d",
+      "passKind": "authoritative-data",
+      "frameRange": {
+        "startFrame": 168,
+        "endFrameExclusive": 480,
+        "lastFrame": 479
+      },
+      "output": {
+        "format": "openexr-float",
+        "channels": [
+          "Z"
+        ],
+        "sequencePattern": "output/voyage-projection/renders/promise/solar/depth-3d/frame-%04d.exr",
+        "sha256": null
+      },
+      "execution": {
+        "status": "planned-not-rendered",
+        "renderer": null,
+        "command": null
+      }
+    },
+    {
+      "id": "promise:solar:normal-3d",
+      "variantId": "promise",
+      "shotId": "solar",
+      "passId": "normal-3d",
+      "passKind": "authoritative-data",
+      "frameRange": {
+        "startFrame": 168,
+        "endFrameExclusive": 480,
+        "lastFrame": 479
+      },
+      "output": {
+        "format": "openexr-half-float",
+        "channels": [
+          "XYZ"
+        ],
+        "sequencePattern": "output/voyage-projection/renders/promise/solar/normal-3d/frame-%04d.exr",
+        "sha256": null
+      },
+      "execution": {
+        "status": "planned-not-rendered",
+        "renderer": null,
+        "command": null
+      }
+    },
+    {
+      "id": "promise:solar:motion-vector-3d",
+      "variantId": "promise",
+      "shotId": "solar",
+      "passId": "motion-vector-3d",
+      "passKind": "authoritative-data",
+      "frameRange": {
+        "startFrame": 168,
+        "endFrameExclusive": 480,
+        "lastFrame": 479
+      },
+      "output": {
+        "format": "openexr-half-float",
+        "channels": [
+          "XY"
+        ],
+        "sequencePattern": "output/voyage-projection/renders/promise/solar/motion-vector-3d/frame-%04d.exr",
+        "sha256": null
+      },
+      "execution": {
+        "status": "planned-not-rendered",
+        "renderer": null,
+        "command": null
+      }
+    },
+    {
+      "id": "promise:solar:object-id-3d",
+      "variantId": "promise",
+      "shotId": "solar",
+      "passId": "object-id-3d",
+      "passKind": "authoritative-data",
+      "frameRange": {
+        "startFrame": 168,
+        "endFrameExclusive": 480,
+        "lastFrame": 479
+      },
+      "output": {
+        "format": "openexr-uint",
+        "channels": [
+          "object-id"
+        ],
+        "sequencePattern": "output/voyage-projection/renders/promise/solar/object-id-3d/frame-%04d.exr",
+        "sha256": null
+      },
+      "execution": {
+        "status": "planned-not-rendered",
+        "renderer": null,
+        "command": null
+      }
+    },
+    {
+      "id": "promise:solar:far-field-matte-3d",
+      "variantId": "promise",
+      "shotId": "solar",
+      "passId": "far-field-matte-3d",
+      "passKind": "authoritative-mask",
+      "frameRange": {
+        "startFrame": 168,
+        "endFrameExclusive": 480,
+        "lastFrame": 479
+      },
+      "output": {
+        "format": "openexr-half-float",
+        "channels": [
+          "A"
+        ],
+        "sequencePattern": "output/voyage-projection/renders/promise/solar/far-field-matte-3d/frame-%04d.exr",
+        "sha256": null
+      },
+      "execution": {
+        "status": "planned-not-rendered",
+        "renderer": null,
+        "command": null
+      }
+    },
+    {
+      "id": "promise:solar:dust-matte-3d",
+      "variantId": "promise",
+      "shotId": "solar",
+      "passId": "dust-matte-3d",
+      "passKind": "authoritative-mask",
+      "frameRange": {
+        "startFrame": 168,
+        "endFrameExclusive": 480,
+        "lastFrame": 479
+      },
+      "output": {
+        "format": "openexr-half-float",
+        "channels": [
+          "A"
+        ],
+        "sequencePattern": "output/voyage-projection/renders/promise/solar/dust-matte-3d/frame-%04d.exr",
+        "sha256": null
+      },
+      "execution": {
+        "status": "planned-not-rendered",
+        "renderer": null,
+        "command": null
+      }
+    },
+    {
+      "id": "promise:heliopause:beauty-3d",
+      "variantId": "promise",
+      "shotId": "heliopause",
+      "passId": "beauty-3d",
+      "passKind": "authoritative-3d",
+      "frameRange": {
+        "startFrame": 480,
+        "endFrameExclusive": 648,
+        "lastFrame": 647
+      },
+      "output": {
+        "format": "openexr-half-float",
+        "channels": [
+          "RGBA"
+        ],
+        "sequencePattern": "output/voyage-projection/renders/promise/heliopause/beauty-3d/frame-%04d.exr",
+        "sha256": null
+      },
+      "execution": {
+        "status": "planned-not-rendered",
+        "renderer": null,
+        "command": null
+      }
+    },
+    {
+      "id": "promise:heliopause:depth-3d",
+      "variantId": "promise",
+      "shotId": "heliopause",
+      "passId": "depth-3d",
+      "passKind": "authoritative-data",
+      "frameRange": {
+        "startFrame": 480,
+        "endFrameExclusive": 648,
+        "lastFrame": 647
+      },
+      "output": {
+        "format": "openexr-float",
+        "channels": [
+          "Z"
+        ],
+        "sequencePattern": "output/voyage-projection/renders/promise/heliopause/depth-3d/frame-%04d.exr",
+        "sha256": null
+      },
+      "execution": {
+        "status": "planned-not-rendered",
+        "renderer": null,
+        "command": null
+      }
+    },
+    {
+      "id": "promise:heliopause:normal-3d",
+      "variantId": "promise",
+      "shotId": "heliopause",
+      "passId": "normal-3d",
+      "passKind": "authoritative-data",
+      "frameRange": {
+        "startFrame": 480,
+        "endFrameExclusive": 648,
+        "lastFrame": 647
+      },
+      "output": {
+        "format": "openexr-half-float",
+        "channels": [
+          "XYZ"
+        ],
+        "sequencePattern": "output/voyage-projection/renders/promise/heliopause/normal-3d/frame-%04d.exr",
+        "sha256": null
+      },
+      "execution": {
+        "status": "planned-not-rendered",
+        "renderer": null,
+        "command": null
+      }
+    },
+    {
+      "id": "promise:heliopause:motion-vector-3d",
+      "variantId": "promise",
+      "shotId": "heliopause",
+      "passId": "motion-vector-3d",
+      "passKind": "authoritative-data",
+      "frameRange": {
+        "startFrame": 480,
+        "endFrameExclusive": 648,
+        "lastFrame": 647
+      },
+      "output": {
+        "format": "openexr-half-float",
+        "channels": [
+          "XY"
+        ],
+        "sequencePattern": "output/voyage-projection/renders/promise/heliopause/motion-vector-3d/frame-%04d.exr",
+        "sha256": null
+      },
+      "execution": {
+        "status": "planned-not-rendered",
+        "renderer": null,
+        "command": null
+      }
+    },
+    {
+      "id": "promise:heliopause:object-id-3d",
+      "variantId": "promise",
+      "shotId": "heliopause",
+      "passId": "object-id-3d",
+      "passKind": "authoritative-data",
+      "frameRange": {
+        "startFrame": 480,
+        "endFrameExclusive": 648,
+        "lastFrame": 647
+      },
+      "output": {
+        "format": "openexr-uint",
+        "channels": [
+          "object-id"
+        ],
+        "sequencePattern": "output/voyage-projection/renders/promise/heliopause/object-id-3d/frame-%04d.exr",
+        "sha256": null
+      },
+      "execution": {
+        "status": "planned-not-rendered",
+        "renderer": null,
+        "command": null
+      }
+    },
+    {
+      "id": "promise:heliopause:far-field-matte-3d",
+      "variantId": "promise",
+      "shotId": "heliopause",
+      "passId": "far-field-matte-3d",
+      "passKind": "authoritative-mask",
+      "frameRange": {
+        "startFrame": 480,
+        "endFrameExclusive": 648,
+        "lastFrame": 647
+      },
+      "output": {
+        "format": "openexr-half-float",
+        "channels": [
+          "A"
+        ],
+        "sequencePattern": "output/voyage-projection/renders/promise/heliopause/far-field-matte-3d/frame-%04d.exr",
+        "sha256": null
+      },
+      "execution": {
+        "status": "planned-not-rendered",
+        "renderer": null,
+        "command": null
+      }
+    },
+    {
+      "id": "promise:heliopause:dust-matte-3d",
+      "variantId": "promise",
+      "shotId": "heliopause",
+      "passId": "dust-matte-3d",
+      "passKind": "authoritative-mask",
+      "frameRange": {
+        "startFrame": 480,
+        "endFrameExclusive": 648,
+        "lastFrame": 647
+      },
+      "output": {
+        "format": "openexr-half-float",
+        "channels": [
+          "A"
+        ],
+        "sequencePattern": "output/voyage-projection/renders/promise/heliopause/dust-matte-3d/frame-%04d.exr",
+        "sha256": null
+      },
+      "execution": {
+        "status": "planned-not-rendered",
+        "renderer": null,
+        "command": null
+      }
+    },
+    {
+      "id": "promise:warp:beauty-3d",
+      "variantId": "promise",
+      "shotId": "warp",
+      "passId": "beauty-3d",
+      "passKind": "authoritative-3d",
+      "frameRange": {
+        "startFrame": 648,
+        "endFrameExclusive": 912,
+        "lastFrame": 911
+      },
+      "output": {
+        "format": "openexr-half-float",
+        "channels": [
+          "RGBA"
+        ],
+        "sequencePattern": "output/voyage-projection/renders/promise/warp/beauty-3d/frame-%04d.exr",
+        "sha256": null
+      },
+      "execution": {
+        "status": "planned-not-rendered",
+        "renderer": null,
+        "command": null
+      }
+    },
+    {
+      "id": "promise:warp:depth-3d",
+      "variantId": "promise",
+      "shotId": "warp",
+      "passId": "depth-3d",
+      "passKind": "authoritative-data",
+      "frameRange": {
+        "startFrame": 648,
+        "endFrameExclusive": 912,
+        "lastFrame": 911
+      },
+      "output": {
+        "format": "openexr-float",
+        "channels": [
+          "Z"
+        ],
+        "sequencePattern": "output/voyage-projection/renders/promise/warp/depth-3d/frame-%04d.exr",
+        "sha256": null
+      },
+      "execution": {
+        "status": "planned-not-rendered",
+        "renderer": null,
+        "command": null
+      }
+    },
+    {
+      "id": "promise:warp:normal-3d",
+      "variantId": "promise",
+      "shotId": "warp",
+      "passId": "normal-3d",
+      "passKind": "authoritative-data",
+      "frameRange": {
+        "startFrame": 648,
+        "endFrameExclusive": 912,
+        "lastFrame": 911
+      },
+      "output": {
+        "format": "openexr-half-float",
+        "channels": [
+          "XYZ"
+        ],
+        "sequencePattern": "output/voyage-projection/renders/promise/warp/normal-3d/frame-%04d.exr",
+        "sha256": null
+      },
+      "execution": {
+        "status": "planned-not-rendered",
+        "renderer": null,
+        "command": null
+      }
+    },
+    {
+      "id": "promise:warp:motion-vector-3d",
+      "variantId": "promise",
+      "shotId": "warp",
+      "passId": "motion-vector-3d",
+      "passKind": "authoritative-data",
+      "frameRange": {
+        "startFrame": 648,
+        "endFrameExclusive": 912,
+        "lastFrame": 911
+      },
+      "output": {
+        "format": "openexr-half-float",
+        "channels": [
+          "XY"
+        ],
+        "sequencePattern": "output/voyage-projection/renders/promise/warp/motion-vector-3d/frame-%04d.exr",
+        "sha256": null
+      },
+      "execution": {
+        "status": "planned-not-rendered",
+        "renderer": null,
+        "command": null
+      }
+    },
+    {
+      "id": "promise:warp:object-id-3d",
+      "variantId": "promise",
+      "shotId": "warp",
+      "passId": "object-id-3d",
+      "passKind": "authoritative-data",
+      "frameRange": {
+        "startFrame": 648,
+        "endFrameExclusive": 912,
+        "lastFrame": 911
+      },
+      "output": {
+        "format": "openexr-uint",
+        "channels": [
+          "object-id"
+        ],
+        "sequencePattern": "output/voyage-projection/renders/promise/warp/object-id-3d/frame-%04d.exr",
+        "sha256": null
+      },
+      "execution": {
+        "status": "planned-not-rendered",
+        "renderer": null,
+        "command": null
+      }
+    },
+    {
+      "id": "promise:warp:far-field-matte-3d",
+      "variantId": "promise",
+      "shotId": "warp",
+      "passId": "far-field-matte-3d",
+      "passKind": "authoritative-mask",
+      "frameRange": {
+        "startFrame": 648,
+        "endFrameExclusive": 912,
+        "lastFrame": 911
+      },
+      "output": {
+        "format": "openexr-half-float",
+        "channels": [
+          "A"
+        ],
+        "sequencePattern": "output/voyage-projection/renders/promise/warp/far-field-matte-3d/frame-%04d.exr",
+        "sha256": null
+      },
+      "execution": {
+        "status": "planned-not-rendered",
+        "renderer": null,
+        "command": null
+      }
+    },
+    {
+      "id": "promise:warp:warp-matte-3d",
+      "variantId": "promise",
+      "shotId": "warp",
+      "passId": "warp-matte-3d",
+      "passKind": "authoritative-mask",
+      "frameRange": {
+        "startFrame": 648,
+        "endFrameExclusive": 912,
+        "lastFrame": 911
+      },
+      "output": {
+        "format": "openexr-half-float",
+        "channels": [
+          "A"
+        ],
+        "sequencePattern": "output/voyage-projection/renders/promise/warp/warp-matte-3d/frame-%04d.exr",
+        "sha256": null
+      },
+      "execution": {
+        "status": "planned-not-rendered",
+        "renderer": null,
+        "command": null
+      }
+    },
+    {
+      "id": "promise:black-hole:beauty-3d",
+      "variantId": "promise",
+      "shotId": "black-hole",
+      "passId": "beauty-3d",
+      "passKind": "authoritative-3d",
+      "frameRange": {
+        "startFrame": 912,
+        "endFrameExclusive": 1152,
+        "lastFrame": 1151
+      },
+      "output": {
+        "format": "openexr-half-float",
+        "channels": [
+          "RGBA"
+        ],
+        "sequencePattern": "output/voyage-projection/renders/promise/black-hole/beauty-3d/frame-%04d.exr",
+        "sha256": null
+      },
+      "execution": {
+        "status": "planned-not-rendered",
+        "renderer": null,
+        "command": null
+      }
+    },
+    {
+      "id": "promise:black-hole:depth-3d",
+      "variantId": "promise",
+      "shotId": "black-hole",
+      "passId": "depth-3d",
+      "passKind": "authoritative-data",
+      "frameRange": {
+        "startFrame": 912,
+        "endFrameExclusive": 1152,
+        "lastFrame": 1151
+      },
+      "output": {
+        "format": "openexr-float",
+        "channels": [
+          "Z"
+        ],
+        "sequencePattern": "output/voyage-projection/renders/promise/black-hole/depth-3d/frame-%04d.exr",
+        "sha256": null
+      },
+      "execution": {
+        "status": "planned-not-rendered",
+        "renderer": null,
+        "command": null
+      }
+    },
+    {
+      "id": "promise:black-hole:normal-3d",
+      "variantId": "promise",
+      "shotId": "black-hole",
+      "passId": "normal-3d",
+      "passKind": "authoritative-data",
+      "frameRange": {
+        "startFrame": 912,
+        "endFrameExclusive": 1152,
+        "lastFrame": 1151
+      },
+      "output": {
+        "format": "openexr-half-float",
+        "channels": [
+          "XYZ"
+        ],
+        "sequencePattern": "output/voyage-projection/renders/promise/black-hole/normal-3d/frame-%04d.exr",
+        "sha256": null
+      },
+      "execution": {
+        "status": "planned-not-rendered",
+        "renderer": null,
+        "command": null
+      }
+    },
+    {
+      "id": "promise:black-hole:motion-vector-3d",
+      "variantId": "promise",
+      "shotId": "black-hole",
+      "passId": "motion-vector-3d",
+      "passKind": "authoritative-data",
+      "frameRange": {
+        "startFrame": 912,
+        "endFrameExclusive": 1152,
+        "lastFrame": 1151
+      },
+      "output": {
+        "format": "openexr-half-float",
+        "channels": [
+          "XY"
+        ],
+        "sequencePattern": "output/voyage-projection/renders/promise/black-hole/motion-vector-3d/frame-%04d.exr",
+        "sha256": null
+      },
+      "execution": {
+        "status": "planned-not-rendered",
+        "renderer": null,
+        "command": null
+      }
+    },
+    {
+      "id": "promise:black-hole:object-id-3d",
+      "variantId": "promise",
+      "shotId": "black-hole",
+      "passId": "object-id-3d",
+      "passKind": "authoritative-data",
+      "frameRange": {
+        "startFrame": 912,
+        "endFrameExclusive": 1152,
+        "lastFrame": 1151
+      },
+      "output": {
+        "format": "openexr-uint",
+        "channels": [
+          "object-id"
+        ],
+        "sequencePattern": "output/voyage-projection/renders/promise/black-hole/object-id-3d/frame-%04d.exr",
+        "sha256": null
+      },
+      "execution": {
+        "status": "planned-not-rendered",
+        "renderer": null,
+        "command": null
+      }
+    },
+    {
+      "id": "promise:black-hole:far-field-matte-3d",
+      "variantId": "promise",
+      "shotId": "black-hole",
+      "passId": "far-field-matte-3d",
+      "passKind": "authoritative-mask",
+      "frameRange": {
+        "startFrame": 912,
+        "endFrameExclusive": 1152,
+        "lastFrame": 1151
+      },
+      "output": {
+        "format": "openexr-half-float",
+        "channels": [
+          "A"
+        ],
+        "sequencePattern": "output/voyage-projection/renders/promise/black-hole/far-field-matte-3d/frame-%04d.exr",
+        "sha256": null
+      },
+      "execution": {
+        "status": "planned-not-rendered",
+        "renderer": null,
+        "command": null
+      }
+    },
+    {
+      "id": "promise:black-hole:accretion-matte-3d",
+      "variantId": "promise",
+      "shotId": "black-hole",
+      "passId": "accretion-matte-3d",
+      "passKind": "authoritative-mask",
+      "frameRange": {
+        "startFrame": 912,
+        "endFrameExclusive": 1152,
+        "lastFrame": 1151
+      },
+      "output": {
+        "format": "openexr-half-float",
+        "channels": [
+          "A"
+        ],
+        "sequencePattern": "output/voyage-projection/renders/promise/black-hole/accretion-matte-3d/frame-%04d.exr",
+        "sha256": null
+      },
+      "execution": {
+        "status": "planned-not-rendered",
+        "renderer": null,
+        "command": null
+      }
+    },
+    {
+      "id": "promise:singularity:beauty-3d",
+      "variantId": "promise",
+      "shotId": "singularity",
+      "passId": "beauty-3d",
+      "passKind": "authoritative-3d",
+      "frameRange": {
+        "startFrame": 1152,
+        "endFrameExclusive": 1272,
+        "lastFrame": 1271
+      },
+      "output": {
+        "format": "openexr-half-float",
+        "channels": [
+          "RGBA"
+        ],
+        "sequencePattern": "output/voyage-projection/renders/promise/singularity/beauty-3d/frame-%04d.exr",
+        "sha256": null
+      },
+      "execution": {
+        "status": "planned-not-rendered",
+        "renderer": null,
+        "command": null
+      }
+    },
+    {
+      "id": "promise:singularity:depth-3d",
+      "variantId": "promise",
+      "shotId": "singularity",
+      "passId": "depth-3d",
+      "passKind": "authoritative-data",
+      "frameRange": {
+        "startFrame": 1152,
+        "endFrameExclusive": 1272,
+        "lastFrame": 1271
+      },
+      "output": {
+        "format": "openexr-float",
+        "channels": [
+          "Z"
+        ],
+        "sequencePattern": "output/voyage-projection/renders/promise/singularity/depth-3d/frame-%04d.exr",
+        "sha256": null
+      },
+      "execution": {
+        "status": "planned-not-rendered",
+        "renderer": null,
+        "command": null
+      }
+    },
+    {
+      "id": "promise:singularity:normal-3d",
+      "variantId": "promise",
+      "shotId": "singularity",
+      "passId": "normal-3d",
+      "passKind": "authoritative-data",
+      "frameRange": {
+        "startFrame": 1152,
+        "endFrameExclusive": 1272,
+        "lastFrame": 1271
+      },
+      "output": {
+        "format": "openexr-half-float",
+        "channels": [
+          "XYZ"
+        ],
+        "sequencePattern": "output/voyage-projection/renders/promise/singularity/normal-3d/frame-%04d.exr",
+        "sha256": null
+      },
+      "execution": {
+        "status": "planned-not-rendered",
+        "renderer": null,
+        "command": null
+      }
+    },
+    {
+      "id": "promise:singularity:motion-vector-3d",
+      "variantId": "promise",
+      "shotId": "singularity",
+      "passId": "motion-vector-3d",
+      "passKind": "authoritative-data",
+      "frameRange": {
+        "startFrame": 1152,
+        "endFrameExclusive": 1272,
+        "lastFrame": 1271
+      },
+      "output": {
+        "format": "openexr-half-float",
+        "channels": [
+          "XY"
+        ],
+        "sequencePattern": "output/voyage-projection/renders/promise/singularity/motion-vector-3d/frame-%04d.exr",
+        "sha256": null
+      },
+      "execution": {
+        "status": "planned-not-rendered",
+        "renderer": null,
+        "command": null
+      }
+    },
+    {
+      "id": "promise:singularity:object-id-3d",
+      "variantId": "promise",
+      "shotId": "singularity",
+      "passId": "object-id-3d",
+      "passKind": "authoritative-data",
+      "frameRange": {
+        "startFrame": 1152,
+        "endFrameExclusive": 1272,
+        "lastFrame": 1271
+      },
+      "output": {
+        "format": "openexr-uint",
+        "channels": [
+          "object-id"
+        ],
+        "sequencePattern": "output/voyage-projection/renders/promise/singularity/object-id-3d/frame-%04d.exr",
+        "sha256": null
+      },
+      "execution": {
+        "status": "planned-not-rendered",
+        "renderer": null,
+        "command": null
+      }
+    },
+    {
+      "id": "promise:singularity:singularity-matte-3d",
+      "variantId": "promise",
+      "shotId": "singularity",
+      "passId": "singularity-matte-3d",
+      "passKind": "authoritative-mask",
+      "frameRange": {
+        "startFrame": 1152,
+        "endFrameExclusive": 1272,
+        "lastFrame": 1271
+      },
+      "output": {
+        "format": "openexr-half-float",
+        "channels": [
+          "A"
+        ],
+        "sequencePattern": "output/voyage-projection/renders/promise/singularity/singularity-matte-3d/frame-%04d.exr",
+        "sha256": null
+      },
+      "execution": {
+        "status": "planned-not-rendered",
+        "renderer": null,
+        "command": null
+      }
+    },
+    {
+      "id": "promise:return:beauty-3d",
+      "variantId": "promise",
+      "shotId": "return",
+      "passId": "beauty-3d",
+      "passKind": "authoritative-3d",
+      "frameRange": {
+        "startFrame": 1272,
+        "endFrameExclusive": 1368,
+        "lastFrame": 1367
+      },
+      "output": {
+        "format": "openexr-half-float",
+        "channels": [
+          "RGBA"
+        ],
+        "sequencePattern": "output/voyage-projection/renders/promise/return/beauty-3d/frame-%04d.exr",
+        "sha256": null
+      },
+      "execution": {
+        "status": "planned-not-rendered",
+        "renderer": null,
+        "command": null
+      }
+    },
+    {
+      "id": "promise:return:depth-3d",
+      "variantId": "promise",
+      "shotId": "return",
+      "passId": "depth-3d",
+      "passKind": "authoritative-data",
+      "frameRange": {
+        "startFrame": 1272,
+        "endFrameExclusive": 1368,
+        "lastFrame": 1367
+      },
+      "output": {
+        "format": "openexr-float",
+        "channels": [
+          "Z"
+        ],
+        "sequencePattern": "output/voyage-projection/renders/promise/return/depth-3d/frame-%04d.exr",
+        "sha256": null
+      },
+      "execution": {
+        "status": "planned-not-rendered",
+        "renderer": null,
+        "command": null
+      }
+    },
+    {
+      "id": "promise:return:normal-3d",
+      "variantId": "promise",
+      "shotId": "return",
+      "passId": "normal-3d",
+      "passKind": "authoritative-data",
+      "frameRange": {
+        "startFrame": 1272,
+        "endFrameExclusive": 1368,
+        "lastFrame": 1367
+      },
+      "output": {
+        "format": "openexr-half-float",
+        "channels": [
+          "XYZ"
+        ],
+        "sequencePattern": "output/voyage-projection/renders/promise/return/normal-3d/frame-%04d.exr",
+        "sha256": null
+      },
+      "execution": {
+        "status": "planned-not-rendered",
+        "renderer": null,
+        "command": null
+      }
+    },
+    {
+      "id": "promise:return:motion-vector-3d",
+      "variantId": "promise",
+      "shotId": "return",
+      "passId": "motion-vector-3d",
+      "passKind": "authoritative-data",
+      "frameRange": {
+        "startFrame": 1272,
+        "endFrameExclusive": 1368,
+        "lastFrame": 1367
+      },
+      "output": {
+        "format": "openexr-half-float",
+        "channels": [
+          "XY"
+        ],
+        "sequencePattern": "output/voyage-projection/renders/promise/return/motion-vector-3d/frame-%04d.exr",
+        "sha256": null
+      },
+      "execution": {
+        "status": "planned-not-rendered",
+        "renderer": null,
+        "command": null
+      }
+    },
+    {
+      "id": "promise:return:object-id-3d",
+      "variantId": "promise",
+      "shotId": "return",
+      "passId": "object-id-3d",
+      "passKind": "authoritative-data",
+      "frameRange": {
+        "startFrame": 1272,
+        "endFrameExclusive": 1368,
+        "lastFrame": 1367
+      },
+      "output": {
+        "format": "openexr-uint",
+        "channels": [
+          "object-id"
+        ],
+        "sequencePattern": "output/voyage-projection/renders/promise/return/object-id-3d/frame-%04d.exr",
+        "sha256": null
+      },
+      "execution": {
+        "status": "planned-not-rendered",
+        "renderer": null,
+        "command": null
+      }
+    },
+    {
+      "id": "promise:return:far-field-matte-3d",
+      "variantId": "promise",
+      "shotId": "return",
+      "passId": "far-field-matte-3d",
+      "passKind": "authoritative-mask",
+      "frameRange": {
+        "startFrame": 1272,
+        "endFrameExclusive": 1368,
+        "lastFrame": 1367
+      },
+      "output": {
+        "format": "openexr-half-float",
+        "channels": [
+          "A"
+        ],
+        "sequencePattern": "output/voyage-projection/renders/promise/return/far-field-matte-3d/frame-%04d.exr",
+        "sha256": null
+      },
+      "execution": {
+        "status": "planned-not-rendered",
+        "renderer": null,
+        "command": null
+      }
+    },
+    {
+      "id": "completion:earth:beauty-3d",
+      "variantId": "completion",
+      "shotId": "earth",
+      "passId": "beauty-3d",
+      "passKind": "authoritative-3d",
+      "frameRange": {
+        "startFrame": 0,
+        "endFrameExclusive": 168,
+        "lastFrame": 167
+      },
+      "output": {
+        "format": "openexr-half-float",
+        "channels": [
+          "RGBA"
+        ],
+        "sequencePattern": "output/voyage-projection/renders/completion/earth/beauty-3d/frame-%04d.exr",
+        "sha256": null
+      },
+      "execution": {
+        "status": "planned-not-rendered",
+        "renderer": null,
+        "command": null
+      }
+    },
+    {
+      "id": "completion:earth:depth-3d",
+      "variantId": "completion",
+      "shotId": "earth",
+      "passId": "depth-3d",
+      "passKind": "authoritative-data",
+      "frameRange": {
+        "startFrame": 0,
+        "endFrameExclusive": 168,
+        "lastFrame": 167
+      },
+      "output": {
+        "format": "openexr-float",
+        "channels": [
+          "Z"
+        ],
+        "sequencePattern": "output/voyage-projection/renders/completion/earth/depth-3d/frame-%04d.exr",
+        "sha256": null
+      },
+      "execution": {
+        "status": "planned-not-rendered",
+        "renderer": null,
+        "command": null
+      }
+    },
+    {
+      "id": "completion:earth:normal-3d",
+      "variantId": "completion",
+      "shotId": "earth",
+      "passId": "normal-3d",
+      "passKind": "authoritative-data",
+      "frameRange": {
+        "startFrame": 0,
+        "endFrameExclusive": 168,
+        "lastFrame": 167
+      },
+      "output": {
+        "format": "openexr-half-float",
+        "channels": [
+          "XYZ"
+        ],
+        "sequencePattern": "output/voyage-projection/renders/completion/earth/normal-3d/frame-%04d.exr",
+        "sha256": null
+      },
+      "execution": {
+        "status": "planned-not-rendered",
+        "renderer": null,
+        "command": null
+      }
+    },
+    {
+      "id": "completion:earth:motion-vector-3d",
+      "variantId": "completion",
+      "shotId": "earth",
+      "passId": "motion-vector-3d",
+      "passKind": "authoritative-data",
+      "frameRange": {
+        "startFrame": 0,
+        "endFrameExclusive": 168,
+        "lastFrame": 167
+      },
+      "output": {
+        "format": "openexr-half-float",
+        "channels": [
+          "XY"
+        ],
+        "sequencePattern": "output/voyage-projection/renders/completion/earth/motion-vector-3d/frame-%04d.exr",
+        "sha256": null
+      },
+      "execution": {
+        "status": "planned-not-rendered",
+        "renderer": null,
+        "command": null
+      }
+    },
+    {
+      "id": "completion:earth:object-id-3d",
+      "variantId": "completion",
+      "shotId": "earth",
+      "passId": "object-id-3d",
+      "passKind": "authoritative-data",
+      "frameRange": {
+        "startFrame": 0,
+        "endFrameExclusive": 168,
+        "lastFrame": 167
+      },
+      "output": {
+        "format": "openexr-uint",
+        "channels": [
+          "object-id"
+        ],
+        "sequencePattern": "output/voyage-projection/renders/completion/earth/object-id-3d/frame-%04d.exr",
+        "sha256": null
+      },
+      "execution": {
+        "status": "planned-not-rendered",
+        "renderer": null,
+        "command": null
+      }
+    },
+    {
+      "id": "completion:earth:far-field-matte-3d",
+      "variantId": "completion",
+      "shotId": "earth",
+      "passId": "far-field-matte-3d",
+      "passKind": "authoritative-mask",
+      "frameRange": {
+        "startFrame": 0,
+        "endFrameExclusive": 168,
+        "lastFrame": 167
+      },
+      "output": {
+        "format": "openexr-half-float",
+        "channels": [
+          "A"
+        ],
+        "sequencePattern": "output/voyage-projection/renders/completion/earth/far-field-matte-3d/frame-%04d.exr",
+        "sha256": null
+      },
+      "execution": {
+        "status": "planned-not-rendered",
+        "renderer": null,
+        "command": null
+      }
+    },
+    {
+      "id": "completion:earth:dust-matte-3d",
+      "variantId": "completion",
+      "shotId": "earth",
+      "passId": "dust-matte-3d",
+      "passKind": "authoritative-mask",
+      "frameRange": {
+        "startFrame": 0,
+        "endFrameExclusive": 168,
+        "lastFrame": 167
+      },
+      "output": {
+        "format": "openexr-half-float",
+        "channels": [
+          "A"
+        ],
+        "sequencePattern": "output/voyage-projection/renders/completion/earth/dust-matte-3d/frame-%04d.exr",
+        "sha256": null
+      },
+      "execution": {
+        "status": "planned-not-rendered",
+        "renderer": null,
+        "command": null
+      }
+    },
+    {
+      "id": "completion:solar:beauty-3d",
+      "variantId": "completion",
+      "shotId": "solar",
+      "passId": "beauty-3d",
+      "passKind": "authoritative-3d",
+      "frameRange": {
+        "startFrame": 168,
+        "endFrameExclusive": 480,
+        "lastFrame": 479
+      },
+      "output": {
+        "format": "openexr-half-float",
+        "channels": [
+          "RGBA"
+        ],
+        "sequencePattern": "output/voyage-projection/renders/completion/solar/beauty-3d/frame-%04d.exr",
+        "sha256": null
+      },
+      "execution": {
+        "status": "planned-not-rendered",
+        "renderer": null,
+        "command": null
+      }
+    },
+    {
+      "id": "completion:solar:depth-3d",
+      "variantId": "completion",
+      "shotId": "solar",
+      "passId": "depth-3d",
+      "passKind": "authoritative-data",
+      "frameRange": {
+        "startFrame": 168,
+        "endFrameExclusive": 480,
+        "lastFrame": 479
+      },
+      "output": {
+        "format": "openexr-float",
+        "channels": [
+          "Z"
+        ],
+        "sequencePattern": "output/voyage-projection/renders/completion/solar/depth-3d/frame-%04d.exr",
+        "sha256": null
+      },
+      "execution": {
+        "status": "planned-not-rendered",
+        "renderer": null,
+        "command": null
+      }
+    },
+    {
+      "id": "completion:solar:normal-3d",
+      "variantId": "completion",
+      "shotId": "solar",
+      "passId": "normal-3d",
+      "passKind": "authoritative-data",
+      "frameRange": {
+        "startFrame": 168,
+        "endFrameExclusive": 480,
+        "lastFrame": 479
+      },
+      "output": {
+        "format": "openexr-half-float",
+        "channels": [
+          "XYZ"
+        ],
+        "sequencePattern": "output/voyage-projection/renders/completion/solar/normal-3d/frame-%04d.exr",
+        "sha256": null
+      },
+      "execution": {
+        "status": "planned-not-rendered",
+        "renderer": null,
+        "command": null
+      }
+    },
+    {
+      "id": "completion:solar:motion-vector-3d",
+      "variantId": "completion",
+      "shotId": "solar",
+      "passId": "motion-vector-3d",
+      "passKind": "authoritative-data",
+      "frameRange": {
+        "startFrame": 168,
+        "endFrameExclusive": 480,
+        "lastFrame": 479
+      },
+      "output": {
+        "format": "openexr-half-float",
+        "channels": [
+          "XY"
+        ],
+        "sequencePattern": "output/voyage-projection/renders/completion/solar/motion-vector-3d/frame-%04d.exr",
+        "sha256": null
+      },
+      "execution": {
+        "status": "planned-not-rendered",
+        "renderer": null,
+        "command": null
+      }
+    },
+    {
+      "id": "completion:solar:object-id-3d",
+      "variantId": "completion",
+      "shotId": "solar",
+      "passId": "object-id-3d",
+      "passKind": "authoritative-data",
+      "frameRange": {
+        "startFrame": 168,
+        "endFrameExclusive": 480,
+        "lastFrame": 479
+      },
+      "output": {
+        "format": "openexr-uint",
+        "channels": [
+          "object-id"
+        ],
+        "sequencePattern": "output/voyage-projection/renders/completion/solar/object-id-3d/frame-%04d.exr",
+        "sha256": null
+      },
+      "execution": {
+        "status": "planned-not-rendered",
+        "renderer": null,
+        "command": null
+      }
+    },
+    {
+      "id": "completion:solar:far-field-matte-3d",
+      "variantId": "completion",
+      "shotId": "solar",
+      "passId": "far-field-matte-3d",
+      "passKind": "authoritative-mask",
+      "frameRange": {
+        "startFrame": 168,
+        "endFrameExclusive": 480,
+        "lastFrame": 479
+      },
+      "output": {
+        "format": "openexr-half-float",
+        "channels": [
+          "A"
+        ],
+        "sequencePattern": "output/voyage-projection/renders/completion/solar/far-field-matte-3d/frame-%04d.exr",
+        "sha256": null
+      },
+      "execution": {
+        "status": "planned-not-rendered",
+        "renderer": null,
+        "command": null
+      }
+    },
+    {
+      "id": "completion:solar:dust-matte-3d",
+      "variantId": "completion",
+      "shotId": "solar",
+      "passId": "dust-matte-3d",
+      "passKind": "authoritative-mask",
+      "frameRange": {
+        "startFrame": 168,
+        "endFrameExclusive": 480,
+        "lastFrame": 479
+      },
+      "output": {
+        "format": "openexr-half-float",
+        "channels": [
+          "A"
+        ],
+        "sequencePattern": "output/voyage-projection/renders/completion/solar/dust-matte-3d/frame-%04d.exr",
+        "sha256": null
+      },
+      "execution": {
+        "status": "planned-not-rendered",
+        "renderer": null,
+        "command": null
+      }
+    },
+    {
+      "id": "completion:heliopause:beauty-3d",
+      "variantId": "completion",
+      "shotId": "heliopause",
+      "passId": "beauty-3d",
+      "passKind": "authoritative-3d",
+      "frameRange": {
+        "startFrame": 480,
+        "endFrameExclusive": 648,
+        "lastFrame": 647
+      },
+      "output": {
+        "format": "openexr-half-float",
+        "channels": [
+          "RGBA"
+        ],
+        "sequencePattern": "output/voyage-projection/renders/completion/heliopause/beauty-3d/frame-%04d.exr",
+        "sha256": null
+      },
+      "execution": {
+        "status": "planned-not-rendered",
+        "renderer": null,
+        "command": null
+      }
+    },
+    {
+      "id": "completion:heliopause:depth-3d",
+      "variantId": "completion",
+      "shotId": "heliopause",
+      "passId": "depth-3d",
+      "passKind": "authoritative-data",
+      "frameRange": {
+        "startFrame": 480,
+        "endFrameExclusive": 648,
+        "lastFrame": 647
+      },
+      "output": {
+        "format": "openexr-float",
+        "channels": [
+          "Z"
+        ],
+        "sequencePattern": "output/voyage-projection/renders/completion/heliopause/depth-3d/frame-%04d.exr",
+        "sha256": null
+      },
+      "execution": {
+        "status": "planned-not-rendered",
+        "renderer": null,
+        "command": null
+      }
+    },
+    {
+      "id": "completion:heliopause:normal-3d",
+      "variantId": "completion",
+      "shotId": "heliopause",
+      "passId": "normal-3d",
+      "passKind": "authoritative-data",
+      "frameRange": {
+        "startFrame": 480,
+        "endFrameExclusive": 648,
+        "lastFrame": 647
+      },
+      "output": {
+        "format": "openexr-half-float",
+        "channels": [
+          "XYZ"
+        ],
+        "sequencePattern": "output/voyage-projection/renders/completion/heliopause/normal-3d/frame-%04d.exr",
+        "sha256": null
+      },
+      "execution": {
+        "status": "planned-not-rendered",
+        "renderer": null,
+        "command": null
+      }
+    },
+    {
+      "id": "completion:heliopause:motion-vector-3d",
+      "variantId": "completion",
+      "shotId": "heliopause",
+      "passId": "motion-vector-3d",
+      "passKind": "authoritative-data",
+      "frameRange": {
+        "startFrame": 480,
+        "endFrameExclusive": 648,
+        "lastFrame": 647
+      },
+      "output": {
+        "format": "openexr-half-float",
+        "channels": [
+          "XY"
+        ],
+        "sequencePattern": "output/voyage-projection/renders/completion/heliopause/motion-vector-3d/frame-%04d.exr",
+        "sha256": null
+      },
+      "execution": {
+        "status": "planned-not-rendered",
+        "renderer": null,
+        "command": null
+      }
+    },
+    {
+      "id": "completion:heliopause:object-id-3d",
+      "variantId": "completion",
+      "shotId": "heliopause",
+      "passId": "object-id-3d",
+      "passKind": "authoritative-data",
+      "frameRange": {
+        "startFrame": 480,
+        "endFrameExclusive": 648,
+        "lastFrame": 647
+      },
+      "output": {
+        "format": "openexr-uint",
+        "channels": [
+          "object-id"
+        ],
+        "sequencePattern": "output/voyage-projection/renders/completion/heliopause/object-id-3d/frame-%04d.exr",
+        "sha256": null
+      },
+      "execution": {
+        "status": "planned-not-rendered",
+        "renderer": null,
+        "command": null
+      }
+    },
+    {
+      "id": "completion:heliopause:far-field-matte-3d",
+      "variantId": "completion",
+      "shotId": "heliopause",
+      "passId": "far-field-matte-3d",
+      "passKind": "authoritative-mask",
+      "frameRange": {
+        "startFrame": 480,
+        "endFrameExclusive": 648,
+        "lastFrame": 647
+      },
+      "output": {
+        "format": "openexr-half-float",
+        "channels": [
+          "A"
+        ],
+        "sequencePattern": "output/voyage-projection/renders/completion/heliopause/far-field-matte-3d/frame-%04d.exr",
+        "sha256": null
+      },
+      "execution": {
+        "status": "planned-not-rendered",
+        "renderer": null,
+        "command": null
+      }
+    },
+    {
+      "id": "completion:heliopause:dust-matte-3d",
+      "variantId": "completion",
+      "shotId": "heliopause",
+      "passId": "dust-matte-3d",
+      "passKind": "authoritative-mask",
+      "frameRange": {
+        "startFrame": 480,
+        "endFrameExclusive": 648,
+        "lastFrame": 647
+      },
+      "output": {
+        "format": "openexr-half-float",
+        "channels": [
+          "A"
+        ],
+        "sequencePattern": "output/voyage-projection/renders/completion/heliopause/dust-matte-3d/frame-%04d.exr",
+        "sha256": null
+      },
+      "execution": {
+        "status": "planned-not-rendered",
+        "renderer": null,
+        "command": null
+      }
+    },
+    {
+      "id": "completion:warp:beauty-3d",
+      "variantId": "completion",
+      "shotId": "warp",
+      "passId": "beauty-3d",
+      "passKind": "authoritative-3d",
+      "frameRange": {
+        "startFrame": 648,
+        "endFrameExclusive": 912,
+        "lastFrame": 911
+      },
+      "output": {
+        "format": "openexr-half-float",
+        "channels": [
+          "RGBA"
+        ],
+        "sequencePattern": "output/voyage-projection/renders/completion/warp/beauty-3d/frame-%04d.exr",
+        "sha256": null
+      },
+      "execution": {
+        "status": "planned-not-rendered",
+        "renderer": null,
+        "command": null
+      }
+    },
+    {
+      "id": "completion:warp:depth-3d",
+      "variantId": "completion",
+      "shotId": "warp",
+      "passId": "depth-3d",
+      "passKind": "authoritative-data",
+      "frameRange": {
+        "startFrame": 648,
+        "endFrameExclusive": 912,
+        "lastFrame": 911
+      },
+      "output": {
+        "format": "openexr-float",
+        "channels": [
+          "Z"
+        ],
+        "sequencePattern": "output/voyage-projection/renders/completion/warp/depth-3d/frame-%04d.exr",
+        "sha256": null
+      },
+      "execution": {
+        "status": "planned-not-rendered",
+        "renderer": null,
+        "command": null
+      }
+    },
+    {
+      "id": "completion:warp:normal-3d",
+      "variantId": "completion",
+      "shotId": "warp",
+      "passId": "normal-3d",
+      "passKind": "authoritative-data",
+      "frameRange": {
+        "startFrame": 648,
+        "endFrameExclusive": 912,
+        "lastFrame": 911
+      },
+      "output": {
+        "format": "openexr-half-float",
+        "channels": [
+          "XYZ"
+        ],
+        "sequencePattern": "output/voyage-projection/renders/completion/warp/normal-3d/frame-%04d.exr",
+        "sha256": null
+      },
+      "execution": {
+        "status": "planned-not-rendered",
+        "renderer": null,
+        "command": null
+      }
+    },
+    {
+      "id": "completion:warp:motion-vector-3d",
+      "variantId": "completion",
+      "shotId": "warp",
+      "passId": "motion-vector-3d",
+      "passKind": "authoritative-data",
+      "frameRange": {
+        "startFrame": 648,
+        "endFrameExclusive": 912,
+        "lastFrame": 911
+      },
+      "output": {
+        "format": "openexr-half-float",
+        "channels": [
+          "XY"
+        ],
+        "sequencePattern": "output/voyage-projection/renders/completion/warp/motion-vector-3d/frame-%04d.exr",
+        "sha256": null
+      },
+      "execution": {
+        "status": "planned-not-rendered",
+        "renderer": null,
+        "command": null
+      }
+    },
+    {
+      "id": "completion:warp:object-id-3d",
+      "variantId": "completion",
+      "shotId": "warp",
+      "passId": "object-id-3d",
+      "passKind": "authoritative-data",
+      "frameRange": {
+        "startFrame": 648,
+        "endFrameExclusive": 912,
+        "lastFrame": 911
+      },
+      "output": {
+        "format": "openexr-uint",
+        "channels": [
+          "object-id"
+        ],
+        "sequencePattern": "output/voyage-projection/renders/completion/warp/object-id-3d/frame-%04d.exr",
+        "sha256": null
+      },
+      "execution": {
+        "status": "planned-not-rendered",
+        "renderer": null,
+        "command": null
+      }
+    },
+    {
+      "id": "completion:warp:far-field-matte-3d",
+      "variantId": "completion",
+      "shotId": "warp",
+      "passId": "far-field-matte-3d",
+      "passKind": "authoritative-mask",
+      "frameRange": {
+        "startFrame": 648,
+        "endFrameExclusive": 912,
+        "lastFrame": 911
+      },
+      "output": {
+        "format": "openexr-half-float",
+        "channels": [
+          "A"
+        ],
+        "sequencePattern": "output/voyage-projection/renders/completion/warp/far-field-matte-3d/frame-%04d.exr",
+        "sha256": null
+      },
+      "execution": {
+        "status": "planned-not-rendered",
+        "renderer": null,
+        "command": null
+      }
+    },
+    {
+      "id": "completion:warp:warp-matte-3d",
+      "variantId": "completion",
+      "shotId": "warp",
+      "passId": "warp-matte-3d",
+      "passKind": "authoritative-mask",
+      "frameRange": {
+        "startFrame": 648,
+        "endFrameExclusive": 912,
+        "lastFrame": 911
+      },
+      "output": {
+        "format": "openexr-half-float",
+        "channels": [
+          "A"
+        ],
+        "sequencePattern": "output/voyage-projection/renders/completion/warp/warp-matte-3d/frame-%04d.exr",
+        "sha256": null
+      },
+      "execution": {
+        "status": "planned-not-rendered",
+        "renderer": null,
+        "command": null
+      }
+    },
+    {
+      "id": "completion:black-hole:beauty-3d",
+      "variantId": "completion",
+      "shotId": "black-hole",
+      "passId": "beauty-3d",
+      "passKind": "authoritative-3d",
+      "frameRange": {
+        "startFrame": 912,
+        "endFrameExclusive": 1152,
+        "lastFrame": 1151
+      },
+      "output": {
+        "format": "openexr-half-float",
+        "channels": [
+          "RGBA"
+        ],
+        "sequencePattern": "output/voyage-projection/renders/completion/black-hole/beauty-3d/frame-%04d.exr",
+        "sha256": null
+      },
+      "execution": {
+        "status": "planned-not-rendered",
+        "renderer": null,
+        "command": null
+      }
+    },
+    {
+      "id": "completion:black-hole:depth-3d",
+      "variantId": "completion",
+      "shotId": "black-hole",
+      "passId": "depth-3d",
+      "passKind": "authoritative-data",
+      "frameRange": {
+        "startFrame": 912,
+        "endFrameExclusive": 1152,
+        "lastFrame": 1151
+      },
+      "output": {
+        "format": "openexr-float",
+        "channels": [
+          "Z"
+        ],
+        "sequencePattern": "output/voyage-projection/renders/completion/black-hole/depth-3d/frame-%04d.exr",
+        "sha256": null
+      },
+      "execution": {
+        "status": "planned-not-rendered",
+        "renderer": null,
+        "command": null
+      }
+    },
+    {
+      "id": "completion:black-hole:normal-3d",
+      "variantId": "completion",
+      "shotId": "black-hole",
+      "passId": "normal-3d",
+      "passKind": "authoritative-data",
+      "frameRange": {
+        "startFrame": 912,
+        "endFrameExclusive": 1152,
+        "lastFrame": 1151
+      },
+      "output": {
+        "format": "openexr-half-float",
+        "channels": [
+          "XYZ"
+        ],
+        "sequencePattern": "output/voyage-projection/renders/completion/black-hole/normal-3d/frame-%04d.exr",
+        "sha256": null
+      },
+      "execution": {
+        "status": "planned-not-rendered",
+        "renderer": null,
+        "command": null
+      }
+    },
+    {
+      "id": "completion:black-hole:motion-vector-3d",
+      "variantId": "completion",
+      "shotId": "black-hole",
+      "passId": "motion-vector-3d",
+      "passKind": "authoritative-data",
+      "frameRange": {
+        "startFrame": 912,
+        "endFrameExclusive": 1152,
+        "lastFrame": 1151
+      },
+      "output": {
+        "format": "openexr-half-float",
+        "channels": [
+          "XY"
+        ],
+        "sequencePattern": "output/voyage-projection/renders/completion/black-hole/motion-vector-3d/frame-%04d.exr",
+        "sha256": null
+      },
+      "execution": {
+        "status": "planned-not-rendered",
+        "renderer": null,
+        "command": null
+      }
+    },
+    {
+      "id": "completion:black-hole:object-id-3d",
+      "variantId": "completion",
+      "shotId": "black-hole",
+      "passId": "object-id-3d",
+      "passKind": "authoritative-data",
+      "frameRange": {
+        "startFrame": 912,
+        "endFrameExclusive": 1152,
+        "lastFrame": 1151
+      },
+      "output": {
+        "format": "openexr-uint",
+        "channels": [
+          "object-id"
+        ],
+        "sequencePattern": "output/voyage-projection/renders/completion/black-hole/object-id-3d/frame-%04d.exr",
+        "sha256": null
+      },
+      "execution": {
+        "status": "planned-not-rendered",
+        "renderer": null,
+        "command": null
+      }
+    },
+    {
+      "id": "completion:black-hole:far-field-matte-3d",
+      "variantId": "completion",
+      "shotId": "black-hole",
+      "passId": "far-field-matte-3d",
+      "passKind": "authoritative-mask",
+      "frameRange": {
+        "startFrame": 912,
+        "endFrameExclusive": 1152,
+        "lastFrame": 1151
+      },
+      "output": {
+        "format": "openexr-half-float",
+        "channels": [
+          "A"
+        ],
+        "sequencePattern": "output/voyage-projection/renders/completion/black-hole/far-field-matte-3d/frame-%04d.exr",
+        "sha256": null
+      },
+      "execution": {
+        "status": "planned-not-rendered",
+        "renderer": null,
+        "command": null
+      }
+    },
+    {
+      "id": "completion:black-hole:accretion-matte-3d",
+      "variantId": "completion",
+      "shotId": "black-hole",
+      "passId": "accretion-matte-3d",
+      "passKind": "authoritative-mask",
+      "frameRange": {
+        "startFrame": 912,
+        "endFrameExclusive": 1152,
+        "lastFrame": 1151
+      },
+      "output": {
+        "format": "openexr-half-float",
+        "channels": [
+          "A"
+        ],
+        "sequencePattern": "output/voyage-projection/renders/completion/black-hole/accretion-matte-3d/frame-%04d.exr",
+        "sha256": null
+      },
+      "execution": {
+        "status": "planned-not-rendered",
+        "renderer": null,
+        "command": null
+      }
+    },
+    {
+      "id": "completion:singularity:beauty-3d",
+      "variantId": "completion",
+      "shotId": "singularity",
+      "passId": "beauty-3d",
+      "passKind": "authoritative-3d",
+      "frameRange": {
+        "startFrame": 1152,
+        "endFrameExclusive": 1272,
+        "lastFrame": 1271
+      },
+      "output": {
+        "format": "openexr-half-float",
+        "channels": [
+          "RGBA"
+        ],
+        "sequencePattern": "output/voyage-projection/renders/completion/singularity/beauty-3d/frame-%04d.exr",
+        "sha256": null
+      },
+      "execution": {
+        "status": "planned-not-rendered",
+        "renderer": null,
+        "command": null
+      }
+    },
+    {
+      "id": "completion:singularity:depth-3d",
+      "variantId": "completion",
+      "shotId": "singularity",
+      "passId": "depth-3d",
+      "passKind": "authoritative-data",
+      "frameRange": {
+        "startFrame": 1152,
+        "endFrameExclusive": 1272,
+        "lastFrame": 1271
+      },
+      "output": {
+        "format": "openexr-float",
+        "channels": [
+          "Z"
+        ],
+        "sequencePattern": "output/voyage-projection/renders/completion/singularity/depth-3d/frame-%04d.exr",
+        "sha256": null
+      },
+      "execution": {
+        "status": "planned-not-rendered",
+        "renderer": null,
+        "command": null
+      }
+    },
+    {
+      "id": "completion:singularity:normal-3d",
+      "variantId": "completion",
+      "shotId": "singularity",
+      "passId": "normal-3d",
+      "passKind": "authoritative-data",
+      "frameRange": {
+        "startFrame": 1152,
+        "endFrameExclusive": 1272,
+        "lastFrame": 1271
+      },
+      "output": {
+        "format": "openexr-half-float",
+        "channels": [
+          "XYZ"
+        ],
+        "sequencePattern": "output/voyage-projection/renders/completion/singularity/normal-3d/frame-%04d.exr",
+        "sha256": null
+      },
+      "execution": {
+        "status": "planned-not-rendered",
+        "renderer": null,
+        "command": null
+      }
+    },
+    {
+      "id": "completion:singularity:motion-vector-3d",
+      "variantId": "completion",
+      "shotId": "singularity",
+      "passId": "motion-vector-3d",
+      "passKind": "authoritative-data",
+      "frameRange": {
+        "startFrame": 1152,
+        "endFrameExclusive": 1272,
+        "lastFrame": 1271
+      },
+      "output": {
+        "format": "openexr-half-float",
+        "channels": [
+          "XY"
+        ],
+        "sequencePattern": "output/voyage-projection/renders/completion/singularity/motion-vector-3d/frame-%04d.exr",
+        "sha256": null
+      },
+      "execution": {
+        "status": "planned-not-rendered",
+        "renderer": null,
+        "command": null
+      }
+    },
+    {
+      "id": "completion:singularity:object-id-3d",
+      "variantId": "completion",
+      "shotId": "singularity",
+      "passId": "object-id-3d",
+      "passKind": "authoritative-data",
+      "frameRange": {
+        "startFrame": 1152,
+        "endFrameExclusive": 1272,
+        "lastFrame": 1271
+      },
+      "output": {
+        "format": "openexr-uint",
+        "channels": [
+          "object-id"
+        ],
+        "sequencePattern": "output/voyage-projection/renders/completion/singularity/object-id-3d/frame-%04d.exr",
+        "sha256": null
+      },
+      "execution": {
+        "status": "planned-not-rendered",
+        "renderer": null,
+        "command": null
+      }
+    },
+    {
+      "id": "completion:singularity:singularity-matte-3d",
+      "variantId": "completion",
+      "shotId": "singularity",
+      "passId": "singularity-matte-3d",
+      "passKind": "authoritative-mask",
+      "frameRange": {
+        "startFrame": 1152,
+        "endFrameExclusive": 1272,
+        "lastFrame": 1271
+      },
+      "output": {
+        "format": "openexr-half-float",
+        "channels": [
+          "A"
+        ],
+        "sequencePattern": "output/voyage-projection/renders/completion/singularity/singularity-matte-3d/frame-%04d.exr",
+        "sha256": null
+      },
+      "execution": {
+        "status": "planned-not-rendered",
+        "renderer": null,
+        "command": null
+      }
+    },
+    {
+      "id": "completion:beyond:beauty-3d",
+      "variantId": "completion",
+      "shotId": "beyond",
+      "passId": "beauty-3d",
+      "passKind": "authoritative-3d",
+      "frameRange": {
+        "startFrame": 1272,
+        "endFrameExclusive": 1368,
+        "lastFrame": 1367
+      },
+      "output": {
+        "format": "openexr-half-float",
+        "channels": [
+          "RGBA"
+        ],
+        "sequencePattern": "output/voyage-projection/renders/completion/beyond/beauty-3d/frame-%04d.exr",
+        "sha256": null
+      },
+      "execution": {
+        "status": "planned-not-rendered",
+        "renderer": null,
+        "command": null
+      }
+    },
+    {
+      "id": "completion:beyond:depth-3d",
+      "variantId": "completion",
+      "shotId": "beyond",
+      "passId": "depth-3d",
+      "passKind": "authoritative-data",
+      "frameRange": {
+        "startFrame": 1272,
+        "endFrameExclusive": 1368,
+        "lastFrame": 1367
+      },
+      "output": {
+        "format": "openexr-float",
+        "channels": [
+          "Z"
+        ],
+        "sequencePattern": "output/voyage-projection/renders/completion/beyond/depth-3d/frame-%04d.exr",
+        "sha256": null
+      },
+      "execution": {
+        "status": "planned-not-rendered",
+        "renderer": null,
+        "command": null
+      }
+    },
+    {
+      "id": "completion:beyond:normal-3d",
+      "variantId": "completion",
+      "shotId": "beyond",
+      "passId": "normal-3d",
+      "passKind": "authoritative-data",
+      "frameRange": {
+        "startFrame": 1272,
+        "endFrameExclusive": 1368,
+        "lastFrame": 1367
+      },
+      "output": {
+        "format": "openexr-half-float",
+        "channels": [
+          "XYZ"
+        ],
+        "sequencePattern": "output/voyage-projection/renders/completion/beyond/normal-3d/frame-%04d.exr",
+        "sha256": null
+      },
+      "execution": {
+        "status": "planned-not-rendered",
+        "renderer": null,
+        "command": null
+      }
+    },
+    {
+      "id": "completion:beyond:motion-vector-3d",
+      "variantId": "completion",
+      "shotId": "beyond",
+      "passId": "motion-vector-3d",
+      "passKind": "authoritative-data",
+      "frameRange": {
+        "startFrame": 1272,
+        "endFrameExclusive": 1368,
+        "lastFrame": 1367
+      },
+      "output": {
+        "format": "openexr-half-float",
+        "channels": [
+          "XY"
+        ],
+        "sequencePattern": "output/voyage-projection/renders/completion/beyond/motion-vector-3d/frame-%04d.exr",
+        "sha256": null
+      },
+      "execution": {
+        "status": "planned-not-rendered",
+        "renderer": null,
+        "command": null
+      }
+    },
+    {
+      "id": "completion:beyond:object-id-3d",
+      "variantId": "completion",
+      "shotId": "beyond",
+      "passId": "object-id-3d",
+      "passKind": "authoritative-data",
+      "frameRange": {
+        "startFrame": 1272,
+        "endFrameExclusive": 1368,
+        "lastFrame": 1367
+      },
+      "output": {
+        "format": "openexr-uint",
+        "channels": [
+          "object-id"
+        ],
+        "sequencePattern": "output/voyage-projection/renders/completion/beyond/object-id-3d/frame-%04d.exr",
+        "sha256": null
+      },
+      "execution": {
+        "status": "planned-not-rendered",
+        "renderer": null,
+        "command": null
+      }
+    },
+    {
+      "id": "completion:beyond:far-field-matte-3d",
+      "variantId": "completion",
+      "shotId": "beyond",
+      "passId": "far-field-matte-3d",
+      "passKind": "authoritative-mask",
+      "frameRange": {
+        "startFrame": 1272,
+        "endFrameExclusive": 1368,
+        "lastFrame": 1367
+      },
+      "output": {
+        "format": "openexr-half-float",
+        "channels": [
+          "A"
+        ],
+        "sequencePattern": "output/voyage-projection/renders/completion/beyond/far-field-matte-3d/frame-%04d.exr",
+        "sha256": null
+      },
+      "execution": {
+        "status": "planned-not-rendered",
+        "renderer": null,
+        "command": null
+      }
+    },
+    {
+      "id": "progress:black-hole:beauty-3d:poster-source",
+      "variantId": "progress",
+      "shotId": "black-hole",
+      "passId": "beauty-3d",
+      "passKind": "authoritative-3d",
+      "posterSourceOnly": true,
+      "frameRange": {
+        "startFrame": 912,
+        "endFrameExclusive": 913,
+        "lastFrame": 912
+      },
+      "output": {
+        "format": "openexr-half-float",
+        "channels": [
+          "RGBA"
+        ],
+        "sequencePattern": "output/voyage-projection/renders/progress/black-hole/beauty-3d/frame-%04d.exr",
+        "sha256": null
+      },
+      "execution": {
+        "status": "planned-not-rendered",
+        "renderer": null,
+        "command": null
+      }
+    },
+    {
+      "id": "progress:black-hole:depth-3d:poster-source",
+      "variantId": "progress",
+      "shotId": "black-hole",
+      "passId": "depth-3d",
+      "passKind": "authoritative-data",
+      "posterSourceOnly": true,
+      "frameRange": {
+        "startFrame": 912,
+        "endFrameExclusive": 913,
+        "lastFrame": 912
+      },
+      "output": {
+        "format": "openexr-float",
+        "channels": [
+          "Z"
+        ],
+        "sequencePattern": "output/voyage-projection/renders/progress/black-hole/depth-3d/frame-%04d.exr",
+        "sha256": null
+      },
+      "execution": {
+        "status": "planned-not-rendered",
+        "renderer": null,
+        "command": null
+      }
+    },
+    {
+      "id": "progress:black-hole:normal-3d:poster-source",
+      "variantId": "progress",
+      "shotId": "black-hole",
+      "passId": "normal-3d",
+      "passKind": "authoritative-data",
+      "posterSourceOnly": true,
+      "frameRange": {
+        "startFrame": 912,
+        "endFrameExclusive": 913,
+        "lastFrame": 912
+      },
+      "output": {
+        "format": "openexr-half-float",
+        "channels": [
+          "XYZ"
+        ],
+        "sequencePattern": "output/voyage-projection/renders/progress/black-hole/normal-3d/frame-%04d.exr",
+        "sha256": null
+      },
+      "execution": {
+        "status": "planned-not-rendered",
+        "renderer": null,
+        "command": null
+      }
+    },
+    {
+      "id": "progress:black-hole:motion-vector-3d:poster-source",
+      "variantId": "progress",
+      "shotId": "black-hole",
+      "passId": "motion-vector-3d",
+      "passKind": "authoritative-data",
+      "posterSourceOnly": true,
+      "frameRange": {
+        "startFrame": 912,
+        "endFrameExclusive": 913,
+        "lastFrame": 912
+      },
+      "output": {
+        "format": "openexr-half-float",
+        "channels": [
+          "XY"
+        ],
+        "sequencePattern": "output/voyage-projection/renders/progress/black-hole/motion-vector-3d/frame-%04d.exr",
+        "sha256": null
+      },
+      "execution": {
+        "status": "planned-not-rendered",
+        "renderer": null,
+        "command": null
+      }
+    },
+    {
+      "id": "progress:black-hole:object-id-3d:poster-source",
+      "variantId": "progress",
+      "shotId": "black-hole",
+      "passId": "object-id-3d",
+      "passKind": "authoritative-data",
+      "posterSourceOnly": true,
+      "frameRange": {
+        "startFrame": 912,
+        "endFrameExclusive": 913,
+        "lastFrame": 912
+      },
+      "output": {
+        "format": "openexr-uint",
+        "channels": [
+          "object-id"
+        ],
+        "sequencePattern": "output/voyage-projection/renders/progress/black-hole/object-id-3d/frame-%04d.exr",
+        "sha256": null
+      },
+      "execution": {
+        "status": "planned-not-rendered",
+        "renderer": null,
+        "command": null
+      }
+    },
+    {
+      "id": "progress:black-hole:far-field-matte-3d:poster-source",
+      "variantId": "progress",
+      "shotId": "black-hole",
+      "passId": "far-field-matte-3d",
+      "passKind": "authoritative-mask",
+      "posterSourceOnly": true,
+      "frameRange": {
+        "startFrame": 912,
+        "endFrameExclusive": 913,
+        "lastFrame": 912
+      },
+      "output": {
+        "format": "openexr-half-float",
+        "channels": [
+          "A"
+        ],
+        "sequencePattern": "output/voyage-projection/renders/progress/black-hole/far-field-matte-3d/frame-%04d.exr",
+        "sha256": null
+      },
+      "execution": {
+        "status": "planned-not-rendered",
+        "renderer": null,
+        "command": null
+      }
+    },
+    {
+      "id": "progress:black-hole:accretion-matte-3d:poster-source",
+      "variantId": "progress",
+      "shotId": "black-hole",
+      "passId": "accretion-matte-3d",
+      "passKind": "authoritative-mask",
+      "posterSourceOnly": true,
+      "frameRange": {
+        "startFrame": 912,
+        "endFrameExclusive": 913,
+        "lastFrame": 912
+      },
+      "output": {
+        "format": "openexr-half-float",
+        "channels": [
+          "A"
+        ],
+        "sequencePattern": "output/voyage-projection/renders/progress/black-hole/accretion-matte-3d/frame-%04d.exr",
+        "sha256": null
+      },
+      "execution": {
+        "status": "planned-not-rendered",
+        "renderer": null,
+        "command": null
+      }
+    }
+  ]
+}

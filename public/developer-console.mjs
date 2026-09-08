@@ -3,19 +3,19 @@ import {
   ADAPTIVE_LEVEL_MIN,
   ADAPTIVE_LEVEL_START,
   createAdaptiveDifficultyState
-} from "./adaptive-difficulty.mjs?v=5.0.0-beta.1";
+} from "./adaptive-difficulty.mjs?v=5.0.0-beta.4";
 import {
   HOME_MENU_ADVANCED_WINS,
   HOME_MENU_CHOICES_RANK,
   HOME_MENU_CHOICES_WINS,
   HOME_MENU_EXPLORE_RANK,
   HOME_MENU_EXPLORE_WINS
-} from "./home-menu.mjs?v=5.0.0-beta.1";
+} from "./home-menu.mjs?v=5.0.0-beta.4";
 import {
   REMIX_PROGRESSION_VERSION,
   REMIX_RANKS,
   createRemixProgressionState
-} from "./remix-progression.mjs?v=5.0.0-beta.1";
+} from "./remix-progression.mjs?v=5.0.0-beta.4";
 
 export const DEVELOPER_CONSOLE_VERSION = 1;
 

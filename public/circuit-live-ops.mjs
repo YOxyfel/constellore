@@ -3,7 +3,7 @@ import {
   cosmosCircuitCourse,
   cosmosCircuitWeek,
   sanitizeCircuitRun
-} from "./cosmos-circuit.mjs?v=5.0.0-beta.1";
+} from "./cosmos-circuit.mjs?v=5.0.0-beta.4";
 
 export const CIRCUIT_LIVE_OPS_VERSION = 1;
 export const WEEKLY_CIRCUIT_OBJECTIVES = 3;

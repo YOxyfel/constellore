@@ -3,7 +3,7 @@ import {
   getRemixRank,
   getRemixRankPresentation,
   remixFamiliesAreCompatible
-} from "./remix-progression.mjs?v=5.0.0-beta.1";
+} from "./remix-progression.mjs?v=5.0.0-beta.4";
 
 export const REMIX_READINESS_VERSION = 1;
 export const REMIX_READINESS_HISTORY_LIMIT = 36;

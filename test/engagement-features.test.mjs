@@ -3,6 +3,8 @@ import test from "node:test";
 
 import {
   FEEDBACK_CUES,
+  HELP_NUDGE_MAX_DELAY_MS,
+  HELP_NUDGE_MIN_DELAY_MS,
   QUICK_TIP_LIMIT,
   assistancePolicy,
   buildGhost,
@@ -12,11 +14,14 @@ import {
   ghostTrailPreviewState,
   grantSenseCharges,
   lifetimeProgression,
+  lowRankHelpNudgeEligible,
+  nextHelpNudgeDelay,
   rankSenseCandidates,
   reconcileCloudProgression,
   refillSenseWallet,
   sanitizeFeedbackPreferences,
   sanitizeSenseWallet,
+  scoreMultiplierAfterNudges,
   selectQuickTip,
   selectWordGift,
   spendSenseCharge,
@@ -104,6 +109,7 @@ test("spending a Sense charge keeps a reduced Open score", () => {
 
 test("assistance policy is explicit and never increases after stronger help", () => {
   assert.equal(assistancePolicy("tip").scoreMultiplier, 1);
+  assert.equal(assistancePolicy("tip").division, "open");
   assert.equal(assistancePolicy("wish").scoreMultiplier, .8);
   assert.equal(assistancePolicy("market").scoreMultiplier, .8);
   assert.equal(assistancePolicy("ai").scoreMultiplier, .8);
@@ -324,6 +330,8 @@ test("feedback preferences sanitize JSON, booleans, mute, and volume", () => {
     music: true,
     haptics: true,
     resultDetails: false,
+    helpNudges: true,
+    fusionAnimation: "normal",
     muted: false,
     volume: 1,
     musicVolume: 1,
@@ -334,6 +342,8 @@ test("feedback preferences sanitize JSON, booleans, mute, and volume", () => {
     music: true,
     haptics: false,
     resultDetails: false,
+    helpNudges: true,
+    fusionAnimation: "normal",
     muted: true,
     volume: 0,
     musicVolume: 1,
@@ -344,11 +354,42 @@ test("feedback preferences sanitize JSON, booleans, mute, and volume", () => {
     music: true,
     haptics: true,
     resultDetails: false,
+    helpNudges: true,
+    fusionAnimation: "normal",
     muted: false,
     volume: .75,
     musicVolume: 1,
     sfxVolume: 1
   });
+});
+
+test("low-rank help nudges are bounded, optional, and retain ninety percent per accepted hint", () => {
+  for (let sequence = 0; sequence < 40; sequence += 1) {
+    const delay = nextHelpNudgeDelay({ seed: 73, sequence });
+    assert.ok(delay >= HELP_NUDGE_MIN_DELAY_MS);
+    assert.ok(delay <= HELP_NUDGE_MAX_DELAY_MS);
+    assert.equal(delay, nextHelpNudgeDelay({ seed: 73, sequence }));
+  }
+  assert.deepEqual(
+    [0, 1, 2, 3].map((nudgesUsed) => scoreMultiplierAfterNudges({ nudgesUsed })),
+    [1, .9, .81, .729]
+  );
+  assert.equal(scoreMultiplierAfterNudges({ baseMultiplier: .5, nudgesUsed: 1 }), .45);
+  assert.equal(scoreMultiplierAfterNudges({ baseMultiplier: .75, nudgesUsed: 3 }), .54675);
+  const bronzeClimb = { onboardingComplete: true, mode: "reach" };
+  assert.equal(lowRankHelpNudgeEligible({ ...bronzeClimb, rankNumber: 1 }), true);
+  assert.equal(lowRankHelpNudgeEligible({ ...bronzeClimb, rankNumber: 2 }), true);
+  assert.equal(lowRankHelpNudgeEligible({ ...bronzeClimb, rankNumber: 3 }), false);
+  assert.equal(lowRankHelpNudgeEligible({ rankNumber: 1, mode: "reach" }), false, "the opening lessons must finish before idle nudges begin");
+  for (const mode of ["training", "second-orbit", "explore", "scramble", "challenge", "daily", "weekly"]) {
+    assert.equal(lowRankHelpNudgeEligible({ onboardingComplete: true, rankNumber: 1, mode }), false);
+  }
+  for (const blocked of [
+    { enabled: false }, { active: false }, { paused: true }, { busy: true }, { dialogOpen: true }, { tipsUsed: 3 }
+  ]) assert.equal(lowRankHelpNudgeEligible({ ...bronzeClimb, rankNumber: 1, ...blocked }), false);
+  assert.equal(sanitizeFeedbackPreferences({ helpNudges: "false" }).helpNudges, false);
+  assert.equal(sanitizeFeedbackPreferences({ fusionAnimation: "faster" }).fusionAnimation, "faster");
+  assert.equal(sanitizeFeedbackPreferences({ fusionAnimation: "unknown" }).fusionAnimation, "normal");
 });
 
 test("feedback cue policy is volume-aware and safe for silent, reduced-motion, and hidden contexts", () => {

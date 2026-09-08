@@ -18,7 +18,7 @@ test("the player profile leads with permanent Route Rank and separated lifetime 
   assert.match(profile, /id="profileRouteRankName">Bronze<\/h3>/);
   assert.match(profile, /id="profileRouteRankMeter"[^>]+role="progressbar"/);
   assert.match(profile, /id="profileRouteRankUnlock">Silver unlocks Free play and custom targets/);
-  assert.match(profile, /class="profile-total"[\s\S]*id="profileTotalDust"/);
+  assert.match(profile, /class="profile-grid profile-core-grid"[\s\S]*class="profile-total"[\s\S]*id="profileTotalDust"[\s\S]*Stardust[\s\S]*Spendable balance/);
   assert.match(profile, /class="profile-overview"[\s\S]*id="profileWords"[\s\S]*id="profileWins"[\s\S]*id="profileStreak"/);
   assert.match(profile, /<section class="profile-more"[^>]+aria-labelledby="profileMoreTitle"/);
   assert.match(profile, /id="profileMoreTitle">Progress and rewards/);
@@ -37,17 +37,29 @@ test("the player profile leads with permanent Route Rank and separated lifetime 
   assert.ok(profile.indexOf("profile-route-rank") < profile.indexOf("profile-overview"), "Route Rank must lead the progress story");
   assert.ok(profile.indexOf("profile-overview") < profile.indexOf("profile-disclosure-grid"), "key progress must appear before secondary collections");
   assert.match(menu, /id="hubMenuSettingsTitle">Settings and data<\/h3>/);
+  assert.doesNotMatch(profile, /profile-modal__viewport|data-profile-frame-overlay/);
+  assert.doesNotMatch(rankSurface, /profile-window-frame|createProfileRankFrameController|data-profile-frame/);
+  assert.doesNotMatch(rankSurface, /profile-frame-equipped|profile-rank-frame-stage/);
+  assert.doesNotMatch(rankSurface, /profile-frame-studio|profile-frame-picker|profileFramePicker/);
 });
 
 test("the profile is roomy on desktop, full-screen on mobile, and resets secondary tools", () => {
   assert.match(rankSurface, /[.]simple-ui [.]modal[.]profile-modal\s*\{[^}]*width:\s*min\(720px,/);
-  assert.match(rankSurface, /[.]simple-ui [.]profile-core-grid\s*\{[^}]*grid-template-columns:\s*repeat\(3,/);
+  assert.match(rankSurface, /[.]simple-ui [.]profile-core-grid\s*\{[^}]*grid-template-columns:\s*repeat\(4,/);
+  assert.match(rankSurface, /[.]simple-ui [.]profile-core-grid [.]profile-total\s*\{[^}]*display:\s*grid[^}]*border:[^}]*text-align:\s*center/);
+  assert.match(rankSurface, /@media \(max-width:\s*700px\)[\s\S]*?[.]simple-ui [.]profile-core-grid\s*\{[^}]*repeat\(2,/);
+  assert.match(rankSurface, /@media \(max-width:\s*420px\)[\s\S]*?[.]simple-ui [.]profile-core-grid [.]profile-total\s*\{[^}]*min-height:\s*86px/);
   assert.match(rankSurface, /@media \(max-width:\s*700px\)[\s\S]*?[.]simple-ui [.]modal[.]profile-modal\s*\{[^}]*width:\s*100%[^}]*height:\s*100dvh/);
+  assert.doesNotMatch(rankSurface, /--profile-frame-/);
+  assert.match(rankSurface, /[.]profile-modal > [.]modal-close\s*\{[^}]*background:/);
+  assert.match(rankSurface, /[.]profile-modal > [.]modal-close:focus-visible\s*\{[^}]*outline:/);
+  assert.match(rankSurface, /@media \(max-width:\s*700px\)[\s\S]*?[.]profile-modal > [.]modal-close\s*\{[^}]*safe-area-inset-top/);
   assert.match(rankSurface, /[.]profile-route-rank\s*\{[^}]*grid-template-columns:/);
   assert.match(styles, /[.]profile-disclosure\[open\]\s*\{[^}]*grid-column:\s*1\s*\/\s*-1/);
   assert.match(homeMenuView, /routeRankProgressPresentation\(routeRank\)/);
   assert.match(homeMenuView, /profileRouteRankMeter[^]+aria-valuenow/);
   assert.match(app, /renderProfileRankView\(routeRank\)/);
+  assert.doesNotMatch(app, /profileRankSurface[?][.]syncProfileRankFrame/);
   assert.match(app, /await prepareProfileRankSurface\(\)[^]+renderProfile\(\)/);
   assert.match(app, /try\s*\{[^]+import\("[.]\/profile-rank-surface[.]mjs[^]+catch\s*\{[^]+profileRankSurface = null/);
   assert.match(app, /profileBadgeSummary[^\n]+badges[.]filter\(\(badge\) => badge[.]earned\)/);
@@ -55,6 +67,24 @@ test("the profile is roomy on desktop, full-screen on mobile, and resets seconda
   assert.match(app, /querySelectorAll\("[.]profile-disclosure\[open\]"\)[.]forEach/);
   assert.match(app, /addEventListener\("toggle"[\s\S]*other !== section[\s\S]*other[.]open = false/);
   assert.match(app, /function openHubMenu\(\)[\s\S]*renderProfile\(\)[\s\S]*menu-disclosure\[open\]/);
+});
+
+test("Stardust has a persistent, synchronized home and menu wallet", () => {
+  const header = page.slice(page.indexOf('<header class="start-nav">'), page.indexOf('<main class="start-content">'));
+  assert.match(header, /id="homeStardustWallet"[^>]+role="status"[^>]+aria-label="0 Stardust available"/);
+  assert.match(header, /class="stardust-wallet__copy"[^>]*>[\s\S]*Stardust[\s\S]*id="profileDust"/);
+  assert.ok(header.indexOf("homeStardustWallet") < header.indexOf("profileButton"), "the balance should remain separate from Route Rank");
+  assert.doesNotMatch(header, /profileButton[^]+id="profileDust"/);
+  assert.match(menu, /id="hubStardustWallet"[^>]+role="status"[^>]+aria-label="0 Stardust available"/);
+  assert.match(menu, /id="hubStardust"/);
+  assert.match(app, /const formattedStardust = stardustBalance[.]toLocaleString\("en-US"\)/);
+  for (const id of ["profileDust", "hubStardust", "profileTotalDust"]) {
+    assert.match(app, new RegExp(`#${id}[^\\n]+formattedStardust`));
+  }
+  for (const id of ["homeStardustWallet", "hubStardustWallet"]) {
+    assert.match(app, new RegExp(`#${id}[^\\n]+Stardust available`));
+  }
+  assert.doesNotMatch(app, /#profileLevel/);
 });
 
 test("sound settings expose an accessible three-channel volume mixer", () => {

@@ -1,0 +1,767 @@
+{
+  "schemaVersion": 1,
+  "contractId": "constellore-voyage-projection-cinematic",
+  "contractVersion": "1.2.0",
+  "contractSha256": "0459b858503d99cc30d04139b5aa6144d03fb81e4b2e95fb9be4973f149b1416",
+  "timebase": "1/24",
+  "fps": 24,
+  "frameNumbering": "zero-based-end-exclusive",
+  "narrationQuantization": "nearest-frame; source second values remain authoritative for WebVTT",
+  "frameRange": {
+    "startFrame": 0,
+    "endFrameExclusive": 1368,
+    "lastFrame": 1367
+  },
+  "variants": [
+    {
+      "id": "promise",
+      "purpose": "first-open mission promise",
+      "terminalOutcome": "destination-unresolved",
+      "shots": [
+        {
+          "id": "earth",
+          "setting": "earth-departure",
+          "storyBeat": "The projection wakes over Earth and establishes the player-sized rocket against a reachable world.",
+          "cameraIntent": "Grounded, slow rise, readable horizon; no roll.",
+          "sourceSeconds": {
+            "start": 0,
+            "end": 7
+          },
+          "startFrame": 0,
+          "endFrameExclusive": 168,
+          "lastFrame": 167,
+          "durationFrames": 168,
+          "startTimecode": "00:00:00:00",
+          "endTimecodeExclusive": "00:00:07:00",
+          "authoritativePassIds": [
+            "beauty-3d",
+            "depth-3d",
+            "normal-3d",
+            "motion-vector-3d",
+            "object-id-3d",
+            "far-field-matte-3d",
+            "dust-matte-3d"
+          ],
+          "optionalAiPassIds": [
+            "ai-deep-field",
+            "ai-dust-volume"
+          ],
+          "narrationCueIds": [
+            "understanding-makes-reachable"
+          ]
+        },
+        {
+          "id": "solar",
+          "setting": "solar-system",
+          "storyBeat": "The rocket crosses the known solar worlds; completed coordinates materialize while future planets remain distant.",
+          "cameraIntent": "One continuous lateral pursuit with restrained parallax and no orbiting camera roll.",
+          "sourceSeconds": {
+            "start": 7,
+            "end": 20
+          },
+          "startFrame": 168,
+          "endFrameExclusive": 480,
+          "lastFrame": 479,
+          "durationFrames": 312,
+          "startTimecode": "00:00:07:00",
+          "endTimecodeExclusive": "00:00:20:00",
+          "authoritativePassIds": [
+            "beauty-3d",
+            "depth-3d",
+            "normal-3d",
+            "motion-vector-3d",
+            "object-id-3d",
+            "far-field-matte-3d",
+            "dust-matte-3d"
+          ],
+          "optionalAiPassIds": [
+            "ai-deep-field",
+            "ai-dust-volume"
+          ],
+          "narrationCueIds": [
+            "discovery-makes-coordinate"
+          ]
+        },
+        {
+          "id": "heliopause",
+          "setting": "heliopause",
+          "storyBeat": "Known sunlight thins and the route becomes the only stable coordinate.",
+          "cameraIntent": "Locked pursuit eases wider; maintain a level horizon surrogate and legible rocket silhouette.",
+          "sourceSeconds": {
+            "start": 20,
+            "end": 27
+          },
+          "startFrame": 480,
+          "endFrameExclusive": 648,
+          "lastFrame": 647,
+          "durationFrames": 168,
+          "startTimecode": "00:00:20:00",
+          "endTimecodeExclusive": "00:00:27:00",
+          "authoritativePassIds": [
+            "beauty-3d",
+            "depth-3d",
+            "normal-3d",
+            "motion-vector-3d",
+            "object-id-3d",
+            "far-field-matte-3d",
+            "dust-matte-3d"
+          ],
+          "optionalAiPassIds": [
+            "ai-deep-field",
+            "ai-dust-volume"
+          ],
+          "narrationCueIds": []
+        },
+        {
+          "id": "warp",
+          "setting": "interstellar-corridor",
+          "storyBeat": "The projection uses earned coordinates to fold distance without inventing new destinations.",
+          "cameraIntent": "Centered pursuit, fixed roll, acceleration communicated by environment and route compression rather than camera shake.",
+          "sourceSeconds": {
+            "start": 27,
+            "end": 38
+          },
+          "startFrame": 648,
+          "endFrameExclusive": 912,
+          "lastFrame": 911,
+          "durationFrames": 264,
+          "startTimecode": "00:00:27:00",
+          "endTimecodeExclusive": "00:00:38:00",
+          "authoritativePassIds": [
+            "beauty-3d",
+            "depth-3d",
+            "normal-3d",
+            "motion-vector-3d",
+            "object-id-3d",
+            "far-field-matte-3d",
+            "warp-matte-3d"
+          ],
+          "optionalAiPassIds": [
+            "ai-deep-field",
+            "ai-warp-caustics"
+          ],
+          "narrationCueIds": []
+        },
+        {
+          "id": "black-hole",
+          "setting": "black-hole-approach",
+          "storyBeat": "The last known light bends around a destination the map cannot name.",
+          "cameraIntent": "Measured push toward the accretion plane; no handheld motion and no more than three degrees of authored roll.",
+          "sourceSeconds": {
+            "start": 38,
+            "end": 48
+          },
+          "startFrame": 912,
+          "endFrameExclusive": 1152,
+          "lastFrame": 1151,
+          "durationFrames": 240,
+          "startTimecode": "00:00:38:00",
+          "endTimecodeExclusive": "00:00:48:00",
+          "authoritativePassIds": [
+            "beauty-3d",
+            "depth-3d",
+            "normal-3d",
+            "motion-vector-3d",
+            "object-id-3d",
+            "far-field-matte-3d",
+            "accretion-matte-3d"
+          ],
+          "optionalAiPassIds": [
+            "ai-deep-field",
+            "ai-accretion-glow"
+          ],
+          "narrationCueIds": [
+            "map-has-no-word"
+          ]
+        },
+        {
+          "id": "singularity",
+          "setting": "event-horizon",
+          "storyBeat": "The mission projection reaches its data boundary and either collapses or resolves according to the earned variant.",
+          "cameraIntent": "Axial approach with fixed roll; the singularity grows through distance, never through a synthetic zoom punch.",
+          "sourceSeconds": {
+            "start": 48,
+            "end": 53
+          },
+          "startFrame": 1152,
+          "endFrameExclusive": 1272,
+          "lastFrame": 1271,
+          "durationFrames": 120,
+          "startTimecode": "00:00:48:00",
+          "endTimecodeExclusive": "00:00:53:00",
+          "authoritativePassIds": [
+            "beauty-3d",
+            "depth-3d",
+            "normal-3d",
+            "motion-vector-3d",
+            "object-id-3d",
+            "singularity-matte-3d"
+          ],
+          "optionalAiPassIds": [
+            "ai-singularity-corona"
+          ],
+          "narrationCueIds": []
+        },
+        {
+          "id": "return",
+          "setting": "earth-return",
+          "storyBeat": "The unresolved projection folds back to Earth and hands agency to the player: make the route.",
+          "cameraIntent": "Short visual recall of Earth, stable composition, clean negative space for authored interface text.",
+          "sourceSeconds": {
+            "start": 53,
+            "end": 57
+          },
+          "startFrame": 1272,
+          "endFrameExclusive": 1368,
+          "lastFrame": 1367,
+          "durationFrames": 96,
+          "startTimecode": "00:00:53:00",
+          "endTimecodeExclusive": "00:00:57:00",
+          "authoritativePassIds": [
+            "beauty-3d",
+            "depth-3d",
+            "normal-3d",
+            "motion-vector-3d",
+            "object-id-3d",
+            "far-field-matte-3d"
+          ],
+          "optionalAiPassIds": [
+            "ai-deep-field"
+          ],
+          "narrationCueIds": [
+            "make-one"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "progress",
+      "purpose": "evolving realtime mission projection",
+      "terminalOutcome": "destination-unresolved",
+      "shots": [
+        {
+          "id": "earth",
+          "setting": "earth-departure",
+          "storyBeat": "The projection wakes over Earth and establishes the player-sized rocket against a reachable world.",
+          "cameraIntent": "Grounded, slow rise, readable horizon; no roll.",
+          "sourceSeconds": {
+            "start": 0,
+            "end": 7
+          },
+          "startFrame": 0,
+          "endFrameExclusive": 168,
+          "lastFrame": 167,
+          "durationFrames": 168,
+          "startTimecode": "00:00:00:00",
+          "endTimecodeExclusive": "00:00:07:00",
+          "authoritativePassIds": [
+            "beauty-3d",
+            "depth-3d",
+            "normal-3d",
+            "motion-vector-3d",
+            "object-id-3d",
+            "far-field-matte-3d",
+            "dust-matte-3d"
+          ],
+          "optionalAiPassIds": [
+            "ai-deep-field",
+            "ai-dust-volume"
+          ],
+          "narrationCueIds": [
+            "understanding-makes-reachable"
+          ]
+        },
+        {
+          "id": "solar",
+          "setting": "solar-system",
+          "storyBeat": "The rocket crosses the known solar worlds; completed coordinates materialize while future planets remain distant.",
+          "cameraIntent": "One continuous lateral pursuit with restrained parallax and no orbiting camera roll.",
+          "sourceSeconds": {
+            "start": 7,
+            "end": 20
+          },
+          "startFrame": 168,
+          "endFrameExclusive": 480,
+          "lastFrame": 479,
+          "durationFrames": 312,
+          "startTimecode": "00:00:07:00",
+          "endTimecodeExclusive": "00:00:20:00",
+          "authoritativePassIds": [
+            "beauty-3d",
+            "depth-3d",
+            "normal-3d",
+            "motion-vector-3d",
+            "object-id-3d",
+            "far-field-matte-3d",
+            "dust-matte-3d"
+          ],
+          "optionalAiPassIds": [
+            "ai-deep-field",
+            "ai-dust-volume"
+          ],
+          "narrationCueIds": [
+            "discovery-makes-coordinate"
+          ]
+        },
+        {
+          "id": "heliopause",
+          "setting": "heliopause",
+          "storyBeat": "Known sunlight thins and the route becomes the only stable coordinate.",
+          "cameraIntent": "Locked pursuit eases wider; maintain a level horizon surrogate and legible rocket silhouette.",
+          "sourceSeconds": {
+            "start": 20,
+            "end": 27
+          },
+          "startFrame": 480,
+          "endFrameExclusive": 648,
+          "lastFrame": 647,
+          "durationFrames": 168,
+          "startTimecode": "00:00:20:00",
+          "endTimecodeExclusive": "00:00:27:00",
+          "authoritativePassIds": [
+            "beauty-3d",
+            "depth-3d",
+            "normal-3d",
+            "motion-vector-3d",
+            "object-id-3d",
+            "far-field-matte-3d",
+            "dust-matte-3d"
+          ],
+          "optionalAiPassIds": [
+            "ai-deep-field",
+            "ai-dust-volume"
+          ],
+          "narrationCueIds": []
+        },
+        {
+          "id": "warp",
+          "setting": "interstellar-corridor",
+          "storyBeat": "The projection uses earned coordinates to fold distance without inventing new destinations.",
+          "cameraIntent": "Centered pursuit, fixed roll, acceleration communicated by environment and route compression rather than camera shake.",
+          "sourceSeconds": {
+            "start": 27,
+            "end": 38
+          },
+          "startFrame": 648,
+          "endFrameExclusive": 912,
+          "lastFrame": 911,
+          "durationFrames": 264,
+          "startTimecode": "00:00:27:00",
+          "endTimecodeExclusive": "00:00:38:00",
+          "authoritativePassIds": [
+            "beauty-3d",
+            "depth-3d",
+            "normal-3d",
+            "motion-vector-3d",
+            "object-id-3d",
+            "far-field-matte-3d",
+            "warp-matte-3d"
+          ],
+          "optionalAiPassIds": [
+            "ai-deep-field",
+            "ai-warp-caustics"
+          ],
+          "narrationCueIds": []
+        },
+        {
+          "id": "black-hole",
+          "setting": "black-hole-approach",
+          "storyBeat": "The last known light bends around a destination the map cannot name.",
+          "cameraIntent": "Measured push toward the accretion plane; no handheld motion and no more than three degrees of authored roll.",
+          "sourceSeconds": {
+            "start": 38,
+            "end": 48
+          },
+          "startFrame": 912,
+          "endFrameExclusive": 1152,
+          "lastFrame": 1151,
+          "durationFrames": 240,
+          "startTimecode": "00:00:38:00",
+          "endTimecodeExclusive": "00:00:48:00",
+          "authoritativePassIds": [
+            "beauty-3d",
+            "depth-3d",
+            "normal-3d",
+            "motion-vector-3d",
+            "object-id-3d",
+            "far-field-matte-3d",
+            "accretion-matte-3d"
+          ],
+          "optionalAiPassIds": [
+            "ai-deep-field",
+            "ai-accretion-glow"
+          ],
+          "narrationCueIds": [
+            "map-has-no-word"
+          ]
+        },
+        {
+          "id": "singularity",
+          "setting": "event-horizon",
+          "storyBeat": "The mission projection reaches its data boundary and either collapses or resolves according to the earned variant.",
+          "cameraIntent": "Axial approach with fixed roll; the singularity grows through distance, never through a synthetic zoom punch.",
+          "sourceSeconds": {
+            "start": 48,
+            "end": 53
+          },
+          "startFrame": 1152,
+          "endFrameExclusive": 1272,
+          "lastFrame": 1271,
+          "durationFrames": 120,
+          "startTimecode": "00:00:48:00",
+          "endTimecodeExclusive": "00:00:53:00",
+          "authoritativePassIds": [
+            "beauty-3d",
+            "depth-3d",
+            "normal-3d",
+            "motion-vector-3d",
+            "object-id-3d",
+            "singularity-matte-3d"
+          ],
+          "optionalAiPassIds": [
+            "ai-singularity-corona"
+          ],
+          "narrationCueIds": []
+        },
+        {
+          "id": "return",
+          "setting": "earth-return",
+          "storyBeat": "The unresolved projection folds back to Earth and hands agency to the player: make the route.",
+          "cameraIntent": "Short visual recall of Earth, stable composition, clean negative space for authored interface text.",
+          "sourceSeconds": {
+            "start": 53,
+            "end": 57
+          },
+          "startFrame": 1272,
+          "endFrameExclusive": 1368,
+          "lastFrame": 1367,
+          "durationFrames": 96,
+          "startTimecode": "00:00:53:00",
+          "endTimecodeExclusive": "00:00:57:00",
+          "authoritativePassIds": [
+            "beauty-3d",
+            "depth-3d",
+            "normal-3d",
+            "motion-vector-3d",
+            "object-id-3d",
+            "far-field-matte-3d"
+          ],
+          "optionalAiPassIds": [
+            "ai-deep-field"
+          ],
+          "narrationCueIds": [
+            "make-one"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "completion",
+      "purpose": "earned finale",
+      "terminalOutcome": "continued-beyond",
+      "shots": [
+        {
+          "id": "earth",
+          "setting": "earth-departure",
+          "storyBeat": "The projection wakes over Earth and establishes the player-sized rocket against a reachable world.",
+          "cameraIntent": "Grounded, slow rise, readable horizon; no roll.",
+          "sourceSeconds": {
+            "start": 0,
+            "end": 7
+          },
+          "startFrame": 0,
+          "endFrameExclusive": 168,
+          "lastFrame": 167,
+          "durationFrames": 168,
+          "startTimecode": "00:00:00:00",
+          "endTimecodeExclusive": "00:00:07:00",
+          "authoritativePassIds": [
+            "beauty-3d",
+            "depth-3d",
+            "normal-3d",
+            "motion-vector-3d",
+            "object-id-3d",
+            "far-field-matte-3d",
+            "dust-matte-3d"
+          ],
+          "optionalAiPassIds": [
+            "ai-deep-field",
+            "ai-dust-volume"
+          ],
+          "narrationCueIds": [
+            "understanding-makes-reachable"
+          ]
+        },
+        {
+          "id": "solar",
+          "setting": "solar-system",
+          "storyBeat": "The rocket crosses the known solar worlds; completed coordinates materialize while future planets remain distant.",
+          "cameraIntent": "One continuous lateral pursuit with restrained parallax and no orbiting camera roll.",
+          "sourceSeconds": {
+            "start": 7,
+            "end": 20
+          },
+          "startFrame": 168,
+          "endFrameExclusive": 480,
+          "lastFrame": 479,
+          "durationFrames": 312,
+          "startTimecode": "00:00:07:00",
+          "endTimecodeExclusive": "00:00:20:00",
+          "authoritativePassIds": [
+            "beauty-3d",
+            "depth-3d",
+            "normal-3d",
+            "motion-vector-3d",
+            "object-id-3d",
+            "far-field-matte-3d",
+            "dust-matte-3d"
+          ],
+          "optionalAiPassIds": [
+            "ai-deep-field",
+            "ai-dust-volume"
+          ],
+          "narrationCueIds": [
+            "discovery-makes-coordinate"
+          ]
+        },
+        {
+          "id": "heliopause",
+          "setting": "heliopause",
+          "storyBeat": "Known sunlight thins and the route becomes the only stable coordinate.",
+          "cameraIntent": "Locked pursuit eases wider; maintain a level horizon surrogate and legible rocket silhouette.",
+          "sourceSeconds": {
+            "start": 20,
+            "end": 27
+          },
+          "startFrame": 480,
+          "endFrameExclusive": 648,
+          "lastFrame": 647,
+          "durationFrames": 168,
+          "startTimecode": "00:00:20:00",
+          "endTimecodeExclusive": "00:00:27:00",
+          "authoritativePassIds": [
+            "beauty-3d",
+            "depth-3d",
+            "normal-3d",
+            "motion-vector-3d",
+            "object-id-3d",
+            "far-field-matte-3d",
+            "dust-matte-3d"
+          ],
+          "optionalAiPassIds": [
+            "ai-deep-field",
+            "ai-dust-volume"
+          ],
+          "narrationCueIds": []
+        },
+        {
+          "id": "warp",
+          "setting": "interstellar-corridor",
+          "storyBeat": "The projection uses earned coordinates to fold distance without inventing new destinations.",
+          "cameraIntent": "Centered pursuit, fixed roll, acceleration communicated by environment and route compression rather than camera shake.",
+          "sourceSeconds": {
+            "start": 27,
+            "end": 38
+          },
+          "startFrame": 648,
+          "endFrameExclusive": 912,
+          "lastFrame": 911,
+          "durationFrames": 264,
+          "startTimecode": "00:00:27:00",
+          "endTimecodeExclusive": "00:00:38:00",
+          "authoritativePassIds": [
+            "beauty-3d",
+            "depth-3d",
+            "normal-3d",
+            "motion-vector-3d",
+            "object-id-3d",
+            "far-field-matte-3d",
+            "warp-matte-3d"
+          ],
+          "optionalAiPassIds": [
+            "ai-deep-field",
+            "ai-warp-caustics"
+          ],
+          "narrationCueIds": []
+        },
+        {
+          "id": "black-hole",
+          "setting": "black-hole-approach",
+          "storyBeat": "The last known light bends around a destination the map cannot name.",
+          "cameraIntent": "Measured push toward the accretion plane; no handheld motion and no more than three degrees of authored roll.",
+          "sourceSeconds": {
+            "start": 38,
+            "end": 48
+          },
+          "startFrame": 912,
+          "endFrameExclusive": 1152,
+          "lastFrame": 1151,
+          "durationFrames": 240,
+          "startTimecode": "00:00:38:00",
+          "endTimecodeExclusive": "00:00:48:00",
+          "authoritativePassIds": [
+            "beauty-3d",
+            "depth-3d",
+            "normal-3d",
+            "motion-vector-3d",
+            "object-id-3d",
+            "far-field-matte-3d",
+            "accretion-matte-3d"
+          ],
+          "optionalAiPassIds": [
+            "ai-deep-field",
+            "ai-accretion-glow"
+          ],
+          "narrationCueIds": [
+            "map-has-no-word"
+          ]
+        },
+        {
+          "id": "singularity",
+          "setting": "event-horizon",
+          "storyBeat": "The mission projection reaches its data boundary and either collapses or resolves according to the earned variant.",
+          "cameraIntent": "Axial approach with fixed roll; the singularity grows through distance, never through a synthetic zoom punch.",
+          "sourceSeconds": {
+            "start": 48,
+            "end": 53
+          },
+          "startFrame": 1152,
+          "endFrameExclusive": 1272,
+          "lastFrame": 1271,
+          "durationFrames": 120,
+          "startTimecode": "00:00:48:00",
+          "endTimecodeExclusive": "00:00:53:00",
+          "authoritativePassIds": [
+            "beauty-3d",
+            "depth-3d",
+            "normal-3d",
+            "motion-vector-3d",
+            "object-id-3d",
+            "singularity-matte-3d"
+          ],
+          "optionalAiPassIds": [
+            "ai-singularity-corona"
+          ],
+          "narrationCueIds": []
+        },
+        {
+          "id": "beyond",
+          "setting": "beyond-singularity",
+          "storyBeat": "The completed projection continues beyond the old boundary into a still-unnamed field without declaring the journey finished.",
+          "cameraIntent": "Stable emergence, slow parallax, no celebratory spin or montage cut.",
+          "sourceSeconds": {
+            "start": 53,
+            "end": 57
+          },
+          "startFrame": 1272,
+          "endFrameExclusive": 1368,
+          "lastFrame": 1367,
+          "durationFrames": 96,
+          "startTimecode": "00:00:53:00",
+          "endTimecodeExclusive": "00:00:57:00",
+          "authoritativePassIds": [
+            "beauty-3d",
+            "depth-3d",
+            "normal-3d",
+            "motion-vector-3d",
+            "object-id-3d",
+            "far-field-matte-3d"
+          ],
+          "optionalAiPassIds": [
+            "ai-beyond-color-field"
+          ],
+          "narrationCueIds": []
+        }
+      ]
+    }
+  ],
+  "narrationCues": [
+    {
+      "id": "understanding-makes-reachable",
+      "shotId": "earth",
+      "variants": [
+        "promise",
+        "progress",
+        "completion"
+      ],
+      "text": "Every world we understand becomes somewhere we can reach.",
+      "sourceSeconds": {
+        "start": 1,
+        "end": 6.2
+      },
+      "startFrame": 24,
+      "endFrameExclusive": 149,
+      "lastFrame": 148,
+      "durationFrames": 125,
+      "startTimecode": "00:00:01:00",
+      "endTimecodeExclusive": "00:00:06:05",
+      "startQuantizationMilliseconds": 0,
+      "endQuantizationMilliseconds": 8.333
+    },
+    {
+      "id": "discovery-makes-coordinate",
+      "shotId": "solar",
+      "variants": [
+        "promise",
+        "progress",
+        "completion"
+      ],
+      "text": "Every discovery gives the voyage another coordinate.",
+      "sourceSeconds": {
+        "start": 8.4,
+        "end": 14.2
+      },
+      "startFrame": 202,
+      "endFrameExclusive": 341,
+      "lastFrame": 340,
+      "durationFrames": 139,
+      "startTimecode": "00:00:08:10",
+      "endTimecodeExclusive": "00:00:14:05",
+      "startQuantizationMilliseconds": 16.667,
+      "endQuantizationMilliseconds": 8.333
+    },
+    {
+      "id": "map-has-no-word",
+      "shotId": "black-hole",
+      "variants": [
+        "promise",
+        "progress",
+        "completion"
+      ],
+      "text": "Beyond the last light, the map has no word for what comes next.",
+      "sourceSeconds": {
+        "start": 39.4,
+        "end": 46.8
+      },
+      "startFrame": 946,
+      "endFrameExclusive": 1123,
+      "lastFrame": 1122,
+      "durationFrames": 177,
+      "startTimecode": "00:00:39:10",
+      "endTimecodeExclusive": "00:00:46:19",
+      "startQuantizationMilliseconds": 16.667,
+      "endQuantizationMilliseconds": -8.333
+    },
+    {
+      "id": "make-one",
+      "shotId": "return",
+      "variants": [
+        "promise",
+        "progress"
+      ],
+      "text": "So we will make one.",
+      "sourceSeconds": {
+        "start": 54,
+        "end": 56.4
+      },
+      "startFrame": 1296,
+      "endFrameExclusive": 1354,
+      "lastFrame": 1353,
+      "durationFrames": 58,
+      "startTimecode": "00:00:54:00",
+      "endTimecodeExclusive": "00:00:56:10",
+      "startQuantizationMilliseconds": 0,
+      "endQuantizationMilliseconds": 16.667
+    }
+  ]
+}

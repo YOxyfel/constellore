@@ -61,6 +61,12 @@ export function createInitialAppState({
       rankId: "",
       blockedPairs: new Set()
     },
+    conceptChemistry: null,
+    conceptMatter: {
+      version: 1,
+      representation: "compound",
+      operations: []
+    },
     runIq,
     focusMode: true,
     routeProgress,

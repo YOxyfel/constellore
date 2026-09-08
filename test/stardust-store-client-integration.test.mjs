@@ -23,7 +23,7 @@ test("the help surface lazy-loads one canonical Stardust store", () => {
   assert.match(app, /loadOptionalStylesheet\("stardust-store[.]css(?:[?]v=[^"]+)?"\)/);
   assert.doesNotMatch(app, /from "[.]\/stardust-store[.]mjs/);
   assert.doesNotMatch(page, /<link[^>]+stardust-store[.]css/);
-  assert.match(app, /function openPowerups\(\)[\s\S]*ensureStardustStore\(\)/);
+  assert.match(app, /function openPowerups\(\{ trigger = document[.]activeElement \} = \{\}\)[\s\S]*ensureStardustStore\(\)/);
 });
 
 test("all Stardust buttons use the quote-and-apply purchase contract", () => {

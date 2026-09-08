@@ -128,6 +128,15 @@ test("assistance applies a monotonic whole-route penalty and Study always scores
   assert.equal(market.dimensions.purity, 80);
   assert.equal(inferredAi.dimensions.purity, 80);
   assert.equal(giftThenAi.dimensions.purity, 50, "later AI use cannot upgrade a stronger Gift penalty");
+  for (const scoreMultiplier of [.9, .81, .729]) {
+    const input = completedRoute({ assist: "tip", scoreMultiplier });
+    const tippedGrade = gradeSignatureRoute(input);
+    const tippedSignature = sanitizeRouteSignature(createRouteSignature(input));
+    assert.equal(tippedGrade.metrics.assist, "tip", "Route Signals must not be mislabeled as AI or Sense help");
+    assert.equal(tippedGrade.metrics.scoreMultiplier, scoreMultiplier);
+    assert.equal(tippedSignature.assist, "tip");
+    assert.equal(tippedSignature.scoreMultiplier, scoreMultiplier);
+  }
   assert.ok(pure.total > market.total);
   assert.ok(market.total > giftThenAi.total);
   assert.equal(revealed.total, 0);

@@ -1614,8 +1614,9 @@ h3 {
 
 @media (max-width: 640px) {
   .lab-header {
+    position: relative;
     align-items: flex-start;
-    padding: 16px;
+    padding: 16px 16px 56px;
   }
 
   .lab-subtitle {
@@ -1628,7 +1629,23 @@ h3 {
   }
 
   .lab-flags {
+    position: absolute;
+    right: 16px;
+    bottom: 12px;
+    left: 16px;
+    display: flex;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    max-width: none;
+    overflow: hidden;
+  }
+
+  .lab-flags span:first-child {
     display: none;
+  }
+
+  .lab-flags span:nth-child(3) {
+    display: inline-flex;
   }
 
   .lab-header-actions .button {

@@ -26,7 +26,7 @@ test("mission briefings make the target and win condition explicit in plain word
   assert.equal(briefing.interactionRule, "Drop one word onto another to combine them.");
   assert.equal(briefing.startValue, "You start with 4 words");
   assert.equal(briefing.startDetail, "Earth, Water, Fire, and Air");
-  assert.match(briefing.fairnessNote, /score-safe/i);
+  assert.match(briefing.fairnessNote, /90%.*81%.*72[.]9%/i);
   assert.match(briefing.fairnessNote, /reduced rewards/i);
   assert.match(briefing.fairnessNote, /0 score/i);
 });

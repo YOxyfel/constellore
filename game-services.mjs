@@ -1,10 +1,13 @@
 import { createHash, createHmac, randomBytes, randomUUID, timingSafeEqual } from "node:crypto";
 import { mkdir, readFile, readdir, rename, unlink, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
-import { QUICK_TIP_LIMIT, assistancePolicy, combineAssistance } from "./public/engagement-features.mjs";
+import { isDeepStrictEqual } from "node:util";
+import { QUICK_TIP_LIMIT, assistancePolicy, combineAssistance, scoreMultiplierAfterNudges } from "./public/engagement-features.mjs";
 import { buildCommunityResults } from "./public/community-results.mjs";
 import { cosmicEventCatalog, cosmicEventCollectionProgress, currentCosmicEvent } from "./public/cosmic-events.mjs";
 import { constellationVoyageCatalog, sanitizeVoyageProgress } from "./public/constellation-voyages.mjs";
+import { sanitizeWorldweavingState } from "./public/worldweaving.mjs";
+import { sanitizeExpeditionState } from "./public/expedition.mjs";
 import { emptyRecipeFeedback, normalizeRecipeFeedback, recipeFeedbackSummary, recordRecipeFeedback } from "./public/recipe-feedback.mjs";
 import {
   ROUTE_REMIX_FAMILIES,
@@ -286,7 +289,7 @@ const analyticsEnumDimensions = new Map([
   ["theme", new Set(["void", "aurora", "solar", "dark", "light", "system"])],
   ["entitlement", new Set(["pass", "reward", "free", "credits", "earned"])],
   ["reason", new Set(["abandoned", "moves", "time", "reveal", "sense", "gift", "completed", "unavailable", "extract", "crash", "timeout", "withdraw"])],
-  ["assist", new Set(["none", "ai", "market", "wish", "reveal", "sense", "gift"])],
+  ["assist", new Set(["none", "tip", "ai", "market", "wish", "reveal", "sense", "gift"])],
   ["result", new Set(["won", "lost", "tied", "completed", "dismissed", "accepted", "cancelled"])],
   ["kind", new Set([
     "fusion", "rejection", "discovery", "twist", "target", "ui", "music", "haptic",
@@ -551,7 +554,25 @@ export function marketTrend(item, period, demand, length = 12) {
   return Array.from({ length }, (_, index) => marketPrice(item, period - (length - index - 1), demand));
 }
 
-export function calculateStarscore({ game, moves, elapsedSeconds, errors = 0, assisted = false, assist = "none" }) {
+export function runScoreMultiplier(run = {}) {
+  const policy = assistancePolicy(run?.assist || "none");
+  if (run?.scoringDisabled || run?.forfeited || policy.study || !policy.scoreEligible) return 0;
+  const tipsUsed = Array.isArray(run?.tipRecords) ? run.tipRecords.length : run?.tipsUsed;
+  return scoreMultiplierAfterNudges({ baseMultiplier: policy.scoreMultiplier, nudgesUsed: tipsUsed });
+}
+
+export function runPublishedAssist(run = {}) {
+  const assist = assistancePolicy(run?.assist || "none").id;
+  const tipsUsed = Array.isArray(run?.tipRecords) ? run.tipRecords.length : Math.max(0, Number(run?.tipsUsed) || 0);
+  return assist === "none" && tipsUsed > 0 ? "tip" : assist;
+}
+
+export function runPublishedDivision(run = {}) {
+  const policy = assistancePolicy(runPublishedAssist(run));
+  return run?.scoringDisabled || run?.forfeited || policy.study ? "study" : policy.division;
+}
+
+export function calculateStarscore({ game, moves, elapsedSeconds, errors = 0, assisted = false, assist = "none", tipsUsed = 0 }) {
   const tier = clamp(Number(game?.tier) || 1, 1, 5);
   const parMoves = 3 + tier * 3;
   const base = 100_000 + tier * 5_000;
@@ -560,12 +581,13 @@ export function calculateStarscore({ game, moves, elapsedSeconds, errors = 0, as
   const errorPenalty = Math.max(0, Math.floor(Number(errors) || 0)) * 2_500;
   const rawScore = Math.max(1, base - movePenalty - timePenalty - errorPenalty);
   const requestedAssist = String(assist || "none").toLowerCase();
-  const scoredAssist = ["wish", "market", "ai", "sense", "gift", "open", "reveal", "training"].includes(requestedAssist)
+  const scoredAssist = ["tip", "wish", "market", "ai", "sense", "gift", "open", "reveal", "training"].includes(requestedAssist)
     ? requestedAssist
     : assisted ? "open" : "none";
   const policy = assistancePolicy(scoredAssist);
   if (!policy.scoreEligible || policy.scoreMultiplier <= 0) return 0;
-  return Math.max(1, Math.round(rawScore * policy.scoreMultiplier));
+  const scoreMultiplier = scoreMultiplierAfterNudges({ baseMultiplier: policy.scoreMultiplier, nudgesUsed: tipsUsed });
+  return Math.max(1, Math.round(rawScore * scoreMultiplier));
 }
 
 export function compareEntries(left, right) {
@@ -1038,9 +1060,135 @@ function normalizeDynamicRecipeCatalog(raw) {
   return Object.fromEntries(entries.slice(0, 1_000));
 }
 
+function assertExactCloudKeys(value, keys, message = "Expedition progress is not valid.") {
+  if (!hasExactRecordKeys(value, keys)) {
+    throw serviceError(400, message, "invalid_cloud_profile");
+  }
+}
+
+const LEGACY_MOON_OUTPOST_KEYS = ["version", "worldId", "structures", "recipeRepeats"];
+const MOON_OUTPOST_KEYS = [...LEGACY_MOON_OUTPOST_KEYS, "projects"];
+
+function assertCloudMoonProjectsShape(source) {
+  assertExactCloudKeys(source, ["version", "entries"], "Moon project progress is not valid.");
+  if (!Array.isArray(source.entries) || source.entries.length > 16) {
+    throw serviceError(400, "Moon project progress is not valid.", "invalid_cloud_profile");
+  }
+  for (const project of source.entries) {
+    assertExactCloudKeys(project, [
+      "id", "contentVersion", "evidence", "decisions", "rewards", "completedAt"
+    ], "Moon project progress is not valid.");
+    if (
+      !Array.isArray(project.evidence) || project.evidence.length > 128
+      || !Array.isArray(project.decisions) || project.decisions.length > 16
+      || !Array.isArray(project.rewards) || project.rewards.length > 32
+    ) {
+      throw serviceError(400, "Moon project progress is not valid.", "invalid_cloud_profile");
+    }
+    for (const evidence of project.evidence) {
+      assertExactCloudKeys(evidence, [
+        "milestoneId", "recipeKey", "routeKey", "completedAt"
+      ], "Moon project evidence is not valid.");
+    }
+    for (const decision of project.decisions) {
+      assertExactCloudKeys(decision, [
+        "decisionId", "choiceId", "decidedAt"
+      ], "Moon project decisions are not valid.");
+    }
+    for (const reward of project.rewards) {
+      assertExactCloudKeys(reward, ["rewardId", "claimedAt"], "Moon project rewards are not valid.");
+    }
+  }
+}
+
+function legacyCloudExpeditionProjection(source) {
+  const legacy = structuredClone(source);
+  legacy.worlds.moon.outpost.version = 1;
+  delete legacy.worlds.moon.outpost.projects;
+  return legacy;
+}
+
+function assertCloudExpeditionShape(source, { worldweaving } = {}) {
+  assertExactCloudKeys(source, [
+    "version", "revision", "updatedAt", "activeWorldId", "homeWorldId", "worlds", "salvage",
+    "salvageCosmeticIds", "creditedCollectionIds"
+  ]);
+  assertExactCloudKeys(source.worlds, ["moon"]);
+  const moon = source.worlds.moon;
+  assertExactCloudKeys(moon, ["outpost", "launches", "lastLaunchAt"]);
+  const legacyOutpost = moon.outpost?.version === 1
+    && hasExactRecordKeys(moon.outpost, LEGACY_MOON_OUTPOST_KEYS);
+  if (!legacyOutpost) assertExactCloudKeys(moon.outpost, MOON_OUTPOST_KEYS);
+  assertExactCloudKeys(moon.outpost.structures, ["power", "shelter", "signal"]);
+  for (const structure of Object.values(moon.outpost.structures)) {
+    if (structure == null) continue;
+    assertExactCloudKeys(structure, [
+      "choiceId", "anchorKey", "stage", "meaningCharge", "calibratedAt", "totalCollected"
+    ], "Moon Outpost progress is not valid.");
+  }
+  if (!Array.isArray(moon.outpost.recipeRepeats)) {
+    throw serviceError(400, "Moon Outpost recipe memory is not valid.", "invalid_cloud_profile");
+  }
+  for (const repeat of moon.outpost.recipeRepeats) {
+    assertExactCloudKeys(repeat, ["key", "uses"], "Moon Outpost recipe memory is not valid.");
+  }
+  if (!legacyOutpost) assertCloudMoonProjectsShape(moon.outpost.projects);
+  assertExactCloudKeys(source.salvage, [
+    "version", "opensByTier", "pityMissesByTier", "selectionShards", "receiptFingerprints"
+  ], "Salvage Cache progress is not valid.");
+  const tierFields = ["common", "rare", "epic", "mythic"];
+  assertExactCloudKeys(source.salvage.opensByTier, tierFields, "Salvage Cache progress is not valid.");
+  assertExactCloudKeys(source.salvage.pityMissesByTier, tierFields, "Salvage Cache progress is not valid.");
+  if (!Array.isArray(source.salvage.receiptFingerprints)) {
+    throw serviceError(400, "Salvage Cache receipts are not valid.", "invalid_cloud_profile");
+  }
+  for (const field of ["salvageCosmeticIds", "creditedCollectionIds"]) {
+    if (!Array.isArray(source[field])) {
+      throw serviceError(400, "Expedition rewards are not valid.", "invalid_cloud_profile");
+    }
+  }
+  const sanitized = sanitizeExpeditionState(source, { worldweaving });
+  const comparison = legacyOutpost ? legacyCloudExpeditionProjection(sanitized) : sanitized;
+  if (!isDeepStrictEqual(source, comparison)) {
+    // The permissive domain sanitizer remains useful for old local saves, but
+    // economic cloud snapshots must already be canonical. Rejecting instead of
+    // clamping prevents malformed counters, receipts, or rewards from minting.
+    throw serviceError(400, "Expedition economic progress is not canonical.", "invalid_cloud_profile");
+  }
+  return sanitized;
+}
+
 function sanitizeCloudJourneys(raw, { currentEvent = null, authoritativeEventProgress = null } = {}) {
-  assertAllowedKeys(raw, new Set(["eventProgress", "selectedVoyageId", "voyageProgress"]));
+  assertAllowedKeys(raw, new Set(["eventProgress", "expedition", "selectedVoyageId", "voyageProgress", "worldweaving"]));
   const journeys = {};
+
+  if ("worldweaving" in raw) {
+    const source = raw.worldweaving;
+    assertAllowedKeys(source, new Set(["version", "worlds"]));
+    assertAllowedKeys(source.worlds, new Set(["moon"]));
+    const moon = source.worlds.moon;
+    assertAllowedKeys(moon, new Set(["anchors", "completion", "outcomeKey", "worldword"]));
+    assertAllowedKeys(moon.anchors, new Set(["power", "shelter", "signal"]));
+    for (const anchor of Object.values(moon.anchors)) {
+      if (anchor == null) continue;
+      assertAllowedKeys(anchor, new Set(["choiceId", "memory", "completedAt"]));
+      assertAllowedKeys(anchor.memory, new Set(["key", "a", "b", "word"]));
+    }
+    if (moon.completion != null) assertAllowedKeys(moon.completion, new Set(["completedAt"]));
+    if (moon.worldword != null) {
+      assertAllowedKeys(moon.worldword, new Set(["id", "word", "provenance"]));
+      assertAllowedKeys(moon.worldword.provenance, new Set(["kind", "worldId", "outcomeKey", "anchorKeys", "recipe"]));
+      assertAllowedKeys(moon.worldword.provenance.recipe, new Set(["key", "a", "b", "word"]));
+    }
+    journeys.worldweaving = sanitizeWorldweavingState(source);
+  }
+
+  if ("expedition" in raw) {
+    const source = raw.expedition;
+    journeys.expedition = assertCloudExpeditionShape(source, {
+      worldweaving: journeys.worldweaving ?? raw.worldweaving
+    });
+  }
 
   if ("selectedVoyageId" in raw) {
     const selectedVoyageId = String(raw.selectedVoyageId || "").trim().toLowerCase();
@@ -1134,9 +1282,17 @@ function sanitizeCloudProfile(raw, {
 } = {}) {
   assertAllowedKeys(raw, CLOUD_PROFILE_FIELDS);
   const profile = {};
+  const requestedJourneys = "journeys" in raw
+    ? sanitizeCloudJourneys(raw.journeys, { currentEvent, authoritativeEventProgress })
+    : null;
+  const salvageCosmeticIds = requestedJourneys?.expedition?.salvageCosmeticIds || [];
   const ownership = {
     ...(isRecord(cosmeticOwnership) ? cosmeticOwnership : {}),
-    founder: Boolean(founder || cosmeticOwnership?.supporter)
+    founder: Boolean(founder || cosmeticOwnership?.supporter),
+    itemIds: [
+      ...(Array.isArray(cosmeticOwnership?.itemIds) ? cosmeticOwnership.itemIds : []),
+      ...salvageCosmeticIds
+    ]
   };
 
   if ("theme" in raw) {
@@ -1173,16 +1329,19 @@ function sanitizeCloudProfile(raw, {
     profile.rivalGhostEnabled = raw.rivalGhostEnabled;
   }
   if ("feedbackPreferences" in raw) {
-    const allowed = new Set(["haptics", "music", "musicVolume", "muted", "resultDetails", "sfxVolume", "sound", "volume"]);
+    const allowed = new Set(["fusionAnimation", "haptics", "helpNudges", "music", "musicVolume", "muted", "resultDetails", "sfxVolume", "sound", "volume"]);
     assertAllowedKeys(raw.feedbackPreferences, allowed);
     const preferences = raw.feedbackPreferences;
-    for (const field of ["sound", "music", "haptics", "resultDetails", "muted"]) {
+    for (const field of ["sound", "music", "haptics", "helpNudges", "resultDetails", "muted"]) {
       if (field in preferences && typeof preferences[field] !== "boolean") throw serviceError(400, "Feedback preferences must use true or false.", "invalid_cloud_profile");
     }
     for (const field of ["volume", "musicVolume", "sfxVolume"]) {
       if (field in preferences && (!Number.isFinite(preferences[field]) || preferences[field] < 0 || preferences[field] > 1)) {
         throw serviceError(400, "Feedback volumes must be between zero and one.", "invalid_cloud_profile");
       }
+    }
+    if ("fusionAnimation" in preferences && !["normal", "faster", "off"].includes(preferences.fusionAnimation)) {
+      throw serviceError(400, "Fusion animation preference must be normal, faster, or off.", "invalid_cloud_profile");
     }
     profile.feedbackPreferences = structuredClone(preferences);
   }
@@ -1276,7 +1435,7 @@ function sanitizeCloudProfile(raw, {
     });
     profile.recipeMastery = { version: 1, recipes };
   }
-  if ("journeys" in raw) profile.journeys = sanitizeCloudJourneys(raw.journeys, { currentEvent, authoritativeEventProgress });
+  if (requestedJourneys) profile.journeys = requestedJourneys;
   if ("signatureBests" in raw) profile.signatureBests = sanitizeCloudSignatureBests(raw.signatureBests);
 
   return profile;
@@ -1638,10 +1797,30 @@ export class GameStore {
         player.entitlements.constellore_founders_pass = { productId: "constellore_founders_pass", kind: "creative_pass", active: true, source: "legacy", grantedAt: player.createdAt || new Date().toISOString() };
         playersMigrated = true;
       }
+      const storedCloudJourneys = isRecord(player.cloudProfile?.data?.journeys)
+        ? player.cloudProfile.data.journeys
+        : null;
+      if (isRecord(storedCloudJourneys?.expedition)) {
+        const migratedExpedition = sanitizeExpeditionState(storedCloudJourneys.expedition, {
+          worldweaving: storedCloudJourneys.worldweaving
+        });
+        if (!isDeepStrictEqual(storedCloudJourneys.expedition, migratedExpedition)) {
+          storedCloudJourneys.expedition = migratedExpedition;
+          playersMigrated = true;
+        }
+      }
       if (isRecord(player.cloudProfile?.data?.cosmetics)) {
+        const cloudJourneys = isRecord(player.cloudProfile?.data?.journeys)
+          ? player.cloudProfile.data.journeys
+          : {};
+        const cachedCosmeticIds = cloudJourneys.expedition
+          ? sanitizeExpeditionState(cloudJourneys.expedition, {
+              worldweaving: cloudJourneys.worldweaving
+            }).salvageCosmeticIds
+          : [];
         const migratedCosmetics = sanitizeCosmeticLoadout(player.cloudProfile.data.cosmetics, {
           founder: Boolean(player.founderPass),
-          itemIds: player.cosmeticEntitlements.items,
+          itemIds: [...player.cosmeticEntitlements.items, ...cachedCosmeticIds],
           collectionIds: player.cosmeticEntitlements.collections,
           progress: authoritativeCosmeticProgress(player, this.data.runLedger)
         });
@@ -3235,6 +3414,10 @@ export class GameStore {
           data.feedbackPreferences[field] = storedValue;
         }
       }
+      const storedFusionAnimation = current.profile.feedbackPreferences.fusionAnimation;
+      if (!("fusionAnimation" in data.feedbackPreferences) && ["normal", "faster", "off"].includes(storedFusionAnimation)) {
+        data.feedbackPreferences.fusionAnimation = storedFusionAnimation;
+      }
     }
     player.cloudProfile = { version: current.version + 1, data, updatedAt: new Date().toISOString() };
     await this.persist();
@@ -4550,14 +4733,15 @@ function sanitizeRunTipRecords(raw) {
   return records;
 }
 
-function publicTipResponse(record, used, available = Boolean(record)) {
+function publicTipResponse(record, used, available = Boolean(record), scoreMultiplier = scoreMultiplierAfterNudges({ nudgesUsed: used })) {
   const count = Math.min(QUICK_TIP_LIMIT, Math.max(0, Number(used) || 0));
   return {
     available: Boolean(available),
     text: String(record?.text || "All three Route Signals have been used for this orbit.").slice(0, 240),
     used: count,
     remaining: Math.max(0, QUICK_TIP_LIMIT - count),
-    scoreSafe: true
+    scoreSafe: false,
+    scoreMultiplier: Math.min(1, Math.max(0, Number(scoreMultiplier) || 0))
   };
 }
 
@@ -5341,12 +5525,12 @@ export class RunRegistry {
     }
     run.tipRecords = sanitizeRunTipRecords(run.tipRecords);
     if (tipIndex < run.tipRecords.length) {
-      return publicTipResponse(run.tipRecords[tipIndex], run.tipRecords.length);
+      return publicTipResponse(run.tipRecords[tipIndex], run.tipRecords.length, true, runScoreMultiplier(run));
     }
     if (tipIndex > run.tipRecords.length) {
       throw serviceError(409, "Route Signal state changed. Refresh this orbit and try again.", "tip_state_mismatch");
     }
-    if (run.tipRecords.length >= QUICK_TIP_LIMIT) return publicTipResponse(null, run.tipRecords.length, false);
+    if (run.tipRecords.length >= QUICK_TIP_LIMIT) return publicTipResponse(null, run.tipRecords.length, false, runScoreMultiplier(run));
     if (run.submitted) throw serviceError(409, "This score was already submitted.", "already_submitted");
     if (run.completedAt) throw serviceError(409, "This orbit is already complete.", "run_complete");
 
@@ -5357,12 +5541,12 @@ export class RunRegistry {
     let id = String(selected?.id || "").trim().toLowerCase().slice(0, 80);
     if (!/^[a-z0-9][a-z0-9-]{0,79}$/.test(id) || run.tipRecords.some((record) => record.id === id)) id = `tip-${run.tipRecords.length + 1}`;
     if (selected?.available === false || !text) {
-      return publicTipResponse({ text: text || "No spoiler-safe direction is available yet." }, run.tipRecords.length, false);
+      return publicTipResponse({ text: text || "No spoiler-safe direction is available yet." }, run.tipRecords.length, false, runScoreMultiplier(run));
     }
     const record = { id, text };
     run.tipRecords.push(record);
     this.checkpoint(run);
-    return publicTipResponse(record, run.tipRecords.length);
+    return publicTipResponse(record, run.tipRecords.length, true, runScoreMultiplier(run));
   }
 
   addBend(run, item, assist) {
@@ -5393,6 +5577,8 @@ export class RunRegistry {
       giftUsed: Boolean(run.giftUsed),
       giftItem: run.giftItem ? structuredClone(run.giftItem) : null,
       tipsUsed: sanitizeRunTipRecords(run.tipRecords).length,
+      scoreMultiplier: runScoreMultiplier(run),
+      division: runPublishedDivision(run),
       remixProgress: run.remixRuntime
         ? routeRemixProgress(run.remixRuntime, run.remixProgress)
         : null
@@ -5417,6 +5603,10 @@ export class RunRegistry {
     const routePar = Array.isArray(run.solutionRoute) && run.solutionRoute.length
       ? run.solutionRoute.length
       : Math.max(1, Math.floor(Number(run.game.parMoves) || 3 + (Number(run.game.tier) || 1) * 3));
+    const tipsUsed = sanitizeRunTipRecords(run.tipRecords).length;
+    const scoreMultiplier = runScoreMultiplier(run);
+    const publishedAssist = runPublishedAssist(run);
+    const publishedPolicy = assistancePolicy(publishedAssist);
     const signature = sanitizeRouteSignature(createRouteSignature({
       history: run.history,
       target: run.game.target,
@@ -5429,13 +5619,14 @@ export class RunRegistry {
       game: run.game,
       mode: run.game.mode,
       challengeId: run.challengeId,
-      assist: run.assist,
+      assist: publishedAssist,
+      scoreMultiplier,
       scoringDisabled: false,
       revealed: false
     }));
     run.verifiedSignature = signature;
     const elapsedSeconds = Math.round(elapsedMs / 1000);
-    const challengeIdentity = buildChallengeIdentity(run.game, { assist: run.assist });
+    const challengeIdentity = buildChallengeIdentity(run.game, { assist: publishedAssist });
     run.finalChallengeKey = challengeIdentity.key;
     const anomalyFlags = [];
     // Keep this deliberately conservative: short verified routes can be
@@ -5453,11 +5644,11 @@ export class RunRegistry {
       challengeKey: challengeIdentity.key,
       challengeBaseKey: run.challengeBaseIdentity.key,
       challenge: challengeIdentity.descriptor,
-      division: assisted ? "open" : "pure",
-      assist: run.assist,
+      division: publishedPolicy.division,
+      assist: publishedAssist,
       mode: run.game.mode,
       target: run.game.target,
-      score: calculateStarscore({ game: run.game, moves: run.moves, elapsedSeconds, errors: run.rejectedAttempts, assisted, assist: run.assist }),
+      score: calculateStarscore({ game: run.game, moves: run.moves, elapsedSeconds, errors: run.rejectedAttempts, assisted, assist: run.assist, tipsUsed }),
       moves: run.moves,
       attempts: run.attempts,
       rejectedAttempts: run.rejectedAttempts,

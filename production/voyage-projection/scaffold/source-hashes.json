@@ -1,0 +1,128 @@
+{
+  "schemaVersion": 1,
+  "contractSha256": "0459b858503d99cc30d04139b5aa6144d03fb81e4b2e95fb9be4973f149b1416",
+  "hashAlgorithm": "sha256",
+  "inputs": [
+    {
+      "path": "ART_ASSET_PROVENANCE.md",
+      "status": "present",
+      "bytes": 32996,
+      "sha256": "69ded4ee5a3eb88af8691aa96596849d00a732f62593d940f39cb885dafc3da7"
+    },
+    {
+      "path": "PLANET_HUB_ASSET_PROVENANCE.json",
+      "status": "present",
+      "bytes": 3539,
+      "sha256": "8d011482cee1fb96f1714978069b1cf450397ec3abd29322f5bd73a076f5ff80"
+    },
+    {
+      "path": "public/art/planet-hub/manifest.json",
+      "status": "present",
+      "bytes": 65371,
+      "sha256": "0f4c4ea7c3189f45d2a1093d013f224635ca09414a4484fa69691decb8c02053"
+    },
+    {
+      "path": "public/cinematic/voyage-projection-experience.css",
+      "status": "present",
+      "bytes": 23770,
+      "sha256": "63ecabcea669657d8473257de9e5d6975037c7f4fcbad32a1dc931ff8d7edb09"
+    },
+    {
+      "path": "public/cinematic/voyage-projection-experience.mjs",
+      "status": "present",
+      "bytes": 42540,
+      "sha256": "abad77f39d616167ce1a2f1e7ecdd962d6dafdf3e7b9869de38740d88622c697"
+    },
+    {
+      "path": "public/cinematic/voyage-projection-media.json",
+      "status": "present",
+      "bytes": 542,
+      "sha256": "fd5a8b2141f819cc3f07c53d472e7ecb0fc4ed46a15c15930759d3fa5a26d7c1"
+    },
+    {
+      "path": "public/cinematic/voyage-projection-media.mjs",
+      "status": "present",
+      "bytes": 5230,
+      "sha256": "a5ffa434f9c05f5ccaeec951a1aaaaef8132ca924eb3de390f8653984a4f44ea"
+    },
+    {
+      "path": "public/vendor/three/planet-hub-three.mjs",
+      "status": "present",
+      "bytes": 623668,
+      "sha256": "a7a4905f4a09f96f1b1768258e0e74e4863aaca77cd614c260b9df9546b714a4"
+    },
+    {
+      "path": "public/voyage-projection-domain.mjs",
+      "status": "present",
+      "bytes": 14085,
+      "sha256": "90fc88eafa528a736e7291c773ff92702c665b19882d69c63fb323cfa01d32c5"
+    },
+    {
+      "path": "public/voyage-projection-runtime.mjs",
+      "status": "present",
+      "bytes": 18275,
+      "sha256": "f68a6c66fa8dde5ced47b2b35c9c1c45e4c67efcc93b8fa91743c64298cbb587"
+    },
+    {
+      "path": "public/voyage-projection-scene.mjs",
+      "status": "present",
+      "bytes": 48543,
+      "sha256": "95baca603036c2fd29964514506427860b988439993774b4e4bfa0e4b75ad3b4"
+    },
+    {
+      "path": "scripts/build-voyage-projection-audio.py",
+      "status": "present",
+      "bytes": 27732,
+      "sha256": "f2db33a6089283bf7f4ed30d4f4b82606010f417493d0b2ef6bce24fa5f2d29d"
+    },
+    {
+      "path": "scripts/verify-voyage-projection-audio.mjs",
+      "status": "present",
+      "bytes": 23789,
+      "sha256": "ab4f67be37cb621ecabc8936de90d8d2f305525c9de2c77489e60a9ac857f2a1"
+    },
+    {
+      "path": "scripts/voyage-projection-blender.py",
+      "status": "present",
+      "bytes": 76044,
+      "sha256": "8a44e7ce0a276e371b54d62603e8add99ab094c2e77c96e342073842918bb096"
+    },
+    {
+      "path": "scripts/voyage-projection-cinematic.v1.json",
+      "status": "present",
+      "bytes": 20994,
+      "sha256": "0ff76e89b7bfbba9567d42a548e0f6c4203f3c0dd1207d687ae189e9fc9aa0d7"
+    },
+    {
+      "path": "scripts/voyage-projection-compositor.mjs",
+      "status": "present",
+      "bytes": 75549,
+      "sha256": "cc40be39f22223f61c335775f4f88de3a3ff6ce25d48af785914309cd6827429"
+    },
+    {
+      "path": "scripts/voyage-projection-offline-plan.mjs",
+      "status": "present",
+      "bytes": 7794,
+      "sha256": "e77fc9a4d85e174989fef756d4c7f108fcbb21f48d426dd9dc1737990dc0bf59"
+    },
+    {
+      "path": "scripts/voyage-projection-offline-render.mjs",
+      "status": "present",
+      "bytes": 8635,
+      "sha256": "1aa164e588aa500972f29bfea8d139c36b644dc1bc6abf7773a4b2d0e57bb63e"
+    },
+    {
+      "path": "scripts/voyage-projection-production.mjs",
+      "status": "present",
+      "bytes": 43196,
+      "sha256": "3cd583cf0e9bfd4e63a84a1a3d30548836d78543cfc4e9c0c0c9f5ea4a14d0e4"
+    },
+    {
+      "path": "scripts/voyage-projection-scaffold.mjs",
+      "status": "present",
+      "bytes": 34397,
+      "sha256": "683d2e5b71685a6ced23b58857468892c117bcfdd7e5bf11eb944906d8d76ef1"
+    }
+  ],
+  "missingInputs": []
+}

@@ -32,6 +32,7 @@ export const GOLDEN_PAIR_VIEW_SELECTORS = Object.freeze({
   scene: "[data-golden-scene]",
   sources: "[data-golden-sources]",
   source: "[data-golden-source]",
+  meteorTrail: "[data-golden-meteor-trail]",
   sourceEmoji: "[data-golden-source-emoji]",
   sourceWord: "[data-golden-source-word]",
   glyphs: "[data-golden-glyphs]",
@@ -46,11 +47,13 @@ export const GOLDEN_PAIR_VIEW_SELECTORS = Object.freeze({
   resultWord: "[data-golden-result-word]"
 });
 
-export const GOLDEN_PAIR_MAX_ACTIVE_MS = 850;
+export const GOLDEN_PAIR_MIN_ACTIVE_MS = 3_200;
+export const GOLDEN_PAIR_MAX_ACTIVE_MS = 3_600;
+export const GOLDEN_PAIR_FASTER_DURATION_SCALE = .6;
+export const GOLDEN_PAIR_FASTER_MIN_ACTIVE_MS = 2_000;
 
 const MOTIONS = new Set(GOLDEN_PAIR_MOTIONS);
-const DEFAULT_DURATION_MS = 720;
-const MIN_DURATION_MS = 240;
+const DEFAULT_DURATION_MS = 3_400;
 const REDUCED_FRAME_MS = 320;
 const CONTROL_CHARACTERS = /[\u0000-\u001f\u007f]/gu;
 const UNSAFE_TOKEN_CHARACTERS = /[^a-z0-9-]/gu;
@@ -77,7 +80,18 @@ function safeToken(value, fallback, maximum = 32) {
 function boundedDuration(value) {
   const number = Number(value);
   if (!Number.isFinite(number)) return DEFAULT_DURATION_MS;
-  return Math.min(GOLDEN_PAIR_MAX_ACTIVE_MS, Math.max(MIN_DURATION_MS, Math.round(number)));
+  return Math.min(
+    GOLDEN_PAIR_MAX_ACTIVE_MS,
+    Math.max(GOLDEN_PAIR_MIN_ACTIVE_MS, Math.round(number))
+  );
+}
+
+function pacedDuration(duration, pace) {
+  if (pace !== "faster") return duration;
+  return Math.max(
+    GOLDEN_PAIR_FASTER_MIN_ACTIVE_MS,
+    Math.round(duration * GOLDEN_PAIR_FASTER_DURATION_SCALE)
+  );
 }
 
 function normalizeDiscovery(value, fallbackWord) {
@@ -104,11 +118,17 @@ function normalizeModel(model) {
   }
   const requestedMotion = boundedText(model.motion, 24).toLowerCase();
   const motion = MOTIONS.has(requestedMotion) ? requestedMotion : "pulse";
+  const presentation = boundedText(model.presentation, 24).toLowerCase() === "generic"
+    ? "generic"
+    : "authored";
+  const authored = presentation === "authored" && model.authored !== false;
   return Object.freeze({
     id: safeToken(model.id, "golden-pair", 64),
     a,
     b,
     result,
+    presentation,
+    authored,
     family: safeToken(model.family, "fusion"),
     motion,
     palette: safeToken(model.palette, "gold"),
@@ -162,10 +182,14 @@ function createDiscoveryNode(documentRef, marker, slot) {
     : "data-golden-source-word";
   const emoji = markedElement(documentRef, "span", emojiMarker);
   const word = markedElement(documentRef, "span", wordMarker);
+  const meteorTrail = slot
+    ? markedElement(documentRef, "span", "data-golden-meteor-trail")
+    : null;
   if (slot) node.setAttribute("data-golden-source", slot);
   emoji.setAttribute("aria-hidden", "true");
-  node.append(emoji, word);
-  return Object.freeze({ node, emoji, word });
+  meteorTrail?.setAttribute("aria-hidden", "true");
+  node.append(...(meteorTrail ? [meteorTrail, emoji, word] : [emoji, word]));
+  return Object.freeze({ node, emoji, word, meteorTrail });
 }
 
 function createShell(documentRef, root) {
@@ -259,6 +283,9 @@ export function createGoldenPairView(settings = {}) {
     root.removeAttribute("data-golden-palette");
     root.removeAttribute("data-golden-id");
     root.removeAttribute("data-golden-motion-mode");
+    root.removeAttribute("data-golden-pace");
+    root.removeAttribute("data-golden-presentation");
+    root.removeAttribute("data-golden-authored");
     currentId = "";
   }
 
@@ -283,7 +310,7 @@ export function createGoldenPairView(settings = {}) {
     pendingTimers.add(timer);
   }
 
-  function play(candidate) {
+  function play(candidate, options = {}) {
     cancel("replaced");
     if (disposed) {
       return Object.freeze({ played: false, reason: "disposed" });
@@ -317,11 +344,16 @@ export function createGoldenPairView(settings = {}) {
     root.setAttribute("data-golden-family", model.family);
     root.setAttribute("data-golden-motion", model.motion);
     root.setAttribute("data-golden-palette", model.palette);
+    root.setAttribute("data-golden-presentation", model.presentation);
+    root.setAttribute("data-golden-authored", String(model.authored));
     root.setAttribute("data-golden-motion-mode", prefersReducedMotion ? "reduced" : "full");
+    const pace = options?.pace === "faster" ? "faster" : "normal";
+    const fullMotionDuration = pacedDuration(model.duration, pace);
+    root.setAttribute("data-golden-pace", pace);
     root.setAttribute("data-golden-phase", "arming");
     root.removeAttribute("data-golden-stop-reason");
     if (root.style && typeof root.style.setProperty === "function") {
-      root.style.setProperty("--golden-duration", `${model.duration}ms`);
+      root.style.setProperty("--golden-duration", `${fullMotionDuration}ms`);
     }
     root.hidden = false;
     if (!prefersReducedMotion) {
@@ -332,13 +364,16 @@ export function createGoldenPairView(settings = {}) {
     root.setAttribute("data-golden-phase", prefersReducedMotion ? "static" : "active");
 
     const activeGeneration = generation;
-    const displayDuration = prefersReducedMotion ? REDUCED_FRAME_MS : model.duration;
+    const displayDuration = prefersReducedMotion ? REDUCED_FRAME_MS : fullMotionDuration;
     scheduleCompletion(displayDuration, activeGeneration);
 
     return Object.freeze({
       played: true,
       id: model.id,
       motion: model.motion,
+      presentation: model.presentation,
+      authored: model.authored,
+      pace,
       duration: displayDuration,
       reducedMotion: prefersReducedMotion,
       announcement: model.announcement
@@ -358,6 +393,7 @@ export function createGoldenPairView(settings = {}) {
     root.removeAttribute("data-golden-palette");
     root.removeAttribute("data-golden-id");
     root.removeAttribute("data-golden-motion-mode");
+    root.removeAttribute("data-golden-pace");
     root.replaceChildren();
   }
 

@@ -5,18 +5,18 @@ import { readFile } from "node:fs/promises";
 const app = await readFile(new URL("../public/app.js", import.meta.url), "utf8");
 const page = await readFile(new URL("../public/index.html", import.meta.url), "utf8");
 
-test("Help orders its three plain choices from least to most assistance", () => {
-  const guidance = page.slice(page.indexOf('id="senseDialog"'), page.indexOf('id="revealDialog"'));
+test("Help orders its four assistance choices from least to most consequential", () => {
+  const guidance = page.slice(page.indexOf('id="senseDialog"'), page.indexOf('id="stardustDialog"'));
   const hint = guidance.indexOf('id="useQuickTip"');
+  const compass = guidance.indexOf('id="useSense"');
   const gift = guidance.indexOf('id="useWordGift"');
   const reveal = guidance.indexOf('id="revealPathButton"');
-  const legacyExtra = guidance.indexOf('id="useSense"');
-  assert.ok(hint >= 0 && gift > hint && reveal > gift);
-  assert.ok(legacyExtra > reveal, "advanced legacy help must stay outside the primary choice order");
-  assert.match(guidance, /Your points stay the same/);
-  assert.match(guidance, /You keep half your points/);
-  assert.match(guidance, /You get no points/);
-  assert.match(guidance, /class="simple-hidden"[^>]*aria-hidden="true"[\s\S]*id="useSense"/);
+  assert.ok(hint >= 0 && compass > hint && gift > compass && reveal > gift);
+  assert.match(guidance, /Next signal keeps 90% of max score and Stardust; Star Credits are reduced too[.]/);
+  assert.match(guidance, /OPEN &middot; 75% SCORE/);
+  assert.match(guidance, /OPEN &middot; 50% SCORE/);
+  assert.match(guidance, /Study run with no score/);
+  assert.doesNotMatch(guidance, /class="simple-hidden"[^>]*aria-hidden="true"[\s\S]*id="useSense"/);
 });
 
 test("each mission resets both desktop and mobile inventory scroll positions", () => {

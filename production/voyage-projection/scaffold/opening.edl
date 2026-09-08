@@ -1,0 +1,33 @@
+TITLE: VOYAGE PROJECTION OPENING
+FCM: NON-DROP FRAME
+
+001  AX       V     C        00:00:00:00 00:00:07:00 00:00:00:00 00:00:07:00
+* FROM CLIP NAME: earth
+* SETTING: earth-departure
+
+002  AX       V     C        00:00:07:00 00:00:20:00 00:00:07:00 00:00:20:00
+* FROM CLIP NAME: solar
+* SETTING: solar-system
+
+003  AX       V     C        00:00:20:00 00:00:27:00 00:00:20:00 00:00:27:00
+* FROM CLIP NAME: heliopause
+* SETTING: heliopause
+
+004  AX       V     C        00:00:27:00 00:00:38:00 00:00:27:00 00:00:38:00
+* FROM CLIP NAME: warp
+* SETTING: interstellar-corridor
+
+005  AX       V     C        00:00:38:00 00:00:48:00 00:00:38:00 00:00:48:00
+* FROM CLIP NAME: black-hole
+* SETTING: black-hole-approach
+
+006  AX       V     C        00:00:48:00 00:00:53:00 00:00:48:00 00:00:53:00
+* FROM CLIP NAME: singularity
+* SETTING: event-horizon
+
+007  AX       V     C        00:00:53:00 00:00:57:00 00:00:53:00 00:00:57:00
+* FROM CLIP NAME: return
+* SETTING: earth-return
+
+* CONTRACT SHA256: 0459b858503d99cc30d04139b5aa6144d03fb81e4b2e95fb9be4973f149b1416
+* TIMEBASE: 24 FPS NON-DROP

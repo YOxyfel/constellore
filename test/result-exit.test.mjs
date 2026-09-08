@@ -86,12 +86,14 @@ test("new-game actions leave Results available until the replacement run commits
   assert.match(communityRace, /retryGame\(\)/);
 
   assert.doesNotMatch(finish, /state[.]resultAction\s*=\s*\(\)\s*=>\s*\{[\s\S]{0,180}resultDialog[.]close\(\)/);
-  assert.match(finish, /if \(state[.]mode === "daily"\)[\s\S]{0,180}state[.]resultAction = \(\) => void beginMode\("reach"\)/);
+  assert.match(finish, /if \(state[.]mode === "daily"\)[\s\S]{0,120}updateDailyStreak\(\)/);
+  assert.doesNotMatch(finish, /if \(state[.]mode === "daily"\)[\s\S]{0,180}state[.]resultAction = \(\) => void beginMode\("reach"\)/);
   assert.match(finish, /profile[.]weekly[.]complete = true[\s\S]{0,260}state[.]resultAction = \(\) => void beginMode\("reach"\)/);
   assert.match(finish, /state[.]resultAction = \(\) => void beginMode\("weekly"\)/);
-  assert.match(finish, /won && \["daily", "weekly"\][.]includes\(state[.]mode\) \? "Play next level"/);
+  assert.match(finish, /won && state[.]mode === "daily" \? "Return home"/);
+  assert.match(finish, /won && state[.]mode === "weekly" \? "Play next level"/);
   assert.match(finish, /state[.]resultAction = \(\) => void startSecondOrbit\(\{\s*enterThroughGate:\s*true\s*\}\)/);
-  assert.match(finish, /state[.]resultAction = \(\) => void beginMode\(nextMode\)/);
+  assert.match(finish, /state[.]resultAction = \(\) => void beginMode\("reach"\)/);
 });
 
 test("a win commits before async bookkeeping and presents results only after the board settles", () => {

@@ -1,0 +1,193 @@
+{
+  "schemaVersion": 1,
+  "status": "project-authored-review-master-candidate",
+  "releaseEligible": false,
+  "finalMaster": false,
+  "contract": {
+    "path": "scripts/voyage-projection-cinematic.v1.json",
+    "sha256": "0459b858503d99cc30d04139b5aa6144d03fb81e4b2e95fb9be4973f149b1416"
+  },
+  "generator": {
+    "path": "scripts/build-voyage-projection-audio-master.py",
+    "sha256": "18c9fe9f7e379e45fd77d9f957adaeef6a96af554a8b33526be52dc9d1c771b8",
+    "seed": 271828,
+    "deterministic": true
+  },
+  "toolchain": {
+    "pythonVersion": "3.14.0",
+    "pythonImplementation": "CPython",
+    "numpyVersion": "2.5.0",
+    "bitGenerator": "PCG64",
+    "knownOutputSha256Locked": true,
+    "unsupportedEnvironmentPolicy": "reject-before-read-or-write"
+  },
+  "sourceGuideRecord": {
+    "path": "production/voyage-projection/scaffold/provenance/audio-guide-record.json",
+    "sha256": "39d1bec688804dc283cfe02bb91dfc7a1a92e8716a6fff4f90c7ff41ee7da418"
+  },
+  "provenance": {
+    "projectAuthored": true,
+    "ownershipBasis": "Mixed and mastered deterministically from Constellore project-authored procedural score and SFX source code.",
+    "thirdPartySamples": false,
+    "generativeModelOutput": false,
+    "externalPerformerMaterial": false
+  },
+  "voice": {
+    "included": false,
+    "navigationVoiceComplete": false,
+    "status": "absent",
+    "performer": null,
+    "provider": null,
+    "rightsEvidence": null
+  },
+  "reviewBoundary": {
+    "reviewOnly": true,
+    "humanApprovalRequired": true,
+    "humanApproval": null,
+    "mayPopulateFinalCompositorPaths": false,
+    "mayMutateRuntimeMediaApproval": false,
+    "statement": "These candidates support creative review only. Add licensed narration, calibrated release metering, and recorded human approval before any final-master promotion."
+  },
+  "outputs": [
+    {
+      "id": "completion-review-master",
+      "variant": "completion",
+      "path": "output/voyage-projection/audio/review/voyage-projection-completion-review-master.wav",
+      "status": "voice-free-review-master-candidate",
+      "reviewOnly": true,
+      "finalMaster": false,
+      "releaseEligible": false,
+      "voiceIncluded": false,
+      "sourceStems": [
+        {
+          "id": "score-completion",
+          "sha256": "56a87b6eaf3edd9629c6d953248613416fe72bd7a4f69abdec22122c15063673"
+        },
+        {
+          "id": "sfx-completion",
+          "sha256": "83bdf1effaa750e3a429541e8d688f7cd5f5f31e1b9477c9ebdfff2dea66d102"
+        }
+      ],
+      "mix": {
+        "scoreGainDb": -0.5,
+        "sfxGainDb": -1.5,
+        "scoreNarrationDuckDb": -2.2,
+        "sfxNarrationDuckDb": -1.2,
+        "narrationWindows": [
+          [
+            1.0,
+            6.2
+          ],
+          [
+            8.4,
+            14.2
+          ],
+          [
+            39.4,
+            46.8
+          ]
+        ],
+        "stereoSideScale": 0.92,
+        "saturationDrive": 1.035
+      },
+      "analysis": {
+        "targetIntegratedLoudnessLufs": -18.0,
+        "truePeakCeilingDbtp": -2.0,
+        "truePeakMethod": "4x four-point cubic intersample estimate for review; calibrated release metering still required",
+        "normalizationGainDb": 0.057255,
+        "samplePeakDbfs": -5.4401,
+        "truePeakDbtp": -5.428663,
+        "integratedLoudnessLufs": -18.0,
+        "maximumMomentaryLufs": -12.707792,
+        "maximumShortTermLufs": -13.812091,
+        "loudnessRangeLu": 6.932635
+      },
+      "format": {
+        "container": "wav",
+        "codec": "pcm_s24le",
+        "sampleRateHz": 48000,
+        "channels": 2,
+        "bitsPerSample": 24
+      },
+      "bytes": 16416044,
+      "dataBytes": 16416000,
+      "frames": 2736000,
+      "durationSeconds": 57.0,
+      "samplePeakDbfs": -5.440099,
+      "rmsDbfs": -19.183646,
+      "sha256": "ae81025cf2ca7c30e3e5655bf3fbfbe6bf74c625de3aa251f17d225290e6e132"
+    },
+    {
+      "id": "promise-review-master",
+      "variant": "promise",
+      "path": "output/voyage-projection/audio/review/voyage-projection-promise-review-master.wav",
+      "status": "voice-free-review-master-candidate",
+      "reviewOnly": true,
+      "finalMaster": false,
+      "releaseEligible": false,
+      "voiceIncluded": false,
+      "sourceStems": [
+        {
+          "id": "score-unresolved",
+          "sha256": "35094fcc91a12d22d31ed079b58df936a15a84f837221237ef4d35066670d8ef"
+        },
+        {
+          "id": "sfx-unresolved",
+          "sha256": "6ca2e31db953edc6b6bb6427d809082f15f35de720e754314baf15d3ef3909c5"
+        }
+      ],
+      "mix": {
+        "scoreGainDb": -0.5,
+        "sfxGainDb": -1.5,
+        "scoreNarrationDuckDb": -2.2,
+        "sfxNarrationDuckDb": -1.2,
+        "narrationWindows": [
+          [
+            1.0,
+            6.2
+          ],
+          [
+            8.4,
+            14.2
+          ],
+          [
+            39.4,
+            46.8
+          ],
+          [
+            54.0,
+            56.4
+          ]
+        ],
+        "stereoSideScale": 0.92,
+        "saturationDrive": 1.035
+      },
+      "analysis": {
+        "targetIntegratedLoudnessLufs": -18.0,
+        "truePeakCeilingDbtp": -2.0,
+        "truePeakMethod": "4x four-point cubic intersample estimate for review; calibrated release metering still required",
+        "normalizationGainDb": 0.204333,
+        "samplePeakDbfs": -5.24183,
+        "truePeakDbtp": -5.230486,
+        "integratedLoudnessLufs": -18.0,
+        "maximumMomentaryLufs": -12.546625,
+        "maximumShortTermLufs": -13.647131,
+        "loudnessRangeLu": 6.739698
+      },
+      "format": {
+        "container": "wav",
+        "codec": "pcm_s24le",
+        "sampleRateHz": 48000,
+        "channels": 2,
+        "bitsPerSample": 24
+      },
+      "bytes": 16416044,
+      "dataBytes": 16416000,
+      "frames": 2736000,
+      "durationSeconds": 57.0,
+      "samplePeakDbfs": -5.241829,
+      "rmsDbfs": -19.115579,
+      "sha256": "52294ba7bd2ff65c483dfaf421c20d4b7cfaeb495d7c284c3eca4aac8c56590b"
+    }
+  ]
+}

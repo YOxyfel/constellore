@@ -1,0 +1,23 @@
+/* Short, bounded handoffs keep the picker responsive. Search updates never animate. */
+.constellation-bloom__transition-ghost { display: none; }
+.constellation-bloom[data-transition-phase="out"] :is(.constellation-bloom__category-shell,.constellation-bloom__word-shell) {
+  animation: bloom-palette-out .08s ease-in both;
+}
+.constellation-bloom[data-transition-phase="in"] :is(.constellation-bloom__category-shell,.constellation-bloom__word-shell) {
+  animation: bloom-palette-in .14s ease-out both;
+}
+.constellation-bloom[data-transition="bloom-relocate"][data-transition-phase="out"] .constellation-bloom__panel {
+  animation: bloom-presence-out .1s ease-in both;
+}
+.constellation-bloom[data-transition="bloom-relocate"][data-transition-phase="in"] .constellation-bloom__panel {
+  animation: bloom-presence-in .16s ease-out both;
+}
+.constellation-bloom[data-transition="word-commit"] .constellation-bloom__word-shell.is-committing {
+  animation: bloom-palette-out .12s ease-in both;
+}
+@keyframes bloom-palette-out { to { opacity: 0; transform: translateY(3px); } }
+@keyframes bloom-palette-in { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: none; } }
+@keyframes bloom-presence-out { to { opacity: 0; scale: .96; } }
+@keyframes bloom-presence-in { from { opacity: 0; scale: .96; } to { opacity: 1; scale: 1; } }
+@media (prefers-reduced-motion: reduce) { .constellation-bloom * { animation: none !important; transition-duration: .01ms !important; } }
+body.simple-ui:is([data-cosmetic-effects="reduced"],[data-cosmetic-effects="off"]) .constellation-bloom * { animation: none !important; transition-duration: .01ms !important; }

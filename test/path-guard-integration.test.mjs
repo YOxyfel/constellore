@@ -23,6 +23,7 @@ import {
 const CLASSIC_STARTERS = ["Earth", "Water", "Fire", "Air"];
 const LOCAL_RUNTIME_ASSETS = [
   "adaptive-difficulty.mjs",
+  "concept-chemistry.mjs",
   "cosmic-twists.mjs",
   "engagement-features.mjs",
   "local-beta.mjs",
@@ -80,7 +81,14 @@ function actionableStep(route, available) {
   );
 }
 
-function offRouteStarterPair({ route, starters, target, lookup, isProductive = () => false }) {
+function offRouteStarterPair({
+  route,
+  starters,
+  target,
+  lookup,
+  isProductive = () => false,
+  acceptResult = () => true
+}) {
   const available = new Set(starters.map((word) => word.toLocaleLowerCase("en-US")));
   const expected = new Set(route
     .filter((step) =>
@@ -96,6 +104,7 @@ function offRouteStarterPair({ route, starters, target, lookup, isProductive = (
       && result.word.toLocaleLowerCase("en-US") !== target.toLocaleLowerCase("en-US")
       && !expected.has(pairKey(a, b))
       && !isProductive(result)
+      && acceptResult(result)
     ) {
       return { a, b, result };
     }
@@ -103,7 +112,7 @@ function offRouteStarterPair({ route, starters, target, lookup, isProductive = (
   assert.fail(`No valid off-route starter pair was available for ${target}`);
 }
 
-function onlineOffRoutePair({ route, starters, target }) {
+function onlineOffRoutePair({ route, starters, target, acceptResult }) {
   const guidedResults = new Set(route.map((step) => step.word.toLocaleLowerCase("en-US")));
   return offRouteStarterPair({
     route,
@@ -111,7 +120,8 @@ function onlineOffRoutePair({ route, starters, target }) {
     target,
     lookup: curatedCombination,
     isProductive: (result) =>
-      guidedResults.has(result.word.toLocaleLowerCase("en-US"))
+      guidedResults.has(result.word.toLocaleLowerCase("en-US")),
+    acceptResult
   });
 }
 
@@ -144,12 +154,18 @@ function contextualOffRoutePair({ route, available, target }) {
   assert.fail(`No contextual off-route pair was available for ${target}`);
 }
 
-function missingPair({ route, available, lookup }) {
+function findMissingPair({ route, available, lookup }) {
   const routePairs = new Set(route.map((step) => pairKey(step.a, step.b)));
   for (const [a, b] of starterPairs(available)) {
     if (!routePairs.has(pairKey(a, b)) && !lookup(a, b)) return { a, b };
   }
-  assert.fail("The fixture needs a definitively missing discovered pair");
+  return null;
+}
+
+function missingPair(options) {
+  const pair = findMissingPair(options);
+  assert.ok(pair, "The fixture needs a definitively missing discovered pair");
+  return pair;
 }
 
 function privateEvidenceKeys(value, found = []) {
@@ -179,6 +195,14 @@ function assertSpoilerSafe(value, { rejectedResult = "" } = {}) {
       "a rejected pairing must not disclose its canonical result"
     );
   }
+}
+
+function assertConceptChemistryGuide(guide, { strict } = {}) {
+  assert.equal(guide?.kind, "concept-chemistry-guide");
+  assert.equal(guide?.version, 1);
+  if (typeof strict === "boolean") assert.equal(guide.strict, strict);
+  assert.deepEqual(JSON.parse(JSON.stringify(guide)), guide, "the current guide must remain JSON-safe");
+  return guide;
 }
 
 function comparableOnlineProgress(response) {
@@ -270,7 +294,7 @@ test("the online missing-result branch guards before recording a rejected attemp
   );
   assert.match(
     source.slice(missingResult, mutation),
-    /if \(run && pathGuardEnabledForRun\(run\)\)[\s\S]*sendJson\(response,\s*409,\s*pathGuardWrongPathPayload\(run\)\)/
+    /if \(run && pathGuardDecisionForRun\(run, \{ a: safeA, b: safeB, result: null \}\)[.]blocked\)[\s\S]*sendJson\(response,\s*409,\s*pathGuardWrongPathPayload\(run\)\)/
   );
 });
 
@@ -350,6 +374,8 @@ test("online Bronze Path Guard is non-consuming, spoiler-safe, and fails open fo
   assert.equal(bronze.game.remixes.rank.id, "bronze");
   assert.equal(bronze.game.remixes.activeCount, 0);
   assertSpoilerSafe(bronze);
+  const initialBronzeGuide = assertConceptChemistryGuide(bronze.run.conceptChemistry, { strict: true });
+  assert.equal(initialBronzeGuide.valid, true);
   const bronzeRoute = solutionRoute(bronze.game.target);
   const productive = actionableStep(bronzeRoute, bronze.game.starters);
   assert.ok(productive, "the Bronze fixture needs a playable authored first step");
@@ -361,10 +387,12 @@ test("online Bronze Path Guard is non-consuming, spoiler-safe, and fails open fo
   const before = await resume(bronze);
   assert.equal(before.response.status, 200);
   assertSpoilerSafe(before.payload);
+  assertConceptChemistryGuide(before.payload.run.conceptChemistry, { strict: true });
   const blocked = await combine(bronze, offRoute);
   assert.equal(blocked.response.status, 409);
   assert.equal(blocked.payload.code, "wrong_path");
   assert.match(blocked.payload.error, /wrong path|cannot advance|does not advance/i);
+  assert.deepEqual(assertConceptChemistryGuide(blocked.payload.conceptChemistry, { strict: true }), initialBronzeGuide);
   assertSpoilerSafe(blocked.payload, { rejectedResult: offRoute.result.word });
   const after = await resume(bronze);
   assert.equal(after.response.status, 200);
@@ -377,6 +405,8 @@ test("online Bronze Path Guard is non-consuming, spoiler-safe, and fails open fo
   const accepted = await combine(bronze, productive);
   assert.equal(accepted.response.status, 200);
   assert.equal(accepted.payload.word, productive.word);
+  const nextBronzeGuide = assertConceptChemistryGuide(accepted.payload.conceptChemistry, { strict: true });
+  assert.notDeepEqual(nextBronzeGuide, initialBronzeGuide);
   assert.equal(accepted.payload.completed, false, "the fixture needs room to test a contextual pairing");
   const contextualOffRoute = contextualOffRoutePair({
     route: bronzeRoute,
@@ -398,9 +428,8 @@ test("online Bronze Path Guard is non-consuming, spoiler-safe, and fails open fo
   );
   await revealIfNeeded(bronze, accepted);
 
-  // Regression: the distance planner can prefer independently shorter
-  // prerequisite plans whose union is not globally shortest. Path Guard must
-  // still permit an immediately playable step from its verified run route.
+  // Independently playable route steps wait until the active chemistry
+  // backbone finishes, preserving one deterministic guided flow.
   const manufacturing = await start({
     mode: "reach",
     adaptive: true,
@@ -414,13 +443,21 @@ test("online Bronze Path Guard is non-consuming, spoiler-safe, and fails open fo
     && step.word === "Energy"
   );
   assert.ok(energyStep, "Manufacturing's verified route must include Air + Fire → Energy");
-  const canonicalRouteCombination = await combine(manufacturing, energyStep);
-  assert.equal(
-    canonicalRouteCombination.response.status,
-    200,
-    "Path Guard must never reject a currently playable step from the verified run route"
+  const manufacturingGuide = assertConceptChemistryGuide(manufacturing.run.conceptChemistry, { strict: true });
+  assert.equal(manufacturingGuide.expectedProduct, "Steam");
+  const earlyEnergy = await combine(manufacturing, energyStep);
+  assert.equal(earlyEnergy.response.status, 409, "another route branch must wait for the active backbone");
+  assertConceptChemistryGuide(earlyEnergy.payload.conceptChemistry, { strict: true });
+  const guidedManufacturingStep = manufacturingRoute.find((step) =>
+    pairKey(step.a, step.b) === pairKey(
+      manufacturingGuide.allowedPair.a,
+      manufacturingGuide.allowedPair.b
+    )
   );
-  assert.equal(canonicalRouteCombination.payload.word, "Energy");
+  assert.ok(guidedManufacturingStep);
+  const canonicalRouteCombination = await combine(manufacturing, guidedManufacturingStep);
+  assert.equal(canonicalRouteCombination.response.status, 200);
+  assert.equal(canonicalRouteCombination.payload.word, manufacturingGuide.expectedProduct);
   await revealIfNeeded(manufacturing, canonicalRouteCombination);
 
   const guidedMud = await start({
@@ -473,6 +510,7 @@ test("online Bronze Path Guard is non-consuming, spoiler-safe, and fails open fo
   const assistedCombination = await combine(assisted, assistedOffRoute);
   assert.equal(assistedCombination.response.status, 200, "assisted runs must fail open");
   assert.equal(assistedCombination.payload.word, assistedOffRoute.result.word);
+  assertConceptChemistryGuide(assistedCombination.payload.conceptChemistry, { strict: false });
   await revealIfNeeded(assisted, assistedCombination);
 
   const replaySource = await start({ mode: "quick", seed: 9473 });
@@ -499,11 +537,17 @@ test("online Bronze Path Guard is non-consuming, spoiler-safe, and fails open fo
 
   const ranked = await start({ mode: "daily", seed: 9474 });
   assert.equal(ranked.game.ranked, true);
+  assertConceptChemistryGuide(ranked.run.conceptChemistry, { strict: false });
   const rankedRoute = solutionRoute(ranked.game.target);
   const rankedOffRoute = onlineOffRoutePair({
     route: rankedRoute,
     starters: ranked.game.starters,
-    target: ranked.game.target
+    target: ranked.game.target,
+    acceptResult: (result) => Boolean(findMissingPair({
+      route: rankedRoute,
+      available: [...ranked.game.starters, result.word],
+      lookup: curatedCombination
+    }))
   });
   const rankedCombination = await combine(ranked, rankedOffRoute);
   assert.equal(rankedCombination.response.status, 200, "ranked runs must never expose the Path Guard oracle");
@@ -584,6 +628,7 @@ test("the static local runtime matches Path Guard consumption, allowance, exclus
       assert.equal(error.code, "wrong_path");
       assert.equal(error.status, 409);
       assert.match(error.message, /wrong path|cannot advance|does not advance/i);
+      assertConceptChemistryGuide(error.payload?.conceptChemistry, { strict: true });
       assertSpoilerSafe(
         { error: error.message, code: error.code },
         { rejectedResult: pair.result?.word || "" }
@@ -671,8 +716,19 @@ test("the static local runtime matches Path Guard consumption, allowance, exclus
     && step.word === "Energy"
   );
   assert.ok(localEnergyStep, "the local Manufacturing guide must include Air + Fire в†’ Energy");
-  const localEnergy = await combine(localManufacturing, localEnergyStep);
-  assert.equal(localEnergy.word, "Energy");
+  const localManufacturingGuide = assertConceptChemistryGuide(localManufacturing.run.conceptChemistry, { strict: true });
+  assert.equal(localManufacturingGuide.expectedProduct, "Steam");
+  await rejectedLocalPair(localManufacturing, localEnergyStep);
+  const localGuidedStep = localManufacturingRoute.find((step) =>
+    pairKey(step.a, step.b) === pairKey(
+      localManufacturingGuide.allowedPair.a,
+      localManufacturingGuide.allowedPair.b
+    )
+  );
+  assert.ok(localGuidedStep);
+  const localEnergy = await combine(localManufacturing, localGuidedStep);
+  assert.equal(localEnergy.word, localManufacturingGuide.expectedProduct);
+  assertConceptChemistryGuide(localEnergy.conceptChemistry, { strict: true });
   await reveal(localManufacturing);
 
   const localMud = await start({

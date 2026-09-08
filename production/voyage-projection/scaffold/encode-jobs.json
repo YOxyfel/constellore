@@ -1,0 +1,398 @@
+{
+  "schemaVersion": 1,
+  "contractSha256": "0459b858503d99cc30d04139b5aa6144d03fb81e4b2e95fb9be4973f149b1416",
+  "planOnly": true,
+  "executesCommands": false,
+  "fps": 24,
+  "totalFrames": 1368,
+  "jobs": [
+    {
+      "id": "opening-prores-master",
+      "kind": "prores-master",
+      "variantId": "promise",
+      "ready": false,
+      "blockers": [
+        "composited frame sequence missing",
+        "48 kHz / 24-bit mastered audio missing"
+      ],
+      "inputs": {
+        "framePattern": "output/voyage-projection/composites/promise/timeline/frame-%04d.exr",
+        "frameSha256": null,
+        "audioPath": "output/voyage-projection/audio/voyage-projection-opening-master.wav",
+        "audioSha256": null
+      },
+      "output": {
+        "path": "output/voyage-projection/masters/voyage-projection-opening-master.mov",
+        "sha256": null
+      },
+      "executable": "ffmpeg",
+      "arguments": [
+        "-hide_banner",
+        "-y",
+        "-framerate",
+        "24",
+        "-start_number",
+        "0",
+        "-i",
+        "output/voyage-projection/composites/promise/timeline/frame-%04d.exr",
+        "-i",
+        "output/voyage-projection/audio/voyage-projection-opening-master.wav",
+        "-c:v",
+        "prores_ks",
+        "-profile:v",
+        "5",
+        "-pix_fmt",
+        "yuva444p10le",
+        "-c:a",
+        "pcm_s24le",
+        "-ar",
+        "48000",
+        "-color_primaries",
+        "bt709",
+        "-color_trc",
+        "bt709",
+        "-colorspace",
+        "bt709",
+        "output/voyage-projection/masters/voyage-projection-opening-master.mov"
+      ]
+    },
+    {
+      "id": "opening-h264-web",
+      "kind": "h264-web",
+      "variantId": "promise",
+      "ready": false,
+      "blockers": [
+        "ProRes master missing"
+      ],
+      "inputs": {
+        "masterPath": "output/voyage-projection/masters/voyage-projection-opening-master.mov",
+        "masterSha256": null
+      },
+      "output": {
+        "path": "public/cinematic/voyage-projection-opening-master.mp4",
+        "sha256": null
+      },
+      "executable": "ffmpeg",
+      "arguments": [
+        "-hide_banner",
+        "-y",
+        "-i",
+        "output/voyage-projection/masters/voyage-projection-opening-master.mov",
+        "-vf",
+        "scale=1920:1080:flags=lanczos",
+        "-c:v",
+        "libx264",
+        "-profile:v",
+        "high",
+        "-pix_fmt",
+        "yuv420p",
+        "-movflags",
+        "+faststart",
+        "-c:a",
+        "aac",
+        "-ar",
+        "48000",
+        "public/cinematic/voyage-projection-opening-master.mp4"
+      ]
+    },
+    {
+      "id": "opening-vp9-alternate",
+      "kind": "vp9-web-plan",
+      "variantId": "promise",
+      "ready": false,
+      "blockers": [
+        "ProRes master missing"
+      ],
+      "inputs": {
+        "masterPath": "output/voyage-projection/masters/voyage-projection-opening-master.mov",
+        "masterSha256": null
+      },
+      "output": {
+        "path": "public/cinematic/voyage-projection-opening-master.webm",
+        "sha256": null
+      },
+      "executable": "ffmpeg",
+      "arguments": [
+        "-hide_banner",
+        "-y",
+        "-i",
+        "output/voyage-projection/masters/voyage-projection-opening-master.mov",
+        "-vf",
+        "scale=1920:1080:flags=lanczos",
+        "-c:v",
+        "libvpx-vp9",
+        "-crf",
+        "28",
+        "-b:v",
+        "0",
+        "-deadline",
+        "good",
+        "-cpu-used",
+        "2",
+        "-pix_fmt",
+        "yuv420p",
+        "-c:a",
+        "libopus",
+        "-b:a",
+        "160k",
+        "-ar",
+        "48000",
+        "public/cinematic/voyage-projection-opening-master.webm"
+      ]
+    },
+    {
+      "id": "finale-prores-master",
+      "kind": "prores-master",
+      "variantId": "completion",
+      "ready": false,
+      "blockers": [
+        "composited frame sequence missing",
+        "48 kHz / 24-bit mastered audio missing"
+      ],
+      "inputs": {
+        "framePattern": "output/voyage-projection/composites/completion/timeline/frame-%04d.exr",
+        "frameSha256": null,
+        "audioPath": "output/voyage-projection/audio/voyage-projection-finale-master.wav",
+        "audioSha256": null
+      },
+      "output": {
+        "path": "output/voyage-projection/masters/voyage-projection-finale-master.mov",
+        "sha256": null
+      },
+      "executable": "ffmpeg",
+      "arguments": [
+        "-hide_banner",
+        "-y",
+        "-framerate",
+        "24",
+        "-start_number",
+        "0",
+        "-i",
+        "output/voyage-projection/composites/completion/timeline/frame-%04d.exr",
+        "-i",
+        "output/voyage-projection/audio/voyage-projection-finale-master.wav",
+        "-c:v",
+        "prores_ks",
+        "-profile:v",
+        "5",
+        "-pix_fmt",
+        "yuva444p10le",
+        "-c:a",
+        "pcm_s24le",
+        "-ar",
+        "48000",
+        "-color_primaries",
+        "bt709",
+        "-color_trc",
+        "bt709",
+        "-colorspace",
+        "bt709",
+        "output/voyage-projection/masters/voyage-projection-finale-master.mov"
+      ]
+    },
+    {
+      "id": "finale-h264-web",
+      "kind": "h264-web",
+      "variantId": "completion",
+      "ready": false,
+      "blockers": [
+        "ProRes master missing"
+      ],
+      "inputs": {
+        "masterPath": "output/voyage-projection/masters/voyage-projection-finale-master.mov",
+        "masterSha256": null
+      },
+      "output": {
+        "path": "public/cinematic/voyage-projection-finale-master.mp4",
+        "sha256": null
+      },
+      "executable": "ffmpeg",
+      "arguments": [
+        "-hide_banner",
+        "-y",
+        "-i",
+        "output/voyage-projection/masters/voyage-projection-finale-master.mov",
+        "-vf",
+        "scale=1920:1080:flags=lanczos",
+        "-c:v",
+        "libx264",
+        "-profile:v",
+        "high",
+        "-pix_fmt",
+        "yuv420p",
+        "-movflags",
+        "+faststart",
+        "-c:a",
+        "aac",
+        "-ar",
+        "48000",
+        "public/cinematic/voyage-projection-finale-master.mp4"
+      ]
+    },
+    {
+      "id": "finale-vp9-alternate",
+      "kind": "vp9-web-plan",
+      "variantId": "completion",
+      "ready": false,
+      "blockers": [
+        "ProRes master missing"
+      ],
+      "inputs": {
+        "masterPath": "output/voyage-projection/masters/voyage-projection-finale-master.mov",
+        "masterSha256": null
+      },
+      "output": {
+        "path": "public/cinematic/voyage-projection-finale-master.webm",
+        "sha256": null
+      },
+      "executable": "ffmpeg",
+      "arguments": [
+        "-hide_banner",
+        "-y",
+        "-i",
+        "output/voyage-projection/masters/voyage-projection-finale-master.mov",
+        "-vf",
+        "scale=1920:1080:flags=lanczos",
+        "-c:v",
+        "libvpx-vp9",
+        "-crf",
+        "28",
+        "-b:v",
+        "0",
+        "-deadline",
+        "good",
+        "-cpu-used",
+        "2",
+        "-pix_fmt",
+        "yuv420p",
+        "-c:a",
+        "libopus",
+        "-b:a",
+        "160k",
+        "-ar",
+        "48000",
+        "public/cinematic/voyage-projection-finale-master.webm"
+      ]
+    },
+    {
+      "id": "opening-poster",
+      "kind": "poster-webp-plan",
+      "variantId": "promise",
+      "shotId": "solar",
+      "ready": false,
+      "blockers": [
+        "graded composite frame missing",
+        "creative approval missing"
+      ],
+      "sourceFrame": 168,
+      "inputs": {
+        "sourcePath": "output/voyage-projection/composites/promise/solar/frame-0168.exr",
+        "sourceSha256": null
+      },
+      "output": {
+        "path": "public/cinematic/voyage-projection-opening-poster.webp",
+        "sha256": null
+      },
+      "executable": "ffmpeg",
+      "arguments": [
+        "-hide_banner",
+        "-y",
+        "-i",
+        "output/voyage-projection/composites/promise/solar/frame-0168.exr",
+        "-vf",
+        "scale=1920:1080:flags=lanczos",
+        "-frames:v",
+        "1",
+        "-c:v",
+        "libwebp",
+        "-quality",
+        "88",
+        "-compression_level",
+        "6",
+        "-preset",
+        "picture",
+        "public/cinematic/voyage-projection-opening-poster.webp"
+      ]
+    },
+    {
+      "id": "progress-poster",
+      "kind": "poster-webp-plan",
+      "variantId": "progress",
+      "shotId": "black-hole",
+      "ready": false,
+      "blockers": [
+        "graded composite frame missing",
+        "creative approval missing"
+      ],
+      "sourceFrame": 912,
+      "inputs": {
+        "sourcePath": "output/voyage-projection/composites/progress/black-hole/frame-0912.exr",
+        "sourceSha256": null
+      },
+      "output": {
+        "path": "public/cinematic/voyage-projection-progress-poster.webp",
+        "sha256": null
+      },
+      "executable": "ffmpeg",
+      "arguments": [
+        "-hide_banner",
+        "-y",
+        "-i",
+        "output/voyage-projection/composites/progress/black-hole/frame-0912.exr",
+        "-vf",
+        "scale=1920:1080:flags=lanczos",
+        "-frames:v",
+        "1",
+        "-c:v",
+        "libwebp",
+        "-quality",
+        "88",
+        "-compression_level",
+        "6",
+        "-preset",
+        "picture",
+        "public/cinematic/voyage-projection-progress-poster.webp"
+      ]
+    },
+    {
+      "id": "finale-poster",
+      "kind": "poster-webp-plan",
+      "variantId": "completion",
+      "shotId": "beyond",
+      "ready": false,
+      "blockers": [
+        "graded composite frame missing",
+        "creative approval missing"
+      ],
+      "sourceFrame": 1272,
+      "inputs": {
+        "sourcePath": "output/voyage-projection/composites/completion/beyond/frame-1272.exr",
+        "sourceSha256": null
+      },
+      "output": {
+        "path": "public/cinematic/voyage-projection-finale-poster.webp",
+        "sha256": null
+      },
+      "executable": "ffmpeg",
+      "arguments": [
+        "-hide_banner",
+        "-y",
+        "-i",
+        "output/voyage-projection/composites/completion/beyond/frame-1272.exr",
+        "-vf",
+        "scale=1920:1080:flags=lanczos",
+        "-frames:v",
+        "1",
+        "-c:v",
+        "libwebp",
+        "-quality",
+        "88",
+        "-compression_level",
+        "6",
+        "-preset",
+        "picture",
+        "public/cinematic/voyage-projection-finale-poster.webp"
+      ]
+    }
+  ]
+}

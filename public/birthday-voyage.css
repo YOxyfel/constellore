@@ -1,0 +1,5596 @@
+:root {
+  --birthday-ink: #f8f5ff;
+  --birthday-muted: rgba(231, 228, 255, .7);
+  --birthday-cyan: #7ae8ff;
+  --birthday-violet: #a98bff;
+  --birthday-gold: #ffc66f;
+  --birthday-rose: #ff7aa8;
+}
+
+/* Programmatically focused headings announce each new chapter to assistive
+   technology. They are not interactive controls, so avoid drawing the global
+   three-pixel control outline around the cinematic title. */
+.birthday-voyage__panel h2[tabindex="-1"]:focus,
+.birthday-voyage__route h2[tabindex="-1"]:focus {
+  outline: none;
+}
+
+/* Route announcements remain available to screen readers without competing
+   with the authored chapter copy as a second visible caption bar. */
+.birthday-voyage__status {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0 0 0 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+body.birthday-voyage-active {
+  overflow: hidden;
+}
+
+.birthday-voyage {
+  position: fixed;
+  z-index: 100000;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  min-height: 100dvh;
+  overflow: hidden;
+  padding: clamp(12px, 2.2vw, 30px);
+  color: var(--birthday-ink);
+  background:
+    radial-gradient(circle at 50% 110%, rgba(103, 68, 180, .28), transparent 46%),
+    #02030a;
+  isolation: isolate;
+}
+
+.birthday-voyage:focus-visible {
+  outline: 3px solid var(--birthday-cyan);
+  outline-offset: -6px;
+}
+
+.birthday-voyage__backdrop {
+  position: absolute;
+  z-index: -2;
+  inset: 0;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 18% 22%, rgba(91, 225, 255, .13), transparent 25%),
+    radial-gradient(circle at 82% 16%, rgba(176, 125, 255, .15), transparent 28%),
+    radial-gradient(circle at 65% 82%, rgba(255, 118, 163, .1), transparent 25%);
+}
+
+.birthday-voyage__backdrop::after {
+  content: "";
+  position: absolute;
+  inset: -20%;
+  opacity: .22;
+  background: conic-gradient(
+    from 90deg at 50% 50%,
+    transparent,
+    rgba(122, 232, 255, .12),
+    transparent 32%,
+    rgba(169, 139, 255, .12),
+    transparent 68%
+  );
+  animation: birthday-nebula-turn 28s linear infinite;
+}
+
+.birthday-voyage__backdrop i {
+  position: absolute;
+  top: var(--birthday-y);
+  left: var(--birthday-x);
+  width: var(--birthday-size);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 10px rgba(137, 229, 255, .9);
+  animation: birthday-star-pulse var(--birthday-twinkle) ease-in-out infinite alternate;
+}
+
+.birthday-voyage__shell {
+  width: min(1180px, 100%);
+  max-height: calc(100dvh - clamp(24px, 4.4vw, 60px));
+  overflow: hidden auto;
+  border: 1px solid rgba(189, 178, 255, .22);
+  border-radius: clamp(22px, 3vw, 38px);
+  background:
+    linear-gradient(145deg, rgba(17, 20, 43, .94), rgba(5, 7, 19, .96)),
+    #080a18;
+  box-shadow:
+    0 36px 120px rgba(0, 0, 0, .65),
+    inset 0 1px 0 rgba(255, 255, 255, .08);
+  backdrop-filter: blur(22px);
+}
+
+.birthday-voyage__topbar {
+  position: sticky;
+  z-index: 20;
+  top: 0;
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 18px;
+  min-height: 66px;
+  padding: 12px clamp(18px, 3vw, 34px);
+  border-bottom: 1px solid rgba(189, 178, 255, .14);
+  background: rgba(5, 7, 18, .84);
+  backdrop-filter: blur(22px);
+}
+
+.birthday-voyage__topbar > span:first-child {
+  color: rgba(238, 236, 255, .82);
+  font: 700 11px/1.2 "DM Mono", ui-monospace, SFMono-Regular, Consolas, monospace;
+  letter-spacing: .17em;
+}
+
+.birthday-voyage__progress {
+  position: relative;
+  min-width: min(38vw, 280px);
+  padding-bottom: 9px;
+  color: var(--birthday-muted);
+  font: 600 11px/1.2 "DM Mono", ui-monospace, SFMono-Regular, Consolas, monospace;
+  text-align: right;
+}
+
+.birthday-voyage__progress::before,
+.birthday-voyage__progress::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 2px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .09);
+}
+
+.birthday-voyage__progress::after {
+  right: auto;
+  width: var(--birthday-progress, 0%);
+  background: linear-gradient(90deg, var(--birthday-cyan), var(--birthday-violet), var(--birthday-rose));
+  box-shadow: 0 0 14px rgba(122, 232, 255, .48);
+  transition: width 440ms cubic-bezier(.2, .72, .22, 1);
+}
+
+.birthday-voyage__close {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, .14);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, .04);
+  color: #fff;
+  font: 300 26px/1 Arial, sans-serif;
+  cursor: pointer;
+}
+
+.birthday-voyage__close:hover,
+.birthday-voyage__close:focus-visible {
+  border-color: rgba(122, 232, 255, .7);
+  background: rgba(122, 232, 255, .1);
+}
+
+.birthday-voyage[data-birthday-message="open"] .birthday-voyage__topbar .birthday-voyage__close {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.birthday-voyage__panel {
+  display: grid;
+  align-content: center;
+  min-height: min(670px, calc(100dvh - 160px));
+  padding: clamp(30px, 5vw, 72px);
+}
+
+.birthday-voyage__question-header {
+  width: min(760px, 100%);
+  margin: 0 auto clamp(24px, 4vw, 42px);
+  text-align: center;
+}
+
+.birthday-voyage__eyebrow {
+  display: block;
+  margin-bottom: 14px;
+  color: var(--birthday-cyan);
+  font: 700 11px/1.2 "DM Mono", ui-monospace, SFMono-Regular, Consolas, monospace;
+  letter-spacing: .24em;
+}
+
+.birthday-voyage__question-header h2 {
+  margin: 0;
+  color: #fff;
+  font: 760 clamp(30px, 5vw, 62px)/.98 "Outfit", Inter, system-ui, sans-serif;
+  letter-spacing: -.045em;
+  text-wrap: balance;
+}
+
+.birthday-voyage__question-header p {
+  max-width: 660px;
+  margin: 18px auto 0;
+  color: var(--birthday-muted);
+  font: 500 clamp(15px, 1.8vw, 19px)/1.6 Inter, system-ui, sans-serif;
+}
+
+.birthday-voyage__status {
+  min-height: 52px;
+  margin: 0;
+  padding: 14px clamp(18px, 3vw, 34px) 18px;
+  border-top: 1px solid rgba(189, 178, 255, .11);
+  color: var(--birthday-gold);
+  background: rgba(3, 4, 13, .48);
+  font: 650 13px/1.45 "DM Mono", ui-monospace, SFMono-Regular, Consolas, monospace;
+  text-align: center;
+}
+
+.birthday-voyage__form {
+  display: grid;
+  gap: 16px;
+  width: min(520px, 100%);
+  margin: 0 auto;
+}
+
+.birthday-voyage__form label {
+  display: grid;
+  gap: 9px;
+  color: rgba(239, 237, 255, .8);
+  font: 650 12px/1.2 "DM Mono", ui-monospace, SFMono-Regular, Consolas, monospace;
+  letter-spacing: .07em;
+}
+
+.birthday-voyage__form input {
+  width: 100%;
+  min-height: 58px;
+  padding: 0 18px;
+  border: 1px solid rgba(184, 174, 255, .28);
+  border-radius: 16px;
+  outline: 0;
+  color: #fff;
+  background: rgba(3, 5, 15, .76);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .04);
+  font: 600 17px/1 Inter, system-ui, sans-serif;
+}
+
+.birthday-voyage__form input:focus {
+  border-color: var(--birthday-cyan);
+  box-shadow: 0 0 0 4px rgba(122, 232, 255, .12);
+}
+
+.birthday-voyage__primary,
+.birthday-voyage__secondary,
+.birthday-voyage__choice,
+.birthday-voyage__city-card,
+.birthday-voyage__route-skip {
+  min-height: 52px;
+  border-radius: 15px;
+  font: 700 14px/1.2 Inter, system-ui, sans-serif;
+  cursor: pointer;
+  transition: transform 160ms ease, border-color 160ms ease, background 160ms ease, opacity 160ms ease;
+}
+
+.birthday-voyage__primary {
+  justify-self: center;
+  min-width: min(100%, 280px);
+  padding: 0 24px;
+  border: 0;
+  color: #070916;
+  background: linear-gradient(100deg, var(--birthday-cyan), #b7f7ff 44%, #d6c9ff);
+  box-shadow: 0 14px 42px rgba(79, 202, 235, .2);
+}
+
+.birthday-voyage__secondary {
+  padding: 0 22px;
+  border: 1px solid rgba(190, 179, 255, .32);
+  color: #fff;
+  background: rgba(151, 126, 255, .1);
+}
+
+.birthday-voyage__primary:focus-visible,
+.birthday-voyage__secondary:focus-visible,
+.birthday-voyage__choice:focus-visible,
+.birthday-voyage__city-card:focus-visible {
+  transform: translateY(-2px);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .birthday-voyage__primary:hover,
+  .birthday-voyage__secondary:hover,
+  .birthday-voyage__choice:hover,
+  .birthday-voyage__city-card:hover {
+    transform: translateY(-2px);
+  }
+}
+
+.birthday-voyage__primary:disabled,
+.birthday-voyage__secondary:disabled,
+.birthday-voyage__choice:disabled,
+.birthday-voyage__city-card:disabled {
+  cursor: default;
+  opacity: .4;
+}
+
+.birthday-voyage__choice-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+  width: min(940px, 100%);
+  margin: 0 auto;
+}
+
+.birthday-voyage__choice {
+  position: relative;
+  overflow: hidden;
+  padding: 15px 12px;
+  border: 1px solid rgba(190, 179, 255, .24);
+  color: #f7f4ff;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, .055), rgba(255, 255, 255, .015)),
+    rgba(6, 8, 23, .7);
+}
+
+.birthday-voyage__choice:hover,
+.birthday-voyage__choice:focus-visible,
+.birthday-voyage__choice.is-selected {
+  border-color: var(--birthday-cyan);
+  background: rgba(76, 196, 226, .14);
+}
+
+.birthday-voyage__choice.is-removing {
+  animation: birthday-option-remove 360ms ease-in both;
+}
+
+.birthday-voyage__choice.is-morphed {
+  border-color: var(--birthday-gold);
+  background:
+    linear-gradient(145deg, rgba(255, 198, 111, .18), rgba(255, 255, 255, .025)),
+    rgba(6, 8, 23, .78);
+  animation: birthday-sedan-morph 560ms cubic-bezier(.16, .82, .22, 1) both;
+}
+
+.birthday-voyage__choice-grid--cars.is-final {
+  grid-template-columns: minmax(220px, 320px);
+  justify-content: center;
+}
+
+.birthday-voyage__choice:disabled:not(.is-selected) {
+  opacity: .36;
+}
+
+.birthday-voyage__question-nav {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  width: min(680px, 100%);
+  margin: clamp(24px, 4vw, 38px) auto 0;
+}
+
+.birthday-voyage__question-nav .birthday-voyage__primary,
+.birthday-voyage__question-nav .birthday-voyage__secondary {
+  min-width: min(230px, 46%);
+}
+
+.birthday-voyage__question-nav.has-reset {
+  width: min(840px, 100%);
+}
+
+.birthday-voyage__question-nav.has-reset .birthday-voyage__primary,
+.birthday-voyage__question-nav.has-reset .birthday-voyage__secondary {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.birthday-voyage__reset {
+  border-color: rgba(255, 198, 111, .3);
+  color: var(--birthday-gold);
+  background: rgba(255, 198, 111, .06);
+}
+
+.birthday-voyage[data-revealed="true"] .birthday-voyage__question-nav {
+  justify-content: flex-end;
+}
+
+.birthday-voyage[data-revealed="true"] .birthday-voyage__question-nav .birthday-voyage__primary {
+  flex: 0 1 300px;
+}
+
+.birthday-voyage__saved-answer {
+  margin: 0;
+  padding: 12px 15px;
+  border: 1px dashed rgba(255, 198, 111, .34);
+  border-radius: 13px;
+  color: var(--birthday-gold);
+  background: rgba(255, 198, 111, .06);
+  font: 650 13px/1.4 "DM Mono", ui-monospace, monospace;
+  text-align: center;
+}
+
+.birthday-voyage__drink-options {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+  width: min(900px, 100%);
+  margin: 0 auto;
+}
+
+.birthday-voyage__choice--evasive {
+  min-height: 58px;
+  border-color: rgba(122, 232, 255, .52);
+  background:
+    linear-gradient(145deg, rgba(122, 232, 255, .18), rgba(169, 139, 255, .08)),
+    #080b1d;
+  box-shadow: 0 8px 24px rgba(40, 174, 211, .18);
+}
+
+.birthday-voyage__choice--evasive.is-viewport-evasive {
+  position: absolute;
+  z-index: 50;
+  top: 0;
+  left: 0;
+  width: min(var(--water-width, 170px), calc(100vw - 24px));
+  margin: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translate3d(var(--water-x, 0), var(--water-y, 0), 0)
+    rotate(var(--water-tilt, 0deg));
+  transition:
+    border-color 160ms ease,
+    background 160ms ease,
+    box-shadow 160ms ease,
+    filter 110ms ease;
+  will-change: transform;
+}
+
+.birthday-voyage__water-anchor {
+  display: block;
+  min-height: 58px;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.birthday-voyage__choice--evasive.is-viewport-evasive.is-positioned {
+  visibility: visible;
+}
+
+.birthday-voyage__choice--evasive.is-viewport-evasive.is-positioned,
+.birthday-voyage__choice--evasive.is-viewport-evasive.is-positioned:hover,
+.birthday-voyage__choice--evasive.is-viewport-evasive.is-positioned:focus-visible {
+  transform: translate3d(var(--water-x, 0), var(--water-y, 0), 0)
+    rotate(var(--water-tilt, 0deg));
+}
+
+.birthday-voyage__choice--evasive.is-teleporting {
+  filter: brightness(1.45) drop-shadow(0 0 18px rgba(122, 232, 255, .7));
+}
+
+.birthday-voyage__choice--evasive.is-caught {
+  border-color: var(--birthday-gold);
+  background: rgba(255, 198, 111, .14);
+  box-shadow: 0 0 24px rgba(255, 198, 111, .22);
+  will-change: auto;
+}
+
+.birthday-voyage__city-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+  width: min(1040px, 100%);
+  margin: 0 auto;
+  perspective: 1000px;
+}
+
+.birthday-voyage__city-card {
+  position: relative;
+  min-height: clamp(160px, 20vw, 230px);
+  overflow: hidden;
+  padding: 0;
+  border: 1px solid rgba(190, 179, 255, .24);
+  background: #080a18;
+  transform-style: preserve-3d;
+}
+
+.birthday-voyage__city-card strong {
+  position: absolute;
+  z-index: 2;
+  top: 0;
+  right: 0;
+  left: 0;
+  padding: 12px 8px;
+  color: #fff;
+  background: linear-gradient(180deg, rgba(2, 3, 10, .94), rgba(2, 3, 10, .18));
+  font: 750 14px/1.2 Inter, system-ui, sans-serif;
+  text-align: center;
+}
+
+.birthday-voyage__city-card img {
+  width: 100%;
+  height: 100%;
+  min-height: inherit;
+  object-fit: cover;
+  transition: filter 180ms ease, transform 180ms ease;
+}
+
+.birthday-voyage__city-card:hover img,
+.birthday-voyage__city-card:focus-visible img {
+  transform: scale(1.04);
+}
+
+.birthday-voyage__city-card.is-flipping {
+  animation: birthday-city-flip 440ms ease-in-out;
+}
+
+.birthday-voyage__city-card.is-selected {
+  border-color: var(--birthday-cyan);
+  box-shadow: 0 0 0 2px rgba(122, 232, 255, .22);
+}
+
+.birthday-voyage__unlock-orbit {
+  position: relative;
+  width: clamp(120px, 18vw, 190px);
+  aspect-ratio: 1;
+  margin: 0 auto 28px;
+}
+
+.birthday-voyage__unlock-orbit i,
+.birthday-voyage__unlock-orbit b {
+  position: absolute;
+  inset: 8%;
+  border: 1px solid rgba(122, 232, 255, .62);
+  border-radius: 50%;
+  transform: rotate(20deg) scaleY(.43);
+  animation: birthday-orbit-turn 8s linear infinite;
+}
+
+.birthday-voyage__unlock-orbit i:nth-child(2) {
+  inset: 20%;
+  border-color: rgba(255, 122, 168, .7);
+  animation-direction: reverse;
+  animation-duration: 5s;
+  transform: rotate(-28deg) scaleY(.62);
+}
+
+.birthday-voyage__unlock-orbit b {
+  inset: 42%;
+  border: 0;
+  background: #fff;
+  box-shadow:
+    0 0 16px 6px #fff,
+    0 0 44px 18px rgba(122, 232, 255, .58),
+    0 0 86px 34px rgba(169, 139, 255, .22);
+  transform: none;
+  animation: birthday-star-pulse 1.2s ease-in-out infinite alternate;
+}
+
+.birthday-voyage__summary {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  width: min(940px, 100%);
+  margin: 0 auto 22px;
+}
+
+.birthday-voyage__summary-card {
+  position: relative;
+  min-height: 88px;
+  overflow: hidden;
+  padding: 18px 16px 16px;
+  border: 1px solid rgba(190, 179, 255, .18);
+  border-radius: 16px;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(122, 232, 255, .07), transparent 44%),
+    rgba(255, 255, 255, .035);
+  text-align: center;
+  transition:
+    min-height 720ms cubic-bezier(.22, .8, .2, 1),
+    padding 720ms cubic-bezier(.22, .8, .2, 1);
+  animation: birthday-summary-drop-top 620ms cubic-bezier(.18, .84, .25, 1.12) calc(var(--summary-index) * 110ms) both;
+}
+
+.birthday-voyage__summary-card[data-entry="bottom"] {
+  animation-name: birthday-summary-drop-bottom;
+}
+
+.birthday-voyage__summary.is-fated .birthday-voyage__summary-card {
+  min-height: 148px;
+  padding-block: 22px 20px;
+  transition-delay: calc(var(--summary-index) * 40ms);
+}
+
+.birthday-voyage__answer-original::before,
+.birthday-voyage__answer-original::after {
+  content: "";
+  position: absolute;
+  z-index: 2;
+  top: 50%;
+  left: -12%;
+  width: 124%;
+  height: 3px;
+  border-radius: 999px;
+  opacity: 0;
+  background: linear-gradient(90deg, var(--birthday-rose), var(--birthday-gold));
+  box-shadow: 0 0 14px rgba(255, 122, 168, .65);
+  transform: rotate(12deg) scaleX(0);
+  transform-origin: left;
+}
+
+.birthday-voyage__answer-original::after {
+  transform: rotate(-12deg) scaleX(0);
+  transform-origin: right;
+}
+
+.birthday-voyage__summary.is-fated .birthday-voyage__answer-original::before {
+  animation: birthday-fate-strike 360ms calc(160ms + var(--summary-index) * 100ms) ease-out forwards;
+}
+
+.birthday-voyage__summary.is-fated .birthday-voyage__answer-original::after {
+  animation: birthday-fate-strike-reverse 360ms calc(250ms + var(--summary-index) * 100ms) ease-out forwards;
+}
+
+.birthday-voyage__summary dt {
+  position: relative;
+  z-index: 1;
+  color: var(--birthday-muted);
+  font: 650 10px/1.2 "DM Mono", ui-monospace, monospace;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+.birthday-voyage__summary dd {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  margin: 7px 0 0;
+  color: #fff;
+  font: 750 16px/1.25 Inter, system-ui, sans-serif;
+}
+
+.birthday-voyage__answer-original {
+  position: relative;
+  display: inline-block;
+  transition: opacity 220ms ease, filter 220ms ease;
+}
+
+.birthday-voyage__summary.is-fated .birthday-voyage__answer-original {
+  opacity: .35;
+  filter: grayscale(1);
+}
+
+.birthday-voyage__fate-replacement {
+  position: relative;
+  z-index: 3;
+  display: block;
+  max-height: 0;
+  margin-top: 0;
+  overflow: hidden;
+  opacity: 0;
+  color: var(--birthday-gold);
+  font: 800 clamp(17px, 2vw, 22px)/1.2 "Outfit", Inter, system-ui, sans-serif;
+  transform: translateY(12px) scale(.94);
+  visibility: hidden;
+}
+
+.birthday-voyage__summary.is-fated .birthday-voyage__fate-replacement {
+  max-height: 70px;
+  margin-top: 16px;
+  opacity: 1;
+  transform: none;
+  visibility: visible;
+  transition:
+    opacity 480ms calc(420ms + var(--summary-index) * 100ms),
+    transform 480ms calc(420ms + var(--summary-index) * 100ms),
+    max-height 620ms calc(180ms + var(--summary-index) * 80ms),
+    margin-top 620ms calc(180ms + var(--summary-index) * 80ms);
+}
+
+.birthday-voyage[data-revealed="true"] .birthday-voyage__question-header h2 {
+  font-size: clamp(28px, 4.4vw, 54px);
+}
+
+.birthday-voyage[data-stage="lion-intro"] {
+  background: #000;
+}
+
+.birthday-voyage[data-stage="lion-intro"] .birthday-voyage__shell {
+  width: min(920px, 100%);
+  background: #000;
+}
+
+.birthday-voyage[data-stage="lion-intro"] .birthday-voyage__panel {
+  min-height: 0;
+  padding: clamp(12px, 2vw, 22px);
+}
+
+.birthday-voyage__lion-intro {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+}
+
+.birthday-voyage__lion-intro-heading {
+  text-align: center;
+}
+
+.birthday-voyage__lion-intro-heading .birthday-voyage__eyebrow {
+  margin-bottom: 4px;
+  font-size: 9px;
+}
+
+.birthday-voyage__lion-intro-heading h2 {
+  margin: 0;
+  color: #fff;
+  font: 760 clamp(24px, 3vw, 34px)/1 "Outfit", Inter, system-ui, sans-serif;
+  letter-spacing: -.035em;
+}
+
+.birthday-voyage__lion-intro-heading p {
+  margin: 5px 0 0;
+  color: var(--birthday-gold);
+  font: 650 11px/1.35 "DM Mono", ui-monospace, monospace;
+}
+
+.birthday-voyage__lion-intro-frame {
+  position: relative;
+  width: min(62dvh, 640px, 100%);
+  aspect-ratio: 1;
+  overflow: hidden;
+  border: 1px solid rgba(255, 198, 111, .24);
+  border-radius: 22px;
+  background: #000;
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, .04),
+    0 24px 70px rgba(0, 0, 0, .72),
+    0 0 44px rgba(255, 198, 111, .08);
+}
+
+.birthday-voyage__lion-intro-video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: #000;
+}
+
+.birthday-voyage__lion-intro-play {
+  position: absolute;
+  z-index: 2;
+  inset: 50% auto auto 50%;
+  transform: translate(-50%, -50%);
+}
+
+.birthday-voyage__lion-intro-play:hover,
+.birthday-voyage__lion-intro-play:focus-visible {
+  transform: translate(-50%, calc(-50% - 2px));
+}
+
+.birthday-voyage__lion-intro-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  width: min(640px, 100%);
+}
+
+.birthday-voyage__lion-intro-sound {
+  color: rgba(238, 236, 255, .72);
+  font: 700 10px/1 "DM Mono", ui-monospace, monospace;
+  letter-spacing: .11em;
+}
+
+.birthday-voyage__lion-intro-actions .birthday-voyage__secondary {
+  min-height: 42px;
+  padding-inline: 16px;
+  font-size: 11px;
+}
+
+.birthday-voyage[data-stage="route"] .birthday-voyage__shell {
+  width: min(1400px, 100%);
+}
+
+.birthday-voyage[data-stage="route"] .birthday-voyage__panel {
+  min-height: 0;
+  padding: 18px clamp(12px, 2vw, 28px) 26px;
+}
+
+.birthday-voyage[data-stage="route"] .birthday-voyage__status {
+  min-height: 46px;
+  padding-block: 12px;
+}
+
+.birthday-voyage__route {
+  position: relative;
+  display: grid;
+  gap: 12px;
+}
+
+.birthday-voyage__route-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 0 8px;
+}
+
+.birthday-voyage__route-heading-copy {
+  display: grid;
+  gap: 3px;
+}
+
+.birthday-voyage__route-heading .birthday-voyage__eyebrow {
+  margin-bottom: 2px;
+}
+
+.birthday-voyage__route-heading h2 {
+  margin: 0;
+  color: #fff;
+  font: 780 clamp(22px, 3vw, 38px)/1 "Outfit", Inter, system-ui, sans-serif;
+  letter-spacing: -.035em;
+}
+
+.birthday-voyage__route-heading p {
+  margin: 0;
+  color: var(--birthday-muted);
+  font: 550 13px/1.4 Inter, system-ui, sans-serif;
+}
+
+.birthday-voyage__route-prompt {
+  max-width: 360px;
+  padding: 9px 13px;
+  border: 1px solid hsl(var(--scene-hue, 190) 86% 74% / .28);
+  border-radius: 999px;
+  color: rgba(249, 248, 255, .9);
+  background: hsl(var(--scene-hue, 190) 54% 28% / .2);
+  box-shadow: 0 0 20px hsl(var(--scene-hue, 190) 90% 66% / .1);
+  font: 650 11px/1.35 "DM Mono", ui-monospace, monospace;
+  text-align: right;
+  transition: border-color 500ms ease, background 500ms ease, box-shadow 500ms ease;
+}
+
+.birthday-voyage__route-board {
+  position: relative;
+  --scene-hue: 190;
+  min-height: min(65dvh, 620px);
+  overflow: hidden;
+  border: 1px solid rgba(190, 179, 255, .16);
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at 20% 14%, hsl(var(--scene-hue) 95% 70% / .13), transparent 30%),
+    radial-gradient(circle at 80% 84%, hsl(calc(var(--scene-hue) + 58) 82% 67% / .16), transparent 32%),
+    linear-gradient(180deg, rgba(9, 12, 30, .94), rgba(2, 3, 10, .98));
+  box-shadow:
+    inset 0 0 90px rgba(1, 2, 10, .7),
+    0 20px 60px rgba(0, 0, 0, .18);
+  contain: layout paint;
+  isolation: isolate;
+  transition: border-color 700ms ease, background 900ms ease;
+}
+
+.birthday-voyage__route-ambience {
+  position: absolute;
+  z-index: 0;
+  inset: -5%;
+  display: block;
+  width: 110%;
+  height: 110%;
+  opacity: 0;
+  object-fit: cover;
+  filter: blur(8px) saturate(1.08) brightness(.7);
+  transform: scale(1.035);
+  transition: opacity 900ms ease, filter 900ms ease;
+  pointer-events: none;
+}
+
+.birthday-voyage__route-ambience.is-active {
+  opacity: .34;
+}
+
+.birthday-voyage__route-board[data-route-kind="planet"] .birthday-voyage__route-ambience.is-active,
+.birthday-voyage__route-board[data-route-kind="cosmos"] .birthday-voyage__route-ambience.is-active {
+  opacity: .42;
+  filter: blur(6px) saturate(1.12) brightness(.72);
+}
+
+.birthday-voyage__route-board::before {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  opacity: var(--route-energy, 0);
+  pointer-events: none;
+  background: radial-gradient(
+    circle at var(--arrival-x, 14%) var(--arrival-y, 15%),
+    hsl(var(--arrival-hue, 190) 100% 72% / .24),
+    transparent 24%
+  );
+  mix-blend-mode: screen;
+  transition: opacity 600ms ease, background 500ms ease;
+}
+
+.birthday-voyage__route-board::after {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  opacity: .26;
+  pointer-events: none;
+  background-image:
+    radial-gradient(circle, #fff 0 1px, transparent 1.5px),
+    radial-gradient(circle, rgba(122, 232, 255, .8) 0 1px, transparent 1.5px);
+  background-position: 0 0, 18px 22px;
+  background-size: 43px 43px, 67px 67px;
+  mask-image: linear-gradient(180deg, #000, transparent 80%);
+}
+
+.birthday-voyage__route-line {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.birthday-voyage__route-shadow,
+.birthday-voyage__route-stripes {
+  fill: none;
+  vector-effect: non-scaling-stroke;
+}
+
+.birthday-voyage__route-shadow {
+  stroke: rgba(2, 3, 10, .9);
+  stroke-width: 13;
+}
+
+.birthday-voyage__route-stripes {
+  stroke: var(--birthday-cyan);
+  stroke-width: 7;
+  stroke-dasharray: 13 10;
+  stroke-linecap: round;
+  filter: drop-shadow(0 0 7px rgba(122, 232, 255, .55));
+  animation: birthday-route-dashes 1.1s linear infinite;
+}
+
+.birthday-voyage[data-space="true"] .birthday-voyage__route-stripes {
+  stroke: var(--birthday-violet);
+  filter: drop-shadow(0 0 9px rgba(169, 139, 255, .72));
+}
+
+.birthday-voyage__route-card {
+  position: absolute;
+  z-index: 4;
+  top: var(--route-y);
+  left: var(--route-x);
+  --gift-hue: var(--vfx-hue, 190);
+  --gift-paper-deep: hsl(var(--gift-hue) 47% 24%);
+  --gift-paper: hsl(var(--gift-hue) 66% 40%);
+  --gift-paper-light: hsl(var(--gift-hue) 88% 68%);
+  --gift-ribbon-deep: #b56d28;
+  --gift-ribbon: #ffd07b;
+  --gift-ribbon-light: #fff0b9;
+  width: clamp(76px, 8.4vw, 112px);
+  aspect-ratio: 1.28;
+  perspective: 800px;
+  transform: translate(-50%, -50%);
+}
+
+.birthday-voyage__route-card[data-destination="varna"] { --gift-hue: 188; }
+.birthday-voyage__route-card[data-destination="vienna"] { --gift-hue: 332; }
+.birthday-voyage__route-card[data-destination="brussels"] { --gift-hue: 42; }
+.birthday-voyage__route-card[data-destination="sofia"] { --gift-hue: 270; }
+.birthday-voyage__route-card[data-destination="tokyo"] { --gift-hue: 350; }
+.birthday-voyage__route-card[data-destination="shibuya"] { --gift-hue: 300; }
+.birthday-voyage__route-card[data-destination="earth"] { --gift-hue: 198; }
+.birthday-voyage__route-card[data-destination="moon"] { --gift-hue: 218; }
+.birthday-voyage__route-card[data-destination="mars"] { --gift-hue: 18; }
+.birthday-voyage__route-card[data-destination="kepler"] { --gift-hue: 256; }
+.birthday-voyage__route-card[data-destination="cosmos"] { --gift-hue: 316; }
+
+.birthday-voyage__route-card.is-available:hover,
+.birthday-voyage__route-card.is-available:focus-within,
+.birthday-voyage__route-card.is-previewing {
+  z-index: 30;
+}
+
+.birthday-voyage__route-card[data-route-status="waiting"] {
+  opacity: 1;
+}
+
+.birthday-voyage__route-card.is-available {
+  z-index: 18;
+  opacity: 1;
+}
+
+.birthday-voyage__route-card[data-kind="cosmos"] {
+  width: clamp(84px, 9vw, 118px);
+}
+
+.birthday-voyage__route-card.is-special {
+  z-index: 7;
+  width: clamp(96px, 11.2vw, 150px);
+  --vienna-peak: 1.48;
+  --vienna-rest: 1.04;
+}
+
+.birthday-voyage__route-card.is-special::before {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  inset: -10%;
+  border: 1px solid rgba(255, 213, 145, .5);
+  border-radius: 19px;
+  opacity: .38;
+  background: radial-gradient(circle, rgba(255, 198, 111, .09), transparent 68%);
+  box-shadow: 0 0 16px rgba(255, 198, 111, .2);
+  transition: inset 320ms ease, opacity 320ms ease, box-shadow 320ms ease;
+}
+
+.birthday-voyage__route-card.is-special.is-celebrating::before {
+  inset: -24%;
+  border-width: 2px;
+  border-radius: 26px;
+  opacity: .92;
+  background: conic-gradient(
+    from 0deg,
+    transparent,
+    rgba(255, 198, 111, .24),
+    transparent 24%,
+    rgba(122, 232, 255, .25),
+    transparent 58%,
+    rgba(255, 122, 168, .22),
+    transparent
+  );
+  box-shadow:
+    0 0 28px rgba(255, 198, 111, .32),
+    inset 0 0 24px rgba(122, 232, 255, .16);
+  animation: birthday-vienna-halo 1.65s linear 1;
+}
+
+.birthday-voyage__route-card.is-special .birthday-voyage__route-card-inner {
+  z-index: 1;
+}
+
+.birthday-voyage__route-card-trigger {
+  position: relative;
+  z-index: 1;
+  display: block;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: 13px;
+  appearance: none;
+  color: inherit;
+  background: transparent;
+  font: inherit;
+  perspective: 800px;
+  cursor: zoom-in;
+  transform: scale(1);
+  transform-origin: center;
+  transition:
+    transform 420ms cubic-bezier(.2, .78, .2, 1),
+    filter 420ms ease;
+}
+
+.birthday-voyage button.birthday-voyage__route-card-trigger:disabled {
+  cursor: default;
+  opacity: 1;
+}
+
+.birthday-voyage[data-route-mode="reexplore"] .birthday-voyage__route-card.is-replayable {
+  z-index: 10;
+}
+
+.birthday-voyage[data-route-mode="reexplore"] .birthday-voyage__route-card.is-replayable .birthday-voyage__route-card-trigger:not(:disabled) {
+  cursor: pointer;
+}
+
+.birthday-voyage[data-route-mode="reexplore"] .birthday-voyage__route-card.is-replayable:hover,
+.birthday-voyage[data-route-mode="reexplore"] .birthday-voyage__route-card.is-replayable:focus-within {
+  z-index: 32;
+}
+
+.birthday-voyage[data-route-mode="reexplore"] .birthday-voyage__route-card.is-replayable .birthday-voyage__route-card-trigger:not(:disabled):hover,
+.birthday-voyage[data-route-mode="reexplore"] .birthday-voyage__route-card.is-replayable .birthday-voyage__route-card-trigger:not(:disabled):focus-visible {
+  outline: 2px solid var(--birthday-cyan);
+  outline-offset: 4px;
+  filter: drop-shadow(0 0 18px hsl(var(--vfx-hue) 100% 72% / .72));
+  transform: scale(1.1);
+}
+
+.birthday-voyage__route-card.is-available .birthday-voyage__route-card-trigger {
+  cursor: zoom-in;
+  animation: birthday-route-card-ready 1.6s ease-in-out infinite alternate;
+}
+
+.birthday-voyage__route-card.is-available .birthday-voyage__route-card-trigger:focus-visible {
+  outline: 2px solid var(--birthday-cyan);
+  outline-offset: 5px;
+  transform: scale(1.12);
+  filter: drop-shadow(0 0 16px rgba(122, 232, 255, .62));
+}
+
+.birthday-voyage__route-card-inner {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  transition: transform 650ms cubic-bezier(.2, .72, .24, 1);
+}
+
+.birthday-voyage__route-card.is-committed .birthday-voyage__route-card-inner,
+.birthday-voyage__route-card.is-arrived .birthday-voyage__route-card-inner {
+  transform: rotateY(180deg);
+}
+
+.birthday-voyage__route-card.is-available .birthday-voyage__route-card-trigger:focus-visible .birthday-voyage__route-card-inner {
+  transform: translateZ(7px);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .birthday-voyage__route-card.is-available .birthday-voyage__route-card-trigger:hover {
+    transform: scale(1.12);
+    filter: drop-shadow(0 0 16px rgba(122, 232, 255, .56));
+  }
+
+  .birthday-voyage__route-card.is-available .birthday-voyage__route-card-trigger:hover .birthday-voyage__route-card-inner {
+    transform: translateZ(7px);
+  }
+}
+
+.birthday-voyage__route-card.is-celebrating:not(.is-special) {
+  animation: birthday-arrival-card 880ms cubic-bezier(.18, .78, .2, 1);
+}
+
+.birthday-voyage__route-card.is-special.is-arrived {
+  transform: translate(-50%, -50%) scale(var(--vienna-rest));
+}
+
+.birthday-voyage__route-card.is-special.is-celebrating {
+  animation: birthday-vienna-hero 1650ms cubic-bezier(.16, .82, .18, 1) both;
+}
+
+.birthday-voyage__route-card-face {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  border: 1px solid rgba(194, 185, 255, .34);
+  border-radius: 13px;
+  backface-visibility: hidden;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, .48);
+}
+
+.birthday-voyage__route-card-front {
+  position: absolute;
+  display: grid;
+  place-content: center;
+  gap: 5px;
+  color: rgba(245, 243, 255, .82);
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, .18), transparent 38%),
+    repeating-linear-gradient(
+      135deg,
+      transparent 0 8px,
+      rgba(255, 255, 255, .035) 8px 10px
+    ),
+    linear-gradient(145deg, var(--gift-paper-light), var(--gift-paper) 48%, var(--gift-paper-deep));
+  text-align: center;
+  isolation: isolate;
+}
+
+.birthday-voyage__route-card-front > span {
+  position: absolute;
+  z-index: 5;
+  top: 31%;
+  right: 0;
+  left: 0;
+  color: var(--birthday-cyan);
+  font: 700 10px/1 "DM Mono", ui-monospace, monospace;
+  text-shadow: 0 1px 5px rgba(0, 0, 0, .82);
+}
+
+.birthday-voyage__route-card-front b {
+  position: absolute;
+  z-index: 5;
+  right: 8px;
+  bottom: 7px;
+  left: 8px;
+  margin: 0;
+  padding: 5px 7px;
+  border: 1px solid rgba(255, 255, 255, .24);
+  border-radius: 999px;
+  color: #fff;
+  background: rgba(3, 5, 15, .54);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .12),
+    0 4px 12px rgba(0, 0, 0, .22);
+  font: 750 clamp(11px, 1.1vw, 14px)/1.1 Inter, system-ui, sans-serif;
+  text-shadow: 0 1px 5px rgba(0, 0, 0, .9);
+  backdrop-filter: blur(5px);
+}
+
+.birthday-voyage__route-card.is-available .birthday-voyage__route-card-front b {
+  color: #fff;
+  font-size: clamp(12px, 1.3vw, 16px);
+  text-shadow: 0 0 12px rgba(122, 232, 255, .82);
+}
+
+/*
+ * The live invitation sits outside the flipping card so it can remain above
+ * the paper, crossing ribbon and lid. The legacy face label stays in the DOM
+ * for state copy, but is deliberately quiet until the wrapping is gone.
+ */
+.birthday-voyage__route-card:not([data-gift-state="open"]) .birthday-voyage__route-card-front b {
+  visibility: hidden;
+  opacity: 0;
+}
+
+.birthday-voyage__gift-prompt {
+  position: absolute;
+  z-index: 12;
+  top: 62%;
+  left: 50%;
+  isolation: isolate;
+  display: grid;
+  place-items: center;
+  width: clamp(70px, calc(100% - 14px), 108px);
+  box-sizing: border-box;
+  padding: 5px 9px 6px;
+  overflow: hidden;
+  border: 1px solid hsl(var(--gift-hue) 94% 84% / .9);
+  border-radius: 11px;
+  visibility: hidden;
+  color: #fff;
+  background:
+    linear-gradient(145deg, rgba(24, 28, 54, .92), rgba(4, 7, 20, .96)),
+    hsl(var(--gift-hue) 45% 12%);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, .12),
+    0 7px 18px rgba(0, 0, 0, .48),
+    0 0 16px hsl(var(--gift-hue) 100% 70% / .34),
+    inset 0 1px 0 rgba(255, 255, 255, .2);
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, -42%) scale(.84);
+  transform-origin: 50% 50%;
+  transition:
+    opacity 180ms ease,
+    visibility 0s linear 180ms,
+    transform 300ms cubic-bezier(.18, .8, .2, 1),
+    border-color 220ms ease,
+    box-shadow 220ms ease;
+  -webkit-backdrop-filter: blur(10px) saturate(1.28);
+  backdrop-filter: blur(10px) saturate(1.28);
+}
+
+.birthday-voyage__gift-prompt[hidden] {
+  display: none !important;
+}
+
+.birthday-voyage__gift-prompt::before {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  inset: -25% -65%;
+  border-radius: inherit;
+  background: linear-gradient(
+    108deg,
+    transparent 37%,
+    rgba(255, 255, 255, .08) 43%,
+    rgba(255, 255, 255, .48) 50%,
+    rgba(255, 255, 255, .08) 57%,
+    transparent 63%
+  );
+  transform: translateX(-58%);
+  animation: birthday-gift-prompt-shimmer 2.8s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.birthday-voyage__gift-prompt-kicker,
+.birthday-voyage__gift-prompt-label {
+  position: relative;
+  z-index: 1;
+  display: block;
+  max-width: 100%;
+  white-space: nowrap;
+}
+
+.birthday-voyage__gift-prompt-kicker {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  color: var(--gift-ribbon-light);
+  font: 750 clamp(5px, .5vw, 7px)/1 "DM Mono", ui-monospace, monospace;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, .9);
+}
+
+.birthday-voyage__gift-prompt-kicker::before,
+.birthday-voyage__gift-prompt-kicker::after {
+  content: "✦";
+  color: var(--gift-ribbon);
+  font-size: .8em;
+  line-height: 1;
+  text-shadow: 0 0 7px rgba(255, 208, 123, .72);
+}
+
+.birthday-voyage__gift-prompt-label {
+  overflow: hidden;
+  color: #fff;
+  font: 820 clamp(11px, 1.08vw, 14px)/1.08 Inter, system-ui, sans-serif;
+  letter-spacing: -.015em;
+  text-align: center;
+  text-overflow: ellipsis;
+  text-shadow:
+    0 1px 4px rgba(0, 0, 0, .96),
+    0 0 10px hsl(var(--gift-hue) 100% 75% / .58);
+}
+
+.birthday-voyage__route-card.is-available[data-gift-state="wrapped"]
+  .birthday-voyage__gift-prompt[data-prompt-state="ready"] {
+  visibility: visible;
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+  transition-delay: 0s;
+  animation: birthday-gift-prompt-ready 440ms cubic-bezier(.18, .82, .2, 1);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .birthday-voyage__route-card.is-available .birthday-voyage__route-card-trigger:hover
+    > .birthday-voyage__gift-prompt[data-prompt-state="ready"],
+  .birthday-voyage__route-card.is-available .birthday-voyage__route-card-trigger:focus-visible
+    > .birthday-voyage__gift-prompt[data-prompt-state="ready"] {
+    border-color: #fff;
+    box-shadow:
+      0 0 0 2px hsl(var(--gift-hue) 100% 75% / .32),
+      0 9px 22px rgba(0, 0, 0, .54),
+      0 0 23px hsl(var(--gift-hue) 100% 72% / .72),
+      inset 0 1px 0 rgba(255, 255, 255, .28);
+    transform: translate(-50%, -55%) scale(1.055);
+  }
+}
+
+.birthday-voyage__route-card.is-unwrapping
+  .birthday-voyage__gift-prompt[data-prompt-state="opening"] {
+  visibility: visible;
+  animation: birthday-gift-prompt-release 420ms cubic-bezier(.24, .72, .2, 1) both;
+}
+
+.birthday-voyage__route-card:is(.is-committed, .is-arrived, .is-complete, .is-replayable)
+  .birthday-voyage__gift-prompt {
+  visibility: hidden;
+  opacity: 0;
+}
+
+.birthday-voyage__gift-wrap,
+.birthday-voyage__gift-lid,
+.birthday-voyage__gift-ribbon,
+.birthday-voyage__gift-bow {
+  position: absolute;
+  display: block;
+  pointer-events: none;
+  transform-style: preserve-3d;
+}
+
+.birthday-voyage__gift-wrap {
+  z-index: 2;
+  inset: 0;
+  overflow: visible;
+  border-radius: inherit;
+  opacity: 1;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, .18),
+    inset 0 -12px 20px rgba(0, 0, 0, .12);
+  transition: opacity 180ms ease 430ms, visibility 0s linear 610ms;
+}
+
+.birthday-voyage__gift-wrap::before,
+.birthday-voyage__gift-wrap::after {
+  content: "";
+  position: absolute;
+  z-index: 1;
+  inset: 7px;
+  border: 1px solid rgba(255, 255, 255, .15);
+  border-radius: 9px;
+  opacity: .7;
+  pointer-events: none;
+}
+
+.birthday-voyage__gift-wrap::after {
+  inset: 0;
+  border: 0;
+  border-radius: inherit;
+  opacity: .2;
+  background-image:
+    radial-gradient(circle, rgba(255, 255, 255, .95) 0 1px, transparent 1.5px),
+    radial-gradient(circle, rgba(255, 255, 255, .68) 0 1px, transparent 1.5px);
+  background-position: 7px 8px, 19px 21px;
+  background-size: 27px 27px, 37px 37px;
+}
+
+.birthday-voyage__gift-paper {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  display: block;
+  overflow: hidden;
+  border-radius: inherit;
+  opacity: .22;
+  background:
+    linear-gradient(115deg, rgba(255, 255, 255, .54), transparent 22% 70%, rgba(0, 0, 0, .24)),
+    repeating-linear-gradient(45deg, transparent 0 12px, rgba(255, 255, 255, .16) 12px 14px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .55),
+    inset 0 -9px 16px rgba(0, 0, 0, .22);
+}
+
+.birthday-voyage__gift-lid {
+  z-index: 4;
+  top: -2px;
+  right: -3px;
+  left: -3px;
+  height: 28%;
+  border: 1px solid hsl(var(--gift-hue) 84% 80% / .62);
+  border-radius: 12px 12px 5px 5px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, .28), transparent 42%),
+    linear-gradient(90deg, var(--gift-paper-light), var(--gift-paper) 58%, var(--gift-paper-deep));
+  box-shadow:
+    0 5px 9px rgba(0, 0, 0, .27),
+    inset 0 1px 0 rgba(255, 255, 255, .26);
+  transform-origin: 50% 100%;
+}
+
+.birthday-voyage__gift-ribbon {
+  z-index: 3;
+  inset: 0;
+  overflow: hidden;
+  border-radius: inherit;
+  background:
+    linear-gradient(
+      90deg,
+      transparent 0 42%,
+      var(--gift-ribbon-deep) 42% 44%,
+      var(--gift-ribbon) 44% 56%,
+      var(--gift-ribbon-light) 56% 58%,
+      transparent 58%
+    ),
+    linear-gradient(
+      0deg,
+      transparent 0 43%,
+      var(--gift-ribbon-deep) 43% 46%,
+      var(--gift-ribbon) 46% 58%,
+      var(--gift-ribbon-light) 58% 61%,
+      transparent 61%
+    );
+  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, .32));
+  transform-origin: 50% 52%;
+}
+
+.birthday-voyage__gift-bow {
+  z-index: 6;
+  top: -54%;
+  left: 50%;
+  width: 42%;
+  height: 96%;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 50% 55%, var(--gift-ribbon-light) 0 9%, var(--gift-ribbon) 10% 21%, transparent 23%),
+    radial-gradient(ellipse at 27% 52%, transparent 0 18%, var(--gift-ribbon-light) 20% 25%, var(--gift-ribbon) 27% 51%, var(--gift-ribbon-deep) 53% 59%, transparent 61%),
+    radial-gradient(ellipse at 73% 52%, transparent 0 18%, var(--gift-ribbon-light) 20% 25%, var(--gift-ribbon) 27% 51%, var(--gift-ribbon-deep) 53% 59%, transparent 61%);
+  filter: drop-shadow(0 4px 3px rgba(0, 0, 0, .4));
+  transform: translateX(-50%) rotate(-3deg);
+  transform-origin: 50% 55%;
+}
+
+.birthday-voyage__route-card.is-unwrapping .birthday-voyage__gift-ribbon {
+  animation: birthday-gift-ribbon-release 520ms cubic-bezier(.2, .76, .2, 1) both;
+}
+
+.birthday-voyage__route-card.is-unwrapping .birthday-voyage__gift-bow {
+  animation: birthday-gift-bow-release 590ms cubic-bezier(.18, .78, .18, 1) both;
+}
+
+.birthday-voyage__route-card.is-unwrapping .birthday-voyage__gift-lid {
+  animation: birthday-gift-lid-open 620ms cubic-bezier(.16, .76, .2, 1) both;
+}
+
+.birthday-voyage__route-card.is-unwrapping .birthday-voyage__gift-wrap {
+  animation: birthday-gift-paper-release 650ms cubic-bezier(.18, .72, .22, 1) both;
+}
+
+.birthday-voyage__route-card:is(.is-committed, .is-arrived, .is-complete, .is-replayable) :is(
+  .birthday-voyage__gift-wrap,
+  .birthday-voyage__gift-lid,
+  .birthday-voyage__gift-ribbon,
+  .birthday-voyage__gift-bow
+) {
+  visibility: hidden;
+  opacity: 0;
+}
+
+.birthday-voyage__route-card-back {
+  transform: rotateY(180deg);
+  background: #070914;
+}
+
+.birthday-voyage__route-card-back strong {
+  position: absolute;
+  z-index: 2;
+  top: 0;
+  right: 0;
+  left: 0;
+  padding: 7px 4px;
+  color: #fff;
+  background: linear-gradient(180deg, rgba(2, 3, 10, .96), transparent);
+  font: 780 clamp(10px, 1vw, 13px)/1.1 Inter, system-ui, sans-serif;
+  text-align: center;
+  text-shadow: 0 1px 5px rgba(0, 0, 0, .92);
+}
+
+.birthday-voyage__route-card-back img {
+  width: 100%;
+  height: 100%;
+  opacity: 1;
+  object-fit: cover;
+  filter: none;
+  transition: opacity 420ms ease, filter 420ms ease;
+}
+
+.birthday-voyage__route-card[data-route-status="complete"] .birthday-voyage__route-card-back img,
+.birthday-voyage__route-card[data-route-status="replayable"] .birthday-voyage__route-card-back img {
+  opacity: .9;
+  filter: saturate(.86) brightness(.88);
+}
+
+.birthday-voyage__route-card[data-route-status="available"] .birthday-voyage__route-card-back img,
+.birthday-voyage__route-card[data-route-status="driving"] .birthday-voyage__route-card-back img,
+.birthday-voyage__route-card[data-route-status="previewing"] .birthday-voyage__route-card-back img,
+.birthday-voyage__route-card.is-revisiting .birthday-voyage__route-card-back img {
+  opacity: 1;
+  filter: none;
+  transition: none;
+}
+
+.birthday-voyage[data-route-mode="reexplore"] .birthday-voyage__route-card.is-replayable:hover .birthday-voyage__route-card-back img,
+.birthday-voyage[data-route-mode="reexplore"] .birthday-voyage__route-card.is-replayable:focus-within .birthday-voyage__route-card-back img {
+  opacity: 1;
+  filter: none;
+}
+
+.birthday-voyage__route-card[data-kind="planet"] .birthday-voyage__route-card-back img {
+  box-sizing: border-box;
+  object-fit: contain;
+  padding: 8%;
+  background:
+    radial-gradient(circle, rgba(122, 232, 255, .12), transparent 52%),
+    #03040b;
+}
+
+.birthday-voyage__route-card[data-kind="cosmos"] .birthday-voyage__route-card-face {
+  border-color: rgba(255, 184, 223, .42);
+  box-shadow:
+    0 0 0 1px rgba(255, 122, 168, .1),
+    0 0 16px rgba(169, 139, 255, .2);
+  transition: border-color 280ms ease, box-shadow 280ms ease;
+}
+
+.birthday-voyage__route-card[data-kind="cosmos"]:is(.is-current, .is-celebrating, .is-previewing) .birthday-voyage__route-card-face,
+.birthday-voyage[data-route-mode="reexplore"] .birthday-voyage__route-card[data-kind="cosmos"].is-replayable:focus-within .birthday-voyage__route-card-face {
+  border-color: rgba(255, 205, 233, .9);
+  box-shadow:
+    0 0 0 3px rgba(255, 122, 168, .2),
+    0 0 38px rgba(169, 139, 255, .58),
+    0 0 74px rgba(255, 122, 168, .22);
+}
+
+.birthday-voyage__route-card-revisit {
+  position: absolute;
+  z-index: 4;
+  right: 50%;
+  bottom: -15px;
+  display: none;
+  width: max-content;
+  padding: 5px 8px;
+  border: 1px solid hsl(var(--vfx-hue) 90% 72% / .38);
+  border-radius: 999px;
+  color: #fff;
+  background: rgba(4, 6, 18, .9);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, .44);
+  font: 700 8px/1 "DM Mono", ui-monospace, monospace;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  transform: translateX(50%);
+  white-space: nowrap;
+}
+
+.birthday-voyage__route-touch-hint {
+  display: none;
+  align-items: center;
+  gap: 7px;
+  width: max-content;
+  max-width: calc(100% - 24px);
+  padding: 7px 10px;
+  border: 1px solid rgba(122, 232, 255, .3);
+  border-radius: 999px;
+  color: rgba(245, 249, 255, .88);
+  background: rgba(3, 6, 18, .76);
+  font: 700 9px/1.25 "DM Mono", ui-monospace, monospace;
+  letter-spacing: .05em;
+}
+
+.birthday-voyage__route-preview {
+  --preview-fit: cover;
+  --preview-aspect: 1.28;
+  width: min(960px, calc(100vw - 24px));
+  max-width: none;
+  max-height: calc(100dvh - 24px);
+  margin: auto;
+  padding: 18px;
+  overflow: auto;
+  border: 1px solid rgba(190, 179, 255, .34);
+  border-radius: 24px;
+  color: #fff;
+  background:
+    radial-gradient(circle at 18% 8%, rgba(122, 232, 255, .16), transparent 32%),
+    radial-gradient(circle at 84% 94%, rgba(176, 126, 255, .2), transparent 34%),
+    linear-gradient(155deg, #11162f, #040611 68%);
+  box-shadow:
+    0 34px 100px rgba(0, 0, 0, .72),
+    0 0 56px rgba(122, 232, 255, .14);
+}
+
+.birthday-voyage__route-preview[open] {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, auto) auto;
+  animation: birthday-route-preview-in 420ms cubic-bezier(.18, .8, .2, 1) both;
+}
+
+.birthday-voyage__route-preview[data-closing="true"] {
+  animation: birthday-route-preview-out 460ms cubic-bezier(.5, 0, .8, .3) both;
+}
+
+.birthday-voyage__route-preview::backdrop {
+  background: rgba(1, 2, 9, .82);
+  backdrop-filter: blur(9px);
+  animation: birthday-route-preview-backdrop 360ms ease both;
+}
+
+.birthday-voyage__route-preview-header {
+  grid-area: 1 / 1;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.birthday-voyage__route-preview-header h3 {
+  margin: 5px 0 0;
+  font: 800 clamp(27px, 5vw, 46px)/1 "Outfit", Inter, system-ui, sans-serif;
+}
+
+.birthday-voyage__route-preview-close {
+  flex: 0 0 auto;
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  border: 1px solid rgba(190, 179, 255, .32);
+  border-radius: 50%;
+  color: #fff;
+  background: rgba(255, 255, 255, .06);
+  font: 500 25px/1 Inter, system-ui, sans-serif;
+  cursor: pointer;
+  transition: transform 180ms ease, border-color 180ms ease, background 180ms ease;
+}
+
+.birthday-voyage__route-preview-close:hover,
+.birthday-voyage__route-preview-close:focus-visible {
+  border-color: var(--birthday-cyan);
+  outline: 2px solid var(--birthday-cyan);
+  outline-offset: 3px;
+  background: rgba(122, 232, 255, .14);
+  transform: rotate(8deg) scale(1.06);
+}
+
+.birthday-voyage__route-preview-card {
+  grid-area: 2 / 1;
+  width: min(900px, 92vw, calc(72dvh * 1.28));
+  aspect-ratio: var(--preview-aspect);
+  margin: 0 auto;
+  perspective: 1200px;
+}
+
+.birthday-voyage__route-preview-card-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  opacity: 1;
+  transform: rotateY(0deg) scale(.86);
+  transform-style: preserve-3d;
+  transition:
+    opacity 460ms ease,
+    transform 780ms cubic-bezier(.16, .8, .2, 1);
+}
+
+.birthday-voyage__route-preview[data-opened="true"] .birthday-voyage__route-preview-card-inner {
+  transform: rotateY(180deg) scale(1);
+}
+
+.birthday-voyage__route-preview[data-closing="true"] .birthday-voyage__route-preview-card-inner {
+  opacity: 0;
+  transform: rotateY(180deg) scale(.2);
+  transition-duration: 460ms;
+}
+
+.birthday-voyage__route-preview-card-face {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  overflow: hidden;
+  border: 1px solid rgba(194, 185, 255, .52);
+  border-radius: 22px;
+  backface-visibility: hidden;
+  box-shadow:
+    0 22px 54px rgba(0, 0, 0, .58),
+    0 0 34px rgba(122, 232, 255, .16);
+}
+
+.birthday-voyage__route-preview-card-front {
+  place-content: center;
+  gap: 10px;
+  text-align: center;
+  background:
+    radial-gradient(circle at 50% 35%, rgba(122, 232, 255, .18), transparent 34%),
+    linear-gradient(145deg, #20274e, #080a18);
+}
+
+.birthday-voyage__route-preview-card-front span {
+  color: var(--birthday-cyan);
+  font: 800 clamp(22px, 5vw, 42px)/1 "DM Mono", ui-monospace, monospace;
+}
+
+.birthday-voyage__route-preview-card-front b {
+  font: 800 clamp(18px, 3.5vw, 32px)/1.1 "Outfit", Inter, system-ui, sans-serif;
+}
+
+.birthday-voyage__route-preview-card-back {
+  position: relative;
+  transform: rotateY(180deg);
+  background: #050711;
+}
+
+.birthday-voyage__route-preview-card-back strong {
+  display: none;
+  position: absolute;
+  z-index: 2;
+  inset: 0 0 auto;
+  padding: clamp(16px, 3vw, 28px) 18px 46px;
+  background: linear-gradient(180deg, rgba(2, 3, 10, .96), transparent);
+  font: 850 clamp(25px, 5vw, 48px)/1 "Outfit", Inter, system-ui, sans-serif;
+  text-align: center;
+}
+
+.birthday-voyage__route-preview-card-back img,
+.birthday-voyage__route-preview-video {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  object-fit: var(--preview-fit);
+  background: #03040b;
+}
+
+.birthday-voyage__route-preview:is([data-kind="planet"], [data-kind="cosmos"], [data-media-fit="contain"]) {
+  --preview-fit: contain;
+}
+
+.birthday-voyage__route-preview:is([data-kind="planet"], [data-media-fit="contain"]) .birthday-voyage__route-preview-card-back img,
+.birthday-voyage__route-preview:is([data-kind="planet"], [data-media-fit="contain"]) .birthday-voyage__route-preview-video {
+  padding: clamp(14px, 3.5vw, 38px);
+  background:
+    radial-gradient(circle at 50% 52%, rgba(122, 232, 255, .14), transparent 42%),
+    radial-gradient(circle at 24% 18%, rgba(169, 139, 255, .12), transparent 34%),
+    #02030a;
+}
+
+.birthday-voyage__route-preview[data-media-state="loading"] .birthday-voyage__route-preview-card-back::after,
+.birthday-voyage__route-preview[aria-busy="true"] .birthday-voyage__route-preview-card-back::after {
+  content: "Loading our next chapter\2026";
+  position: absolute;
+  z-index: 5;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  padding: 28px;
+  color: rgba(246, 246, 255, .88);
+  background:
+    radial-gradient(circle, rgba(122, 232, 255, .18), transparent 28%),
+    rgba(2, 3, 11, .78);
+  font: 750 clamp(11px, 1.6vw, 14px)/1.4 "DM Mono", ui-monospace, monospace;
+  letter-spacing: .09em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.birthday-voyage__route-preview[data-media-state="error"] .birthday-voyage__route-preview-card-back::after,
+.birthday-voyage__route-preview[data-media-error="true"] .birthday-voyage__route-preview-card-back::after {
+  content: "This memory is still travelling through the stars.";
+  position: absolute;
+  z-index: 5;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  padding: clamp(54px, 8vw, 90px) 28px 28px;
+  color: rgba(250, 244, 255, .92);
+  background:
+    radial-gradient(circle at 50% 44%, rgba(255, 122, 168, .2), transparent 30%),
+    linear-gradient(145deg, rgba(19, 10, 32, .94), rgba(3, 5, 16, .97));
+  font: 700 clamp(14px, 2.2vw, 20px)/1.45 "Outfit", Inter, system-ui, sans-serif;
+  letter-spacing: .015em;
+  text-align: center;
+}
+
+.birthday-voyage__route-preview-card-back img[hidden],
+.birthday-voyage__route-preview-video[hidden] {
+  display: none;
+}
+
+.birthday-voyage__route-preview[data-playing="true"] .birthday-voyage__route-preview-card-back img,
+.birthday-voyage__route-preview[data-playing="true"] .birthday-voyage__route-preview-video {
+  animation: birthday-route-media-play var(--preview-duration, 5s) ease-in-out both;
+}
+
+.birthday-voyage__route-preview-context {
+  margin: 14px 0 0;
+  color: var(--birthday-muted);
+  font: 650 11px/1.4 "DM Mono", ui-monospace, monospace;
+  letter-spacing: .08em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+/*
+ * The chapter is deliberately staged as part of the destination itself: it
+ * premieres over the middle of the memory, then becomes a substantial lower
+ * caption rail. Keeping both states in the card's grid cell makes that move
+ * feel connected to the picture without covering the dialog controls.
+ */
+.birthday-voyage__route-preview-chapter-stage {
+  /*
+   * Keep both endpoints in variables so the phase hand-off can animate from
+   * the exact same geometry at every breakpoint. The rail animation replaces
+   * the filled intro animation instead of asking a transition to inherit its
+   * transform, which otherwise produces a one-frame jump.
+   */
+  --chapter-intro-shift: 0px;
+  --chapter-rail-shift: clamp(94px, 22dvh, 222px);
+  --chapter-stage-shift: var(--chapter-rail-shift);
+  --chapter-intro-scale: 1;
+  --chapter-rail-scale: .97;
+  --chapter-intro-width: min(760px, calc(100% - clamp(56px, 8vw, 112px)));
+  --chapter-rail-width: min(850px, calc(100% - clamp(20px, 3.2vw, 40px)));
+  --chapter-intro-padding: clamp(20px, 3.4vw, 34px) clamp(22px, 4.5vw, 48px);
+  --chapter-rail-padding: clamp(14px, 2vw, 20px) clamp(18px, 3vw, 34px);
+  --chapter-intro-radius: clamp(19px, 3vw, 28px);
+  --chapter-rail-radius: clamp(16px, 2.2vw, 22px);
+  --chapter-intro-title-size: clamp(27px, 4.5vw, 50px);
+  --chapter-rail-title-size: clamp(22px, 3.2vw, 34px);
+  --chapter-intro-title-leading: 1.02;
+  --chapter-rail-title-leading: 1.05;
+  --chapter-intro-copy-size: clamp(14px, 2vw, 19px);
+  --chapter-rail-copy-size: clamp(13px, 1.7vw, 17px);
+  --chapter-rail-motion-duration: 1000ms;
+  --chapter-rail-motion-ease: cubic-bezier(.16, .86, .18, 1);
+  position: relative;
+  z-index: 8;
+  grid-area: 2 / 1;
+  place-self: center;
+  box-sizing: border-box;
+  display: grid;
+  gap: 7px;
+  width: var(--chapter-intro-width);
+  max-width: 100%;
+  padding: var(--chapter-intro-padding);
+  overflow: hidden;
+  border: 1px solid rgba(218, 226, 255, .55);
+  border-radius: var(--chapter-intro-radius);
+  color: #fff;
+  background:
+    linear-gradient(102deg, rgba(4, 7, 20, .94), rgba(13, 18, 42, .82) 56%, rgba(24, 13, 44, .88)),
+    rgba(3, 5, 16, .88);
+  box-shadow:
+    0 26px 76px rgba(0, 0, 0, .58),
+    0 0 0 1px rgba(122, 232, 255, .08) inset,
+    0 0 42px rgba(122, 232, 255, .17),
+    0 0 58px rgba(176, 126, 255, .12);
+  opacity: 0;
+  visibility: hidden;
+  isolation: isolate;
+  pointer-events: none;
+  text-align: center;
+  text-wrap: balance;
+  transform: translate3d(0, var(--chapter-stage-shift), 0) scale(.92);
+  transform-origin: center;
+  transition:
+    width 880ms cubic-bezier(.18, .82, .16, 1),
+    padding 880ms cubic-bezier(.18, .82, .16, 1),
+    border-radius 880ms cubic-bezier(.18, .82, .16, 1),
+    opacity 320ms ease,
+    transform 920ms cubic-bezier(.16, .82, .18, 1),
+    visibility 0s linear 320ms;
+  -webkit-backdrop-filter: blur(11px) saturate(1.15);
+  backdrop-filter: blur(11px) saturate(1.15);
+}
+
+.birthday-voyage__route-preview-chapter-stage::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  border-radius: inherit;
+  background:
+    radial-gradient(circle at 12% 10%, rgba(122, 232, 255, .17), transparent 30%),
+    radial-gradient(circle at 91% 88%, rgba(255, 122, 168, .15), transparent 34%);
+  pointer-events: none;
+}
+
+.birthday-voyage__route-preview-chapter-stage::after {
+  content: "";
+  position: absolute;
+  z-index: 2;
+  top: 0;
+  left: -44%;
+  width: 34%;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #fff, var(--birthday-cyan), transparent);
+  filter: drop-shadow(0 0 8px var(--birthday-cyan));
+  opacity: 0;
+  pointer-events: none;
+}
+
+.birthday-voyage__route-preview-chapter-kicker {
+  color: var(--birthday-cyan);
+  font: 800 clamp(9px, 1.3vw, 12px)/1.25 "DM Mono", ui-monospace, monospace;
+  letter-spacing: .2em;
+  text-transform: uppercase;
+  text-shadow: 0 0 18px rgba(122, 232, 255, .72);
+}
+
+.birthday-voyage__route-preview-chapter-title {
+  margin: 0;
+  color: #fff;
+  font: 850 var(--chapter-intro-title-size)/var(--chapter-intro-title-leading) "Outfit", Inter, system-ui, sans-serif;
+  letter-spacing: -.025em;
+  text-shadow:
+    0 2px 18px rgba(0, 0, 0, .9),
+    0 0 34px rgba(169, 139, 255, .2);
+  transition: font-size 820ms cubic-bezier(.18, .82, .16, 1), line-height 820ms ease;
+}
+
+.birthday-voyage__route-preview-chapter-copy {
+  max-width: 660px;
+  margin: 2px auto 0;
+  color: rgba(247, 247, 255, .9);
+  font: 650 var(--chapter-intro-copy-size)/1.42 "Outfit", Inter, system-ui, sans-serif;
+  letter-spacing: .01em;
+  text-transform: none;
+  text-shadow: 0 2px 13px rgba(0, 0, 0, .94);
+  transition: font-size 820ms cubic-bezier(.18, .82, .16, 1);
+}
+
+.birthday-voyage__route-preview[data-chapter-phase="intro"]
+  .birthday-voyage__route-preview-chapter-stage,
+.birthday-voyage__route-preview-chapter-stage[data-chapter-phase="intro"] {
+  opacity: 1;
+  visibility: visible;
+  transform: translate3d(0, 0, 0) scale(1);
+  transition-delay: 0s;
+  animation: birthday-route-chapter-premiere 700ms cubic-bezier(.16, .86, .22, 1) both;
+}
+
+.birthday-voyage__route-preview[data-chapter-phase="intro"]
+  .birthday-voyage__route-preview-chapter-stage::after,
+.birthday-voyage__route-preview-chapter-stage[data-chapter-phase="intro"]::after {
+  animation: birthday-route-chapter-glint 900ms 260ms cubic-bezier(.2, .7, .2, 1) both;
+}
+
+.birthday-voyage__route-preview[data-chapter-phase="rail"]
+  .birthday-voyage__route-preview-chapter-stage,
+.birthday-voyage__route-preview-chapter-stage[data-chapter-phase="rail"] {
+  width: var(--chapter-rail-width);
+  padding: var(--chapter-rail-padding);
+  border-color: rgba(218, 226, 255, .38);
+  border-radius: var(--chapter-rail-radius);
+  opacity: 1;
+  visibility: visible;
+  transform: translate3d(0, var(--chapter-rail-shift), 0) scale(var(--chapter-rail-scale));
+  transition-delay: 0s;
+  animation: birthday-route-chapter-to-rail var(--chapter-rail-motion-duration)
+    var(--chapter-rail-motion-ease) both;
+}
+
+.birthday-voyage__route-preview[data-chapter-phase="rail"]
+  .birthday-voyage__route-preview-chapter-title,
+.birthday-voyage__route-preview-chapter-stage[data-chapter-phase="rail"]
+  .birthday-voyage__route-preview-chapter-title {
+  font-size: var(--chapter-rail-title-size);
+  line-height: var(--chapter-rail-title-leading);
+  animation: birthday-route-chapter-title-to-rail var(--chapter-rail-motion-duration)
+    var(--chapter-rail-motion-ease) both;
+}
+
+.birthday-voyage__route-preview[data-chapter-phase="rail"]
+  .birthday-voyage__route-preview-chapter-copy,
+.birthday-voyage__route-preview-chapter-stage[data-chapter-phase="rail"]
+  .birthday-voyage__route-preview-chapter-copy {
+  font-size: var(--chapter-rail-copy-size);
+  animation: birthday-route-chapter-copy-to-rail var(--chapter-rail-motion-duration)
+    var(--chapter-rail-motion-ease) both;
+}
+
+.birthday-voyage__route-preview[data-chapter-phase="closing"]
+  .birthday-voyage__route-preview-chapter-stage,
+.birthday-voyage__route-preview-chapter-stage[data-chapter-phase="closing"] {
+  opacity: 0;
+  visibility: hidden;
+  transform: translate3d(0, calc(var(--chapter-stage-shift) + 22px), 0) scale(.94);
+  transition-duration: 300ms, 300ms, 300ms, 220ms, 330ms, 0s;
+  transition-delay: 0s, 0s, 0s, 0s, 0s, 330ms;
+}
+
+.birthday-voyage__route-preview-progress {
+  grid-area: 3 / 1;
+  display: block;
+  width: min(560px, 72%);
+  height: 4px;
+  margin: 12px auto 0;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .12);
+}
+
+.birthday-voyage__route-preview-progress i {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--birthday-cyan), var(--birthday-violet), var(--birthday-rose));
+  transform: scaleX(1);
+  transform-origin: left;
+}
+
+.birthday-voyage__route-preview[data-playing="true"] .birthday-voyage__route-preview-progress i {
+  animation: birthday-route-preview-progress var(--preview-duration, 5s) linear both;
+}
+
+.birthday-voyage__route-preview[data-closing="true"] .birthday-voyage__route-preview-progress {
+  opacity: 0;
+}
+
+.birthday-voyage__route-preview[data-media-state="loading"] .birthday-voyage__route-preview-progress i,
+.birthday-voyage__route-preview[aria-busy="true"] .birthday-voyage__route-preview-progress i {
+  width: 28%;
+  animation: birthday-route-preview-loading 1.1s ease-in-out infinite alternate;
+  transform: translateX(0);
+  transform-origin: center;
+}
+
+.birthday-voyage__route-preview[data-media-state="error"] .birthday-voyage__route-preview-progress,
+.birthday-voyage__route-preview[data-media-error="true"] .birthday-voyage__route-preview-progress {
+  opacity: .38;
+}
+
+.birthday-voyage__reexplore {
+  width: min(620px, calc(100vw - 28px));
+  max-width: none;
+  margin: auto;
+  padding: clamp(28px, 5vw, 52px);
+  overflow: hidden;
+  border: 1px solid rgba(214, 192, 255, .44);
+  border-radius: 28px;
+  color: #fff;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(255, 122, 168, .2), transparent 42%),
+    radial-gradient(circle at 86% 80%, rgba(122, 232, 255, .17), transparent 36%),
+    linear-gradient(145deg, rgba(17, 21, 51, .98), rgba(5, 6, 18, .99));
+  box-shadow:
+    0 28px 90px rgba(0, 0, 0, .72),
+    0 0 70px rgba(169, 139, 255, .22);
+  text-align: center;
+}
+
+.birthday-voyage__reexplore[open] {
+  animation: birthday-reexplore-in 620ms cubic-bezier(.16, .84, .2, 1) both;
+}
+
+.birthday-voyage__reexplore::backdrop {
+  background: rgba(1, 2, 10, .8);
+  backdrop-filter: blur(12px) saturate(.7);
+  animation: birthday-route-preview-backdrop 420ms ease both;
+}
+
+.birthday-voyage__reexplore-glow {
+  position: absolute;
+  inset: -55% 16% auto;
+  height: 220px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 198, 111, .38), rgba(169, 139, 255, .14) 44%, transparent 72%);
+  filter: blur(8px);
+  pointer-events: none;
+}
+
+.birthday-voyage__reexplore h3 {
+  position: relative;
+  margin: 12px 0 10px;
+  font: 820 clamp(28px, 5vw, 48px)/1.02 "Outfit", Inter, system-ui, sans-serif;
+  letter-spacing: -.035em;
+}
+
+.birthday-voyage__reexplore p {
+  position: relative;
+  max-width: 510px;
+  margin: 0 auto;
+  color: rgba(225, 222, 242, .82);
+  font: 550 clamp(14px, 2vw, 17px)/1.55 Inter, system-ui, sans-serif;
+}
+
+.birthday-voyage__reexplore-actions {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 26px;
+}
+
+.birthday-voyage__reexplore-actions .birthday-voyage__primary,
+.birthday-voyage__reexplore-actions .birthday-voyage__secondary {
+  min-height: 50px;
+}
+
+.birthday-voyage__message,
+.birthday-voyage__birthday-message {
+  width: min(720px, calc(100vw - 28px));
+  max-width: none;
+  max-height: calc(100dvh - 28px);
+  margin: auto;
+  padding: clamp(34px, 6vw, 68px) clamp(22px, 6vw, 64px);
+  overflow: hidden auto;
+  border: 1px solid rgba(255, 205, 232, .5);
+  border-radius: clamp(24px, 4vw, 36px);
+  color: #fff;
+  background:
+    linear-gradient(180deg, rgba(4, 5, 18, .38), rgba(3, 4, 15, .9)),
+    radial-gradient(circle at 50% 30%, transparent 0 18%, rgba(8, 8, 25, .48) 70%),
+    url("/art/birthday-voyage/masters/our-cosmos-master.webp") center / cover no-repeat,
+    #050611;
+  box-shadow:
+    0 34px 110px rgba(0, 0, 0, .78),
+    0 0 72px rgba(169, 139, 255, .3),
+    inset 0 1px 0 rgba(255, 255, 255, .12);
+  isolation: isolate;
+  text-align: center;
+}
+
+.birthday-voyage__message[open],
+.birthday-voyage__birthday-message[open] {
+  animation: birthday-message-in 720ms cubic-bezier(.16, .84, .2, 1) both;
+}
+
+.birthday-voyage__message::backdrop,
+.birthday-voyage__birthday-message::backdrop {
+  background: rgba(1, 2, 10, .88);
+  backdrop-filter: blur(14px) saturate(.72);
+  animation: birthday-route-preview-backdrop 480ms ease both;
+}
+
+.birthday-voyage__message::before,
+.birthday-voyage__birthday-message::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  opacity: .42;
+  background-image:
+    radial-gradient(circle, rgba(255, 255, 255, .94) 0 1px, transparent 1.5px),
+    radial-gradient(circle, rgba(122, 232, 255, .74) 0 1px, transparent 1.5px);
+  background-position: 4px 7px, 19px 28px;
+  background-size: 47px 47px, 71px 71px;
+  mask-image: radial-gradient(circle at 50% 48%, #000, transparent 82%);
+  pointer-events: none;
+}
+
+.birthday-voyage__message::after,
+.birthday-voyage__birthday-message::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: 10% 12%;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 122, 168, .22), rgba(169, 139, 255, .1) 42%, transparent 72%);
+  filter: blur(10px);
+  pointer-events: none;
+}
+
+.birthday-voyage__message > *,
+.birthday-voyage__birthday-message > * {
+  position: relative;
+}
+
+.birthday-voyage__message-kicker {
+  display: block;
+  margin-bottom: 12px;
+  color: var(--birthday-cyan);
+  font: 800 10px/1.3 "DM Mono", ui-monospace, monospace;
+  letter-spacing: .2em;
+  text-transform: uppercase;
+}
+
+.birthday-voyage__birthday-message > .birthday-voyage__eyebrow {
+  margin-bottom: 12px;
+  color: var(--birthday-cyan);
+  letter-spacing: .2em;
+}
+
+.birthday-voyage__message-title {
+  max-width: 620px;
+  margin: 0 auto;
+  font: 850 clamp(34px, 7vw, 64px)/.98 "Outfit", Inter, system-ui, sans-serif;
+  letter-spacing: -.045em;
+  text-wrap: balance;
+  text-shadow: 0 4px 30px rgba(0, 0, 0, .75);
+}
+
+.birthday-voyage__birthday-message > h3 {
+  max-width: 620px;
+  margin: 0 auto;
+  font: 850 clamp(34px, 7vw, 64px)/.98 "Outfit", Inter, system-ui, sans-serif;
+  letter-spacing: -.045em;
+  text-wrap: balance;
+  text-shadow: 0 4px 30px rgba(0, 0, 0, .75);
+}
+
+.birthday-voyage__message-copy,
+.birthday-voyage__birthday-message .birthday-voyage__birthday-message-copy {
+  max-width: 580px;
+  margin: clamp(18px, 3vw, 28px) auto 0;
+  color: rgba(248, 245, 255, .9);
+  font: 570 clamp(16px, 2.4vw, 20px)/1.65 Inter, system-ui, sans-serif;
+  text-shadow: 0 2px 14px rgba(0, 0, 0, .9);
+  text-wrap: pretty;
+}
+
+.birthday-voyage__message-signoff {
+  display: block;
+  margin-top: clamp(18px, 3vw, 28px);
+  color: var(--birthday-gold);
+  font: 720 clamp(17px, 2.8vw, 23px)/1.35 "Outfit", Inter, system-ui, sans-serif;
+}
+
+.birthday-voyage__birthday-message-dedication {
+  max-width: 570px;
+  margin: clamp(20px, 3.5vw, 30px) auto 0;
+  color: var(--birthday-gold);
+  font: 720 clamp(19px, 3vw, 25px)/1.4 "Outfit", Inter, system-ui, sans-serif;
+  text-shadow: 0 2px 18px rgba(0, 0, 0, .9);
+  text-wrap: balance;
+}
+
+.birthday-voyage__birthday-message-hint {
+  margin-top: 16px !important;
+  color: rgba(225, 222, 242, .72) !important;
+  font: 650 10px/1.45 "DM Mono", ui-monospace, monospace !important;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.birthday-voyage__message-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  margin-top: clamp(24px, 4vw, 36px);
+}
+
+.birthday-voyage__message-actions > button {
+  min-width: min(220px, 100%);
+}
+
+.birthday-voyage__route-card.is-current .birthday-voyage__route-card-face {
+  border-color: #fff;
+  box-shadow:
+    0 0 0 3px rgba(122, 232, 255, .22),
+    0 0 calc(26px + var(--vfx-level) * 3px)
+      hsl(var(--vfx-hue) 100% 72% / .56);
+}
+
+.birthday-voyage__route-card.is-special .birthday-voyage__route-card-face {
+  border-color: rgba(255, 213, 145, .54);
+  box-shadow:
+    0 0 0 1px rgba(255, 198, 111, .14),
+    0 0 15px rgba(255, 198, 111, .2);
+}
+
+.birthday-voyage__route-card.is-special.is-celebrating .birthday-voyage__route-card-face {
+  border-color: rgba(255, 229, 188, .94);
+  box-shadow:
+    0 0 0 3px rgba(255, 198, 111, .28),
+    0 0 36px rgba(255, 198, 111, .54),
+    0 0 68px rgba(122, 232, 255, .2);
+}
+
+.birthday-voyage__arrival-vfx {
+  position: absolute;
+  z-index: 10;
+  top: var(--route-y);
+  left: var(--route-x);
+  width: 1px;
+  height: 1px;
+  pointer-events: none;
+}
+
+.birthday-voyage__arrival-vfx::before,
+.birthday-voyage__arrival-vfx::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: calc(40px + var(--burst-level) * 7px);
+  aspect-ratio: 1;
+  border: 2px solid hsl(var(--burst-hue) 100% 76% / .85);
+  border-radius: 50%;
+  box-shadow: 0 0 18px hsl(var(--burst-hue) 100% 72% / .46);
+  transform: translate(-50%, -50%) scale(.2);
+  animation: birthday-arrival-ring 1250ms cubic-bezier(.12, .66, .2, 1) both;
+}
+
+.birthday-voyage__arrival-vfx::after {
+  animation-delay: 180ms;
+}
+
+.birthday-voyage__arrival-vfx.is-special::before,
+.birthday-voyage__arrival-vfx.is-special::after {
+  width: 132px;
+  border-width: 3px;
+  border-color: rgba(255, 211, 138, .92);
+  box-shadow:
+    0 0 20px rgba(255, 198, 111, .62),
+    inset 0 0 22px rgba(122, 232, 255, .28);
+}
+
+.birthday-voyage__arrival-vfx.is-conversion::before {
+  border-style: dashed;
+  animation-duration: 1600ms;
+}
+
+.birthday-voyage__arrival-particle {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: var(--burst-size);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  opacity: 0;
+  background: hsl(var(--burst-hue) 100% 78%);
+  box-shadow: 0 0 9px hsl(var(--burst-hue) 100% 70% / .8);
+  transform: translate(-50%, -50%) scale(.4);
+  animation: birthday-arrival-particle 1180ms cubic-bezier(.12, .7, .16, 1)
+    var(--burst-delay) both;
+}
+
+.birthday-voyage__route-board.is-at-maximum::before {
+  animation: birthday-route-maximum 1500ms ease-out;
+}
+
+.birthday-voyage__parking-sign {
+  position: absolute;
+  z-index: 1;
+  top: calc(100% + clamp(5px, .7vw, 9px));
+  left: var(--parking-sign-left, calc(50% + var(--parking-sign-distance, clamp(86px, 10vw, 140px))));
+  display: grid;
+  place-items: center;
+  grid-template-rows: minmax(0, 1fr) auto;
+  align-content: center;
+  box-sizing: border-box;
+  width: clamp(34px, 3.15vw, 42px);
+  min-height: clamp(38px, 3.65vw, 46px);
+  padding: 4px 3px 3px;
+  border: 2px solid rgba(223, 249, 255, .94);
+  border-radius: 6px;
+  opacity: 0;
+  color: #fff;
+  background:
+    linear-gradient(145deg, rgba(255, 255, 255, .2), transparent 38%),
+    linear-gradient(160deg, #168ad1, #07508c);
+  box-shadow:
+    0 4px 7px rgba(0, 0, 0, .48),
+    0 0 0 2px rgba(19, 126, 190, .24),
+    0 0 18px rgba(79, 204, 255, 0);
+  font: inherit;
+  letter-spacing: 0;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, .55);
+  transform: translate(-50%, 14px) rotate(-4deg) scale(.58);
+  transform-origin: 50% 100%;
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    opacity 260ms ease,
+    transform 580ms cubic-bezier(.16, .82, .2, 1),
+    box-shadow 480ms ease,
+    visibility 0s linear 580ms;
+}
+
+.birthday-voyage__parking-sign-glyph,
+.birthday-voyage__parking-sign-label {
+  position: relative;
+  z-index: 2;
+  display: block;
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+  color: inherit;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.birthday-voyage__parking-sign-glyph {
+  font: 900 clamp(13px, 1.4vw, 18px)/.92 Inter, system-ui, sans-serif;
+  letter-spacing: -.05em;
+}
+
+.birthday-voyage .birthday-voyage__parking-sign-label {
+  opacity: .88;
+  font-family: "DM Mono", ui-monospace, monospace;
+  font-size: clamp(5px, .48vw, 6px);
+  font-weight: 850;
+  line-height: 1;
+  letter-spacing: .035em;
+}
+
+.birthday-voyage__parking-sign::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  top: calc(100% + 2px);
+  left: 50%;
+  width: 3px;
+  height: clamp(14px, 2vw, 24px);
+  border-radius: 0 0 2px 2px;
+  background: linear-gradient(90deg, #788395, #e7eef5 48%, #667181);
+  box-shadow: 0 3px 4px rgba(0, 0, 0, .42);
+  transform: translateX(-50%);
+}
+
+.birthday-voyage__parking-sign::after {
+  content: "";
+  position: absolute;
+  z-index: -2;
+  top: calc(100% + clamp(14px, 2vw, 24px));
+  left: 50%;
+  width: 16px;
+  height: 5px;
+  border-radius: 50%;
+  opacity: .7;
+  background: rgba(0, 0, 0, .72);
+  filter: blur(1px);
+  transform: translateX(-50%);
+}
+
+.birthday-voyage__route-card:nth-of-type(even) > .birthday-voyage__parking-sign,
+.birthday-voyage__parking-sign[data-side="left"] {
+  --parking-sign-left: calc(50% - var(--parking-sign-distance, clamp(86px, 10vw, 140px)));
+}
+
+.birthday-voyage__route-card:nth-of-type(odd) > .birthday-voyage__parking-sign,
+.birthday-voyage__parking-sign[data-side="right"] {
+  --parking-sign-left: calc(50% + var(--parking-sign-distance, clamp(86px, 10vw, 140px)));
+}
+
+.birthday-voyage__route-card > .birthday-voyage__parking-sign[data-side="left"] {
+  --parking-sign-left: calc(50% - var(--parking-sign-distance, clamp(86px, 10vw, 140px)));
+}
+
+.birthday-voyage__route-card > .birthday-voyage__parking-sign[data-side="right"] {
+  --parking-sign-left: calc(50% + var(--parking-sign-distance, clamp(86px, 10vw, 140px)));
+}
+
+.birthday-voyage__route-card:is(
+  [data-destination="mars"],
+  [data-destination="kepler"],
+  [data-destination="cosmos"]
+) > .birthday-voyage__parking-sign {
+  top: calc(100% - 15px);
+}
+
+.birthday-voyage__route-card:is([data-kind="planet"], [data-kind="cosmos"]) > .birthday-voyage__parking-sign {
+  width: clamp(30px, 3vw, 40px);
+  min-height: clamp(29px, 2.7vw, 35px);
+  border-color: hsl(var(--gift-hue) 100% 86% / .9);
+  border-radius: 50% 50% 8px 8px;
+  color: hsl(var(--gift-hue) 100% 90%);
+  background:
+    linear-gradient(180deg, hsl(var(--gift-hue) 100% 82% / .16), transparent 52%),
+    repeating-linear-gradient(90deg, transparent 0 4px, hsl(var(--gift-hue) 100% 80% / .1) 4px 5px),
+    rgba(5, 7, 22, .94);
+  box-shadow:
+    inset 0 0 9px hsl(var(--gift-hue) 100% 68% / .25),
+    0 0 0 2px hsl(var(--gift-hue) 100% 70% / .12),
+    0 0 18px hsl(var(--gift-hue) 100% 72% / 0);
+  font: 850 clamp(6px, .65vw, 8px)/1 "DM Mono", ui-monospace, monospace;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  clip-path: polygon(17% 0, 83% 0, 100% 28%, 100% 78%, 82% 100%, 18% 100%, 0 78%, 0 28%);
+}
+
+.birthday-voyage__route-card:is([data-kind="planet"], [data-kind="cosmos"]) .birthday-voyage__parking-sign-glyph {
+  font-size: clamp(9px, 1vw, 13px);
+  filter: drop-shadow(0 0 5px currentColor);
+}
+
+.birthday-voyage__route-card:is([data-kind="planet"], [data-kind="cosmos"]) .birthday-voyage__parking-sign-label {
+  font-size: clamp(4.5px, .46vw, 6px);
+}
+
+.birthday-voyage__route-card:is([data-kind="planet"], [data-kind="cosmos"]) > .birthday-voyage__parking-sign::before {
+  width: 2px;
+  background: linear-gradient(180deg, hsl(var(--gift-hue) 100% 83%), hsl(var(--gift-hue) 74% 48%));
+  box-shadow: 0 0 7px hsl(var(--gift-hue) 100% 70% / .72);
+}
+
+.birthday-voyage__parking-sign:is(.is-approaching, .is-active, .is-parking, .is-reversing, .is-parked),
+.birthday-voyage__route-card:is(.is-parking, .is-reversing, .is-parked, .is-previewing) > .birthday-voyage__parking-sign {
+  opacity: 1;
+  box-shadow:
+    0 5px 8px rgba(0, 0, 0, .52),
+    0 0 0 2px hsl(var(--gift-hue) 100% 72% / .2),
+    0 0 18px hsl(var(--gift-hue) 100% 72% / .65);
+  transform: translate(-50%, 0) rotate(0) scale(1);
+  visibility: visible;
+  transition-delay: 0s;
+  animation: birthday-parking-sign-rise 680ms cubic-bezier(.12, .82, .16, 1) both;
+}
+
+.birthday-voyage__parking-sign:is(.is-approaching, .is-active, .is-parking)::after,
+.birthday-voyage__route-card.is-parking > .birthday-voyage__parking-sign::after {
+  animation: birthday-parking-beacon-ground 900ms ease-in-out infinite alternate;
+}
+
+.birthday-voyage__route-card:is([data-kind="planet"], [data-kind="cosmos"]) > .birthday-voyage__parking-sign:is(.is-approaching, .is-active, .is-parking, .is-reversing) {
+  animation:
+    birthday-parking-sign-rise 680ms cubic-bezier(.12, .82, .16, 1) both,
+    birthday-docking-beacon 1.05s ease-in-out 680ms infinite alternate;
+}
+
+.birthday-voyage__parking-sign.is-parked,
+.birthday-voyage__route-card:is(.is-parked, .is-previewing) > .birthday-voyage__parking-sign {
+  animation: none;
+  box-shadow:
+    0 4px 7px rgba(0, 0, 0, .46),
+    0 0 0 1px hsl(var(--gift-hue) 100% 72% / .16),
+    0 0 9px hsl(var(--gift-hue) 100% 72% / .24);
+}
+
+/* Keep the parked vehicle in the foreground while its sign remains a fixed
+   roadside landmark. The active card is lowered only during the maneuver so
+   its stacking context cannot pull the sign over the car. */
+.birthday-voyage__route-card:is(.is-parking, .is-reversing, .is-parked) {
+  z-index: 11;
+}
+
+.birthday-voyage__vehicle {
+  position: absolute;
+  z-index: 12;
+  top: var(--vehicle-y, 15.33%);
+  left: var(--vehicle-x, 9.2%);
+  width: clamp(70px, 8.8vw, 124px);
+  transform: translate(-50%, -50%) rotate(var(--vehicle-angle, 0deg));
+  transform-origin: 50% 50%;
+  pointer-events: none;
+  will-change: top, left, transform;
+}
+
+.birthday-voyage__vehicle::before,
+.birthday-voyage__vehicle::after {
+  content: "";
+  position: absolute;
+  z-index: 6;
+  pointer-events: none;
+}
+
+.birthday-voyage__vehicle::before {
+  inset: 5% -4% 0;
+  border-radius: 45%;
+  opacity: 0;
+  background:
+    radial-gradient(circle at 8% 55%, #ffdf75 0 2px, #ff961f 3px, transparent 8px),
+    radial-gradient(circle at 12% 61%, #ff4d5e 0 2px, transparent 8px),
+    radial-gradient(circle at 90% 57%, rgba(255, 247, 204, .86) 0 2px, transparent 9px);
+  filter: drop-shadow(0 0 5px #ff9e31);
+}
+
+.birthday-voyage__vehicle::after {
+  content: "\2665";
+  top: -24%;
+  left: 50%;
+  opacity: 0;
+  color: #ff8bb3;
+  font: 900 clamp(11px, 1.4vw, 18px)/1 Arial, sans-serif;
+  filter: drop-shadow(0 0 8px rgba(255, 122, 168, .92));
+  transform: translate(-50%, 8px) scale(.45);
+}
+
+.birthday-voyage__vehicle:is(.is-parking, [data-parking-phase="approach"], [data-parking-phase="signal"])::before {
+  animation: birthday-parking-signal 520ms steps(1, end) infinite;
+}
+
+.birthday-voyage__vehicle:is(.is-reversing, [data-parking-phase="reverse"])::before {
+  opacity: 1;
+  background:
+    radial-gradient(circle at 8% 55%, #fff 0 2px, #d8f4ff 3px, transparent 9px),
+    radial-gradient(circle at 12% 62%, #ff465c 0 2px, transparent 9px),
+    radial-gradient(circle at 89% 57%, #ffaf38 0 2px, transparent 8px);
+  filter:
+    drop-shadow(0 0 7px rgba(220, 247, 255, .94))
+    drop-shadow(0 0 8px rgba(255, 66, 88, .72));
+  animation: birthday-parking-reverse-lights 620ms ease-in-out infinite alternate;
+}
+
+.birthday-voyage__vehicle.is-parking .birthday-voyage__vehicle-car {
+  animation: birthday-parking-body-check 860ms ease-in-out infinite alternate;
+}
+
+.birthday-voyage__vehicle.is-reversing .birthday-voyage__vehicle-car {
+  animation: birthday-parking-reverse-body 640ms ease-in-out infinite alternate;
+}
+
+.birthday-voyage__vehicle.is-parking.is-rocket .birthday-voyage__vehicle-rocket,
+.birthday-voyage__vehicle.is-reversing.is-rocket .birthday-voyage__vehicle-rocket {
+  filter:
+    drop-shadow(-10px 8px 5px rgba(0, 0, 0, .55))
+    drop-shadow(0 0 16px rgba(169, 139, 255, .82))
+    brightness(1.08);
+}
+
+.birthday-voyage__vehicle.is-parked:not(.is-staged)::after,
+.birthday-voyage__vehicle[data-parking-phase="settled"]::after {
+  animation: birthday-parking-heart 1250ms cubic-bezier(.16, .8, .2, 1) both;
+}
+
+.birthday-voyage__vehicle.is-staged .birthday-voyage__vehicle-car {
+  animation: birthday-route-car-idle 900ms ease-in-out infinite alternate;
+}
+
+.birthday-voyage__vehicle.is-parked {
+  z-index: 16;
+  transform:
+    translate(-50%, -50%)
+    rotate(var(--vehicle-angle, 0deg))
+    scale(var(--vehicle-park-scale, .84));
+}
+
+.birthday-voyage__vehicle:is(.is-parking, .is-reversing) {
+  z-index: 16;
+}
+
+.birthday-voyage__vehicle.is-parked .birthday-voyage__vehicle-car,
+.birthday-voyage__vehicle.is-parked .birthday-voyage__vehicle-rocket {
+  filter:
+    drop-shadow(0 7px 6px rgba(0, 0, 0, .76))
+    drop-shadow(0 0 7px hsl(var(--scene-hue, 190) 90% 72% / .28));
+}
+
+.birthday-voyage__vehicle-car {
+  display: block;
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+  filter:
+    drop-shadow(0 8px 6px rgba(0, 0, 0, .7))
+    drop-shadow(0 0 8px rgba(122, 232, 255, .26));
+  transition: opacity 440ms ease, transform 440ms ease, filter 440ms ease;
+}
+
+.birthday-voyage__vehicle-passengers {
+  position: absolute;
+  top: 35%;
+  left: 47%;
+  color: var(--birthday-rose);
+  font: 800 clamp(8px, 1vw, 13px)/1 Arial, sans-serif;
+  filter: drop-shadow(0 0 5px rgba(255, 122, 168, .9));
+  transition: opacity 240ms ease;
+}
+
+.birthday-voyage__vehicle-rocket {
+  position: absolute;
+  inset: 50% auto auto 50%;
+  display: block;
+  width: 112%;
+  height: auto;
+  opacity: 0;
+  object-fit: contain;
+  filter:
+    drop-shadow(-10px 8px 5px rgba(0, 0, 0, .55))
+    drop-shadow(0 0 12px rgba(169, 139, 255, .68));
+  transform: translate(-50%, -50%) scale(.46);
+  transition: opacity 420ms ease, transform 520ms cubic-bezier(.2, .9, .2, 1);
+}
+
+.birthday-voyage__vehicle.is-rocket .birthday-voyage__vehicle-car {
+  opacity: 0;
+  transform: scale(.28);
+  filter: brightness(2.4) blur(3px);
+}
+
+.birthday-voyage__vehicle.is-rocket .birthday-voyage__vehicle-passengers {
+  opacity: 0;
+}
+
+.birthday-voyage__vehicle.is-rocket .birthday-voyage__vehicle-rocket {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1.08);
+}
+
+.birthday-voyage__vehicle.is-rocket.is-parked .birthday-voyage__vehicle-rocket {
+  transform: translate(-50%, -50%) scale(1);
+}
+
+.birthday-voyage__route-skip {
+  justify-self: end;
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid rgba(190, 179, 255, .22);
+  color: var(--birthday-muted);
+  background: transparent;
+  font-size: 11px;
+}
+
+.birthday-voyage__route-skip:hover,
+.birthday-voyage__route-skip:focus-visible {
+  border-color: rgba(122, 232, 255, .66);
+  outline: 2px solid var(--birthday-cyan);
+  outline-offset: 3px;
+  color: #fff;
+  background: rgba(122, 232, 255, .1);
+}
+
+.birthday-voyage__finale {
+  display: grid;
+  grid-template-columns: minmax(140px, 240px) minmax(180px, 300px);
+  justify-content: center;
+  align-items: center;
+  gap: clamp(18px, 4vw, 54px);
+  width: min(760px, 100%);
+  margin: 0 auto;
+}
+
+.birthday-voyage__heart-constellation {
+  position: relative;
+  width: min(230px, 40vw);
+  aspect-ratio: 1;
+  filter: drop-shadow(0 0 16px rgba(255, 122, 168, .42));
+}
+
+.birthday-voyage__heart-constellation::before,
+.birthday-voyage__heart-constellation::after {
+  content: "";
+  position: absolute;
+  top: 18%;
+  width: 52%;
+  height: 72%;
+  border: 1px solid rgba(255, 122, 168, .48);
+  border-radius: 50% 50% 12% 12%;
+  transform-origin: 100% 100%;
+}
+
+.birthday-voyage__heart-constellation::before {
+  left: 3%;
+  transform: rotate(45deg);
+}
+
+.birthday-voyage__heart-constellation::after {
+  right: 3%;
+  transform: rotate(-45deg);
+  transform-origin: 0 100%;
+}
+
+.birthday-voyage__heart-constellation i {
+  position: absolute;
+  z-index: 2;
+  top: var(--heart-y);
+  left: var(--heart-x);
+  width: var(--heart-size);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow:
+    0 0 7px 2px #fff,
+    0 0 18px 6px rgba(255, 122, 168, .55);
+  animation: birthday-star-pulse var(--heart-twinkle) ease-in-out infinite alternate;
+}
+
+.birthday-voyage__lion {
+  width: 100%;
+  max-width: 300px;
+  border-radius: 22px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, .54);
+}
+
+.birthday-voyage__finale blockquote {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--birthday-gold);
+  font: 680 clamp(17px, 2vw, 22px)/1.45 "Outfit", Inter, system-ui, sans-serif;
+  text-align: center;
+}
+
+.birthday-voyage__finale .birthday-voyage__primary {
+  grid-column: 1 / -1;
+}
+
+.birthday-voyage[data-stage="finale"] .birthday-voyage__panel {
+  min-height: calc(100dvh - 126px);
+  padding: clamp(22px, 3vw, 38px);
+}
+
+.birthday-voyage[data-stage="finale"] .birthday-voyage__question-header {
+  margin-bottom: 18px;
+}
+
+.birthday-voyage[data-stage="finale"] .birthday-voyage__question-header h2 {
+  font-size: clamp(32px, 4.5vw, 54px);
+}
+
+.birthday-voyage[data-stage="finale"] .birthday-voyage__question-header p {
+  margin-top: 12px;
+}
+
+.birthday-voyage[data-stage="finale"] .birthday-voyage__status {
+  display: none;
+}
+
+.birthday-voyage[data-stage="finale"] .birthday-voyage__finale {
+  grid-template-columns: minmax(120px, 190px) minmax(160px, 240px);
+  gap: clamp(12px, 2.3vw, 28px);
+}
+
+.birthday-voyage[data-stage="finale"] .birthday-voyage__heart-constellation {
+  width: min(180px, 34vw);
+}
+
+.birthday-voyage[data-stage="finale"] .birthday-voyage__lion {
+  max-width: 240px;
+}
+
+.birthday-voyage-guest-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 38px;
+  padding: 0 12px;
+  border: 1px solid rgba(122, 232, 255, .24);
+  border-radius: 999px;
+  color: #dffaff;
+  background: rgba(122, 232, 255, .08);
+  font: 700 10px/1 "DM Mono", ui-monospace, monospace;
+  letter-spacing: .06em;
+  white-space: nowrap;
+}
+
+@keyframes birthday-nebula-turn {
+  to { transform: rotate(1turn); }
+}
+
+@keyframes birthday-star-pulse {
+  from { opacity: .25; transform: scale(.75); }
+  to { opacity: 1; transform: scale(1.18); }
+}
+
+@keyframes birthday-option-remove {
+  0% { opacity: 1; transform: translateY(0) scale(1); }
+  45% { opacity: 1; transform: translateY(-6px) scale(1.03) rotate(-2deg); }
+  100% { opacity: 0; transform: translateY(24px) scale(.72) rotate(7deg); }
+}
+
+@keyframes birthday-sedan-morph {
+  0% {
+    opacity: 0;
+    filter: blur(8px) brightness(1.8);
+    transform: scaleX(1.34) scaleY(.62);
+  }
+  58% {
+    opacity: 1;
+    filter: blur(0) brightness(1.3);
+    transform: scaleX(.94) scaleY(1.06);
+  }
+  100% {
+    opacity: 1;
+    filter: none;
+    transform: none;
+  }
+}
+
+@keyframes birthday-summary-drop-top {
+  0% {
+    opacity: 0;
+    transform: translateY(-48vh) rotate(-4deg);
+  }
+  72% {
+    opacity: 1;
+    transform: translateY(10px) rotate(1deg);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes birthday-summary-drop-bottom {
+  0% {
+    opacity: 0;
+    transform: translateY(48vh) rotate(4deg);
+  }
+  72% {
+    opacity: 1;
+    transform: translateY(-10px) rotate(-1deg);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes birthday-fate-strike {
+  0% {
+    opacity: 0;
+    transform: rotate(12deg) scaleX(0);
+  }
+  100% {
+    opacity: 1;
+    transform: rotate(12deg) scaleX(1);
+  }
+}
+
+@keyframes birthday-fate-strike-reverse {
+  0% {
+    opacity: 0;
+    transform: rotate(-12deg) scaleX(0);
+  }
+  100% {
+    opacity: 1;
+    transform: rotate(-12deg) scaleX(1);
+  }
+}
+
+@keyframes birthday-city-flip {
+  0% { transform: rotateY(0); }
+  48% { transform: rotateY(90deg) scale(.96); }
+  52% { transform: rotateY(-90deg) scale(.96); }
+  100% { transform: rotateY(0); }
+}
+
+@keyframes birthday-orbit-turn {
+  from { transform: rotate(20deg) scaleY(.43); }
+  to { transform: rotate(380deg) scaleY(.43); }
+}
+
+@keyframes birthday-route-dashes {
+  to { stroke-dashoffset: -23; }
+}
+
+@keyframes birthday-route-preview-in {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(.94);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes birthday-route-preview-out {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(12px) scale(.72);
+  }
+}
+
+@keyframes birthday-route-preview-backdrop {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes birthday-route-chapter-premiere {
+  0% {
+    opacity: 0;
+    filter: blur(9px);
+    transform: translate3d(0, 20px, 0) scale(.9);
+  }
+  58% {
+    opacity: 1;
+    filter: blur(0);
+    transform: translate3d(0, -3px, 0) scale(1.018);
+  }
+  100% {
+    opacity: 1;
+    filter: blur(0);
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+/*
+ * A real second phase, rather than a transform transition underneath the
+ * premiere animation's `fill-mode: both`. Its first frame is the premiere's
+ * final frame, so switching data-chapter-phase cannot expose an intermediate
+ * layout before the move begins.
+ */
+@keyframes birthday-route-chapter-to-rail {
+  from {
+    width: var(--chapter-intro-width);
+    padding: var(--chapter-intro-padding);
+    border-radius: var(--chapter-intro-radius);
+    transform: translate3d(0, var(--chapter-intro-shift), 0) scale(var(--chapter-intro-scale));
+  }
+
+  to {
+    width: var(--chapter-rail-width);
+    padding: var(--chapter-rail-padding);
+    border-radius: var(--chapter-rail-radius);
+    transform: translate3d(0, var(--chapter-rail-shift), 0) scale(var(--chapter-rail-scale));
+  }
+}
+
+@keyframes birthday-route-chapter-title-to-rail {
+  from {
+    font-size: var(--chapter-intro-title-size);
+    line-height: var(--chapter-intro-title-leading);
+  }
+
+  to {
+    font-size: var(--chapter-rail-title-size);
+    line-height: var(--chapter-rail-title-leading);
+  }
+}
+
+@keyframes birthday-route-chapter-copy-to-rail {
+  from { font-size: var(--chapter-intro-copy-size); }
+  to { font-size: var(--chapter-rail-copy-size); }
+}
+
+@keyframes birthday-route-chapter-glint {
+  0% {
+    left: -44%;
+    opacity: 0;
+  }
+  18% {
+    opacity: .92;
+  }
+  78% {
+    opacity: .76;
+  }
+  100% {
+    left: 112%;
+    opacity: 0;
+  }
+}
+
+@keyframes birthday-reexplore-in {
+  from {
+    opacity: 0;
+    transform: translateY(24px) scale(.9);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes birthday-route-card-ready {
+  from { filter: drop-shadow(0 0 4px rgba(122, 232, 255, .18)); }
+  to { filter: drop-shadow(0 0 15px rgba(122, 232, 255, .7)); }
+}
+
+@keyframes birthday-gift-prompt-ready {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -26%) scale(.72);
+  }
+  68% {
+    opacity: 1;
+    transform: translate(-50%, -54%) scale(1.055);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+@keyframes birthday-gift-prompt-shimmer {
+  0%, 48% { transform: translateX(-58%); }
+  74%, 100% { transform: translateX(58%); }
+}
+
+@keyframes birthday-gift-prompt-release {
+  0% {
+    visibility: visible;
+    opacity: 1;
+    transform: translate(-50%, -50%) rotate(0) scale(1);
+  }
+  34% {
+    opacity: 1;
+    transform: translate(-50%, -60%) rotate(1deg) scale(1.06);
+  }
+  100% {
+    visibility: hidden;
+    opacity: 0;
+    transform: translate(-50%, -108%) rotate(-3deg) scale(.76);
+  }
+}
+
+@keyframes birthday-gift-paper-release {
+  0% {
+    opacity: 1;
+    filter: none;
+    transform: scale(1);
+  }
+  52% {
+    opacity: .9;
+    filter: brightness(1.18);
+    transform: scale(1.035);
+  }
+  100% {
+    opacity: 0;
+    filter: blur(3px) brightness(1.32);
+    transform: scale(1.12);
+  }
+}
+
+@keyframes birthday-gift-ribbon-release {
+  0% {
+    opacity: 1;
+    transform: rotate(0) scale(1);
+  }
+  46% {
+    opacity: 1;
+    transform: rotate(-2deg) scale(1.05, .96);
+  }
+  100% {
+    opacity: 0;
+    transform: rotate(13deg) scale(1.24, .22) translateY(16%);
+  }
+}
+
+@keyframes birthday-gift-bow-release {
+  0% {
+    opacity: 1;
+    transform: translateX(-50%) rotate(-3deg) scale(1);
+  }
+  42% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(-18%) rotate(10deg) scale(1.16);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(-5%) translateY(-115%) rotate(42deg) scale(.62);
+  }
+}
+
+@keyframes birthday-gift-lid-open {
+  0% {
+    opacity: 1;
+    transform: perspective(240px) rotateX(0) translateY(0);
+  }
+  55% {
+    opacity: 1;
+    transform: perspective(240px) rotateX(-68deg) translateY(-17%);
+  }
+  100% {
+    opacity: 0;
+    transform: perspective(240px) rotateX(-106deg) translateY(-78%) scale(.94);
+  }
+}
+
+@keyframes birthday-parking-sign-rise {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 16px) rotate(-6deg) scale(.56);
+  }
+  58% {
+    opacity: 1;
+    transform: translate(-50%, -3px) rotate(2deg) scale(1.06);
+  }
+  78% {
+    transform: translate(-50%, 1px) rotate(-1deg) scale(.98);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(-50%, 0) rotate(0) scale(1);
+  }
+}
+
+@keyframes birthday-parking-beacon-ground {
+  from {
+    opacity: .32;
+    transform: translateX(-50%) scaleX(.7);
+  }
+  to {
+    opacity: .9;
+    transform: translateX(-50%) scaleX(1.32);
+  }
+}
+
+@keyframes birthday-docking-beacon {
+  from {
+    color: hsl(var(--gift-hue) 100% 88%);
+    filter: brightness(.92);
+    box-shadow:
+      inset 0 0 7px hsl(var(--gift-hue) 100% 68% / .2),
+      0 0 6px hsl(var(--gift-hue) 100% 72% / .28);
+  }
+  to {
+    color: #fff;
+    filter: brightness(1.24);
+    box-shadow:
+      inset 0 0 13px hsl(var(--gift-hue) 100% 72% / .48),
+      0 0 19px hsl(var(--gift-hue) 100% 72% / .82);
+  }
+}
+
+@keyframes birthday-parking-signal {
+  0%, 44% { opacity: 0; }
+  45%, 82% { opacity: 1; }
+  83%, 100% { opacity: .1; }
+}
+
+@keyframes birthday-parking-reverse-lights {
+  from { filter: brightness(.82) drop-shadow(0 0 4px rgba(214, 247, 255, .64)); }
+  to { filter: brightness(1.28) drop-shadow(0 0 10px rgba(214, 247, 255, .95)); }
+}
+
+@keyframes birthday-parking-body-check {
+  from { transform: translateY(0) rotate(0); }
+  to { transform: translateY(1px) rotate(.5deg); }
+}
+
+@keyframes birthday-parking-reverse-body {
+  from { transform: translateX(0) translateY(0); }
+  to { transform: translateX(-2px) translateY(1px); }
+}
+
+@keyframes birthday-parking-heart {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 9px) scale(.4) rotate(-8deg);
+  }
+  30% {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1.18) rotate(4deg);
+  }
+  64% {
+    opacity: 1;
+    transform: translate(-50%, -5px) scale(.94) rotate(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -19px) scale(.72) rotate(6deg);
+  }
+}
+
+@keyframes birthday-route-car-idle {
+  from { translate: 0 0; }
+  to { translate: 0 -3px; }
+}
+
+@keyframes birthday-route-media-play {
+  0% { filter: saturate(1) brightness(1); transform: scale(1.02); }
+  50% { filter: saturate(1.1) brightness(1.02); transform: scale(1.1) translate3d(-1%, -1%, 0); }
+  100% { filter: saturate(1.04) brightness(.98); transform: scale(1.06) translate3d(1%, 0, 0); }
+}
+
+@keyframes birthday-route-preview-progress {
+  from { transform: scaleX(1); }
+  to { transform: scaleX(0); }
+}
+
+@keyframes birthday-route-preview-loading {
+  from { transform: translateX(-126%); }
+  to { transform: translateX(356%); }
+}
+
+@keyframes birthday-message-in {
+  from {
+    opacity: 0;
+    transform: translateY(24px) scale(.92);
+    filter: blur(7px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: none;
+  }
+}
+
+@keyframes birthday-arrival-card {
+  0% { transform: translate(-50%, -50%) scale(.82) rotate(-5deg); }
+  46% { transform: translate(-50%, -50%) scale(1.2) rotate(4deg); }
+  72% { transform: translate(-50%, -50%) scale(.96) rotate(-1deg); }
+  100% { transform: translate(-50%, -50%) scale(1) rotate(0); }
+}
+
+@keyframes birthday-vienna-hero {
+  0% {
+    opacity: .55;
+    transform: translate(-50%, -50%) scale(.45) rotate(-18deg);
+  }
+  42% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(var(--vienna-peak)) rotate(390deg);
+  }
+  74% {
+    transform: translate(-50%, -50%) scale(calc(var(--vienna-rest) * .92)) rotate(690deg);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(var(--vienna-rest)) rotate(720deg);
+  }
+}
+
+@keyframes birthday-vienna-halo {
+  to { transform: rotate(1turn); }
+}
+
+@keyframes birthday-arrival-ring {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(.16);
+  }
+  18% { opacity: 1; }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1.75);
+  }
+}
+
+@keyframes birthday-arrival-particle {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(.35);
+  }
+  16% { opacity: 1; }
+  100% {
+    opacity: 0;
+    transform:
+      translate(
+        calc(-50% + var(--burst-x)),
+        calc(-50% + var(--burst-y))
+      )
+      rotate(250deg)
+      scale(.05);
+  }
+}
+
+@keyframes birthday-route-maximum {
+  0% { opacity: .35; }
+  35% { opacity: 1; }
+  100% { opacity: var(--route-energy, 1); }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .birthday-voyage[data-route-mode="reexplore"] .birthday-voyage__route-card.is-replayable:is(:hover, :focus-within) .birthday-voyage__route-card-revisit {
+    display: block;
+  }
+
+  .birthday-voyage[data-route-mode="reexplore"] .birthday-voyage__route-card[data-kind="cosmos"].is-replayable:hover .birthday-voyage__route-card-face {
+    border-color: rgba(255, 205, 233, .9);
+    box-shadow:
+      0 0 0 3px rgba(255, 122, 168, .2),
+      0 0 38px rgba(169, 139, 255, .58),
+      0 0 74px rgba(255, 122, 168, .22);
+  }
+}
+
+@media (hover: none), (pointer: coarse) {
+  .birthday-voyage[data-route-mode="reexplore"] .birthday-voyage__route-touch-hint {
+    display: inline-flex;
+  }
+}
+
+@media (max-height: 780px) and (min-width: 581px) {
+  .birthday-voyage {
+    padding-block: 8px;
+  }
+
+  .birthday-voyage__shell {
+    max-height: calc(100dvh - 16px);
+  }
+
+  .birthday-voyage[data-stage="route"] .birthday-voyage__topbar,
+  .birthday-voyage[data-stage="finale"] .birthday-voyage__topbar {
+    min-height: 52px;
+    padding-block: 7px;
+  }
+
+  .birthday-voyage[data-stage="route"] .birthday-voyage__panel {
+    padding: 8px 14px 10px;
+  }
+
+  .birthday-voyage[data-stage="route"] .birthday-voyage__route {
+    gap: 7px;
+  }
+
+  .birthday-voyage[data-stage="route"] .birthday-voyage__route-heading h2 {
+    font-size: clamp(22px, 3vw, 31px);
+  }
+
+  .birthday-voyage[data-stage="route"] .birthday-voyage__route-heading .birthday-voyage__eyebrow {
+    display: none;
+  }
+
+  .birthday-voyage[data-stage="route"] .birthday-voyage__route-heading p {
+    font-size: 11px;
+  }
+
+  .birthday-voyage[data-stage="route"] .birthday-voyage__route-prompt {
+    padding: 6px 10px;
+    font-size: 9px;
+  }
+
+  .birthday-voyage[data-stage="route"] .birthday-voyage__route-board {
+    min-height: 0;
+    height: clamp(380px, calc(100dvh - 242px), 492px);
+  }
+
+  .birthday-voyage[data-stage="route"] .birthday-voyage__route-skip {
+    min-height: 34px;
+  }
+
+  .birthday-voyage[data-stage="route"] .birthday-voyage__status {
+    min-height: 36px;
+    padding-block: 8px;
+    font-size: 11px;
+  }
+
+  .birthday-voyage[data-stage="finale"] .birthday-voyage__panel {
+    min-height: 0;
+    padding: 10px 22px 14px;
+  }
+
+  .birthday-voyage[data-stage="finale"] .birthday-voyage__question-header {
+    margin-bottom: 8px;
+  }
+
+  .birthday-voyage[data-stage="finale"] .birthday-voyage__question-header h2 {
+    font-size: clamp(30px, 4.3vw, 44px);
+  }
+
+  .birthday-voyage[data-stage="finale"] .birthday-voyage__question-header p {
+    margin-top: 7px;
+    font-size: 14px;
+    line-height: 1.35;
+  }
+
+  .birthday-voyage[data-stage="finale"] .birthday-voyage__finale {
+    grid-template-columns: minmax(100px, 138px) minmax(140px, 188px);
+    gap: 8px 20px;
+  }
+
+  .birthday-voyage[data-stage="finale"] .birthday-voyage__heart-constellation {
+    width: min(132px, 25dvh);
+  }
+
+  .birthday-voyage[data-stage="finale"] .birthday-voyage__lion {
+    max-width: min(188px, 29dvh);
+  }
+
+  .birthday-voyage[data-stage="finale"] .birthday-voyage__finale blockquote {
+    font-size: clamp(15px, 1.8vw, 19px);
+    line-height: 1.3;
+  }
+
+  .birthday-voyage[data-stage="finale"] .birthday-voyage__primary {
+    min-height: 44px;
+  }
+
+  .birthday-voyage[data-stage="lion-intro"] .birthday-voyage__panel {
+    padding-block: 10px;
+  }
+
+  .birthday-voyage[data-stage="lion-intro"] .birthday-voyage__lion-intro {
+    gap: 8px;
+  }
+
+  .birthday-voyage[data-stage="lion-intro"] .birthday-voyage__lion-intro-frame {
+    width: min(51dvh, 640px, 100%);
+  }
+
+  .birthday-voyage[data-question="drink"] .birthday-voyage__panel {
+    min-height: calc(100dvh - 190px);
+    padding-block: 22px;
+  }
+
+  .birthday-voyage[data-question="drink"] .birthday-voyage__question-header {
+    margin-bottom: 16px;
+  }
+
+  .birthday-voyage[data-question="drink"] .birthday-voyage__question-header h2 {
+    font-size: clamp(32px, 4vw, 46px);
+  }
+
+  .birthday-voyage[data-question="drink"] .birthday-voyage__question-header p {
+    margin-top: 10px;
+    line-height: 1.45;
+  }
+
+  .birthday-voyage[data-question="drink"] .birthday-voyage__question-nav {
+    margin-top: 16px;
+  }
+
+  .birthday-voyage[data-question="summary"] .birthday-voyage__panel {
+    min-height: calc(100dvh - 128px);
+    padding-block: 16px;
+  }
+
+  .birthday-voyage[data-question="summary"] .birthday-voyage__question-header {
+    margin-bottom: 18px;
+  }
+
+  .birthday-voyage[data-question="summary"] .birthday-voyage__question-header p {
+    margin-top: 8px;
+    line-height: 1.35;
+  }
+
+  .birthday-voyage[data-question="summary"] .birthday-voyage__summary {
+    margin-bottom: 8px;
+  }
+
+  .birthday-voyage[data-question="summary"] .birthday-voyage__question-nav {
+    margin-top: 12px;
+  }
+
+  .birthday-voyage[data-question="summary"] .birthday-voyage__status {
+    min-height: 40px;
+    padding-block: 8px;
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 840px) {
+  .birthday-voyage__choice-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .birthday-voyage__choice-grid > :last-child {
+    grid-column: 1 / -1;
+  }
+
+  .birthday-voyage__city-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .birthday-voyage__city-card {
+    min-height: 150px;
+  }
+
+  .birthday-voyage__drink-options {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .birthday-voyage__summary {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .birthday-voyage__route-board {
+    min-height: 58dvh;
+  }
+}
+
+@media (max-width: 580px) {
+  .birthday-voyage {
+    padding: 0;
+  }
+
+  .birthday-voyage__shell {
+    width: 100%;
+    max-height: 100dvh;
+    min-height: 100dvh;
+    border: 0;
+    border-radius: 0;
+  }
+
+  .birthday-voyage__topbar {
+    grid-template-columns: 1fr auto;
+    min-height: 58px;
+    padding: 8px 12px;
+  }
+
+  .birthday-voyage__topbar > span:first-child {
+    max-width: 200px;
+    font-size: 9px;
+  }
+
+  .birthday-voyage__progress {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    min-width: 0;
+    text-align: left;
+  }
+
+  .birthday-voyage__close {
+    grid-column: 2;
+    grid-row: 1;
+    width: 40px;
+    height: 40px;
+  }
+
+  .birthday-voyage__panel {
+    min-height: calc(100dvh - 154px);
+    padding: 28px 16px;
+  }
+
+  .birthday-voyage__question-header {
+    margin-bottom: 22px;
+  }
+
+  .birthday-voyage__question-header h2 {
+    font-size: clamp(28px, 10vw, 42px);
+  }
+
+  .birthday-voyage__choice-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 9px;
+  }
+
+  .birthday-voyage__question-nav {
+    gap: 9px;
+    margin-top: 22px;
+  }
+
+  .birthday-voyage__question-nav .birthday-voyage__primary,
+  .birthday-voyage__question-nav .birthday-voyage__secondary {
+    min-width: 0;
+    padding-inline: 12px;
+    font-size: 12px;
+  }
+
+  .birthday-voyage__question-nav.has-reset {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .birthday-voyage__question-nav.has-reset > .birthday-voyage__secondary:not(.birthday-voyage__reset) {
+    grid-row: 1;
+    grid-column: 1;
+  }
+
+  .birthday-voyage__question-nav.has-reset > .birthday-voyage__primary {
+    grid-row: 1;
+    grid-column: 2;
+  }
+
+  .birthday-voyage__question-nav.has-reset > .birthday-voyage__reset {
+    grid-row: 2;
+    grid-column: 1 / -1;
+  }
+
+  .birthday-voyage__drink-options {
+    gap: 8px;
+  }
+
+  .birthday-voyage__choice--evasive.is-viewport-evasive {
+    width: min(var(--water-width, 148px), calc(100vw - 24px));
+  }
+
+  .birthday-voyage__city-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .birthday-voyage__city-card {
+    min-height: 128px;
+  }
+
+  .birthday-voyage__summary {
+    gap: 7px;
+  }
+
+  .birthday-voyage__summary-card {
+    min-height: 80px;
+    padding: 14px 10px 12px;
+  }
+
+  .birthday-voyage__summary.is-fated .birthday-voyage__summary-card {
+    min-height: 136px;
+    padding-block: 18px 16px;
+  }
+
+  .birthday-voyage[data-stage="lion-intro"] .birthday-voyage__panel {
+    min-height: calc(100dvh - 148px);
+    padding: 10px;
+  }
+
+  .birthday-voyage__lion-intro {
+    align-content: center;
+  }
+
+  .birthday-voyage__lion-intro-frame {
+    width: min(54dvh, 100%);
+    border-radius: 16px;
+  }
+
+  .birthday-voyage__lion-intro-actions {
+    padding-inline: 4px;
+  }
+
+  .birthday-voyage[data-stage="route"] .birthday-voyage__panel {
+    min-height: 100dvh;
+    padding: 8px;
+  }
+
+  .birthday-voyage[data-stage="route"] .birthday-voyage__shell {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .birthday-voyage[data-stage="route"] .birthday-voyage__topbar {
+    position: absolute;
+    z-index: 80;
+    top: 8px;
+    right: 8px;
+    display: block;
+    width: 38px;
+    min-height: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    backdrop-filter: none;
+    pointer-events: none;
+  }
+
+  .birthday-voyage[data-stage="route"] .birthday-voyage__topbar > span:first-child,
+  .birthday-voyage[data-stage="route"] .birthday-voyage__progress {
+    display: none;
+  }
+
+  .birthday-voyage[data-stage="route"] .birthday-voyage__close {
+    width: 36px;
+    height: 36px;
+    border-color: rgba(255, 255, 255, .3);
+    background: rgba(3, 5, 16, .82);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, .35);
+    font-size: 22px;
+    pointer-events: auto;
+  }
+
+  .birthday-voyage[data-stage="route"] .birthday-voyage__status {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .birthday-voyage__route-heading {
+    display: grid;
+    gap: 3px;
+    min-height: 88px;
+    padding: 4px 44px 2px 4px;
+  }
+
+  .birthday-voyage__route-heading h2 {
+    font-size: clamp(24px, 8vw, 31px);
+  }
+
+  .birthday-voyage__route-heading .birthday-voyage__eyebrow {
+    margin-bottom: 1px;
+    font-size: 8px;
+  }
+
+  .birthday-voyage__route-heading p {
+    display: block;
+    max-width: calc(100vw - 72px);
+    overflow: hidden;
+    font-size: 10px;
+    line-height: 1.25;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .birthday-voyage__route-prompt {
+    display: block;
+    width: fit-content;
+    max-width: 100%;
+    margin-top: 3px;
+    padding: 6px 9px;
+    overflow: hidden;
+    font-size: 9px;
+    text-align: left;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .birthday-voyage__route-board {
+    min-height: 0;
+    height: calc(100dvh - 122px);
+    border-radius: 16px;
+  }
+
+  .birthday-voyage__route-card {
+    width: clamp(64px, 20vw, 82px);
+  }
+
+  .birthday-voyage__route-card.is-special {
+    width: clamp(74px, 22vw, 92px);
+    --vienna-peak: 1.28;
+    --vienna-rest: 1.02;
+  }
+
+  .birthday-voyage__route-card[data-kind="cosmos"] {
+    width: clamp(68px, 20vw, 86px);
+  }
+
+  .birthday-voyage__route-card-face {
+    border-radius: 9px;
+  }
+
+  .birthday-voyage__route-card-front b {
+    margin-inline: 5px;
+    padding: 4px 5px;
+    font-size: 10px;
+  }
+
+  .birthday-voyage__gift-prompt {
+    top: 63%;
+    width: clamp(67px, calc(100% - 7px), 90px);
+    padding: 4px 7px 5px;
+    border-radius: 9px;
+  }
+
+  .birthday-voyage__gift-prompt-kicker {
+    gap: 3px;
+    font-size: 5px;
+    letter-spacing: .1em;
+  }
+
+  .birthday-voyage__gift-prompt-label {
+    font-size: clamp(10px, 3vw, 12px);
+  }
+
+  .birthday-voyage__gift-wrap::before {
+    inset: 5px;
+    border-radius: 6px;
+  }
+
+  .birthday-voyage__gift-lid {
+    right: -2px;
+    left: -2px;
+    border-radius: 9px 9px 4px 4px;
+  }
+
+  .birthday-voyage__gift-bow {
+    width: 42%;
+    height: 29%;
+  }
+
+  .birthday-voyage__parking-sign {
+    --parking-sign-distance: clamp(66px, 14vw, 90px);
+    top: calc(100% + 4px);
+    width: 30px;
+    min-height: 34px;
+    padding: 3px 2px 2px;
+    border-width: 1.5px;
+    border-radius: 4px;
+  }
+
+  .birthday-voyage__parking-sign-glyph {
+    font-size: 12px;
+  }
+
+  .birthday-voyage .birthday-voyage__parking-sign-label {
+    font-size: 5px;
+  }
+
+  .birthday-voyage__parking-sign::before {
+    height: 13px;
+  }
+
+  .birthday-voyage__parking-sign::after {
+    top: calc(100% + 13px);
+    width: 12px;
+  }
+
+  .birthday-voyage__route-card:is([data-kind="planet"], [data-kind="cosmos"]) > .birthday-voyage__parking-sign {
+    width: 28px;
+    min-height: 27px;
+    letter-spacing: .08em;
+  }
+
+  .birthday-voyage__route-card-back strong {
+    padding: 5px 2px;
+    font-size: 10px;
+    line-height: 1.05;
+  }
+
+  .birthday-voyage__route-card.is-available .birthday-voyage__route-card-trigger:focus-visible {
+    transform: scale(1.08);
+  }
+
+  .birthday-voyage__route-preview {
+    width: calc(100vw - 18px);
+    max-height: calc(100dvh - 18px);
+    padding: 12px;
+    border-radius: 18px;
+  }
+
+  .birthday-voyage__route-preview-header {
+    margin-bottom: 10px;
+  }
+
+  .birthday-voyage__route-preview-card {
+    width: min(92vw, calc(64dvh * 1.28));
+  }
+
+  .birthday-voyage__route-preview-context {
+    margin-top: 9px;
+    font-size: 9px;
+  }
+
+  .birthday-voyage__route-preview-chapter-stage {
+    --chapter-rail-shift: clamp(52px, 8dvh, 68px);
+    --chapter-rail-scale: .985;
+    --chapter-intro-width: calc(100% - 22px);
+    --chapter-rail-width: calc(100% - 12px);
+    --chapter-intro-padding: 17px 16px;
+    --chapter-rail-padding: 11px 13px 12px;
+    --chapter-intro-radius: 18px;
+    --chapter-rail-radius: 15px;
+    --chapter-intro-title-size: clamp(22px, 7.2vw, 30px);
+    --chapter-rail-title-size: clamp(18px, 5.7vw, 23px);
+    --chapter-intro-title-leading: 1.04;
+    --chapter-intro-copy-size: clamp(12px, 3.7vw, 14px);
+    --chapter-rail-copy-size: clamp(11px, 3.35vw, 13px);
+    gap: 5px;
+    width: var(--chapter-intro-width);
+    padding: var(--chapter-intro-padding);
+    border-radius: var(--chapter-intro-radius);
+  }
+
+  .birthday-voyage__route-preview-chapter-kicker {
+    font-size: 8px;
+    letter-spacing: .16em;
+  }
+
+  .birthday-voyage__route-preview-chapter-title {
+    font-size: var(--chapter-intro-title-size);
+    line-height: var(--chapter-intro-title-leading);
+  }
+
+  .birthday-voyage__route-preview-chapter-copy {
+    margin-top: 1px;
+    font-size: var(--chapter-intro-copy-size);
+    line-height: 1.35;
+  }
+
+  .birthday-voyage__route-preview[data-chapter-phase="rail"]
+    .birthday-voyage__route-preview-chapter-stage,
+  .birthday-voyage__route-preview-chapter-stage[data-chapter-phase="rail"] {
+    width: var(--chapter-rail-width);
+    padding: var(--chapter-rail-padding);
+    border-radius: var(--chapter-rail-radius);
+    transform: translate3d(0, var(--chapter-rail-shift), 0) scale(var(--chapter-rail-scale));
+  }
+
+  .birthday-voyage__route-preview[data-chapter-phase="rail"]
+    .birthday-voyage__route-preview-chapter-title,
+  .birthday-voyage__route-preview-chapter-stage[data-chapter-phase="rail"]
+    .birthday-voyage__route-preview-chapter-title {
+    font-size: var(--chapter-rail-title-size);
+  }
+
+  .birthday-voyage__route-preview[data-chapter-phase="rail"]
+    .birthday-voyage__route-preview-chapter-copy,
+  .birthday-voyage__route-preview-chapter-stage[data-chapter-phase="rail"]
+    .birthday-voyage__route-preview-chapter-copy {
+    font-size: var(--chapter-rail-copy-size);
+  }
+
+  .birthday-voyage__reexplore {
+    padding: 28px 18px 22px;
+    border-radius: 20px;
+  }
+
+  .birthday-voyage__reexplore-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .birthday-voyage__vehicle {
+    width: clamp(58px, 19vw, 84px);
+  }
+
+  .birthday-voyage__route-skip {
+    position: absolute;
+    z-index: 22;
+    top: auto;
+    right: 12px;
+    bottom: 12px;
+    min-height: 36px;
+    max-width: calc(100% - 24px);
+    overflow: hidden;
+    background: rgba(4, 6, 17, .84);
+    box-shadow: 0 6px 22px rgba(0, 0, 0, .4);
+    font-size: 9px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .birthday-voyage__route-touch-hint {
+    position: absolute;
+    z-index: 22;
+    bottom: 56px;
+    left: 12px;
+  }
+
+  .birthday-voyage__finale {
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .birthday-voyage[data-stage="finale"] .birthday-voyage__panel {
+    min-height: calc(100dvh - 58px);
+    padding: 20px 14px 26px;
+  }
+
+  .birthday-voyage[data-stage="finale"] .birthday-voyage__question-header h2 {
+    font-size: clamp(30px, 9vw, 40px);
+  }
+
+  .birthday-voyage[data-stage="finale"] .birthday-voyage__finale {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .birthday-voyage__heart-constellation {
+    width: min(160px, 42vw);
+  }
+
+  .birthday-voyage__message,
+  .birthday-voyage__birthday-message {
+    width: calc(100vw - 18px);
+    max-height: calc(100dvh - 18px);
+    padding: 38px 18px 26px;
+    border-radius: 22px;
+  }
+
+  .birthday-voyage__message-title,
+  .birthday-voyage__birthday-message > h3 {
+    font-size: clamp(33px, 11vw, 48px);
+  }
+
+  .birthday-voyage__message-copy,
+  .birthday-voyage__birthday-message .birthday-voyage__birthday-message-copy {
+    font-size: 15px;
+    line-height: 1.55;
+  }
+
+  .birthday-voyage__message-actions {
+    display: grid;
+  }
+
+  .birthday-voyage-guest-badge {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .birthday-voyage *,
+  .birthday-voyage *::before,
+  .birthday-voyage *::after {
+    scroll-behavior: auto !important;
+    animation-duration: .001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 80ms !important;
+  }
+
+  .birthday-voyage__route-card.is-special.is-arrived {
+    animation: none !important;
+    transform: translate(-50%, -50%) scale(1.02);
+  }
+
+  .birthday-voyage__route-card.is-unwrapping :is(
+    .birthday-voyage__gift-wrap,
+    .birthday-voyage__gift-lid,
+    .birthday-voyage__gift-ribbon,
+    .birthday-voyage__gift-bow
+  ) {
+    visibility: hidden;
+    opacity: 0;
+  }
+
+  .birthday-voyage__gift-prompt::before {
+    animation: none !important;
+    opacity: 0;
+  }
+
+  .birthday-voyage__gift-prompt {
+    transition: none !important;
+  }
+
+  .birthday-voyage__route-card.is-available[data-gift-state="wrapped"]
+    .birthday-voyage__gift-prompt[data-prompt-state="ready"] {
+    animation: none !important;
+    transform: translate(-50%, -50%) scale(1);
+  }
+
+  .birthday-voyage__route-card.is-unwrapping
+    .birthday-voyage__gift-prompt[data-prompt-state="opening"] {
+    visibility: hidden;
+    animation: none !important;
+    opacity: 0;
+  }
+
+  .birthday-voyage__parking-sign:is(.is-approaching, .is-active, .is-parking, .is-reversing, .is-parked),
+  .birthday-voyage__route-card:is(.is-parking, .is-reversing, .is-previewing) > .birthday-voyage__parking-sign {
+    animation: none !important;
+    transform: translate(-50%, 0) scale(1);
+  }
+
+  .birthday-voyage__vehicle::before,
+  .birthday-voyage__vehicle::after,
+  .birthday-voyage__vehicle .birthday-voyage__vehicle-car,
+  .birthday-voyage__vehicle .birthday-voyage__vehicle-rocket {
+    animation: none !important;
+  }
+
+  .birthday-voyage__vehicle.is-parked:not(.is-staged)::after,
+  .birthday-voyage__vehicle[data-parking-phase="settled"]::after {
+    opacity: 0;
+  }
+
+  .birthday-voyage__choice--evasive {
+    will-change: auto;
+  }
+
+  .birthday-voyage__summary-card {
+    animation: none !important;
+    opacity: 1;
+    transform: none;
+  }
+
+  .birthday-voyage__summary.is-fated .birthday-voyage__answer-original::before {
+    animation: none !important;
+    opacity: 1;
+    transform: rotate(12deg) scaleX(1);
+  }
+
+  .birthday-voyage__summary.is-fated .birthday-voyage__answer-original::after {
+    animation: none !important;
+    opacity: 1;
+    transform: rotate(-12deg) scaleX(1);
+  }
+
+  .birthday-voyage__fate-replacement {
+    transition: none !important;
+  }
+
+  .birthday-voyage__route-preview[open],
+  .birthday-voyage__route-preview::backdrop {
+    animation: none !important;
+  }
+
+  .birthday-voyage__route-preview-chapter-stage,
+  .birthday-voyage__route-preview-chapter-title,
+  .birthday-voyage__route-preview-chapter-copy {
+    animation: none !important;
+    transition: none !important;
+  }
+
+  .birthday-voyage__route-preview-chapter-stage::after {
+    display: none;
+  }
+
+  .birthday-voyage__route-preview[data-chapter-phase="intro"]
+    .birthday-voyage__route-preview-chapter-stage,
+  .birthday-voyage__route-preview-chapter-stage[data-chapter-phase="intro"] {
+    animation: none !important;
+    opacity: 1;
+    transform: none;
+  }
+
+  .birthday-voyage__route-preview-card-inner,
+  .birthday-voyage__route-preview[data-opened="true"] .birthday-voyage__route-preview-card-inner {
+    transition: none !important;
+    transform: rotateY(180deg) scale(1);
+  }
+
+  .birthday-voyage__route-preview[data-playing="true"] .birthday-voyage__route-preview-card-back img,
+  .birthday-voyage__route-preview[data-playing="true"] .birthday-voyage__route-preview-video {
+    animation: none !important;
+  }
+
+  .birthday-voyage__route-preview[data-playing="true"] .birthday-voyage__route-preview-progress i {
+    animation-name: birthday-route-preview-progress !important;
+    animation-duration: var(--preview-duration, 5s) !important;
+    animation-timing-function: linear !important;
+  }
+
+  .birthday-voyage__route-preview:is([data-media-state="loading"], [aria-busy="true"]) .birthday-voyage__route-preview-progress i {
+    width: 100%;
+    animation: none !important;
+    transform: scaleX(.28);
+  }
+
+  .birthday-voyage__message[open],
+  .birthday-voyage__birthday-message[open],
+  .birthday-voyage__message::backdrop,
+  .birthday-voyage__birthday-message::backdrop {
+    animation: none !important;
+  }
+}
+
+@media (forced-colors: active) {
+  .birthday-voyage__primary,
+  .birthday-voyage__secondary,
+  .birthday-voyage__choice,
+  .birthday-voyage__city-card,
+  .birthday-voyage__close,
+  .birthday-voyage__route-card-trigger,
+  .birthday-voyage__route-preview-close,
+  .birthday-voyage__route-skip,
+  .birthday-voyage__message,
+  .birthday-voyage__birthday-message {
+    border: 2px solid ButtonText;
+  }
+
+  .birthday-voyage:focus-visible,
+  .birthday-voyage__route-card-trigger:focus-visible,
+  .birthday-voyage__route-preview-close:focus-visible,
+  .birthday-voyage__route-skip:focus-visible {
+    outline: 3px solid Highlight;
+    outline-offset: 3px;
+  }
+
+  .birthday-voyage__route-card-face,
+  .birthday-voyage__route-preview-card-face {
+    border: 1px solid CanvasText;
+  }
+
+  .birthday-voyage__route-card-front {
+    color: CanvasText;
+    background: Canvas;
+  }
+
+  .birthday-voyage__route-card-front b {
+    border-color: ButtonText;
+    color: ButtonText;
+    background: Canvas;
+  }
+
+  .birthday-voyage__gift-prompt {
+    border: 2px solid ButtonText;
+    color: ButtonText;
+    background: Canvas;
+    box-shadow: none;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+
+  .birthday-voyage__gift-prompt::before {
+    display: none;
+  }
+
+  .birthday-voyage__gift-prompt-kicker,
+  .birthday-voyage__gift-prompt-label,
+  .birthday-voyage__gift-prompt-kicker::before,
+  .birthday-voyage__gift-prompt-kicker::after {
+    color: ButtonText;
+    text-shadow: none;
+  }
+
+  .birthday-voyage__gift-paper,
+  .birthday-voyage__gift-ribbon {
+    background: transparent;
+  }
+
+  .birthday-voyage__gift-lid {
+    border: 1px solid Highlight;
+    background: Canvas;
+  }
+
+  .birthday-voyage__gift-ribbon {
+    border: 2px solid Highlight;
+  }
+
+  .birthday-voyage__gift-bow {
+    border: 1px solid Highlight;
+    background: Highlight;
+  }
+
+  .birthday-voyage__parking-sign {
+    border: 2px solid ButtonText;
+    color: HighlightText;
+    background: Highlight;
+    box-shadow: none;
+  }
+
+  .birthday-voyage__route-preview-progress i {
+    background: Highlight;
+  }
+
+  .birthday-voyage__route-preview-chapter-stage {
+    border: 2px solid CanvasText;
+    color: CanvasText;
+    background: Canvas;
+    box-shadow: none;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+
+  .birthday-voyage__route-preview-chapter-stage::before,
+  .birthday-voyage__route-preview-chapter-stage::after {
+    display: none;
+  }
+
+  .birthday-voyage__route-preview-chapter-kicker,
+  .birthday-voyage__route-preview-chapter-title,
+  .birthday-voyage__route-preview-chapter-copy {
+    color: CanvasText;
+    text-shadow: none;
+  }
+}
+
+/* -------------------------------------------------------------------------
+ * Birthday Voyage 12/10 visual direction
+ *
+ * These rules intentionally sit after the original production skin. They
+ * preserve the established DOM/class contract while giving the voyage a
+ * coherent gift collection, distinct acts, collision-safe foregrounds and a
+ * genuinely cinematic compact layout. New runtime controls are styled here as
+ * well so recovery, options and the finale never appear as unpolished browser
+ * defaults while their state is being restored.
+ * ---------------------------------------------------------------------- */
+
+.birthday-voyage {
+  --birthday-midnight: #040817;
+  --birthday-midnight-soft: #0a1330;
+  --birthday-cyan-soft: #baf6ff;
+  --birthday-gold-deep: #b97528;
+  --birthday-focus-ring: #e9fbff;
+  color-scheme: dark;
+}
+
+.birthday-voyage :is(button, input, [tabindex]):focus-visible {
+  outline: 3px solid var(--birthday-focus-ring);
+  outline-offset: 3px;
+}
+
+.birthday-voyage :is(
+  .birthday-voyage__primary,
+  .birthday-voyage__secondary,
+  .birthday-voyage__options-action,
+  .birthday-voyage__sound-toggle,
+  .birthday-voyage__options-toggle
+) {
+  min-height: 44px;
+}
+
+.birthday-voyage__topbar {
+  grid-template-columns: 1fr minmax(150px, auto) auto auto;
+}
+
+/* One collection, many destination stamps: midnight paper, cyan edging and
+   warm-gold ribbon stay constant while the destination hue becomes a glint. */
+.birthday-voyage__route-card {
+  --gift-paper-deep: #050918;
+  --gift-paper: #0b1735;
+  --gift-paper-light: #17345c;
+  --gift-ribbon-deep: #9d5d1e;
+  --gift-ribbon: #eeb65b;
+  --gift-ribbon-light: #fff0bd;
+  isolation: isolate;
+}
+
+.birthday-voyage__route-card-face {
+  border-color: rgba(150, 235, 255, .44);
+  box-shadow:
+    0 14px 34px rgba(0, 0, 0, .56),
+    0 0 0 1px hsl(var(--gift-hue) 90% 72% / .08),
+    0 0 22px hsl(var(--gift-hue) 90% 70% / .1);
+}
+
+.birthday-voyage__route-card-front {
+  background:
+    radial-gradient(circle at 82% 15%, hsl(var(--gift-hue) 96% 76% / .26), transparent 22%),
+    linear-gradient(145deg, rgba(255, 255, 255, .12), transparent 34%),
+    repeating-linear-gradient(135deg, transparent 0 12px, rgba(122, 232, 255, .035) 12px 14px),
+    linear-gradient(145deg, #17345c, #0b1735 48%, #040817);
+}
+
+.birthday-voyage__gift-paper {
+  opacity: .38;
+  background:
+    radial-gradient(circle at 86% 18%, hsl(var(--gift-hue) 100% 75% / .25), transparent 20%),
+    linear-gradient(115deg, rgba(255, 255, 255, .34), transparent 22% 70%, rgba(0, 0, 0, .3)),
+    repeating-linear-gradient(45deg, transparent 0 15px, rgba(122, 232, 255, .1) 15px 16px);
+}
+
+.birthday-voyage__gift-paper::after {
+  content: "VOYAGE";
+  position: absolute;
+  top: 9px;
+  right: 9px;
+  display: grid;
+  place-items: center;
+  width: 31%;
+  aspect-ratio: 1;
+  border: 1px solid hsl(var(--gift-hue) 100% 84% / .72);
+  border-radius: 50%;
+  color: hsl(var(--gift-hue) 100% 88% / .88);
+  background: rgba(2, 6, 19, .42);
+  box-shadow: inset 0 0 0 2px rgba(2, 6, 19, .5);
+  font: 800 clamp(4px, .42vw, 6px)/1 "DM Mono", ui-monospace, monospace;
+  letter-spacing: .05em;
+  transform: rotate(8deg);
+}
+
+.birthday-voyage__route-card[data-destination="varna"] .birthday-voyage__gift-paper::after { content: "VAR"; }
+.birthday-voyage__route-card[data-destination="vienna"] .birthday-voyage__gift-paper::after { content: "VIE"; }
+.birthday-voyage__route-card[data-destination="brussels"] .birthday-voyage__gift-paper::after { content: "BRU"; }
+.birthday-voyage__route-card[data-destination="sofia"] .birthday-voyage__gift-paper::after { content: "SOF"; }
+.birthday-voyage__route-card[data-destination="tokyo"] .birthday-voyage__gift-paper::after { content: "TYO"; }
+.birthday-voyage__route-card[data-destination="shibuya"] .birthday-voyage__gift-paper::after { content: "SHB"; }
+.birthday-voyage__route-card[data-destination="earth"] .birthday-voyage__gift-paper::after { content: "EAR"; }
+.birthday-voyage__route-card[data-destination="moon"] .birthday-voyage__gift-paper::after { content: "LUNA"; }
+.birthday-voyage__route-card[data-destination="mars"] .birthday-voyage__gift-paper::after { content: "MARS"; }
+.birthday-voyage__route-card[data-destination="kepler"] .birthday-voyage__gift-paper::after { content: "K452"; }
+.birthday-voyage__route-card[data-destination="cosmos"] .birthday-voyage__gift-paper::after { content: "US"; }
+
+.birthday-voyage__gift-lid {
+  border-color: rgba(186, 246, 255, .58);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, .18), transparent 48%),
+    linear-gradient(90deg, #1a3c69, #0d1d3d 58%, #050918);
+}
+
+.birthday-voyage__gift-prompt {
+  top: 58%;
+  border-color: rgba(214, 248, 255, .92);
+  background-color: rgba(3, 7, 20, .98);
+  background:
+    radial-gradient(circle at 50% 0, hsl(var(--gift-hue) 95% 72% / .18), transparent 58%),
+    linear-gradient(145deg, rgba(10, 22, 50, .98), rgba(3, 7, 20, .98));
+  background-color: rgba(3, 7, 20, .98);
+}
+
+.birthday-voyage__gift-prompt-kicker::before,
+.birthday-voyage__gift-prompt-kicker::after {
+  content: "\2726";
+}
+
+.birthday-voyage__route-card.is-available .birthday-voyage__route-card-trigger {
+  animation-duration: 2.1s;
+}
+
+/* Media remains recognisable before arrival. Only a genuinely completed
+   chapter is softened, and hovering a replay restores its full colour. */
+.birthday-voyage__route-ambience {
+  filter: blur(3px) saturate(1.1) brightness(.68);
+  transform: scale(1.018);
+}
+
+.birthday-voyage__route-ambience.is-active {
+  opacity: .48;
+}
+
+.birthday-voyage__route-board[data-route-kind="planet"] .birthday-voyage__route-ambience.is-active,
+.birthday-voyage__route-board[data-route-kind="cosmos"] .birthday-voyage__route-ambience.is-active {
+  opacity: .5;
+  filter: blur(2px) saturate(1.14) brightness(.7);
+}
+
+.birthday-voyage__route-card[data-route-status="waiting"] .birthday-voyage__route-card-back img,
+.birthday-voyage__route-card[data-route-status="available"] .birthday-voyage__route-card-back img,
+.birthday-voyage__route-card[data-route-status="driving"] .birthday-voyage__route-card-back img,
+.birthday-voyage__route-card[data-route-status="previewing"] .birthday-voyage__route-card-back img {
+  opacity: 1;
+  filter: none;
+}
+
+.birthday-voyage__route-card[data-route-status="complete"] .birthday-voyage__route-card-back img,
+.birthday-voyage__route-card[data-route-status="replayable"] .birthday-voyage__route-card-back img {
+  opacity: .74;
+  filter: saturate(.76) brightness(.78);
+}
+
+/* Act direction: the same board evolves from magical asphalt, through neon,
+   into a launch corridor and finally celestial starlight. */
+.birthday-voyage__route-board {
+  --road-color: #73e8ff;
+  --road-shadow: rgba(1, 5, 16, .94);
+  --act-glow: rgba(122, 232, 255, .13);
+  background:
+    radial-gradient(circle at 20% 14%, var(--act-glow), transparent 30%),
+    radial-gradient(circle at 80% 84%, hsl(calc(var(--scene-hue) + 58) 82% 67% / .16), transparent 32%),
+    linear-gradient(180deg, rgba(8, 14, 32, .94), rgba(2, 4, 13, .99));
+}
+
+.birthday-voyage__route-board:is(
+  [data-route-act="varna"],
+  [data-route-act="world"],
+  [data-route-scene="varna"],
+  [data-scene-preset="varna"],
+  [data-scene-preset="varna-dawn"],
+  [data-scene-preset="europe"]
+) {
+  --road-color: #77e7ff;
+  --act-glow: rgba(255, 198, 111, .14);
+  background:
+    radial-gradient(ellipse at 50% 112%, rgba(255, 184, 93, .22), transparent 46%),
+    radial-gradient(circle at 14% 12%, rgba(118, 231, 255, .17), transparent 28%),
+    linear-gradient(180deg, rgba(10, 21, 39, .92), rgba(4, 7, 18, .99));
+}
+
+.birthday-voyage__route-board:is(
+  [data-route-scene="tokyo"],
+  [data-route-scene="shibuya"],
+  [data-scene-preset="neon"]
+) {
+  --road-color: #ff66c6;
+  --act-glow: rgba(255, 54, 184, .2);
+  background:
+    linear-gradient(90deg, transparent 49.7%, rgba(90, 239, 255, .08) 50%, transparent 50.3%),
+    repeating-linear-gradient(0deg, transparent 0 44px, rgba(255, 80, 196, .05) 45px 46px),
+    radial-gradient(circle at 78% 16%, rgba(255, 53, 184, .24), transparent 34%),
+    radial-gradient(circle at 12% 82%, rgba(56, 224, 255, .18), transparent 32%),
+    linear-gradient(180deg, #100721, #030613 82%);
+}
+
+.birthday-voyage__route-board:is(
+  [data-route-scene="earth"],
+  [data-scene-preset="launch"]
+) {
+  --road-color: #8cfff2;
+  --act-glow: rgba(69, 232, 255, .22);
+  background:
+    radial-gradient(ellipse at 50% 108%, rgba(72, 174, 255, .35), transparent 42%),
+    linear-gradient(180deg, #071b39 0, #061226 42%, #020610 100%);
+}
+
+.birthday-voyage__route-board:is(
+  [data-route-act="space"],
+  [data-route-kind="planet"],
+  [data-route-kind="cosmos"],
+  [data-scene-preset="celestial"]
+) {
+  --road-color: #c2a7ff;
+  --act-glow: rgba(171, 132, 255, .22);
+  background:
+    radial-gradient(circle at 74% 18%, rgba(171, 132, 255, .2), transparent 28%),
+    radial-gradient(circle at 22% 82%, rgba(77, 219, 255, .13), transparent 31%),
+    linear-gradient(180deg, #08081f, #02030d 72%);
+}
+
+/* Earth is technically the first space act, but visually it must still read
+   as a launchpad before the board settles into deep-space starlight. */
+.birthday-voyage__route-board:is(
+  [data-route-scene="earth"],
+  [data-scene-preset="earth-launch"]
+) {
+  --road-color: #8cfff2;
+  --act-glow: rgba(69, 232, 255, .22);
+  background:
+    radial-gradient(ellipse at 50% 108%, rgba(72, 174, 255, .35), transparent 42%),
+    radial-gradient(circle at 50% 72%, rgba(137, 255, 239, .12), transparent 24%),
+    linear-gradient(180deg, #071b39 0, #061226 42%, #020610 100%);
+}
+
+.birthday-voyage__route-stripes {
+  stroke: var(--road-color);
+  filter: drop-shadow(0 0 8px color-mix(in srgb, var(--road-color) 68%, transparent));
+  transition: stroke 800ms ease, filter 800ms ease;
+}
+
+.birthday-voyage__route-shadow {
+  stroke: var(--road-shadow);
+  stroke-width: 17;
+}
+
+/* A strict foreground hierarchy prevents the car from driving behind or over
+   roadside furniture. The sign lives outside its gift; the vehicle occupies a
+   separate, higher lane and remains visually in front throughout manoeuvres. */
+.birthday-voyage__route-card {
+  z-index: 8;
+}
+
+.birthday-voyage__route-card:is(.is-parking, .is-reversing, .is-parked) {
+  z-index: 18;
+}
+
+.birthday-voyage__parking-sign {
+  z-index: 0;
+  top: calc(100% + clamp(12px, 1.25vw, 18px));
+  --parking-sign-distance: clamp(92px, 10.5vw, 150px);
+}
+
+.birthday-voyage__route-card:is([data-kind="planet"], [data-kind="cosmos"]) > .birthday-voyage__parking-sign {
+  top: calc(100% + clamp(8px, 1vw, 14px));
+}
+
+.birthday-voyage__vehicle,
+.birthday-voyage__vehicle:is(.is-parking, .is-reversing, .is-parked) {
+  z-index: 48;
+}
+
+.birthday-voyage__vehicle-car,
+.birthday-voyage__vehicle-rocket {
+  scale: var(--vehicle-facing-scale, 1) 1;
+  transform-origin: center;
+}
+
+.birthday-voyage__vehicle[data-facing="left"] :is(
+  .birthday-voyage__vehicle-car,
+  .birthday-voyage__vehicle-rocket
+) {
+  --vehicle-facing-scale: -1;
+}
+
+.birthday-voyage__vehicle::before {
+  z-index: 7;
+}
+
+.birthday-voyage__vehicle::after {
+  z-index: 8;
+}
+
+.birthday-voyage__vehicle-car {
+  filter:
+    drop-shadow(0 10px 7px rgba(0, 0, 0, .82))
+    drop-shadow(0 0 9px rgba(122, 232, 255, .32));
+}
+
+.birthday-voyage__vehicle.is-staged::after {
+  content: "S + Y";
+  top: -18px;
+  width: max-content;
+  padding: 4px 7px;
+  border: 1px solid rgba(255, 210, 143, .32);
+  border-radius: 999px;
+  opacity: .9;
+  color: #ffe5ad;
+  background: rgba(4, 8, 23, .86);
+  font: 800 8px/1 "DM Mono", ui-monospace, monospace;
+  letter-spacing: .08em;
+  filter: drop-shadow(0 5px 8px rgba(0, 0, 0, .7));
+  transform: translateX(-50%);
+}
+
+/* The chapter message is half the experience: it premieres at full visual
+   weight in the centre, then glides into a substantial lower caption rail. */
+.birthday-voyage__route-preview-chapter-stage {
+  --chapter-rail-motion-duration: 1000ms;
+  --chapter-rail-motion-ease: cubic-bezier(.2, .72, .12, 1);
+  background:
+    radial-gradient(circle at 12% 0, rgba(122, 232, 255, .17), transparent 30%),
+    linear-gradient(104deg, rgba(3, 8, 24, .96), rgba(11, 20, 48, .9) 58%, rgba(24, 13, 44, .92));
+  box-shadow:
+    0 28px 82px rgba(0, 0, 0, .66),
+    0 0 0 1px rgba(122, 232, 255, .12) inset,
+    0 0 54px rgba(122, 232, 255, .22),
+    0 0 76px rgba(176, 126, 255, .16);
+}
+
+.birthday-voyage__route-preview[data-chapter-phase="intro"]
+  .birthday-voyage__route-preview-chapter-stage,
+.birthday-voyage__route-preview-chapter-stage[data-chapter-phase="intro"] {
+  --chapter-intro-width: min(780px, calc(100% - clamp(38px, 8vw, 112px)));
+  width: var(--chapter-intro-width);
+  transform: translate3d(0, 0, 0) scale(1);
+}
+
+.birthday-voyage__route-preview[data-chapter-phase="rail"]
+  .birthday-voyage__route-preview-chapter-stage,
+.birthday-voyage__route-preview-chapter-stage[data-chapter-phase="rail"] {
+  will-change: transform, width, padding, border-radius;
+}
+
+@keyframes birthday-route-chapter-to-rail {
+  0% {
+    width: var(--chapter-intro-width);
+    padding: var(--chapter-intro-padding);
+    border-radius: var(--chapter-intro-radius);
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  35% {
+    transform: translate3d(0, calc(var(--chapter-rail-shift) * .2), 0) scale(.99);
+  }
+  100% {
+    width: var(--chapter-rail-width);
+    padding: var(--chapter-rail-padding);
+    border-radius: var(--chapter-rail-radius);
+    transform: translate3d(0, var(--chapter-rail-shift), 0) scale(var(--chapter-rail-scale));
+  }
+}
+
+/* Lion film: the poster is the invitation, never a black failed-autoplay box. */
+.birthday-voyage__lion-intro-frame {
+  background:
+    radial-gradient(circle at 50% 42%, rgba(255, 198, 111, .15), transparent 38%),
+    #03040a;
+}
+
+.birthday-voyage[data-playback="poster"] .birthday-voyage__lion-intro-video,
+.birthday-voyage[data-playback="error"] .birthday-voyage__lion-intro-video {
+  opacity: .82;
+}
+
+.birthday-voyage__lion-intro-play {
+  min-width: min(310px, calc(100% - 34px));
+  min-height: 58px;
+  padding: 12px 22px;
+  border: 1px solid rgba(255, 224, 164, .78);
+  border-radius: 999px;
+  color: #07101d;
+  background: linear-gradient(105deg, #ffcf75, #fff0b8 50%, #aaf1ff);
+  box-shadow:
+    0 16px 44px rgba(0, 0, 0, .62),
+    0 0 34px rgba(255, 198, 111, .28);
+  font: 850 clamp(12px, 1.65vw, 15px)/1.2 "Outfit", Inter, system-ui, sans-serif;
+  letter-spacing: .01em;
+  text-align: center;
+}
+
+.birthday-voyage[data-playback="playing"] .birthday-voyage__lion-intro-play {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/* Persistent controls and the discreet Journey Options disclosure. */
+.birthday-voyage__journey-toolbar,
+.birthday-voyage__audio-toolbar {
+  position: fixed;
+  z-index: 100140;
+  right: clamp(12px, 2vw, 24px);
+  bottom: clamp(12px, 2vw, 24px);
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.birthday-voyage__journey-options {
+  position: fixed;
+  z-index: 100140;
+  right: clamp(12px, 2vw, 24px);
+  bottom: clamp(12px, 2vw, 24px);
+  pointer-events: auto;
+}
+
+
+.birthday-voyage__sound-control {
+  position: relative;
+  pointer-events: auto;
+}
+
+.birthday-voyage__options-toggle,
+.birthday-voyage__sound-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 44px;
+  padding: 0 13px;
+  border: 1px solid rgba(166, 229, 255, .28);
+  border-radius: 999px;
+  color: rgba(247, 251, 255, .92);
+  background: rgba(4, 9, 25, .88);
+  box-shadow: 0 9px 30px rgba(0, 0, 0, .38);
+  font: 750 10px/1 "DM Mono", ui-monospace, monospace;
+  letter-spacing: .04em;
+  backdrop-filter: blur(14px) saturate(1.2);
+  cursor: pointer;
+}
+
+.birthday-voyage__options-toggle[aria-expanded="true"],
+.birthday-voyage__sound-toggle[aria-pressed="false"] {
+  border-color: rgba(255, 198, 111, .55);
+}
+
+.birthday-voyage[data-sound="on"] .birthday-voyage__sound-toggle,
+.birthday-voyage__sound-toggle[aria-pressed="true"] {
+  border-color: rgba(122, 232, 255, .58);
+  box-shadow: 0 9px 30px rgba(0, 0, 0, .38), 0 0 18px rgba(122, 232, 255, .15);
+}
+
+.birthday-voyage[data-sound="muted"] .birthday-voyage__sound-toggle {
+  color: rgba(229, 230, 242, .7);
+}
+
+.birthday-voyage__options-menu {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 9px);
+  display: grid;
+  gap: 6px;
+  width: min(270px, calc(100vw - 24px));
+  padding: 10px;
+  border: 1px solid rgba(166, 229, 255, .25);
+  border-radius: 16px;
+  color: #fff;
+  background: rgba(4, 8, 23, .97);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, .58);
+  backdrop-filter: blur(18px) saturate(1.18);
+}
+
+.birthday-voyage__options-menu[hidden] {
+  display: none;
+}
+
+.birthday-voyage__options-action {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid transparent;
+  border-radius: 11px;
+  color: rgba(245, 248, 255, .9);
+  background: rgba(255, 255, 255, .045);
+  font: 700 12px/1.25 Inter, system-ui, sans-serif;
+  text-align: left;
+  cursor: pointer;
+}
+
+.birthday-voyage__options-action:hover,
+.birthday-voyage__options-action:focus-visible {
+  border-color: rgba(122, 232, 255, .44);
+  background: rgba(122, 232, 255, .1);
+}
+
+.birthday-voyage__route > .birthday-voyage__route-skip {
+  /* Legacy shortcut remains available to the runtime but no longer spoils the
+     route. Journey Options is the sole visible disclosure. */
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  min-height: 0 !important;
+  margin: -1px !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  border: 0 !important;
+  clip: rect(0 0 0 0) !important;
+  clip-path: inset(50%) !important;
+  white-space: nowrap !important;
+}
+
+.birthday-voyage__options-menu .birthday-voyage__route-skip {
+  position: static;
+  width: 100%;
+  height: auto;
+  min-height: 44px;
+  max-width: none;
+  margin: 0;
+  padding: 10px 12px;
+  overflow: visible;
+  clip: auto;
+  clip-path: none;
+  white-space: normal;
+}
+
+/* Recovery and confirmation are quiet, focused interludes. */
+.birthday-voyage__resume,
+.birthday-voyage__options-confirm {
+  width: min(580px, calc(100vw - 28px));
+  max-width: none;
+  margin: auto;
+  padding: clamp(28px, 5vw, 52px);
+  overflow: hidden;
+  border: 1px solid rgba(176, 230, 255, .42);
+  border-radius: 28px;
+  color: #fff;
+  background:
+    radial-gradient(circle at 50% -20%, rgba(122, 232, 255, .2), transparent 54%),
+    linear-gradient(145deg, rgba(13, 22, 49, .99), rgba(3, 6, 18, .99));
+  box-shadow: 0 30px 100px rgba(0, 0, 0, .75), 0 0 64px rgba(122, 232, 255, .14);
+  text-align: center;
+}
+
+.birthday-voyage__resume::backdrop,
+.birthday-voyage__options-confirm::backdrop {
+  background: rgba(1, 3, 11, .86);
+  backdrop-filter: blur(13px) saturate(.76);
+}
+
+.birthday-voyage__resume h2,
+.birthday-voyage__resume h3,
+.birthday-voyage__options-confirm h3 {
+  margin: 0;
+  font: 840 clamp(29px, 5vw, 46px)/1.04 "Outfit", Inter, system-ui, sans-serif;
+  letter-spacing: -.035em;
+}
+
+.birthday-voyage__resume-summary,
+.birthday-voyage__options-confirm p {
+  margin: 14px auto 0;
+  color: rgba(230, 235, 252, .8);
+  font: 550 15px/1.55 Inter, system-ui, sans-serif;
+}
+
+.birthday-voyage__resume-actions,
+.birthday-voyage__options-confirm-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 24px;
+}
+
+/* Finale: signature first, one intentional quiet breath, dedication second. */
+.birthday-voyage__reexplore .birthday-voyage__finale-signature {
+  position: relative;
+  z-index: 2;
+  margin: 10px auto 18px;
+  color: #fff8d8;
+  font-family: "Outfit", Inter, system-ui, sans-serif;
+  font-size: clamp(30px, 7vw, 68px);
+  font-weight: 820;
+  line-height: 1;
+  letter-spacing: -.04em;
+  text-align: center;
+  text-shadow:
+    0 0 12px #fff,
+    0 0 32px rgba(122, 232, 255, .78),
+    0 0 72px rgba(169, 139, 255, .62);
+}
+
+.birthday-voyage__birthday-message[data-finale-phase="signature"] .birthday-voyage__finale-signature {
+  animation: birthday-finale-signature-draw 2100ms cubic-bezier(.2, .72, .12, 1) both;
+}
+
+.birthday-voyage__finale-signature::after {
+  content: "\2726";
+  position: absolute;
+  top: 50%;
+  left: 0;
+  color: #fff6c9;
+  font-size: .34em;
+  filter: drop-shadow(-12px 0 8px rgba(122, 232, 255, .82));
+  opacity: 0;
+  transform: translate(-60%, -50%);
+}
+
+.birthday-voyage__birthday-message[data-finale-phase="signature"] .birthday-voyage__finale-signature::after {
+  animation: birthday-finale-comet 2100ms cubic-bezier(.2, .72, .12, 1) both;
+}
+
+.birthday-voyage__finale-constellation {
+  position: relative;
+  min-height: clamp(150px, 28dvh, 260px);
+  display: grid;
+  place-items: center;
+  margin: -8px 0 4px;
+  isolation: isolate;
+}
+
+.birthday-voyage__finale-constellation::before,
+.birthday-voyage__finale-constellation::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: 12% 7%;
+  border: 1px solid rgba(145, 232, 255, .22);
+  border-radius: 50%;
+  box-shadow: 0 0 45px rgba(122, 232, 255, .12) inset;
+  transform: rotate(-5deg);
+}
+
+.birthday-voyage__finale-constellation::after {
+  inset: 25% 14%;
+  border-color: rgba(255, 198, 111, .18);
+  transform: rotate(7deg);
+}
+
+.birthday-voyage__finale-constellation i {
+  position: absolute;
+  z-index: 2;
+  top: 50%;
+  left: 50%;
+  width: clamp(3px, .55vw, 6px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  opacity: .28;
+  background: #fff;
+  box-shadow: 0 0 8px #fff, 0 0 20px rgba(122, 232, 255, .74);
+  animation: birthday-finale-star-awaken 1.4s ease-in-out calc(var(--finale-star, 0) * 90ms) both;
+}
+
+.birthday-voyage__finale-constellation i:nth-child(1) { top: 24%; left: 9%; }
+.birthday-voyage__finale-constellation i:nth-child(2) { top: 14%; left: 25%; }
+.birthday-voyage__finale-constellation i:nth-child(3) { top: 31%; left: 37%; }
+.birthday-voyage__finale-constellation i:nth-child(4) { top: 19%; left: 52%; }
+.birthday-voyage__finale-constellation i:nth-child(5) { top: 28%; left: 72%; }
+.birthday-voyage__finale-constellation i:nth-child(6) { top: 18%; left: 91%; }
+.birthday-voyage__finale-constellation i:nth-child(7) { top: 51%; left: 84%; }
+.birthday-voyage__finale-constellation i:nth-child(8) { top: 69%; left: 71%; }
+.birthday-voyage__finale-constellation i:nth-child(9) { top: 83%; left: 52%; }
+.birthday-voyage__finale-constellation i:nth-child(10) { top: 73%; left: 33%; }
+.birthday-voyage__finale-constellation i:nth-child(11) { top: 58%; left: 16%; }
+.birthday-voyage__finale-constellation i:nth-child(12) { top: 48%; left: 46%; }
+.birthday-voyage__finale-constellation i:nth-child(13) { top: 46%; left: 62%; }
+
+.birthday-voyage__finale-dedication {
+  max-width: 650px;
+  margin: 20px auto 0;
+  color: rgba(253, 248, 255, .94);
+  font: 580 clamp(16px, 2.2vw, 21px)/1.65 "Outfit", Inter, system-ui, sans-serif;
+  text-wrap: pretty;
+}
+
+.birthday-voyage__finale-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  max-width: 660px;
+  margin: 28px auto 0;
+}
+
+.birthday-voyage__finale-actions > :nth-child(3) {
+  grid-column: 1 / -1;
+  justify-self: center;
+  min-height: 36px;
+  border-color: transparent;
+  color: rgba(226, 228, 244, .62);
+  background: transparent;
+  box-shadow: none;
+  font-size: 11px;
+}
+
+.birthday-voyage__finale-tertiary {
+  grid-column: 1 / -1;
+  justify-self: center;
+  color: rgba(226, 228, 244, .62);
+  background: transparent;
+  box-shadow: none;
+  font-size: 11px;
+}
+
+.birthday-voyage__finale-reveal {
+  display: block;
+  min-width: min(280px, 100%);
+  margin: 24px auto 0;
+}
+
+:is(
+  .birthday-voyage[data-finale-phase="signature"],
+  .birthday-voyage__birthday-message[data-finale-phase="signature"],
+  .birthday-voyage[data-finale-phase="quiet"],
+  .birthday-voyage__birthday-message[data-finale-phase="quiet"]
+) :is(.birthday-voyage__finale-dedication, .birthday-voyage__finale-actions) {
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(18px);
+}
+
+:is(
+  .birthday-voyage[data-finale-phase="dedication"],
+  .birthday-voyage__birthday-message[data-finale-phase="dedication"]
+) :is(.birthday-voyage__finale-dedication, .birthday-voyage__finale-actions) {
+  opacity: 1;
+  visibility: visible;
+  transform: none;
+  transition: opacity 950ms ease, transform 950ms cubic-bezier(.16, .8, .2, 1), visibility 0s;
+}
+
+@keyframes birthday-finale-signature-draw {
+  0% {
+    clip-path: inset(0 100% 0 0);
+    letter-spacing: .05em;
+    filter: blur(5px);
+    opacity: .15;
+  }
+  32% {
+    opacity: 1;
+  }
+  100% {
+    clip-path: inset(-30% -15% -30% 0);
+    letter-spacing: -.04em;
+    filter: none;
+    opacity: 1;
+  }
+}
+
+@keyframes birthday-finale-comet {
+  0% {
+    left: 0;
+    opacity: 0;
+  }
+  10%, 82% {
+    opacity: 1;
+  }
+  100% {
+    left: 100%;
+    opacity: 0;
+  }
+}
+
+@keyframes birthday-finale-star-awaken {
+  0% {
+    opacity: .12;
+    transform: scale(.35);
+  }
+  68% {
+    opacity: 1;
+    transform: scale(1.6);
+  }
+  100% {
+    opacity: .82;
+    transform: scale(1);
+  }
+}
+
+.birthday-voyage__route-preview-manual {
+  display: none;
+  justify-content: center;
+  gap: 9px;
+  margin-top: 12px;
+}
+
+/* Tablet/zoom composition: preserve content over decorative density. */
+@media (max-width: 900px), (min-resolution: 2dppx) and (max-width: 1180px) {
+  .birthday-voyage__route-card {
+    width: clamp(82px, 9.4vw, 108px);
+  }
+
+  .birthday-voyage__route-card.is-special {
+    width: clamp(102px, 12vw, 136px);
+  }
+
+  .birthday-voyage__route-board {
+    contain: layout paint;
+  }
+}
+
+/* Compact route: JS supplies a taller mobile viewBox and matching geometry.
+   The shell becomes the camera, cards become proper touch targets, and the
+   active chapter can be scrolled/panned into the middle rather than shrinking
+   the entire world into one crowded postcard. */
+@media (max-width: 580px) {
+  .birthday-voyage[data-stage="route"] .birthday-voyage__shell {
+    overflow: hidden auto;
+    scroll-behavior: smooth;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(122, 232, 255, .42) transparent;
+  }
+
+  .birthday-voyage[data-stage="route"] .birthday-voyage__panel {
+    display: block;
+    min-height: auto;
+    padding: 0 8px 18px;
+  }
+
+  .birthday-voyage__route {
+    gap: 8px;
+  }
+
+  .birthday-voyage__route-heading {
+    position: sticky;
+    z-index: 72;
+    top: 0;
+    min-height: 108px;
+    margin: 0 -8px;
+    padding: 12px 54px 11px 14px;
+    border-bottom: 1px solid rgba(151, 229, 255, .14);
+    background: linear-gradient(180deg, rgba(3, 7, 20, .97), rgba(3, 7, 20, .88) 78%, transparent);
+    backdrop-filter: blur(14px) saturate(1.2);
+  }
+
+  .birthday-voyage__topbar {
+    grid-template-columns: 1fr auto auto;
+  }
+
+  .birthday-voyage__topbar .birthday-voyage__sound-toggle {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .birthday-voyage__topbar .birthday-voyage__close {
+    grid-column: 3;
+    grid-row: 1;
+  }
+
+  .birthday-voyage[data-stage="route"] .birthday-voyage__topbar {
+    display: flex;
+    width: 80px;
+    gap: 6px;
+  }
+
+  .birthday-voyage[data-stage="route"] .birthday-voyage__topbar .birthday-voyage__sound-toggle,
+  .birthday-voyage[data-stage="route"] .birthday-voyage__topbar .birthday-voyage__close {
+    flex: 0 0 36px;
+    width: 36px;
+    min-width: 36px;
+    min-height: 36px;
+    height: 36px;
+    pointer-events: auto;
+  }
+
+  .birthday-voyage__route-heading p {
+    max-width: calc(100vw - 72px);
+    overflow: visible;
+    font-size: 11px;
+    line-height: 1.35;
+    text-overflow: clip;
+    white-space: normal;
+  }
+
+  .birthday-voyage__route-prompt {
+    max-width: calc(100vw - 80px);
+    overflow: visible;
+    white-space: normal;
+  }
+
+  .birthday-voyage__route-board,
+  .birthday-voyage__route-board[data-layout="mobile"] {
+    height: 1780px;
+    min-height: 1780px;
+    overflow: hidden;
+    border-radius: 22px;
+    scroll-margin-top: 112px;
+  }
+
+  .birthday-voyage__route-board::after {
+    opacity: .34;
+    mask-image: linear-gradient(180deg, #000, #000 78%, transparent);
+  }
+
+  .birthday-voyage__route-card {
+    width: clamp(112px, 32vw, 132px);
+    min-width: 112px;
+    touch-action: manipulation;
+  }
+
+  .birthday-voyage__route-card.is-special {
+    width: clamp(128px, 37vw, 148px);
+    --vienna-peak: 1.18;
+  }
+
+  .birthday-voyage__route-card[data-kind="cosmos"] {
+    width: clamp(120px, 35vw, 142px);
+  }
+
+  .birthday-voyage__route-card-trigger {
+    min-width: 100%;
+    min-height: 88px;
+  }
+
+  .birthday-voyage__route-card-front b,
+  .birthday-voyage__route-card.is-available .birthday-voyage__route-card-front b {
+    font-size: 13px;
+  }
+
+  .birthday-voyage__gift-prompt {
+    top: 57%;
+    width: calc(100% - 18px);
+    min-height: 39px;
+    padding: 6px 8px;
+  }
+
+  .birthday-voyage__gift-prompt-kicker {
+    font-size: 6px;
+  }
+
+  .birthday-voyage__gift-prompt-label {
+    font-size: 13px;
+  }
+
+  .birthday-voyage__gift-paper::after {
+    font-size: 5px;
+  }
+
+  .birthday-voyage__parking-sign {
+    z-index: 0;
+    top: calc(100% + 12px);
+    --parking-sign-distance: clamp(84px, 24vw, 104px);
+    width: 34px;
+    min-height: 38px;
+  }
+
+  .birthday-voyage__vehicle,
+  .birthday-voyage__vehicle:is(.is-parking, .is-reversing, .is-parked) {
+    z-index: 52;
+    width: clamp(82px, 25vw, 104px);
+  }
+
+  .birthday-voyage__vehicle.is-staged::after {
+    top: -20px;
+    font-size: 7px;
+  }
+
+  .birthday-voyage__route-touch-hint {
+    position: sticky;
+    z-index: 70;
+    bottom: 10px;
+    left: 10px;
+    display: inline-flex;
+    margin: -48px 0 0 10px;
+    backdrop-filter: blur(10px);
+  }
+
+  .birthday-voyage__journey-toolbar,
+  .birthday-voyage__audio-toolbar,
+  .birthday-voyage__journey-options {
+    right: 10px;
+    bottom: max(10px, env(safe-area-inset-bottom));
+  }
+
+  .birthday-voyage__options-toggle,
+  .birthday-voyage__sound-toggle {
+    width: 44px;
+    padding: 0;
+    overflow: hidden;
+    font-size: 0;
+  }
+
+  .birthday-voyage__options-toggle::before {
+    content: "\22EF";
+    font-size: 20px;
+  }
+
+  .birthday-voyage__sound-toggle::before {
+    content: "\266B";
+    font-size: 16px;
+  }
+
+  .birthday-voyage[data-sound="muted"] .birthday-voyage__sound-toggle::before {
+    content: "\00D7";
+    font-size: 22px;
+  }
+
+  .birthday-voyage__options-menu {
+    right: 0;
+    width: min(280px, calc(100vw - 20px));
+  }
+
+  .birthday-voyage__route-preview {
+    width: calc(100vw - 12px);
+    max-height: calc(100dvh - 12px);
+    padding: 10px;
+  }
+
+  .birthday-voyage__route-preview-card {
+    width: min(96vw, calc(61dvh * 1.28));
+  }
+
+  .birthday-voyage__route-preview-chapter-stage {
+    --chapter-rail-shift: clamp(62px, 10dvh, 92px);
+    --chapter-intro-width: calc(100% - 16px);
+    --chapter-rail-width: calc(100% - 8px);
+    --chapter-intro-padding: 19px 16px;
+    --chapter-rail-padding: 12px 13px;
+    --chapter-intro-title-size: clamp(24px, 8vw, 34px);
+    --chapter-rail-title-size: clamp(19px, 6.2vw, 25px);
+    --chapter-intro-copy-size: clamp(13px, 4vw, 16px);
+    --chapter-rail-copy-size: clamp(12px, 3.55vw, 14px);
+  }
+
+  .birthday-voyage__resume,
+  .birthday-voyage__options-confirm {
+    width: calc(100vw - 18px);
+    padding: 30px 18px 22px;
+    border-radius: 22px;
+  }
+
+  .birthday-voyage__resume-actions,
+  .birthday-voyage__options-confirm-actions,
+  .birthday-voyage__finale-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .birthday-voyage__finale-actions > :nth-child(3) {
+    grid-column: auto;
+  }
+
+  .birthday-voyage__finale-tertiary {
+    grid-column: auto;
+  }
+
+  .birthday-voyage__finale-signature {
+    font-size: clamp(31px, 10.5vw, 48px);
+  }
+
+  .birthday-voyage__finale-constellation {
+    min-height: 150px;
+  }
+
+  .birthday-voyage__finale-dedication {
+    font-size: 16px;
+    line-height: 1.58;
+  }
+}
+
+/* The narrowest supported phone keeps full touch targets and lets the camera
+   breathe around gifts rather than allowing route chrome to steal the frame. */
+@media (max-width: 360px) {
+  .birthday-voyage__route-board,
+  .birthday-voyage__route-board[data-layout="mobile"] {
+    height: 1860px;
+    min-height: 1860px;
+  }
+
+  .birthday-voyage__route-card {
+    width: 112px;
+  }
+
+  .birthday-voyage__route-card.is-special {
+    width: 126px;
+  }
+
+  .birthday-voyage__route-heading h2 {
+    font-size: 25px;
+  }
+}
+
+/* At 200% zoom the same compact, scrollable composition is preferable to a
+   clipped desktop map. */
+@media (max-width: 700px), (max-height: 520px) {
+  .birthday-voyage__topbar {
+    min-height: 54px;
+  }
+
+  .birthday-voyage__primary,
+  .birthday-voyage__secondary,
+  .birthday-voyage__choice,
+  .birthday-voyage__city-card {
+    min-height: 44px;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 540px) {
+  .birthday-voyage[data-stage="route"] .birthday-voyage__shell {
+    overflow-y: auto;
+    scroll-behavior: smooth;
+    overscroll-behavior: contain;
+  }
+
+  .birthday-voyage__route-heading {
+    position: sticky;
+    z-index: 72;
+    top: 0;
+    min-height: 82px;
+    background: linear-gradient(180deg, rgba(3, 7, 20, .97), rgba(3, 7, 20, .86) 78%, transparent);
+    backdrop-filter: blur(14px) saturate(1.2);
+  }
+
+  .birthday-voyage__route-board[data-layout="mobile"] {
+    height: 1260px;
+    min-height: 1260px;
+    overflow: hidden;
+  }
+
+  .birthday-voyage__route-board[data-layout="mobile"] .birthday-voyage__route-card {
+    width: clamp(104px, 15vw, 124px);
+  }
+
+  .birthday-voyage__route-board[data-layout="mobile"] .birthday-voyage__route-card.is-special {
+    width: clamp(118px, 17vw, 138px);
+  }
+
+  .birthday-voyage__route-board[data-layout="mobile"] .birthday-voyage__parking-sign {
+    --parking-sign-distance: clamp(82px, 13vw, 112px);
+  }
+
+  .birthday-voyage__route-board[data-layout="mobile"] .birthday-voyage__vehicle {
+    width: clamp(82px, 13vw, 106px);
+  }
+
+  .birthday-voyage__route-preview[open] {
+    grid-template-columns: minmax(0, 1fr) minmax(210px, .72fr);
+    column-gap: 14px;
+  }
+
+  .birthday-voyage__route-preview-header {
+    grid-area: 1 / 1 / 2 / 3;
+  }
+
+  .birthday-voyage__route-preview-card {
+    grid-area: 2 / 1;
+    width: min(60vw, calc(70dvh * 1.28));
+  }
+
+  .birthday-voyage__route-preview-context,
+  .birthday-voyage__route-preview-progress,
+  .birthday-voyage__route-preview-manual {
+    grid-column: 2;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .birthday-voyage[data-stage="route"] .birthday-voyage__shell {
+    scroll-behavior: auto;
+  }
+
+  .birthday-voyage__route-preview-manual {
+    display: flex;
+  }
+
+  .birthday-voyage__route-preview-progress {
+    display: none;
+  }
+
+  .birthday-voyage__route-preview[data-chapter-phase="rail"]
+    .birthday-voyage__route-preview-chapter-stage,
+  .birthday-voyage__route-preview-chapter-stage[data-chapter-phase="rail"] {
+    width: var(--chapter-rail-width);
+    padding: var(--chapter-rail-padding);
+    opacity: 1;
+    visibility: visible;
+    transform: translate3d(0, var(--chapter-rail-shift), 0) scale(var(--chapter-rail-scale));
+  }
+
+  :is(
+    .birthday-voyage[data-finale-phase="dedication"],
+    .birthday-voyage__birthday-message[data-finale-phase="dedication"]
+  ) :is(.birthday-voyage__finale-dedication, .birthday-voyage__finale-actions) {
+    transition: none;
+  }
+}
+
+@media (forced-colors: active) {
+  .birthday-voyage__options-toggle,
+  .birthday-voyage__sound-toggle,
+  .birthday-voyage__options-action,
+  .birthday-voyage__resume,
+  .birthday-voyage__options-confirm,
+  .birthday-voyage__finale-actions > button {
+    border: 2px solid ButtonText;
+    color: ButtonText;
+    background: Canvas;
+    box-shadow: none;
+    forced-color-adjust: auto;
+  }
+
+  .birthday-voyage__route-stripes {
+    stroke: Highlight;
+    filter: none;
+  }
+
+  .birthday-voyage__route-shadow {
+    stroke: CanvasText;
+  }
+
+  .birthday-voyage__gift-paper::after {
+    border: 1px solid CanvasText;
+    color: CanvasText;
+    background: Canvas;
+  }
+
+  .birthday-voyage__route-card[data-route-status="complete"] .birthday-voyage__route-card-back img,
+  .birthday-voyage__route-card[data-route-status="replayable"] .birthday-voyage__route-card-back img {
+    opacity: 1;
+    filter: none;
+  }
+
+  .birthday-voyage__finale-signature,
+  .birthday-voyage__finale-dedication {
+    color: CanvasText;
+    text-shadow: none;
+  }
+}
+
+/* Programmatic heading focus should move the screen reader cursor without
+   painting a large focus rectangle around cinematic headings. */
+.birthday-voyage :is(h2, h3, h4)[tabindex="-1"]:focus,
+.birthday-voyage :is(h2, h3, h4)[tabindex="-1"]:focus-visible {
+  outline: none;
+  box-shadow: none;
+}

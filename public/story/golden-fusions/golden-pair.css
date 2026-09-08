@@ -1,5 +1,5 @@
 [data-golden-pair] {
-  --golden-duration: 720ms;
+  --golden-duration: 3400ms;
   --golden-primary: hsl(43 100% 70%);
   --golden-secondary: hsl(184 100% 72%);
   --golden-ink: hsl(48 100% 94%);
@@ -22,6 +22,11 @@
 [data-golden-pair][hidden],
 body[data-cosmetic-effects="off"] [data-golden-pair] {
   display: none !important;
+}
+
+/* Generic choreography uses effects and word captions, without internal phase labels. */
+[data-golden-presentation="generic"] [data-golden-beats] {
+  display: none;
 }
 
 [data-golden-pair],
@@ -127,12 +132,50 @@ body[data-cosmetic-effects="off"] [data-golden-pair] {
   white-space: nowrap;
 }
 
+[data-golden-source-emoji],
+[data-golden-source-word] {
+  position: relative;
+  z-index: 1;
+}
+
+[data-golden-meteor-trail] {
+  position: absolute;
+  z-index: 0;
+  top: 50%;
+  width: clamp(5rem, 18vw, 11rem);
+  height: 0.42rem;
+  border-radius: 999px;
+  opacity: 0;
+  filter: blur(0.12rem);
+  will-change: transform, opacity;
+}
+
+[data-golden-source="a"] [data-golden-meteor-trail] {
+  right: calc(100% - 0.7rem);
+  background: linear-gradient(90deg, transparent, var(--golden-primary));
+  box-shadow: 0 0 0.8rem var(--golden-primary);
+  transform: translateY(-50%) scaleX(0.06);
+  transform-origin: 100% 50%;
+}
+
+[data-golden-source="b"] [data-golden-meteor-trail] {
+  left: calc(100% - 0.7rem);
+  background: linear-gradient(90deg, var(--golden-secondary), transparent);
+  box-shadow: 0 0 0.8rem var(--golden-secondary);
+  transform: translateY(-50%) scaleX(0.06);
+  transform-origin: 0 50%;
+}
+
 [data-golden-phase="active"] [data-golden-source="a"] {
   animation: golden-source-a var(--golden-duration) cubic-bezier(0.22, 0.8, 0.18, 1) both;
 }
 
 [data-golden-phase="active"] [data-golden-source="b"] {
   animation: golden-source-b var(--golden-duration) cubic-bezier(0.22, 0.8, 0.18, 1) both;
+}
+
+[data-golden-phase="active"] [data-golden-meteor-trail] {
+  animation: golden-meteor-tail var(--golden-duration) ease-out both;
 }
 
 [data-golden-glyphs] {
@@ -479,6 +522,40 @@ body[data-cosmetic-effects="off"] [data-golden-pair] {
   animation-name: golden-motion-spectrum;
 }
 
+/* Generic major moments always read as two meteors meeting head-on. */
+[data-golden-presentation="generic"] {
+  --gp-a-x: -26rem;
+  --gp-a-y: 0rem;
+  --gp-a-r: -5deg;
+  --gp-b-x: 26rem;
+  --gp-b-y: 0rem;
+  --gp-b-r: 5deg;
+}
+
+[data-golden-phase="active"][data-golden-presentation="generic"] [data-golden-result] {
+  animation-name: golden-meteor-result;
+}
+
+@keyframes golden-meteor-tail {
+  0% {
+    opacity: 0;
+    transform: translateY(-50%) scaleX(0.06);
+  }
+  14% {
+    opacity: 0.92;
+    transform: translateY(-50%) scaleX(1);
+  }
+  48% {
+    opacity: 0.72;
+    transform: translateY(-50%) scaleX(0.55);
+  }
+  64%,
+  100% {
+    opacity: 0;
+    transform: translateY(-50%) scaleX(0.04);
+  }
+}
+
 @keyframes golden-source-a {
   0% {
     opacity: 0;
@@ -567,6 +644,31 @@ body[data-cosmetic-effects="off"] [data-golden-pair] {
   100% {
     opacity: 0;
     transform: translate(-50%, -50%) scale(0.98);
+  }
+}
+
+@keyframes golden-meteor-result {
+  0%,
+  60% {
+    opacity: 0;
+    filter: blur(0.45rem);
+    transform: translate(-50%, -50%) scale(0.28);
+  }
+  72% {
+    opacity: 1;
+    filter: blur(0);
+    transform: translate(-50%, calc(-50% - 1.4rem)) scale(1.08);
+  }
+  84%,
+  96% {
+    opacity: 1;
+    filter: blur(0);
+    transform: translate(-50%, calc(-50% - 5.2rem)) scale(1);
+  }
+  100% {
+    opacity: 0;
+    filter: blur(0.12rem);
+    transform: translate(-50%, calc(-50% - 5.6rem)) scale(0.98);
   }
 }
 
@@ -704,9 +806,14 @@ body[data-cosmetic-effects="off"] [data-golden-pair] {
 [data-golden-motion-mode="reduced"] [data-golden-core],
 [data-golden-motion-mode="reduced"] [data-golden-result],
 [data-golden-motion-mode="reduced"] [data-golden-glyphs],
-[data-golden-motion-mode="reduced"] [data-golden-beat] {
+[data-golden-motion-mode="reduced"] [data-golden-beat],
+[data-golden-motion-mode="reduced"] [data-golden-meteor-trail] {
   animation: none !important;
   filter: none !important;
+}
+
+[data-golden-motion-mode="reduced"] [data-golden-meteor-trail] {
+  display: none;
 }
 
 [data-golden-motion-mode="reduced"] [data-golden-source="a"] {
@@ -827,6 +934,12 @@ body[data-cosmetic-effects="off"] [data-golden-pair] {
     color: CanvasText;
     background: Canvas;
     box-shadow: none;
+  }
+
+  [data-golden-meteor-trail] {
+    background: CanvasText;
+    box-shadow: none;
+    filter: none;
   }
 
   [data-golden-core-ring] {

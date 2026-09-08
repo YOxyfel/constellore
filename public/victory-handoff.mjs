@@ -14,9 +14,10 @@ export const VICTORY_HANDOFF_TIMING = Object.freeze({
   revealedAnswerMs: 520,
   standardWinMs: 980,
   goldenPairReducedMotionMs: 850,
-  goldenPairFullMotionMs: 2_900,
+  goldenPairFullMotionMs: 3_650,
+  goldenPairLingerMs: 250,
   minimumMs: 0,
-  maximumMs: 3_200
+  maximumMs: 4_000
 });
 
 function strictFlag(source, property) {
@@ -42,7 +43,21 @@ export function victoryHandoffHoldMs(options = {}) {
   if (!strictFlag(options, "won")) return VICTORY_HANDOFF_TIMING.lossMs;
   if (strictFlag(options, "revealed")) return VICTORY_HANDOFF_TIMING.revealedAnswerMs;
   if (!strictFlag(options, "authoredGoldenPair")) return VICTORY_HANDOFF_TIMING.standardWinMs;
-  return strictFlag(options, "reducedMotion")
-    ? VICTORY_HANDOFF_TIMING.goldenPairReducedMotionMs
-    : VICTORY_HANDOFF_TIMING.goldenPairFullMotionMs;
+  if (strictFlag(options, "reducedMotion")) return VICTORY_HANDOFF_TIMING.goldenPairReducedMotionMs;
+  let duration = 0;
+  try {
+    if (typeof options.goldenPairDurationMs === "number" && Number.isFinite(options.goldenPairDurationMs)) {
+      duration = Math.max(0, Math.round(options.goldenPairDurationMs));
+    }
+  } catch {
+    duration = 0;
+  }
+  if (!duration) return VICTORY_HANDOFF_TIMING.goldenPairFullMotionMs;
+  return Math.min(
+    VICTORY_HANDOFF_TIMING.maximumMs,
+    Math.max(
+      VICTORY_HANDOFF_TIMING.standardWinMs,
+      duration + VICTORY_HANDOFF_TIMING.goldenPairLingerMs
+    )
+  );
 }

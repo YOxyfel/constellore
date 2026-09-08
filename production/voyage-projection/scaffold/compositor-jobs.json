@@ -1,0 +1,783 @@
+{
+  "schemaVersion": 1,
+  "contractSha256": "0459b858503d99cc30d04139b5aa6144d03fb81e4b2e95fb9be4973f149b1416",
+  "defaultMode": "clean-authored-3d",
+  "mediaGenerated": false,
+  "cleanAuthored3d": {
+    "validWithoutAiLayers": true,
+    "changesProtectedPixels": 0,
+    "note": "Optional AI layers remain disabled unless their separately documented production records pass review."
+  },
+  "protectedPixelComparison": {
+    "referencePassId": "beauty-3d",
+    "objectIdPassId": "object-id-3d",
+    "maximumChangedPixels": 0,
+    "protectedElements": [
+      "camera",
+      "rocket",
+      "planet-geometry",
+      "planet-limbs",
+      "orbital-paths",
+      "route-spline",
+      "typography"
+    ]
+  },
+  "jobs": [
+    {
+      "id": "promise:earth:composite",
+      "variantId": "promise",
+      "shotId": "earth",
+      "posterSourceOnly": false,
+      "frameRange": {
+        "startFrame": 0,
+        "endFrameExclusive": 168,
+        "lastFrame": 167
+      },
+      "authoritativeBeautySequence": "output/voyage-projection/renders/promise/earth/beauty-3d/frame-%04d.exr",
+      "authoritativeObjectIdSequence": "output/voyage-projection/renders/promise/earth/object-id-3d/frame-%04d.exr",
+      "outputSequence": "output/voyage-projection/composites/promise/earth/frame-%04d.exr",
+      "outputSha256": null,
+      "optionalAiLayers": [
+        {
+          "passId": "ai-deep-field",
+          "enabled": false,
+          "status": "blocked-until-media-and-provenance-exist",
+          "sequencePattern": "output/voyage-projection/renders/promise/earth/ai-deep-field/frame-%04d.exr",
+          "sequenceSha256": null,
+          "maskPassId": "far-field-matte-3d",
+          "maskSequencePattern": "output/voyage-projection/renders/promise/earth/far-field-matte-3d/frame-%04d.exr",
+          "maskSha256": null,
+          "compositeMode": "over",
+          "provenanceTemplateId": "earth:ai-deep-field"
+        },
+        {
+          "passId": "ai-dust-volume",
+          "enabled": false,
+          "status": "blocked-until-media-and-provenance-exist",
+          "sequencePattern": "output/voyage-projection/renders/promise/earth/ai-dust-volume/frame-%04d.exr",
+          "sequenceSha256": null,
+          "maskPassId": "dust-matte-3d",
+          "maskSequencePattern": "output/voyage-projection/renders/promise/earth/dust-matte-3d/frame-%04d.exr",
+          "maskSha256": null,
+          "compositeMode": "screen",
+          "provenanceTemplateId": "earth:ai-dust-volume"
+        }
+      ],
+      "protectedPixelCheck": {
+        "requiredBeforeAiEnablement": true,
+        "maximumChangedPixels": 0,
+        "result": null
+      }
+    },
+    {
+      "id": "promise:solar:composite",
+      "variantId": "promise",
+      "shotId": "solar",
+      "posterSourceOnly": false,
+      "frameRange": {
+        "startFrame": 168,
+        "endFrameExclusive": 480,
+        "lastFrame": 479
+      },
+      "authoritativeBeautySequence": "output/voyage-projection/renders/promise/solar/beauty-3d/frame-%04d.exr",
+      "authoritativeObjectIdSequence": "output/voyage-projection/renders/promise/solar/object-id-3d/frame-%04d.exr",
+      "outputSequence": "output/voyage-projection/composites/promise/solar/frame-%04d.exr",
+      "outputSha256": null,
+      "optionalAiLayers": [
+        {
+          "passId": "ai-deep-field",
+          "enabled": false,
+          "status": "blocked-until-media-and-provenance-exist",
+          "sequencePattern": "output/voyage-projection/renders/promise/solar/ai-deep-field/frame-%04d.exr",
+          "sequenceSha256": null,
+          "maskPassId": "far-field-matte-3d",
+          "maskSequencePattern": "output/voyage-projection/renders/promise/solar/far-field-matte-3d/frame-%04d.exr",
+          "maskSha256": null,
+          "compositeMode": "over",
+          "provenanceTemplateId": "solar:ai-deep-field"
+        },
+        {
+          "passId": "ai-dust-volume",
+          "enabled": false,
+          "status": "blocked-until-media-and-provenance-exist",
+          "sequencePattern": "output/voyage-projection/renders/promise/solar/ai-dust-volume/frame-%04d.exr",
+          "sequenceSha256": null,
+          "maskPassId": "dust-matte-3d",
+          "maskSequencePattern": "output/voyage-projection/renders/promise/solar/dust-matte-3d/frame-%04d.exr",
+          "maskSha256": null,
+          "compositeMode": "screen",
+          "provenanceTemplateId": "solar:ai-dust-volume"
+        }
+      ],
+      "protectedPixelCheck": {
+        "requiredBeforeAiEnablement": true,
+        "maximumChangedPixels": 0,
+        "result": null
+      }
+    },
+    {
+      "id": "promise:heliopause:composite",
+      "variantId": "promise",
+      "shotId": "heliopause",
+      "posterSourceOnly": false,
+      "frameRange": {
+        "startFrame": 480,
+        "endFrameExclusive": 648,
+        "lastFrame": 647
+      },
+      "authoritativeBeautySequence": "output/voyage-projection/renders/promise/heliopause/beauty-3d/frame-%04d.exr",
+      "authoritativeObjectIdSequence": "output/voyage-projection/renders/promise/heliopause/object-id-3d/frame-%04d.exr",
+      "outputSequence": "output/voyage-projection/composites/promise/heliopause/frame-%04d.exr",
+      "outputSha256": null,
+      "optionalAiLayers": [
+        {
+          "passId": "ai-deep-field",
+          "enabled": false,
+          "status": "blocked-until-media-and-provenance-exist",
+          "sequencePattern": "output/voyage-projection/renders/promise/heliopause/ai-deep-field/frame-%04d.exr",
+          "sequenceSha256": null,
+          "maskPassId": "far-field-matte-3d",
+          "maskSequencePattern": "output/voyage-projection/renders/promise/heliopause/far-field-matte-3d/frame-%04d.exr",
+          "maskSha256": null,
+          "compositeMode": "over",
+          "provenanceTemplateId": "heliopause:ai-deep-field"
+        },
+        {
+          "passId": "ai-dust-volume",
+          "enabled": false,
+          "status": "blocked-until-media-and-provenance-exist",
+          "sequencePattern": "output/voyage-projection/renders/promise/heliopause/ai-dust-volume/frame-%04d.exr",
+          "sequenceSha256": null,
+          "maskPassId": "dust-matte-3d",
+          "maskSequencePattern": "output/voyage-projection/renders/promise/heliopause/dust-matte-3d/frame-%04d.exr",
+          "maskSha256": null,
+          "compositeMode": "screen",
+          "provenanceTemplateId": "heliopause:ai-dust-volume"
+        }
+      ],
+      "protectedPixelCheck": {
+        "requiredBeforeAiEnablement": true,
+        "maximumChangedPixels": 0,
+        "result": null
+      }
+    },
+    {
+      "id": "promise:warp:composite",
+      "variantId": "promise",
+      "shotId": "warp",
+      "posterSourceOnly": false,
+      "frameRange": {
+        "startFrame": 648,
+        "endFrameExclusive": 912,
+        "lastFrame": 911
+      },
+      "authoritativeBeautySequence": "output/voyage-projection/renders/promise/warp/beauty-3d/frame-%04d.exr",
+      "authoritativeObjectIdSequence": "output/voyage-projection/renders/promise/warp/object-id-3d/frame-%04d.exr",
+      "outputSequence": "output/voyage-projection/composites/promise/warp/frame-%04d.exr",
+      "outputSha256": null,
+      "optionalAiLayers": [
+        {
+          "passId": "ai-deep-field",
+          "enabled": false,
+          "status": "blocked-until-media-and-provenance-exist",
+          "sequencePattern": "output/voyage-projection/renders/promise/warp/ai-deep-field/frame-%04d.exr",
+          "sequenceSha256": null,
+          "maskPassId": "far-field-matte-3d",
+          "maskSequencePattern": "output/voyage-projection/renders/promise/warp/far-field-matte-3d/frame-%04d.exr",
+          "maskSha256": null,
+          "compositeMode": "over",
+          "provenanceTemplateId": "warp:ai-deep-field"
+        },
+        {
+          "passId": "ai-warp-caustics",
+          "enabled": false,
+          "status": "blocked-until-media-and-provenance-exist",
+          "sequencePattern": "output/voyage-projection/renders/promise/warp/ai-warp-caustics/frame-%04d.exr",
+          "sequenceSha256": null,
+          "maskPassId": "warp-matte-3d",
+          "maskSequencePattern": "output/voyage-projection/renders/promise/warp/warp-matte-3d/frame-%04d.exr",
+          "maskSha256": null,
+          "compositeMode": "add",
+          "provenanceTemplateId": "warp:ai-warp-caustics"
+        }
+      ],
+      "protectedPixelCheck": {
+        "requiredBeforeAiEnablement": true,
+        "maximumChangedPixels": 0,
+        "result": null
+      }
+    },
+    {
+      "id": "promise:black-hole:composite",
+      "variantId": "promise",
+      "shotId": "black-hole",
+      "posterSourceOnly": false,
+      "frameRange": {
+        "startFrame": 912,
+        "endFrameExclusive": 1152,
+        "lastFrame": 1151
+      },
+      "authoritativeBeautySequence": "output/voyage-projection/renders/promise/black-hole/beauty-3d/frame-%04d.exr",
+      "authoritativeObjectIdSequence": "output/voyage-projection/renders/promise/black-hole/object-id-3d/frame-%04d.exr",
+      "outputSequence": "output/voyage-projection/composites/promise/black-hole/frame-%04d.exr",
+      "outputSha256": null,
+      "optionalAiLayers": [
+        {
+          "passId": "ai-deep-field",
+          "enabled": false,
+          "status": "blocked-until-media-and-provenance-exist",
+          "sequencePattern": "output/voyage-projection/renders/promise/black-hole/ai-deep-field/frame-%04d.exr",
+          "sequenceSha256": null,
+          "maskPassId": "far-field-matte-3d",
+          "maskSequencePattern": "output/voyage-projection/renders/promise/black-hole/far-field-matte-3d/frame-%04d.exr",
+          "maskSha256": null,
+          "compositeMode": "over",
+          "provenanceTemplateId": "black-hole:ai-deep-field"
+        },
+        {
+          "passId": "ai-accretion-glow",
+          "enabled": false,
+          "status": "blocked-until-media-and-provenance-exist",
+          "sequencePattern": "output/voyage-projection/renders/promise/black-hole/ai-accretion-glow/frame-%04d.exr",
+          "sequenceSha256": null,
+          "maskPassId": "accretion-matte-3d",
+          "maskSequencePattern": "output/voyage-projection/renders/promise/black-hole/accretion-matte-3d/frame-%04d.exr",
+          "maskSha256": null,
+          "compositeMode": "add",
+          "provenanceTemplateId": "black-hole:ai-accretion-glow"
+        }
+      ],
+      "protectedPixelCheck": {
+        "requiredBeforeAiEnablement": true,
+        "maximumChangedPixels": 0,
+        "result": null
+      }
+    },
+    {
+      "id": "promise:singularity:composite",
+      "variantId": "promise",
+      "shotId": "singularity",
+      "posterSourceOnly": false,
+      "frameRange": {
+        "startFrame": 1152,
+        "endFrameExclusive": 1272,
+        "lastFrame": 1271
+      },
+      "authoritativeBeautySequence": "output/voyage-projection/renders/promise/singularity/beauty-3d/frame-%04d.exr",
+      "authoritativeObjectIdSequence": "output/voyage-projection/renders/promise/singularity/object-id-3d/frame-%04d.exr",
+      "outputSequence": "output/voyage-projection/composites/promise/singularity/frame-%04d.exr",
+      "outputSha256": null,
+      "optionalAiLayers": [
+        {
+          "passId": "ai-singularity-corona",
+          "enabled": false,
+          "status": "blocked-until-media-and-provenance-exist",
+          "sequencePattern": "output/voyage-projection/renders/promise/singularity/ai-singularity-corona/frame-%04d.exr",
+          "sequenceSha256": null,
+          "maskPassId": "singularity-matte-3d",
+          "maskSequencePattern": "output/voyage-projection/renders/promise/singularity/singularity-matte-3d/frame-%04d.exr",
+          "maskSha256": null,
+          "compositeMode": "add",
+          "provenanceTemplateId": "singularity:ai-singularity-corona"
+        }
+      ],
+      "protectedPixelCheck": {
+        "requiredBeforeAiEnablement": true,
+        "maximumChangedPixels": 0,
+        "result": null
+      }
+    },
+    {
+      "id": "promise:return:composite",
+      "variantId": "promise",
+      "shotId": "return",
+      "posterSourceOnly": false,
+      "frameRange": {
+        "startFrame": 1272,
+        "endFrameExclusive": 1368,
+        "lastFrame": 1367
+      },
+      "authoritativeBeautySequence": "output/voyage-projection/renders/promise/return/beauty-3d/frame-%04d.exr",
+      "authoritativeObjectIdSequence": "output/voyage-projection/renders/promise/return/object-id-3d/frame-%04d.exr",
+      "outputSequence": "output/voyage-projection/composites/promise/return/frame-%04d.exr",
+      "outputSha256": null,
+      "optionalAiLayers": [
+        {
+          "passId": "ai-deep-field",
+          "enabled": false,
+          "status": "blocked-until-media-and-provenance-exist",
+          "sequencePattern": "output/voyage-projection/renders/promise/return/ai-deep-field/frame-%04d.exr",
+          "sequenceSha256": null,
+          "maskPassId": "far-field-matte-3d",
+          "maskSequencePattern": "output/voyage-projection/renders/promise/return/far-field-matte-3d/frame-%04d.exr",
+          "maskSha256": null,
+          "compositeMode": "over",
+          "provenanceTemplateId": "return:ai-deep-field"
+        }
+      ],
+      "protectedPixelCheck": {
+        "requiredBeforeAiEnablement": true,
+        "maximumChangedPixels": 0,
+        "result": null
+      }
+    },
+    {
+      "id": "completion:earth:composite",
+      "variantId": "completion",
+      "shotId": "earth",
+      "posterSourceOnly": false,
+      "frameRange": {
+        "startFrame": 0,
+        "endFrameExclusive": 168,
+        "lastFrame": 167
+      },
+      "authoritativeBeautySequence": "output/voyage-projection/renders/completion/earth/beauty-3d/frame-%04d.exr",
+      "authoritativeObjectIdSequence": "output/voyage-projection/renders/completion/earth/object-id-3d/frame-%04d.exr",
+      "outputSequence": "output/voyage-projection/composites/completion/earth/frame-%04d.exr",
+      "outputSha256": null,
+      "optionalAiLayers": [
+        {
+          "passId": "ai-deep-field",
+          "enabled": false,
+          "status": "blocked-until-media-and-provenance-exist",
+          "sequencePattern": "output/voyage-projection/renders/completion/earth/ai-deep-field/frame-%04d.exr",
+          "sequenceSha256": null,
+          "maskPassId": "far-field-matte-3d",
+          "maskSequencePattern": "output/voyage-projection/renders/completion/earth/far-field-matte-3d/frame-%04d.exr",
+          "maskSha256": null,
+          "compositeMode": "over",
+          "provenanceTemplateId": "earth:ai-deep-field"
+        },
+        {
+          "passId": "ai-dust-volume",
+          "enabled": false,
+          "status": "blocked-until-media-and-provenance-exist",
+          "sequencePattern": "output/voyage-projection/renders/completion/earth/ai-dust-volume/frame-%04d.exr",
+          "sequenceSha256": null,
+          "maskPassId": "dust-matte-3d",
+          "maskSequencePattern": "output/voyage-projection/renders/completion/earth/dust-matte-3d/frame-%04d.exr",
+          "maskSha256": null,
+          "compositeMode": "screen",
+          "provenanceTemplateId": "earth:ai-dust-volume"
+        }
+      ],
+      "protectedPixelCheck": {
+        "requiredBeforeAiEnablement": true,
+        "maximumChangedPixels": 0,
+        "result": null
+      }
+    },
+    {
+      "id": "completion:solar:composite",
+      "variantId": "completion",
+      "shotId": "solar",
+      "posterSourceOnly": false,
+      "frameRange": {
+        "startFrame": 168,
+        "endFrameExclusive": 480,
+        "lastFrame": 479
+      },
+      "authoritativeBeautySequence": "output/voyage-projection/renders/completion/solar/beauty-3d/frame-%04d.exr",
+      "authoritativeObjectIdSequence": "output/voyage-projection/renders/completion/solar/object-id-3d/frame-%04d.exr",
+      "outputSequence": "output/voyage-projection/composites/completion/solar/frame-%04d.exr",
+      "outputSha256": null,
+      "optionalAiLayers": [
+        {
+          "passId": "ai-deep-field",
+          "enabled": false,
+          "status": "blocked-until-media-and-provenance-exist",
+          "sequencePattern": "output/voyage-projection/renders/completion/solar/ai-deep-field/frame-%04d.exr",
+          "sequenceSha256": null,
+          "maskPassId": "far-field-matte-3d",
+          "maskSequencePattern": "output/voyage-projection/renders/completion/solar/far-field-matte-3d/frame-%04d.exr",
+          "maskSha256": null,
+          "compositeMode": "over",
+          "provenanceTemplateId": "solar:ai-deep-field"
+        },
+        {
+          "passId": "ai-dust-volume",
+          "enabled": false,
+          "status": "blocked-until-media-and-provenance-exist",
+          "sequencePattern": "output/voyage-projection/renders/completion/solar/ai-dust-volume/frame-%04d.exr",
+          "sequenceSha256": null,
+          "maskPassId": "dust-matte-3d",
+          "maskSequencePattern": "output/voyage-projection/renders/completion/solar/dust-matte-3d/frame-%04d.exr",
+          "maskSha256": null,
+          "compositeMode": "screen",
+          "provenanceTemplateId": "solar:ai-dust-volume"
+        }
+      ],
+      "protectedPixelCheck": {
+        "requiredBeforeAiEnablement": true,
+        "maximumChangedPixels": 0,
+        "result": null
+      }
+    },
+    {
+      "id": "completion:heliopause:composite",
+      "variantId": "completion",
+      "shotId": "heliopause",
+      "posterSourceOnly": false,
+      "frameRange": {
+        "startFrame": 480,
+        "endFrameExclusive": 648,
+        "lastFrame": 647
+      },
+      "authoritativeBeautySequence": "output/voyage-projection/renders/completion/heliopause/beauty-3d/frame-%04d.exr",
+      "authoritativeObjectIdSequence": "output/voyage-projection/renders/completion/heliopause/object-id-3d/frame-%04d.exr",
+      "outputSequence": "output/voyage-projection/composites/completion/heliopause/frame-%04d.exr",
+      "outputSha256": null,
+      "optionalAiLayers": [
+        {
+          "passId": "ai-deep-field",
+          "enabled": false,
+          "status": "blocked-until-media-and-provenance-exist",
+          "sequencePattern": "output/voyage-projection/renders/completion/heliopause/ai-deep-field/frame-%04d.exr",
+          "sequenceSha256": null,
+          "maskPassId": "far-field-matte-3d",
+          "maskSequencePattern": "output/voyage-projection/renders/completion/heliopause/far-field-matte-3d/frame-%04d.exr",
+          "maskSha256": null,
+          "compositeMode": "over",
+          "provenanceTemplateId": "heliopause:ai-deep-field"
+        },
+        {
+          "passId": "ai-dust-volume",
+          "enabled": false,
+          "status": "blocked-until-media-and-provenance-exist",
+          "sequencePattern": "output/voyage-projection/renders/completion/heliopause/ai-dust-volume/frame-%04d.exr",
+          "sequenceSha256": null,
+          "maskPassId": "dust-matte-3d",
+          "maskSequencePattern": "output/voyage-projection/renders/completion/heliopause/dust-matte-3d/frame-%04d.exr",
+          "maskSha256": null,
+          "compositeMode": "screen",
+          "provenanceTemplateId": "heliopause:ai-dust-volume"
+        }
+      ],
+      "protectedPixelCheck": {
+        "requiredBeforeAiEnablement": true,
+        "maximumChangedPixels": 0,
+        "result": null
+      }
+    },
+    {
+      "id": "completion:warp:composite",
+      "variantId": "completion",
+      "shotId": "warp",
+      "posterSourceOnly": false,
+      "frameRange": {
+        "startFrame": 648,
+        "endFrameExclusive": 912,
+        "lastFrame": 911
+      },
+      "authoritativeBeautySequence": "output/voyage-projection/renders/completion/warp/beauty-3d/frame-%04d.exr",
+      "authoritativeObjectIdSequence": "output/voyage-projection/renders/completion/warp/object-id-3d/frame-%04d.exr",
+      "outputSequence": "output/voyage-projection/composites/completion/warp/frame-%04d.exr",
+      "outputSha256": null,
+      "optionalAiLayers": [
+        {
+          "passId": "ai-deep-field",
+          "enabled": false,
+          "status": "blocked-until-media-and-provenance-exist",
+          "sequencePattern": "output/voyage-projection/renders/completion/warp/ai-deep-field/frame-%04d.exr",
+          "sequenceSha256": null,
+          "maskPassId": "far-field-matte-3d",
+          "maskSequencePattern": "output/voyage-projection/renders/completion/warp/far-field-matte-3d/frame-%04d.exr",
+          "maskSha256": null,
+          "compositeMode": "over",
+          "provenanceTemplateId": "warp:ai-deep-field"
+        },
+        {
+          "passId": "ai-warp-caustics",
+          "enabled": false,
+          "status": "blocked-until-media-and-provenance-exist",
+          "sequencePattern": "output/voyage-projection/renders/completion/warp/ai-warp-caustics/frame-%04d.exr",
+          "sequenceSha256": null,
+          "maskPassId": "warp-matte-3d",
+          "maskSequencePattern": "output/voyage-projection/renders/completion/warp/warp-matte-3d/frame-%04d.exr",
+          "maskSha256": null,
+          "compositeMode": "add",
+          "provenanceTemplateId": "warp:ai-warp-caustics"
+        }
+      ],
+      "protectedPixelCheck": {
+        "requiredBeforeAiEnablement": true,
+        "maximumChangedPixels": 0,
+        "result": null
+      }
+    },
+    {
+      "id": "completion:black-hole:composite",
+      "variantId": "completion",
+      "shotId": "black-hole",
+      "posterSourceOnly": false,
+      "frameRange": {
+        "startFrame": 912,
+        "endFrameExclusive": 1152,
+        "lastFrame": 1151
+      },
+      "authoritativeBeautySequence": "output/voyage-projection/renders/completion/black-hole/beauty-3d/frame-%04d.exr",
+      "authoritativeObjectIdSequence": "output/voyage-projection/renders/completion/black-hole/object-id-3d/frame-%04d.exr",
+      "outputSequence": "output/voyage-projection/composites/completion/black-hole/frame-%04d.exr",
+      "outputSha256": null,
+      "optionalAiLayers": [
+        {
+          "passId": "ai-deep-field",
+          "enabled": false,
+          "status": "blocked-until-media-and-provenance-exist",
+          "sequencePattern": "output/voyage-projection/renders/completion/black-hole/ai-deep-field/frame-%04d.exr",
+          "sequenceSha256": null,
+          "maskPassId": "far-field-matte-3d",
+          "maskSequencePattern": "output/voyage-projection/renders/completion/black-hole/far-field-matte-3d/frame-%04d.exr",
+          "maskSha256": null,
+          "compositeMode": "over",
+          "provenanceTemplateId": "black-hole:ai-deep-field"
+        },
+        {
+          "passId": "ai-accretion-glow",
+          "enabled": false,
+          "status": "blocked-until-media-and-provenance-exist",
+          "sequencePattern": "output/voyage-projection/renders/completion/black-hole/ai-accretion-glow/frame-%04d.exr",
+          "sequenceSha256": null,
+          "maskPassId": "accretion-matte-3d",
+          "maskSequencePattern": "output/voyage-projection/renders/completion/black-hole/accretion-matte-3d/frame-%04d.exr",
+          "maskSha256": null,
+          "compositeMode": "add",
+          "provenanceTemplateId": "black-hole:ai-accretion-glow"
+        }
+      ],
+      "protectedPixelCheck": {
+        "requiredBeforeAiEnablement": true,
+        "maximumChangedPixels": 0,
+        "result": null
+      }
+    },
+    {
+      "id": "completion:singularity:composite",
+      "variantId": "completion",
+      "shotId": "singularity",
+      "posterSourceOnly": false,
+      "frameRange": {
+        "startFrame": 1152,
+        "endFrameExclusive": 1272,
+        "lastFrame": 1271
+      },
+      "authoritativeBeautySequence": "output/voyage-projection/renders/completion/singularity/beauty-3d/frame-%04d.exr",
+      "authoritativeObjectIdSequence": "output/voyage-projection/renders/completion/singularity/object-id-3d/frame-%04d.exr",
+      "outputSequence": "output/voyage-projection/composites/completion/singularity/frame-%04d.exr",
+      "outputSha256": null,
+      "optionalAiLayers": [
+        {
+          "passId": "ai-singularity-corona",
+          "enabled": false,
+          "status": "blocked-until-media-and-provenance-exist",
+          "sequencePattern": "output/voyage-projection/renders/completion/singularity/ai-singularity-corona/frame-%04d.exr",
+          "sequenceSha256": null,
+          "maskPassId": "singularity-matte-3d",
+          "maskSequencePattern": "output/voyage-projection/renders/completion/singularity/singularity-matte-3d/frame-%04d.exr",
+          "maskSha256": null,
+          "compositeMode": "add",
+          "provenanceTemplateId": "singularity:ai-singularity-corona"
+        }
+      ],
+      "protectedPixelCheck": {
+        "requiredBeforeAiEnablement": true,
+        "maximumChangedPixels": 0,
+        "result": null
+      }
+    },
+    {
+      "id": "completion:beyond:composite",
+      "variantId": "completion",
+      "shotId": "beyond",
+      "posterSourceOnly": false,
+      "frameRange": {
+        "startFrame": 1272,
+        "endFrameExclusive": 1368,
+        "lastFrame": 1367
+      },
+      "authoritativeBeautySequence": "output/voyage-projection/renders/completion/beyond/beauty-3d/frame-%04d.exr",
+      "authoritativeObjectIdSequence": "output/voyage-projection/renders/completion/beyond/object-id-3d/frame-%04d.exr",
+      "outputSequence": "output/voyage-projection/composites/completion/beyond/frame-%04d.exr",
+      "outputSha256": null,
+      "optionalAiLayers": [
+        {
+          "passId": "ai-beyond-color-field",
+          "enabled": false,
+          "status": "blocked-until-media-and-provenance-exist",
+          "sequencePattern": "output/voyage-projection/renders/completion/beyond/ai-beyond-color-field/frame-%04d.exr",
+          "sequenceSha256": null,
+          "maskPassId": "far-field-matte-3d",
+          "maskSequencePattern": "output/voyage-projection/renders/completion/beyond/far-field-matte-3d/frame-%04d.exr",
+          "maskSha256": null,
+          "compositeMode": "over",
+          "provenanceTemplateId": "beyond:ai-beyond-color-field"
+        }
+      ],
+      "protectedPixelCheck": {
+        "requiredBeforeAiEnablement": true,
+        "maximumChangedPixels": 0,
+        "result": null
+      }
+    },
+    {
+      "id": "progress:black-hole:composite:poster-source",
+      "variantId": "progress",
+      "shotId": "black-hole",
+      "posterSourceOnly": true,
+      "frameRange": {
+        "startFrame": 912,
+        "endFrameExclusive": 913,
+        "lastFrame": 912
+      },
+      "authoritativeBeautySequence": "output/voyage-projection/renders/progress/black-hole/beauty-3d/frame-%04d.exr",
+      "authoritativeObjectIdSequence": "output/voyage-projection/renders/progress/black-hole/object-id-3d/frame-%04d.exr",
+      "outputSequence": "output/voyage-projection/composites/progress/black-hole/frame-%04d.exr",
+      "outputSha256": null,
+      "optionalAiLayers": [
+        {
+          "passId": "ai-deep-field",
+          "enabled": false,
+          "status": "blocked-until-media-and-provenance-exist",
+          "sequencePattern": "output/voyage-projection/renders/progress/black-hole/ai-deep-field/frame-%04d.exr",
+          "sequenceSha256": null,
+          "maskPassId": "far-field-matte-3d",
+          "maskSequencePattern": "output/voyage-projection/renders/progress/black-hole/far-field-matte-3d/frame-%04d.exr",
+          "maskSha256": null,
+          "compositeMode": "over",
+          "provenanceTemplateId": "black-hole:ai-deep-field"
+        },
+        {
+          "passId": "ai-accretion-glow",
+          "enabled": false,
+          "status": "blocked-until-media-and-provenance-exist",
+          "sequencePattern": "output/voyage-projection/renders/progress/black-hole/ai-accretion-glow/frame-%04d.exr",
+          "sequenceSha256": null,
+          "maskPassId": "accretion-matte-3d",
+          "maskSequencePattern": "output/voyage-projection/renders/progress/black-hole/accretion-matte-3d/frame-%04d.exr",
+          "maskSha256": null,
+          "compositeMode": "add",
+          "provenanceTemplateId": "black-hole:ai-accretion-glow"
+        }
+      ],
+      "protectedPixelCheck": {
+        "requiredBeforeAiEnablement": true,
+        "maximumChangedPixels": 0,
+        "result": null
+      }
+    }
+  ],
+  "timelineAssemblies": [
+    {
+      "id": "promise:timeline-assembly",
+      "variantId": "promise",
+      "status": "planned-not-assembled",
+      "frameRange": {
+        "startFrame": 0,
+        "endFrameExclusive": 1368,
+        "lastFrame": 1367
+      },
+      "segments": [
+        {
+          "shotId": "earth",
+          "startFrame": 0,
+          "endFrameExclusive": 168,
+          "inputSequence": "output/voyage-projection/composites/promise/earth/frame-%04d.exr"
+        },
+        {
+          "shotId": "solar",
+          "startFrame": 168,
+          "endFrameExclusive": 480,
+          "inputSequence": "output/voyage-projection/composites/promise/solar/frame-%04d.exr"
+        },
+        {
+          "shotId": "heliopause",
+          "startFrame": 480,
+          "endFrameExclusive": 648,
+          "inputSequence": "output/voyage-projection/composites/promise/heliopause/frame-%04d.exr"
+        },
+        {
+          "shotId": "warp",
+          "startFrame": 648,
+          "endFrameExclusive": 912,
+          "inputSequence": "output/voyage-projection/composites/promise/warp/frame-%04d.exr"
+        },
+        {
+          "shotId": "black-hole",
+          "startFrame": 912,
+          "endFrameExclusive": 1152,
+          "inputSequence": "output/voyage-projection/composites/promise/black-hole/frame-%04d.exr"
+        },
+        {
+          "shotId": "singularity",
+          "startFrame": 1152,
+          "endFrameExclusive": 1272,
+          "inputSequence": "output/voyage-projection/composites/promise/singularity/frame-%04d.exr"
+        },
+        {
+          "shotId": "return",
+          "startFrame": 1272,
+          "endFrameExclusive": 1368,
+          "inputSequence": "output/voyage-projection/composites/promise/return/frame-%04d.exr"
+        }
+      ],
+      "outputSequence": "output/voyage-projection/composites/promise/timeline/frame-%04d.exr",
+      "outputSha256": null
+    },
+    {
+      "id": "completion:timeline-assembly",
+      "variantId": "completion",
+      "status": "planned-not-assembled",
+      "frameRange": {
+        "startFrame": 0,
+        "endFrameExclusive": 1368,
+        "lastFrame": 1367
+      },
+      "segments": [
+        {
+          "shotId": "earth",
+          "startFrame": 0,
+          "endFrameExclusive": 168,
+          "inputSequence": "output/voyage-projection/composites/completion/earth/frame-%04d.exr"
+        },
+        {
+          "shotId": "solar",
+          "startFrame": 168,
+          "endFrameExclusive": 480,
+          "inputSequence": "output/voyage-projection/composites/completion/solar/frame-%04d.exr"
+        },
+        {
+          "shotId": "heliopause",
+          "startFrame": 480,
+          "endFrameExclusive": 648,
+          "inputSequence": "output/voyage-projection/composites/completion/heliopause/frame-%04d.exr"
+        },
+        {
+          "shotId": "warp",
+          "startFrame": 648,
+          "endFrameExclusive": 912,
+          "inputSequence": "output/voyage-projection/composites/completion/warp/frame-%04d.exr"
+        },
+        {
+          "shotId": "black-hole",
+          "startFrame": 912,
+          "endFrameExclusive": 1152,
+          "inputSequence": "output/voyage-projection/composites/completion/black-hole/frame-%04d.exr"
+        },
+        {
+          "shotId": "singularity",
+          "startFrame": 1152,
+          "endFrameExclusive": 1272,
+          "inputSequence": "output/voyage-projection/composites/completion/singularity/frame-%04d.exr"
+        },
+        {
+          "shotId": "beyond",
+          "startFrame": 1272,
+          "endFrameExclusive": 1368,
+          "inputSequence": "output/voyage-projection/composites/completion/beyond/frame-%04d.exr"
+        }
+      ],
+      "outputSequence": "output/voyage-projection/composites/completion/timeline/frame-%04d.exr",
+      "outputSha256": null
+    }
+  ]
+}

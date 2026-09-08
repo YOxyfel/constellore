@@ -1,0 +1,206 @@
+.concept-bond-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+  contain: layout paint;
+}
+
+.concept-bond__glow,
+.concept-bond__path,
+.concept-bond__waiting-glow,
+.concept-bond__waiting-path {
+  fill: none;
+  stroke-linecap: round;
+}
+
+.concept-bond__glow {
+  stroke: color-mix(in srgb, var(--cyan, #70f4ff) 48%, transparent);
+  stroke-width: 10;
+  opacity: .22;
+  filter: blur(5px);
+}
+
+.concept-bond__path {
+  stroke: color-mix(in srgb, var(--cyan, #70f4ff) 84%, white);
+  stroke-width: 2;
+  stroke-dasharray: 3 8;
+  filter: drop-shadow(0 0 5px color-mix(in srgb, var(--cyan, #70f4ff) 66%, transparent));
+  animation: concept-bond-flow 2.4s linear infinite;
+}
+
+.concept-bond__waiting-glow {
+  stroke: color-mix(in srgb, var(--cyan, #70f4ff) 34%, transparent);
+  stroke-width: 8;
+  opacity: .14;
+  filter: blur(5px);
+}
+
+.concept-bond__waiting-path {
+  stroke: color-mix(in srgb, var(--cyan, #70f4ff) 58%, transparent);
+  stroke-width: 1.6;
+  stroke-dasharray: 2 8;
+  opacity: .62;
+}
+
+.concept-bond__waiting-socket {
+  fill: #07151d;
+  stroke: color-mix(in srgb, var(--cyan, #70f4ff) 62%, transparent);
+  stroke-width: 1.5;
+}
+
+.concept-bond__waiting-label {
+  fill: color-mix(in srgb, var(--cyan, #70f4ff) 62%, white);
+  font: 700 9px/1 var(--font-sans, system-ui, sans-serif);
+  letter-spacing: .09em;
+  text-transform: uppercase;
+  paint-order: stroke;
+  stroke: #031018;
+  stroke-width: 4px;
+  stroke-linejoin: round;
+}
+
+.concept-bond-layer[data-phase="reagent"] .concept-bond__path {
+  stroke: color-mix(in srgb, #ffe09a 78%, white);
+  stroke-width: 1.5;
+  filter: drop-shadow(0 0 4px color-mix(in srgb, #ffe09a 48%, transparent));
+}
+
+.concept-bond-layer[data-phase="reagent"] :is(.concept-bond__endpoint-halo, .concept-bond__endpoint-socket) {
+  stroke: color-mix(in srgb, #ffe09a 78%, white);
+}
+
+.concept-bond-layer[data-phase="reagent"] .concept-bond__endpoint-label {
+  fill: color-mix(in srgb, #ffe09a 82%, white);
+}
+
+.concept-bond__endpoint-halo {
+  fill: color-mix(in srgb, var(--cyan, #70f4ff) 9%, transparent);
+  stroke: color-mix(in srgb, var(--cyan, #70f4ff) 35%, transparent);
+  stroke-width: 1;
+  transform-origin: center;
+  animation: concept-socket-breathe 2.8s ease-in-out infinite;
+}
+
+.concept-bond__endpoint-socket {
+  fill: #07151d;
+  stroke: color-mix(in srgb, var(--cyan, #70f4ff) 90%, white);
+  stroke-width: 2;
+  filter: drop-shadow(0 0 5px color-mix(in srgb, var(--cyan, #70f4ff) 70%, transparent));
+}
+
+.concept-bond__endpoint-label {
+  fill: color-mix(in srgb, var(--cyan, #70f4ff) 82%, white);
+  font: 700 10px/1 var(--font-sans, system-ui, sans-serif);
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  paint-order: stroke;
+  stroke: #031018;
+  stroke-width: 4px;
+  stroke-linejoin: round;
+}
+
+.board-word.concept-backbone {
+  --concept-glow: color-mix(in srgb, var(--cyan, #70f4ff) 74%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--cyan, #70f4ff) 52%, transparent), 0 0 18px var(--concept-glow), inset 0 0 12px color-mix(in srgb, var(--cyan, #70f4ff) 10%, transparent);
+}
+
+.board-word.concept-backbone::after {
+  content: "";
+  position: absolute;
+  inset: -6px;
+  border: 1px solid color-mix(in srgb, var(--cyan, #70f4ff) 34%, transparent);
+  border-radius: inherit;
+  opacity: .68;
+  pointer-events: none;
+  animation: concept-backbone-breathe 2.9s ease-in-out infinite;
+}
+
+.board-word.concept-reagent {
+  box-shadow: 0 0 0 1px color-mix(in srgb, #ffe9a8 38%, transparent), 0 0 12px color-mix(in srgb, #ffe09a 27%, transparent);
+}
+
+.board-word.concept-detour-active {
+  box-shadow: 0 0 0 1px color-mix(in srgb, #ffe9a8 58%, transparent), 0 0 16px color-mix(in srgb, #ffe09a 38%, transparent), inset 0 0 10px color-mix(in srgb, #ffe09a 9%, transparent);
+}
+
+.board-word.concept-backbone-waiting::after {
+  animation-duration: 4.2s;
+  opacity: .5;
+}
+
+.concept-bond-rejected .concept-bond__path {
+  stroke: #ffb873;
+  animation: concept-bond-reject .58s ease both;
+}
+
+.concept-bond-rejected .board-word.concept-backbone {
+  animation: concept-node-reject .58s ease both;
+}
+
+body.simple-ui #gameScreen:is([data-play-layout="stacked"], [data-play-layout="short-landscape"])
+  .run-milestone.has-concept-bond #milestoneText {
+  display: block;
+  flex: 1 1 auto;
+  color: color-mix(in srgb, var(--cyan, #70f4ff) 82%, white);
+}
+
+body.simple-ui #gameScreen:is([data-play-layout="stacked"], [data-play-layout="short-landscape"])
+  .run-milestone.has-concept-bond #routeStepCount {
+  display: none;
+}
+
+@keyframes concept-bond-flow {
+  to { stroke-dashoffset: -22; }
+}
+
+@keyframes concept-socket-breathe {
+  0%, 100% { opacity: .55; transform: scale(.88); }
+  50% { opacity: 1; transform: scale(1.08); }
+}
+
+@keyframes concept-backbone-breathe {
+  0%, 100% { opacity: .4; transform: scale(.99); }
+  50% { opacity: .88; transform: scale(1.025); }
+}
+
+@keyframes concept-bond-reject {
+  0%, 100% { transform: translateX(0); }
+  28% { transform: translateX(-5px); }
+  58% { transform: translateX(4px); }
+}
+
+@keyframes concept-node-reject {
+  0%, 100% { transform: translate(var(--x), var(--y)); }
+  30% { transform: translate(calc(var(--x) - 5px), var(--y)); }
+  62% { transform: translate(calc(var(--x) + 4px), var(--y)); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .concept-bond__path,
+  .concept-bond__waiting-path,
+  .concept-bond__endpoint-halo,
+  .board-word.concept-backbone::after,
+  .concept-bond-rejected .concept-bond__path,
+  .concept-bond-rejected .board-word.concept-backbone {
+    animation: none;
+  }
+}
+
+@media (forced-colors: active) {
+  .concept-bond__glow,
+  .concept-bond__waiting-glow { display: none; }
+  .concept-bond__path,
+  .concept-bond__waiting-path,
+  .concept-bond__endpoint-halo,
+  .concept-bond__endpoint-socket,
+  .concept-bond__waiting-socket { stroke: Highlight; }
+  .concept-bond__endpoint-label,
+  .concept-bond__waiting-label { fill: CanvasText; stroke: Canvas; }
+  .board-word.concept-backbone,
+  .board-word.concept-reagent,
+  .board-word.concept-detour-active { outline: 2px solid Highlight; box-shadow: none; }
+}

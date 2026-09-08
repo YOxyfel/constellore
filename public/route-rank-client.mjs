@@ -1,6 +1,6 @@
-import { sanitizeAdaptiveDifficultyState } from "./adaptive-difficulty.mjs?v=5.0.0-beta.1";
-import { getRankBoardArtTier } from "./rank-board-art.mjs?v=5.0.0-beta.1";
-import { getRemixRankPresentation } from "./remix-progression.mjs?v=5.0.0-beta.1";
+import { sanitizeAdaptiveDifficultyState } from "./adaptive-difficulty.mjs?v=5.0.0-beta.4";
+import { getRankBoardArtTier } from "./rank-board-art.mjs?v=5.0.0-beta.4";
+import { getRemixRankPresentation } from "./remix-progression.mjs?v=5.0.0-beta.4";
 
 const clamp = (value, minimum, maximum) => Math.min(maximum, Math.max(minimum, value));
 

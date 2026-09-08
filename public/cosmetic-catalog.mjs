@@ -5,7 +5,7 @@
  * profiles and may be referenced by receipts, so changing an ID requires an
  * entry in LEGACY_COSMETIC_IDS rather than an in-place rename.
  */
-export const COSMETIC_SCHEMA_VERSION = 10;
+export const COSMETIC_SCHEMA_VERSION = 11;
 
 export const COSMETIC_SLOTS = Object.freeze([
   "wordPlaque",
@@ -17,6 +17,47 @@ export const COSMETIC_SLOTS = Object.freeze([
   "soundTheme"
 ]);
 
+/**
+ * A collection family describes where a complete collection belongs in the catalog.
+ * Acquisition, seasonality, and style tags stay independent so future
+ * collaborations or community kits can also be seasonal or rank-earned.
+ * Empty future families remain hidden by the Observatory until populated.
+ */
+export const COSMETIC_COLLECTION_FAMILIES = Object.freeze([
+  Object.freeze({
+    id: "constellore",
+    label: "Constellore Originals",
+    kicker: "Core universe",
+    description: "Signature celestial collections rooted in the world of the game.",
+    order: 1,
+    future: false
+  }),
+  Object.freeze({
+    id: "theme-worlds",
+    label: "Theme Worlds",
+    kicker: "Genre transformations",
+    description: "Complete genre and art-style transformations with their own look and sound.",
+    order: 2,
+    future: false
+  }),
+  Object.freeze({
+    id: "collaborations",
+    label: "Collaborations",
+    kicker: "Partner worlds",
+    description: "Official collections created with artists, studios, and partner worlds.",
+    order: 3,
+    future: true
+  }),
+  Object.freeze({
+    id: "community-creations",
+    label: "Community Creations",
+    kicker: "Curated together",
+    description: "Curated collections designed with the Constellore community.",
+    order: 4,
+    future: true
+  })
+]);
+
 const collection = (value) => {
   const preset = Object.freeze({ ...value.preset });
   const rankUnlock = value.rankUnlock ? Object.freeze({ ...value.rankUnlock }) : null;
@@ -26,6 +67,8 @@ const collection = (value) => {
     tags: Object.freeze([...value.tags]),
     rankUnlock,
     purchaseOnly,
+    collectionFamily: String(value.collectionFamily || "other-collections").trim().toLowerCase(),
+    styleLabel: String(value.styleLabel || "").trim(),
     acquisition: purchaseOnly
       ? "purchase-only"
       : rankUnlock
@@ -68,6 +111,8 @@ export const COSMETIC_COLLECTIONS = Object.freeze([
     access: "free",
     entitlement: "free",
     order: 1,
+    collectionFamily: "constellore",
+    styleLabel: "Classic celestial",
     creditPrice: 0,
     tier: "Included",
     presentation: "foundation",
@@ -75,7 +120,7 @@ export const COSMETIC_COLLECTIONS = Object.freeze([
     description: "The original observatory: ink-blue skies, woven charts, and quiet cosmic chimes.",
     preview: {
       title: "Chart the first sky",
-      body: "A calm, legible constellation kit built around the living Rank sky."
+      body: "A calm, legible constellation collection built around the living Rank sky."
     },
     preset: {
       wordPlaque: "constellore.celestial-atlas.word-plaque.woven-atlas",
@@ -95,6 +140,8 @@ export const COSMETIC_COLLECTIONS = Object.freeze([
     access: "supporter",
     entitlement: "supporter",
     order: 2,
+    collectionFamily: "constellore",
+    styleLabel: "Prismatic frostglass",
     creditPrice: 450,
     rankUnlock: { id: "silver", name: "Silver", number: 2 },
     unlockHint: "Reach Silver Route Rank to unlock free, or buy now for 450 Star Credits.",
@@ -124,6 +171,8 @@ export const COSMETIC_COLLECTIONS = Object.freeze([
     access: "supporter",
     entitlement: "supporter",
     order: 3,
+    collectionFamily: "constellore",
+    styleLabel: "Brass orrery",
     creditPrice: 800,
     rankUnlock: { id: "gold", name: "Gold", number: 3 },
     unlockHint: "Reach Gold Route Rank to unlock free, or buy now for 800 Star Credits.",
@@ -153,6 +202,8 @@ export const COSMETIC_COLLECTIONS = Object.freeze([
     access: "supporter",
     entitlement: "supporter",
     order: 4,
+    collectionFamily: "constellore",
+    styleLabel: "Moonlit botanical",
     creditPrice: 1200,
     rankUnlock: { id: "emerald", name: "Emerald", number: 5 },
     unlockHint: "Reach Emerald Route Rank to unlock free, or buy now for 1,200 Star Credits.",
@@ -182,6 +233,8 @@ export const COSMETIC_COLLECTIONS = Object.freeze([
     access: "supporter",
     entitlement: "supporter",
     order: 5,
+    collectionFamily: "constellore",
+    styleLabel: "Eclipse prestige",
     creditPrice: 2400,
     rankUnlock: { id: "master", name: "Master", number: 8 },
     unlockHint: "Reach Master Route Rank to unlock free, or buy now for 2,400 Star Credits.",
@@ -211,6 +264,8 @@ export const COSMETIC_COLLECTIONS = Object.freeze([
     access: "supporter",
     entitlement: "supporter",
     order: 6,
+    collectionFamily: "theme-worlds",
+    styleLabel: "Retro arcade",
     creditPrice: 700,
     purchaseOnly: true,
     unlockHint: "Purchase only. Route Rank does not unlock this collection.",
@@ -240,6 +295,8 @@ export const COSMETIC_COLLECTIONS = Object.freeze([
     access: "supporter",
     entitlement: "supporter",
     order: 7,
+    collectionFamily: "theme-worlds",
+    styleLabel: "Undersea storybook",
     creditPrice: 950,
     purchaseOnly: true,
     unlockHint: "Purchase only. Route Rank does not unlock this collection.",
@@ -269,6 +326,8 @@ export const COSMETIC_COLLECTIONS = Object.freeze([
     access: "supporter",
     entitlement: "supporter",
     order: 8,
+    collectionFamily: "theme-worlds",
+    styleLabel: "Cinematic space opera",
     creditPrice: 1600,
     purchaseOnly: true,
     unlockHint: "Purchase only. Route Rank does not unlock this collection.",
@@ -365,12 +424,12 @@ export const COSMETIC_ITEMS = Object.freeze([
     slug: "atlas-doors",
     slot: "gateStyle",
     collectionId: "constellore.collection.celestial-atlas",
-    label: "Atlas Doors",
+    label: "Atlas Starfold",
     access: "free",
     entitlement: "free",
-    tags: ["Free", "Gate"],
-    description: "The engraved opening doors of the Celestial Atlas.",
-    preview: { title: "Atlas Doors", body: "The original observatory threshold and opening motion." },
+    tags: ["Free", "Worldweave"],
+    description: "The Celestial Atlas gathers into an engraved constellation.",
+    preview: { title: "Atlas Starfold", body: "Starlight threads align the next world through the original Atlas signature." },
     recipe: { cssToken: "constellore", seam: "starlight", motion: "hinged" },
     assets: {
       responsive: {
@@ -487,9 +546,9 @@ export const COSMETIC_ITEMS = Object.freeze([
     label: "Crystal Archive",
     access: "supporter",
     entitlement: "supporter",
-    tags: ["Supporter", "Gate"],
-    description: "Faceted archive doors with an emerald aurora seam.",
-    preview: { title: "Crystal Archive gate", body: "An icy threshold that opens on the same dependable timing." },
+    tags: ["Supporter", "Worldweave"],
+    description: "Faceted frostglass threads converge through an emerald aurora.",
+    preview: { title: "Crystal Archive Starfold", body: "An icy constellation gathers and resolves on the same accessible timing." },
     recipe: { cssToken: "crystal-archive", seam: "aurora", motion: "faceted" },
     assets: {
       responsive: {
@@ -603,12 +662,12 @@ export const COSMETIC_ITEMS = Object.freeze([
     slug: "foundry-doors",
     slot: "gateStyle",
     collectionId: "constellore.collection.solar-foundry",
-    label: "Foundry Doors",
+    label: "Foundry Alignment",
     access: "supporter",
     entitlement: "supporter",
-    tags: ["Supporter", "Gate"],
-    description: "Engraved brass doors split by a molten stellar seam.",
-    preview: { title: "Foundry Doors", body: "A crafted mechanical threshold using the standard accessible opening motion." },
+    tags: ["Supporter", "Worldweave"],
+    description: "Brass orrery lines align around a molten stellar core.",
+    preview: { title: "Foundry Alignment", body: "A crafted mechanical constellation folds the destination into reach." },
     recipe: { cssToken: "foundry", seam: "ember", motion: "orrery" },
     assets: {
       responsive: {
@@ -722,12 +781,12 @@ export const COSMETIC_ITEMS = Object.freeze([
     slug: "moon-garden",
     slot: "gateStyle",
     collectionId: "constellore.collection.lunar-garden",
-    label: "Moon Garden Gate",
+    label: "Moon Garden Bloom",
     access: "supporter",
     entitlement: "supporter",
-    tags: ["Supporter", "Gate"],
-    description: "A flowering silver arbor opens beneath a quiet crescent moon.",
-    preview: { title: "Moon Garden gate", body: "A moon-garden threshold using the standard accessible opening motion." },
+    tags: ["Supporter", "Worldweave"],
+    description: "Silver vines and moonlit petals bloom into a living constellation.",
+    preview: { title: "Moon Garden Bloom", body: "A quiet botanical Starfold using the standard accessible transition timing." },
     recipe: { cssToken: "moon-garden", seam: "moonbeam", motion: "petals" },
     assets: {
       responsive: {
@@ -841,12 +900,12 @@ export const COSMETIC_ITEMS = Object.freeze([
     slug: "sovereign-eclipse",
     slot: "gateStyle",
     collectionId: "constellore.collection.eclipse-sovereign",
-    label: "Sovereign Eclipse Gate",
+    label: "Sovereign Eclipse",
     access: "supporter",
     entitlement: "supporter",
-    tags: ["Supporter", "Gate", "Prestige"],
-    description: "Obsidian doors orbit a brilliant, crown-shaped event horizon.",
-    preview: { title: "Sovereign Eclipse gate", body: "A sovereign threshold using the standard accessible opening motion." },
+    tags: ["Supporter", "Worldweave", "Prestige"],
+    description: "Obsidian orbit-lines crown a brilliant event horizon.",
+    preview: { title: "Sovereign Eclipse", body: "A prestige constellation contracts through a crowned singularity." },
     recipe: { cssToken: "sovereign-eclipse", seam: "corona", motion: "crowned" },
     assets: {
       responsive: {
@@ -960,12 +1019,12 @@ export const COSMETIC_ITEMS = Object.freeze([
     slug: "warp-gate",
     slot: "gateStyle",
     collectionId: "constellore.collection.pixel-frontier",
-    label: "Pixel Warp Gate",
+    label: "Pixel Starfold",
     access: "supporter",
     entitlement: "supporter",
-    tags: ["Supporter", "Gate", "Pixel"],
-    description: "A monumental tile-built portal opening onto a spiraling pixel starfield.",
-    preview: { title: "Pixel Warp Gate", body: "A centered arcade threshold using the standard accessible opening timing." },
+    tags: ["Supporter", "Worldweave", "Pixel"],
+    description: "Tile-built constellations collapse into a spiraling pixel starfield.",
+    preview: { title: "Pixel Starfold", body: "A crisp arcade Worldweave using the standard accessible transition timing." },
     recipe: { cssToken: "pixel-warp", seam: "scanline", motion: "stepped" },
     assets: {
       responsive: {
@@ -1079,12 +1138,12 @@ export const COSMETIC_ITEMS = Object.freeze([
     slug: "pearl-current",
     slot: "gateStyle",
     collectionId: "constellore.collection.bubble-reef",
-    label: "Pearl Current Gate",
+    label: "Pearl Current",
     access: "supporter",
     entitlement: "supporter",
-    tags: ["Supporter", "Gate", "Undersea"],
+    tags: ["Supporter", "Worldweave", "Undersea"],
     description: "A luminous current spirals inside a ring of shells, coral, and floating pearls.",
-    preview: { title: "Pearl Current Gate", body: "A dedicated portrait-and-landscape reef threshold with familiar opening timing." },
+    preview: { title: "Pearl Current", body: "A portrait-and-landscape reef constellation with familiar accessible timing." },
     recipe: { cssToken: "pearl-current", seam: "bubble-light", motion: "current" },
     assets: {
       responsive: {
@@ -1198,12 +1257,12 @@ export const COSMETIC_ITEMS = Object.freeze([
     slug: "meridian-gate",
     slot: "gateStyle",
     collectionId: "constellore.collection.stellar-vanguard",
-    label: "Silent Meridian Gate",
+    label: "Silent Meridian",
     access: "supporter",
     entitlement: "supporter",
-    tags: ["Supporter", "Gate", "Space Opera"],
+    tags: ["Supporter", "Worldweave", "Space Opera"],
     description: "Floating alloy segments orbit a radiant singularity above a ceremonial causeway.",
-    preview: { title: "Silent Meridian Gate", body: "A centered cinematic threshold with original architecture and familiar accessible timing." },
+    preview: { title: "Silent Meridian", body: "Alloy meridians align around a radiant singularity with familiar accessible timing." },
     recipe: { cssToken: "meridian-gate", seam: "ion-star", motion: "orbital" },
     assets: {
       responsive: {
@@ -1289,9 +1348,9 @@ export const COSMETIC_ITEMS = Object.freeze([
     label: "Weekly Sigil",
     access: "earned",
     entitlement: "earned",
-    tags: ["Earned", "Gate"],
-    description: "A rotating expedition sigil set into the Atlas Doors.",
-    preview: { title: "Weekly Sigil gate", body: "Complete a Weekly Expedition to engrave its sigil on the gate." },
+    tags: ["Earned", "Worldweave"],
+    description: "A rotating expedition sigil woven into the Atlas Starfold.",
+    preview: { title: "Weekly Sigil", body: "Complete a Weekly Expedition to weave its sigil into the Constellation Fold." },
     recipe: { cssToken: "weekly-sigil", seam: "sigil", motion: "hinged" },
     unlock: { key: "weeklyComplete", value: true }
   })
@@ -1331,6 +1390,7 @@ export const COSMETIC_MANIFEST = Object.freeze({
   schemaVersion: COSMETIC_SCHEMA_VERSION,
   namespace: "constellore",
   slots: COSMETIC_SLOTS,
+  collectionFamilies: COSMETIC_COLLECTION_FAMILIES,
   collections: COSMETIC_COLLECTIONS,
   items: COSMETIC_ITEMS,
   defaultLoadout: DEFAULT_COSMETIC_LOADOUT,

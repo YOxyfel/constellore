@@ -1,0 +1,1515 @@
+/* Living Planet cinematic HUD ---------------------------------------------
+ * Loaded with the interactive Hub. The base planet-hub.css owns the poster,
+ * canvas, and permanent fallback; this sheet owns editorial live chrome.
+ */
+
+/* Cinematic HUD convergence -----------------------------------------------
+ * The legacy declarations above remain the fallback contract. This final,
+ * HTML-only layer gives every live Hub state one calm rail, one editorial
+ * caption rhythm, and independent copy/action tracks without changing DOM or
+ * interaction behavior.
+ */
+body.simple-ui #startScreen .hero-row.home-orbit[data-home-hub] {
+  --planet-hud-serif: Georgia, "Times New Roman", serif;
+  --planet-hud-sans: Manrope, Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --planet-hud-mono: "DM Mono", Consolas, monospace;
+  --planet-hud-ink: #f7fbf7;
+  --planet-hud-copy: rgba(226, 241, 240, .84);
+  --planet-hud-muted: rgba(193, 217, 220, .7);
+  --planet-hud-cyan: #89f2f1;
+  --planet-hud-gold: #ffdda0;
+  --planet-hud-safe-top: max(12px, env(safe-area-inset-top));
+  --planet-hud-safe-right: max(12px, env(safe-area-inset-right));
+  --planet-hud-safe-bottom: max(12px, env(safe-area-inset-bottom));
+  --planet-hud-safe-left: max(12px, env(safe-area-inset-left));
+  /* 64px is the minimum shell that can contain the rail's outer padding, the
+     tablist border/padding, and a real 48px destination target. Keeping the
+     title and eyebrow inside that target prevents the compressed strip seen
+     when chart mode inherited the former 56/60px shell. */
+  --planet-hud-rail-size: 64px;
+  --planet-hud-card-width: min(620px, calc(100vw - var(--planet-hud-safe-left) - var(--planet-hud-safe-right)));
+  --planet-hud-card-height: clamp(184px, 24dvh, 208px);
+  --planet-hud-action-width: clamp(168px, 15vw, 194px);
+  color: var(--planet-hud-ink);
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .home-orbit__scene {
+  box-sizing: border-box;
+  width: var(--planet-hud-card-width);
+  max-width: calc(100vw - var(--planet-hud-safe-left) - var(--planet-hud-safe-right));
+  height: var(--planet-hud-card-height);
+  min-height: 184px;
+  max-height: min(var(--planet-hud-card-height), calc(100dvh - var(--planet-hub-nav-clearance) - var(--planet-hud-rail-size) - 40px));
+  padding: clamp(20px, 2.1vw, 26px);
+  overflow-x: clip;
+  overflow-y: auto;
+  border: 0;
+  border-radius: 0;
+  color: var(--planet-hud-ink);
+  background: linear-gradient(90deg, rgba(1, 10, 20, .94), rgba(1, 10, 20, .87) 68%, rgba(1, 10, 20, .62));
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(137, 242, 241, .34) transparent;
+  text-align: left;
+  text-shadow: 0 3px 22px rgba(0, 3, 12, .72);
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .home-orbit__scene > *,
+body.simple-ui #startScreen .home-orbit[data-home-hub] :is(
+  .primary-orbit-copy,
+  .primary-orbit-actions,
+  .moon-home-voyage__copy,
+  .arena-portal__copy
+) {
+  min-width: 0;
+  max-width: 100%;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] :is(
+  .primary-orbit-panel h2,
+  .moon-home-voyage__copy strong,
+  .home-journey-locked > strong,
+  .arena-portal__copy h2
+) {
+  margin: 0;
+  color: var(--planet-hud-ink);
+  font: 500 clamp(34px, 2.55vw, 42px)/1.02 var(--planet-hud-serif);
+  font-stretch: normal;
+  letter-spacing: -.032em;
+  overflow-wrap: normal;
+  word-break: normal;
+  hyphens: none;
+  text-wrap: balance;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] :is(
+  .primary-orbit-kicker,
+  .moon-home-voyage__copy > small,
+  .home-journey-locked > small,
+  .arena-portal__copy > small
+) {
+  color: var(--planet-hud-cyan);
+  font: 800 10px/1.2 var(--planet-hud-mono);
+  letter-spacing: .16em;
+  text-transform: uppercase;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] :is(
+  .primary-orbit-panel p,
+  .moon-home-voyage__copy em,
+  .home-journey-locked > p,
+  #scrambleHomeStatus
+) {
+  max-width: 42ch;
+  color: var(--planet-hud-copy);
+  font: 520 clamp(13px, 1vw, 15px)/1.45 var(--planet-hud-sans);
+  letter-spacing: 0;
+  overflow-wrap: break-word;
+  text-wrap: pretty;
+}
+
+/* All three destinations use one editorial rhythm. Their accent color may
+   communicate state, but rotating the planet never changes the copy geometry. */
+body.simple-ui #startScreen .home-orbit[data-home-hub] :is(
+  .primary-orbit-copy,
+  .moon-home-voyage__copy,
+  .arena-portal__copy
+) {
+  display: grid;
+  align-content: center;
+  gap: 5px;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .home-orbit__scene--arena .arena-portal__copy > small {
+  display: block !important;
+}
+
+/* The old Journey tile painted its own inset frame and star dots. Those made
+   Journey read as a second panel nested inside the shared destination card. */
+body.simple-ui #startScreen .home-orbit[data-home-hub] .moon-home-voyage::before,
+body.simple-ui #startScreen .home-orbit[data-home-hub] .moon-home-voyage::after {
+  content: none !important;
+  display: none !important;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] :is(button, [role="button"]):focus-visible {
+  outline: 3px solid var(--planet-hud-gold);
+  outline-offset: 3px;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] :is(
+  .primary-orbit-button,
+  .home-journey-locked > button,
+  .moon-home-voyage__action,
+  .moon-home-project-visit,
+  .arena-portal__action,
+  .home-forge-catalog-toggle
+) {
+  box-sizing: border-box;
+  min-width: 0;
+  min-height: 48px;
+  font: 760 clamp(13px, .9vw, 15px)/1.2 var(--planet-hud-sans);
+  font-stretch: normal;
+  letter-spacing: .015em;
+  text-wrap: balance;
+  border-radius: 999px;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] :is(
+  .primary-orbit-button,
+  .home-journey-locked > button,
+  .moon-home-voyage__action,
+  .moon-home-project-visit,
+  .arena-portal__action
+) {
+  width: 100%;
+  min-height: 56px;
+  padding: 12px 18px;
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto !important;
+  grid-template-rows: auto !important;
+  align-items: center !important;
+  gap: 12px !important;
+  text-align: left;
+}
+
+/* Moonhaven is a conditional replacement action, not a second floating HUD
+   pill. Keep stale disabled state out of the card; when Preparing makes it
+   actionable, place it in the exact CTA track vacated by the voyage action. */
+body.simple-ui #startScreen .home-orbit[data-home-hub] .moon-home-project-visit:disabled {
+  display: none !important;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .moon-home-voyage[data-journey-action="preparing"] .moon-home-voyage__action {
+  display: none !important;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .moon-home-project-visit:not([hidden]):not(:disabled) {
+  position: absolute;
+  z-index: 12;
+  top: 50%;
+  right: clamp(20px, 2.1vw, 26px);
+  bottom: auto;
+  width: var(--planet-hud-action-width);
+  min-width: 0;
+  transform: translateY(-50%);
+}
+
+/* Each destination owns a flexible editorial column and a bounded CTA. */
+body.simple-ui #startScreen .home-orbit[data-home-hub] :is(
+  .primary-orbit-panel,
+  .moon-home-voyage,
+  .home-journey-locked,
+  .home-orbit__scene--arena .arena-portal
+) {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  height: 100%;
+  min-height: 100%;
+  margin: 0;
+  padding: 0;
+  align-items: center;
+  column-gap: clamp(16px, 2vw, 26px);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .primary-orbit-panel {
+  grid-template-columns: minmax(0, 1fr) var(--planet-hud-action-width);
+  grid-template-areas: "copy action";
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .primary-orbit-copy {
+  grid-area: copy;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .primary-orbit-actions {
+  grid-area: action;
+}
+
+/* The Forge catalog trigger is a real second row, not content floating below a
+   100%-height first row. Grow the desktop caption upward only while that
+   progressive action is available, then let the main panel share the measured
+   card height with it. This keeps the control genuinely hit-testable without
+   changing the compact/mobile composition. */
+@media (min-width: 901px) and (min-height: 560px) {
+  body.simple-ui #startScreen .home-orbit[data-home-hub]
+  .home-orbit__scene--forge:has(.home-forge-catalog-toggle:not([hidden])) {
+    --planet-hud-card-height: clamp(238px, 31dvh, 268px);
+    grid-template-rows: minmax(0, 1fr) auto;
+  }
+
+  body.simple-ui #startScreen .home-orbit[data-home-hub]
+  .home-orbit__scene--forge:has(.home-forge-catalog-toggle:not([hidden])) .primary-orbit-panel {
+    height: auto;
+    min-height: 0;
+    align-self: stretch;
+  }
+
+  body.simple-ui #startScreen .home-orbit[data-home-hub]
+  .home-orbit__scene--forge:has(.home-forge-catalog-toggle:not([hidden])) .home-forge-catalog-toggle {
+    align-self: end;
+  }
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .primary-orbit-panel::before,
+body.simple-ui #startScreen .home-orbit[data-home-hub] .primary-orbit-panel::after {
+  content: none;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .primary-orbit-panel h2 {
+  font-size: clamp(34px, 2.55vw, 42px);
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .primary-orbit-panel p {
+  margin: 6px 0 0;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .primary-orbit-button {
+  min-height: 56px;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .moon-home-voyage {
+  min-height: 100%;
+  grid-template-columns: minmax(0, 1fr) var(--planet-hud-action-width);
+  grid-template-areas: "copy action" "origin action";
+  row-gap: 8px;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .moon-home-voyage__copy strong {
+  max-width: none;
+  font-size: clamp(34px, 2.55vw, 42px);
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .moon-home-voyage__copy em {
+  max-width: 38ch;
+  margin-top: 5px;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .moon-home-voyage__origin {
+  color: var(--planet-hud-muted);
+  font: 700 9px/1.25 var(--planet-hud-mono);
+  letter-spacing: .12em;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .moon-home-voyage__action {
+  width: 100%;
+  min-height: 56px;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .moon-home-voyage__action small {
+  max-width: none;
+  font: inherit;
+  overflow-wrap: normal;
+  word-break: normal;
+  text-wrap: balance;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .home-journey-locked {
+  grid-template-columns: minmax(0, 1fr) var(--planet-hud-action-width);
+  grid-template-rows: auto auto auto;
+  row-gap: 4px;
+  text-align: left;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .home-journey-locked > :is(small, strong, p) {
+  grid-column: 1;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .home-journey-locked > strong {
+  font-size: clamp(26px, 2.2vw, 36px);
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .home-journey-locked > p {
+  margin: 3px 0 0;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .home-journey-locked > button {
+  grid-column: 2;
+  grid-row: 1 / -1;
+  width: 100%;
+  align-self: center;
+  padding: 10px 15px;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .home-orbit__scene--arena .arena-portal {
+  grid-template-columns: minmax(0, 1fr) var(--planet-hud-action-width);
+  grid-template-areas: "copy action";
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .arena-portal__copy h2 {
+  font-size: clamp(34px, 2.55vw, 42px);
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] #scrambleHomeStatus {
+  display: block;
+  min-height: 0;
+  margin-top: 6px;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .arena-portal__action {
+  width: 100%;
+  min-height: 56px;
+  margin: 0;
+  padding-inline: 17px;
+}
+
+/* Focus becomes a restrained caption, never a modal covering the world. */
+body.simple-ui #startScreen .home-orbit[data-home-hub][data-home-hub-mode="focused"] .home-orbit__scene {
+  top: max(var(--planet-hub-nav-clearance), 84px);
+  right: var(--planet-hud-safe-right);
+  bottom: auto;
+  left: auto;
+  width: var(--planet-hud-card-width);
+  height: var(--planet-hud-card-height);
+  max-height: min(var(--planet-hud-card-height), calc(100dvh - var(--planet-hub-nav-clearance) - 34px));
+  padding: clamp(20px, 2.1vw, 26px);
+  background: linear-gradient(270deg, rgba(1, 10, 20, .92), rgba(1, 10, 20, .72) 72%, transparent);
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub][data-home-hub-mode="focused"] :is(
+  .primary-orbit-panel,
+  .moon-home-voyage,
+  .home-journey-locked,
+  .home-orbit__scene--arena .arena-portal
+) {
+  grid-template-columns: minmax(0, 1fr) var(--planet-hud-action-width);
+  column-gap: clamp(20px, 2.2vw, 30px);
+}
+
+/* A low-contrast compass rail leaves attention on the planet. */
+body.simple-ui #startScreen .home-orbit[data-home-hub] .home-orbit__rail {
+  grid-row: 1 !important;
+  grid-column: 1 !important;
+  bottom: var(--planet-hud-safe-bottom);
+  left: calc((100vw + var(--planet-hud-safe-left) - var(--planet-hud-safe-right)) / 2);
+  box-sizing: border-box;
+  width: min(620px, calc(100vw - var(--planet-hud-safe-left) - var(--planet-hud-safe-right)));
+  height: var(--planet-hud-rail-size);
+  min-height: var(--planet-hud-rail-size);
+  padding: 4px;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .home-orbit__tabs {
+  box-sizing: border-box;
+  height: 100%;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid rgba(137, 242, 241, .13);
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(1, 9, 18, .58);
+  box-shadow: inset 0 1px rgba(255, 255, 255, .035);
+  -webkit-backdrop-filter: blur(13px) saturate(1.04);
+  backdrop-filter: blur(13px) saturate(1.04);
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .home-orbit__tab {
+  box-sizing: border-box;
+  height: 100%;
+  min-height: 0;
+  padding: 5px 12px;
+  grid-template-columns: 18px minmax(0, 1fr);
+  column-gap: 7px;
+  border: 1px solid transparent;
+  color: rgba(226, 241, 240, .78);
+  background: transparent;
+  box-shadow: none;
+  font-family: var(--planet-hud-sans);
+  transform: none;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .home-orbit__tab > span {
+  color: rgba(137, 242, 241, .72);
+  font-size: 14px;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .home-orbit__tab b {
+  font-size: 13px;
+  font-weight: 760;
+  line-height: 1.1;
+  letter-spacing: .01em;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .home-orbit__tab small {
+  color: rgba(193, 217, 220, .54);
+  font-size: 8px;
+  letter-spacing: .08em;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .home-orbit__tab[aria-selected="true"] {
+  color: var(--planet-hud-ink);
+  border-color: rgba(255, 221, 160, .2);
+  background: linear-gradient(180deg, rgba(255, 221, 160, .11), rgba(137, 242, 241, .055));
+  box-shadow: inset 0 -2px var(--planet-hud-gold), inset 0 1px rgba(255, 255, 255, .05);
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .home-orbit__tab[aria-selected="true"] > span,
+body.simple-ui #startScreen .home-orbit[data-home-hub] .home-orbit__tab[aria-selected="true"] small {
+  color: var(--planet-hud-gold);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  body.simple-ui #startScreen .home-orbit[data-home-hub] .home-orbit__tab:hover:not(:disabled) {
+    color: var(--planet-hud-ink);
+    border-color: rgba(137, 242, 241, .2);
+    background: rgba(137, 242, 241, .055);
+  }
+}
+
+/* Portrait phones and tablets use one compact lower-third caption. */
+@media (max-width: 900px), (orientation: portrait) and (max-width: 1100px) {
+  body.simple-ui #startScreen .hero-row.home-orbit[data-home-hub] {
+    --planet-hud-safe-right: max(9px, env(safe-area-inset-right));
+    --planet-hud-safe-left: max(9px, env(safe-area-inset-left));
+    --planet-hud-rail-size: 64px;
+    --planet-hud-card-width: calc(100vw - var(--planet-hud-safe-left) - var(--planet-hud-safe-right));
+  }
+
+  body.simple-ui #startScreen .home-orbit[data-home-hub] .home-orbit__scene,
+  body.simple-ui #startScreen .home-orbit[data-home-hub][data-home-hub-mode="focused"] .home-orbit__scene {
+    top: auto;
+    right: auto;
+    left: var(--planet-hud-safe-left);
+    width: var(--planet-hud-card-width);
+    height: min(196px, 34dvh);
+    min-height: min(184px, 34dvh);
+    max-height: min(196px, 34dvh);
+    padding: 20px 16px 16px;
+    background: linear-gradient(0deg, rgba(1, 9, 18, .94), rgba(1, 9, 18, .76) 70%, transparent);
+  }
+
+  body.simple-ui #startScreen .home-orbit[data-home-hub][data-home-hub-mode="overview"] .home-orbit__scene {
+    bottom: calc(var(--planet-hud-safe-bottom) + var(--planet-hud-rail-size) + 7px);
+  }
+
+  body.simple-ui #startScreen .home-orbit[data-home-hub][data-home-hub-mode="focused"] .home-orbit__scene {
+    bottom: var(--planet-hud-safe-bottom);
+  }
+
+  body.simple-ui #startScreen .home-orbit[data-home-hub] :is(
+    .primary-orbit-panel h2,
+    .moon-home-voyage__copy strong,
+    .home-journey-locked > strong,
+    .arena-portal__copy h2
+  ) {
+    font-size: clamp(24px, 7.2vw, 32px);
+    line-height: 1.04;
+  }
+
+  body.simple-ui #startScreen .home-orbit[data-home-hub] :is(
+    .primary-orbit-panel,
+    .moon-home-voyage,
+    .home-journey-locked,
+    .home-orbit__scene--arena .arena-portal
+  ),
+  body.simple-ui #startScreen .home-orbit[data-home-hub][data-home-hub-mode="focused"] :is(
+    .primary-orbit-panel,
+    .moon-home-voyage,
+    .home-journey-locked,
+    .home-orbit__scene--arena .arena-portal
+  ) {
+    grid-template-columns: minmax(0, 1fr) minmax(136px, 156px);
+    column-gap: 10px;
+  }
+
+  body.simple-ui #startScreen .home-orbit[data-home-hub] :is(
+    .primary-orbit-panel p,
+    .moon-home-voyage__copy em,
+    .home-journey-locked > p,
+    #scrambleHomeStatus
+  ) {
+    font-size: 13px;
+    line-height: 1.35;
+  }
+
+  body.simple-ui #startScreen .home-orbit[data-home-hub] .home-orbit__rail {
+    right: auto;
+    bottom: var(--planet-hud-safe-bottom);
+    left: calc((100vw + var(--planet-hud-safe-left) - var(--planet-hud-safe-right)) / 2);
+    width: calc(100vw - var(--planet-hud-safe-left) - var(--planet-hud-safe-right));
+    height: var(--planet-hud-rail-size);
+    min-height: var(--planet-hud-rail-size);
+    padding: 3px;
+    transform: translateX(-50%);
+  }
+
+  body.simple-ui #startScreen .home-orbit[data-home-hub] .home-orbit__tabs {
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
+    grid-auto-rows: auto;
+  }
+
+  body.simple-ui #startScreen .home-orbit[data-home-hub] .home-orbit__tab {
+    min-width: 0;
+    height: 100%;
+    min-height: 0;
+    padding-inline: 7px;
+  }
+}
+
+@media (max-width: 520px) and (orientation: portrait) {
+  body.simple-ui #startScreen .home-orbit[data-home-hub] .home-orbit__scene,
+  body.simple-ui #startScreen .home-orbit[data-home-hub][data-home-hub-mode="focused"] .home-orbit__scene {
+    height: min(208px, 38dvh);
+    max-height: min(208px, 38dvh);
+    padding: 18px 14px 14px;
+  }
+
+  body.simple-ui #startScreen .home-orbit[data-home-hub] :is(
+    .primary-orbit-panel,
+    .moon-home-voyage,
+    .home-journey-locked,
+    .home-orbit__scene--arena .arena-portal
+  ),
+  body.simple-ui #startScreen .home-orbit[data-home-hub][data-home-hub-mode="focused"] :is(
+    .primary-orbit-panel,
+    .moon-home-voyage,
+    .home-journey-locked,
+    .home-orbit__scene--arena .arena-portal
+  ) {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "copy" "action";
+    row-gap: 8px;
+  }
+
+  body.simple-ui #startScreen .home-orbit[data-home-hub] .moon-home-voyage {
+    min-height: 0;
+  }
+
+  body.simple-ui #startScreen .home-orbit[data-home-hub] .home-journey-locked > button {
+    grid-column: 1;
+    grid-row: auto;
+  }
+
+  body.simple-ui #startScreen .home-orbit[data-home-hub] :is(
+    .primary-orbit-panel p,
+    .moon-home-voyage__copy em,
+    .moon-home-voyage__origin,
+    .home-journey-locked > p,
+    #scrambleHomeStatus
+  ) {
+    display: none;
+  }
+
+  body.simple-ui #startScreen .home-orbit[data-home-hub] :is(
+    .primary-orbit-button,
+    .moon-home-voyage__action,
+    .home-journey-locked > button,
+    .arena-portal__action
+  ) {
+    min-height: 48px;
+  }
+
+  body.simple-ui #startScreen .home-orbit[data-home-hub] .home-orbit__tab {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto;
+    place-items: center;
+    text-align: center;
+  }
+
+  body.simple-ui #startScreen .home-orbit[data-home-hub] .home-orbit__tab > span,
+  body.simple-ui #startScreen .home-orbit[data-home-hub] .home-orbit__tab small {
+    display: none;
+  }
+
+  body.simple-ui #startScreen .home-orbit[data-home-hub] .home-orbit__tab b {
+    overflow: visible;
+    font-size: clamp(12px, 3.8vw, 14px);
+    text-overflow: clip;
+  }
+}
+
+/* Short landscape keeps the world wide and the rail readable. */
+@media (orientation: landscape) and (max-width: 900px) and (max-height: 500px) {
+  body.simple-ui #startScreen .hero-row.home-orbit[data-home-hub] {
+    --planet-hud-rail-size: 82px;
+    --planet-hud-card-width: min(470px, calc(100vw - 110px - var(--planet-hud-safe-left) - var(--planet-hud-safe-right)));
+  }
+
+  body.simple-ui #startScreen .home-orbit[data-home-hub] .home-orbit__rail {
+    top: max(var(--planet-hub-nav-clearance), var(--planet-hud-safe-top));
+    right: var(--planet-hud-safe-right);
+    bottom: var(--planet-hud-safe-bottom);
+    left: auto;
+    width: var(--planet-hud-rail-size);
+    height: auto;
+    min-height: 0;
+    transform: none;
+  }
+
+  body.simple-ui #startScreen .home-orbit[data-home-hub] .home-orbit__tabs {
+    grid-auto-flow: row;
+    grid-auto-columns: auto;
+    grid-auto-rows: minmax(44px, 1fr);
+    border-radius: 22px;
+  }
+
+  body.simple-ui #startScreen .home-orbit[data-home-hub] .home-orbit__tab {
+    min-height: 44px;
+    padding: 4px;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto;
+    place-items: center;
+    text-align: center;
+  }
+
+  body.simple-ui #startScreen .home-orbit[data-home-hub] .home-orbit__tab > span,
+  body.simple-ui #startScreen .home-orbit[data-home-hub] .home-orbit__tab small {
+    display: none;
+  }
+
+  body.simple-ui #startScreen .home-orbit[data-home-hub] .home-orbit__tab b {
+    font-size: 11px;
+  }
+
+  body.simple-ui #startScreen .home-orbit[data-home-hub] .home-orbit__scene,
+  body.simple-ui #startScreen .home-orbit[data-home-hub][data-home-hub-mode="focused"] .home-orbit__scene {
+    top: auto;
+    right: auto;
+    bottom: var(--planet-hud-safe-bottom);
+    left: var(--planet-hud-safe-left);
+    width: var(--planet-hud-card-width);
+    height: min(124px, calc(100dvh - var(--planet-hub-nav-clearance) - 12px));
+    min-height: 0;
+    max-height: min(124px, calc(100dvh - var(--planet-hub-nav-clearance) - 12px));
+    padding: 18px 10px 8px;
+    background: linear-gradient(0deg, rgba(1, 9, 18, .94), rgba(1, 9, 18, .72) 72%, transparent);
+  }
+
+  body.simple-ui #startScreen .home-orbit[data-home-hub] :is(
+    .primary-orbit-panel,
+    .moon-home-voyage,
+    .home-journey-locked,
+    .home-orbit__scene--arena .arena-portal
+  ),
+  body.simple-ui #startScreen .home-orbit[data-home-hub][data-home-hub-mode="focused"] :is(
+    .primary-orbit-panel,
+    .moon-home-voyage,
+    .home-journey-locked,
+    .home-orbit__scene--arena .arena-portal
+  ) {
+    grid-template-columns: minmax(0, 1fr) minmax(124px, 150px);
+    grid-template-areas: "copy action";
+    column-gap: 10px;
+  }
+
+  body.simple-ui #startScreen .home-orbit[data-home-hub] :is(
+    .primary-orbit-panel h2,
+    .moon-home-voyage__copy strong,
+    .home-journey-locked > strong,
+    .arena-portal__copy h2
+  ) {
+    font-size: clamp(20px, 3.7vw, 28px);
+    line-height: 1;
+  }
+
+  body.simple-ui #startScreen .home-orbit[data-home-hub] :is(
+    .primary-orbit-kicker,
+    .primary-orbit-panel p,
+    .moon-home-voyage__copy em,
+    .moon-home-voyage__origin,
+    .home-journey-locked > small,
+    .home-journey-locked > p,
+    #scrambleHomeStatus
+  ) {
+    display: none;
+  }
+
+  body.simple-ui #startScreen .home-orbit[data-home-hub] :is(
+    .primary-orbit-button,
+    .moon-home-voyage__action,
+    .home-journey-locked > button,
+    .arena-portal__action
+  ) {
+    min-height: 48px;
+  }
+}
+
+/* Browser screenshots, foldables, and embedded landscape players can expose
+   only a very shallow strip. A vertical rail cannot fit three 48px targets in
+   that geometry, so preserve the complete labelled rail horizontally and let
+   the world remain the background. No painted shadow extends below it. */
+@media (orientation: landscape) and (max-width: 900px) and (max-height: 240px) {
+  body.simple-ui #startScreen .hero-row.home-orbit[data-home-hub] {
+    --planet-hud-rail-size: 64px;
+  }
+
+  body.simple-ui #startScreen .home-orbit[data-home-hub] .home-orbit__rail {
+    top: auto;
+    right: auto;
+    bottom: var(--planet-hud-safe-bottom);
+    left: calc((100vw + var(--planet-hud-safe-left) - var(--planet-hud-safe-right)) / 2);
+    width: min(620px, calc(100vw - var(--planet-hud-safe-left) - var(--planet-hud-safe-right)));
+    height: var(--planet-hud-rail-size);
+    transform: translateX(-50%);
+  }
+
+  body.simple-ui #startScreen .home-orbit[data-home-hub] .home-orbit__tabs {
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
+    grid-auto-rows: auto;
+    border-radius: 999px;
+  }
+
+  body.simple-ui #startScreen .home-orbit[data-home-hub] .home-orbit__tab {
+    min-height: 0;
+    padding-inline: 7px;
+    grid-template-columns: 18px minmax(0, 1fr);
+    grid-template-rows: auto auto;
+    place-items: initial;
+    text-align: left;
+  }
+
+  body.simple-ui #startScreen .home-orbit[data-home-hub] .home-orbit__tab > span,
+  body.simple-ui #startScreen .home-orbit[data-home-hub] .home-orbit__tab small {
+    display: block;
+  }
+
+  body.simple-ui #startScreen .home-orbit[data-home-hub] .home-orbit__tab > span {
+    grid-row: 1 / -1;
+    align-self: center;
+  }
+
+  body.simple-ui #startScreen .home-orbit[data-home-hub] .home-orbit__scene {
+    display: none !important;
+  }
+}
+
+@media (max-width: 340px) {
+  body.simple-ui #startScreen .home-orbit[data-home-hub] .primary-orbit-panel {
+    grid-template-columns: minmax(0, 1fr) 112px;
+    column-gap: 8px;
+  }
+
+  body.simple-ui #startScreen .home-orbit[data-home-hub] .primary-orbit-panel h2 {
+    font-size: 22px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.simple-ui #startScreen .home-orbit[data-home-hub] :is(
+    .home-orbit__scene,
+    .home-orbit__rail,
+    .home-orbit__tab,
+    button,
+    [role="button"]
+  ) {
+    scroll-behavior: auto;
+    animation: none !important;
+    transition-duration: 120ms !important;
+  }
+}
+
+@media (forced-colors: active) {
+  body.simple-ui #startScreen .home-orbit[data-home-hub] .home-orbit__scene {
+    border: 1px solid CanvasText;
+    color: CanvasText;
+    background: Canvas;
+    text-shadow: none;
+    forced-color-adjust: auto;
+  }
+
+  body.simple-ui #startScreen .home-orbit[data-home-hub] :is(
+    .home-orbit__tabs,
+    .home-orbit__tab,
+    .primary-orbit-button,
+    .home-journey-locked > button,
+    .moon-home-voyage__action,
+    .arena-portal__action
+  ) {
+    border: 1px solid ButtonText;
+    color: ButtonText;
+    background: ButtonFace;
+    box-shadow: none;
+    forced-color-adjust: auto;
+  }
+
+  body.simple-ui #startScreen .home-orbit[data-home-hub] .home-orbit__tab[aria-selected="true"] {
+    outline: 2px solid Highlight;
+    outline-offset: -4px;
+  }
+}
+
+/* Contextual celestial Places ---------------------------------------------
+ * The WebGL scene remains presentational. This lazy-populated HTML surface
+ * provides explicit Select and Visit semantics without making the canvas a
+ * keyboard target. Desktop gets a restrained left atlas; compact layouts use
+ * the same DOM as a non-modal bottom sheet. */
+body.simple-ui #startScreen .home-orbit[data-home-hub] {
+  --planet-hub-places-width: clamp(244px, 20vw, 282px);
+  --planet-hub-places-sheet-height: min(46dvh, 430px);
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] :is(
+  .planet-hub-places,
+  .planet-hub-places__toggle,
+  .planet-hub-places__scrim
+)[hidden] {
+  display: none !important;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .planet-hub-places {
+  position: absolute;
+  z-index: 25;
+  top: calc(var(--planet-hub-nav-clearance) + 10px);
+  bottom: auto;
+  max-height: calc(100dvh - var(--planet-hub-nav-clearance) - var(--planet-hud-rail-size, 64px) - 38px);
+  left: max(var(--planet-hub-safe-left), 14px);
+  box-sizing: border-box;
+  width: var(--planet-hub-places-width);
+  min-height: 0;
+  padding: 10px;
+  display: grid;
+  grid-template-rows: auto auto auto minmax(0, 1fr) auto;
+  gap: 8px;
+  overflow: hidden;
+  border: 1px solid rgba(126, 238, 243, .2);
+  border-radius: 20px;
+  color: #eafafb;
+  background:
+    radial-gradient(circle at 18% 4%, rgba(126, 238, 243, .12), transparent 34%),
+    linear-gradient(155deg, rgba(4, 23, 36, .9), rgba(1, 8, 18, .84));
+  box-shadow: 0 22px 60px rgba(0, 3, 14, .38), inset 0 1px rgba(255, 255, 255, .045);
+  -webkit-backdrop-filter: blur(18px) saturate(1.12);
+  backdrop-filter: blur(18px) saturate(1.12);
+}
+
+/* The atlas and the destination caption occupy separate columns. A wide,
+   high-z-index Places panel must never cover the first lesson's text or CTA. */
+@media (min-width: 901px) and (orientation: landscape) {
+  body.simple-ui #startScreen .home-orbit[data-home-hub][data-planet-hub-places-visible="true"][data-home-hub-mode="overview"] .home-orbit__scene {
+    left: calc(max(var(--planet-hub-safe-left), 14px) + var(--planet-hub-places-width) + 18px);
+    width: min(var(--planet-hud-card-width), calc(100vw - var(--planet-hub-places-width) - 180px));
+    max-width: calc(100vw - var(--planet-hub-places-width) - 180px);
+  }
+  body.simple-ui #startScreen .home-orbit[data-home-hub][data-planet-hub-places-visible="true"] [data-planet-hub-orbit-return] {
+    left: calc(max(var(--planet-hub-safe-left), 14px) + var(--planet-hub-places-width) + 12px);
+  }
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub]:has(.planet-hub__world-switch:not([hidden])) .planet-hub-places {
+  top: calc(var(--planet-hub-nav-clearance) + 68px);
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .planet-hub-places__header {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 9px;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .planet-hub-places__mark {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid rgba(255, 220, 146, .38);
+  border-radius: 50%;
+  color: #ffe2a0;
+  background: radial-gradient(circle, rgba(255, 224, 160, .22), rgba(126, 238, 243, .06) 58%, transparent 60%);
+  box-shadow: 0 0 18px rgba(255, 204, 102, .14);
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .planet-hub-places__header > div {
+  min-width: 0;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .planet-hub-places__header small {
+  display: block;
+  color: rgba(126, 238, 243, .68);
+  font: 800 8px/1 Manrope, Inter, sans-serif;
+  letter-spacing: .18em;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .planet-hub-places__header h2 {
+  overflow: hidden;
+  margin: 3px 0 0;
+  color: #fff4d4;
+  font: 750 16px/1.1 Manrope, Inter, sans-serif;
+  letter-spacing: -.02em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .planet-hub-places__close {
+  display: none;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  border: 0;
+  border-radius: 12px;
+  color: #dff7f8;
+  background: rgba(126, 238, 243, .08);
+  font: 500 24px/1 Manrope, sans-serif;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .planet-hub-places__tools {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 6px;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .planet-hub-places__search {
+  min-width: 0;
+  min-height: 48px;
+  padding: 0 10px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 7px;
+  border: 1px solid rgba(126, 238, 243, .14);
+  border-radius: 12px;
+  color: rgba(126, 238, 243, .66);
+  background: rgba(0, 7, 17, .46);
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .planet-hub-places__search:focus-within {
+  border-color: rgba(126, 238, 243, .62);
+  box-shadow: 0 0 0 2px rgba(126, 238, 243, .12);
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .planet-hub-places__search input {
+  min-width: 0;
+  width: 100%;
+  height: 46px;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  color: #effcfd;
+  background: transparent;
+  font: 650 11px/1 Manrope, Inter, sans-serif;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .planet-hub-places__search input::placeholder {
+  color: rgba(199, 232, 235, .48);
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] [data-planet-hub-places-all] {
+  min-width: 58px;
+  min-height: 48px;
+  padding: 0 9px;
+  border: 1px solid rgba(255, 220, 146, .18);
+  border-radius: 12px;
+  color: #ffe8b4;
+  background: rgba(255, 210, 120, .06);
+  font: 800 9px/1 Manrope, Inter, sans-serif;
+  cursor: pointer;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] [data-planet-hub-places-all][aria-pressed="true"] {
+  border-color: rgba(255, 220, 146, .5);
+  background: rgba(255, 210, 120, .14);
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .planet-hub-places__context {
+  margin: 0;
+  padding: 0 4px;
+  color: rgba(181, 224, 228, .62);
+  font: 750 8px/1.2 Manrope, Inter, sans-serif;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .planet-hub-places__list {
+  min-height: 0;
+  margin: 0;
+  padding: 0 2px 2px 0;
+  display: grid;
+  align-content: start;
+  gap: 5px;
+  overflow: hidden auto;
+  overscroll-behavior: contain;
+  scrollbar-color: rgba(126, 238, 243, .28) transparent;
+  scrollbar-width: thin;
+  list-style: none;
+  touch-action: pan-y;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .planet-hub-places__item {
+  min-width: 0;
+  min-height: 60px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 58px;
+  align-items: stretch;
+  border: 1px solid rgba(126, 238, 243, .1);
+  border-radius: 14px;
+  background: rgba(1, 9, 20, .46);
+  transition: border-color 160ms ease, background 160ms ease, transform 160ms ease;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .planet-hub-places__item[data-selected="true"] {
+  border-color: rgba(126, 238, 243, .42);
+  background: linear-gradient(90deg, rgba(126, 238, 243, .11), rgba(1, 9, 20, .62));
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .planet-hub-places__item[data-visited="true"] {
+  border-color: rgba(255, 220, 146, .46);
+  box-shadow: inset 3px 0 #ffe09b;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] :is(.planet-hub-places__select, .planet-hub-places__visit) {
+  min-width: 0;
+  min-height: 48px;
+  border: 0;
+  color: inherit;
+  background: transparent;
+  cursor: pointer;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .planet-hub-places__select {
+  padding: 5px 6px;
+  display: grid;
+  grid-template-columns: 48px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  border-radius: 13px 0 0 13px;
+  text-align: left;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .planet-hub-places__thumbnail {
+  position: relative;
+  overflow: hidden;
+  width: 48px;
+  height: 46px;
+  border: 1px solid hsla(var(--planet-hub-place-hue, 198), 72%, 72%, .3);
+  border-radius: 11px;
+  background:
+    radial-gradient(circle at 42% 42%, hsla(var(--planet-hub-place-hue, 198), 86%, 78%, .92) 0 7%, transparent 8%),
+    radial-gradient(circle at 50% 52%, hsla(var(--planet-hub-place-hue, 198), 78%, 53%, .46), transparent 38%),
+    linear-gradient(145deg, hsla(var(--planet-hub-place-hue, 198), 62%, 19%, .9), rgba(0, 5, 15, .96));
+  box-shadow: inset 0 0 16px rgba(0, 0, 0, .4), 0 0 14px hsla(var(--planet-hub-place-hue, 198), 70%, 54%, .1);
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .planet-hub-places__thumbnail::before,
+body.simple-ui #startScreen .home-orbit[data-home-hub] .planet-hub-places__thumbnail::after {
+  position: absolute;
+  content: "";
+  pointer-events: none;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .planet-hub-places__thumbnail::before {
+  inset: 9px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 36% 30%, rgba(255, 255, 255, .74), hsla(var(--planet-hub-place-hue, 198), 70%, 56%, .88) 18%, hsla(var(--planet-hub-place-hue, 198), 64%, 22%, .9) 70%);
+  box-shadow: 0 0 13px hsla(var(--planet-hub-place-hue, 198), 84%, 66%, .48);
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .planet-hub-places__thumbnail[data-pattern="star"]::before,
+body.simple-ui #startScreen .home-orbit[data-home-hub] .planet-hub-places__thumbnail[data-pattern="sun"]::before,
+body.simple-ui #startScreen .home-orbit[data-home-hub] .planet-hub-places__thumbnail[data-pattern="core"]::before {
+  inset: 15px;
+  background: #fff4c7;
+  box-shadow: 0 0 6px #fff, 0 0 18px 5px hsla(var(--planet-hub-place-hue, 42), 92%, 62%, .72);
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .planet-hub-places__thumbnail[data-pattern="rings"]::after,
+body.simple-ui #startScreen .home-orbit[data-home-hub] .planet-hub-places__thumbnail[data-pattern="system"]::after {
+  inset: 18px 3px;
+  border: 1px solid hsla(var(--planet-hub-place-hue, 42), 90%, 76%, .74);
+  border-radius: 50%;
+  transform: rotate(-13deg);
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .planet-hub-places__thumbnail[data-pattern="cluster"]::before,
+body.simple-ui #startScreen .home-orbit[data-home-hub] .planet-hub-places__thumbnail[data-pattern="galaxy"]::before {
+  inset: 4px;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 26% 36%, #fff 0 2%, transparent 3%),
+    radial-gradient(circle at 67% 29%, #fff 0 2%, transparent 3%),
+    radial-gradient(circle at 58% 70%, #fff 0 2%, transparent 3%),
+    radial-gradient(ellipse, hsla(var(--planet-hub-place-hue, 240), 80%, 76%, .68), transparent 64%);
+  box-shadow: none;
+  transform: rotate(-18deg);
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .planet-hub-places__thumbnail[data-sprite] {
+  background-color: #00040c;
+  background-image: url("./art/planet-hub/place-thumbnails/solar-bodies.webp");
+  background-repeat: no-repeat;
+  background-position: var(--planet-hub-place-sprite-x, 0%) center;
+  background-size: 1000% 100%;
+  box-shadow: inset 0 0 12px rgba(0, 0, 0, .18), 0 0 14px hsla(var(--planet-hub-place-hue, 198), 70%, 54%, .12);
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .planet-hub-places__thumbnail[data-sprite]::before,
+body.simple-ui #startScreen .home-orbit[data-home-hub] .planet-hub-places__thumbnail[data-sprite]::after {
+  content: none;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .planet-hub-places__copy {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .planet-hub-places__copy strong,
+body.simple-ui #startScreen .home-orbit[data-home-hub] .planet-hub-places__copy small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .planet-hub-places__copy strong {
+  color: #effcfd;
+  font: 750 11px/1.1 Manrope, Inter, sans-serif;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .planet-hub-places__copy small {
+  color: rgba(185, 222, 226, .6);
+  font: 600 8px/1.25 Manrope, Inter, sans-serif;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .planet-hub-places__visit {
+  padding: 0 6px;
+  border-left: 1px solid rgba(126, 238, 243, .1);
+  border-radius: 0 13px 13px 0;
+  color: #ffe7ad;
+  font: 800 9px/1 Manrope, Inter, sans-serif;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] :is(
+  .planet-hub-places__select,
+  .planet-hub-places__visit,
+  .planet-hub-places__close,
+  [data-planet-hub-places-all]
+):is(:hover, :focus-visible) {
+  outline: 2px solid rgba(126, 238, 243, .64);
+  outline-offset: -2px;
+  background-color: rgba(126, 238, 243, .09);
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] :is(.planet-hub-places__select, .planet-hub-places__visit):disabled {
+  color: rgba(183, 211, 214, .38);
+  cursor: default;
+  opacity: .58;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .planet-hub-places__empty {
+  margin: 0;
+  padding: 14px 10px;
+  color: rgba(205, 235, 237, .68);
+  font: 650 10px/1.4 Manrope, Inter, sans-serif;
+  text-align: center;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .planet-hub-places__toggle {
+  position: absolute;
+  z-index: 27;
+  left: max(var(--planet-hub-safe-left), 10px);
+  bottom: calc(var(--planet-hud-rail-size, 64px) + max(12px, env(safe-area-inset-bottom)) + 10px);
+  min-width: 108px;
+  min-height: 48px;
+  padding: 7px 14px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid rgba(126, 238, 243, .32);
+  border-radius: 999px;
+  color: #eafafb;
+  background: rgba(2, 17, 29, .84);
+  box-shadow: 0 14px 36px rgba(0, 3, 14, .34);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  font: 800 11px/1 Manrope, Inter, sans-serif;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .planet-hub-places__toggle:is(:hover, :focus-visible) {
+  border-color: rgba(255, 220, 146, .72);
+  outline: 2px solid rgba(126, 238, 243, .4);
+  outline-offset: 2px;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .planet-hub-places__scrim {
+  position: absolute;
+  z-index: 24;
+  inset: 0;
+  background: rgba(0, 5, 14, .48);
+  -webkit-backdrop-filter: blur(2px);
+  backdrop-filter: blur(2px);
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .planet-hub-places__sr-only {
+  position: absolute;
+  overflow: hidden;
+  width: 1px;
+  height: 1px;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub][data-planet-hub-journey-flight="true"] :is(
+  .planet-hub-places,
+  .planet-hub-places__toggle,
+  .planet-hub-places__scrim
+),
+body.simple-ui:has(dialog[open], [role="dialog"][aria-modal="true"]:not([hidden])) #startScreen :is(
+  .planet-hub-places,
+  .planet-hub-places__toggle,
+  .planet-hub-places__scrim
+) {
+  display: none !important;
+}
+
+@media (min-width: 901px) and (orientation: landscape) {
+  body.simple-ui #startScreen .home-orbit[data-home-hub] .planet-hub-places__toggle,
+  body.simple-ui #startScreen .home-orbit[data-home-hub] .planet-hub-places__scrim {
+    display: none !important;
+  }
+}
+
+@media (max-width: 900px), (orientation: portrait) and (max-width: 1100px) {
+  body.simple-ui #startScreen .home-orbit[data-home-hub] .planet-hub-places__toggle:not([hidden]) {
+    display: inline-flex;
+    top: calc(var(--planet-hub-nav-clearance) + 98px);
+    bottom: auto;
+  }
+
+  body.simple-ui #startScreen .home-orbit[data-home-hub] .planet-hub-places {
+    top: auto;
+    right: max(var(--planet-hub-safe-right), 8px);
+    bottom: calc(var(--planet-hud-rail-size, 64px) + max(8px, env(safe-area-inset-bottom)) + 8px);
+    left: max(var(--planet-hub-safe-left), 8px);
+    width: auto;
+    height: var(--planet-hub-places-sheet-height);
+    min-height: 250px;
+    max-height: calc(100dvh - var(--planet-hub-nav-clearance) - var(--planet-hud-rail-size, 64px) - 24px);
+    border-radius: 22px;
+    box-shadow: 0 -18px 56px rgba(0, 3, 14, .48), inset 0 1px rgba(255, 255, 255, .05);
+    animation: planet-hub-places-sheet-in 260ms cubic-bezier(.16, 1, .3, 1) both;
+  }
+
+  body.simple-ui #startScreen .home-orbit[data-home-hub]:has(.planet-hub__world-switch:not([hidden])) .planet-hub-places {
+    top: auto;
+  }
+
+  body.simple-ui #startScreen .home-orbit[data-home-hub] .planet-hub-places__close:not([hidden]) {
+    display: grid;
+  }
+
+  body.simple-ui #startScreen .home-orbit[data-home-hub] .planet-hub-places__item {
+    grid-template-columns: minmax(0, 1fr) 68px;
+  }
+
+  body.simple-ui #startScreen .home-orbit[data-home-hub] .planet-hub-places__copy strong {
+    font-size: 12px;
+  }
+}
+
+@media (orientation: landscape) and (max-width: 900px) and (max-height: 500px) {
+  body.simple-ui #startScreen .home-orbit[data-home-hub] .planet-hub-places {
+    right: calc(var(--planet-hud-rail-size, 94px) + var(--planet-hud-safe-right, 9px) + 8px);
+    bottom: max(var(--planet-hud-safe-bottom, 9px), 8px);
+    left: max(var(--planet-hud-safe-left, 9px), 8px);
+    height: min(72dvh, 330px);
+    min-height: 220px;
+  }
+
+  body.simple-ui #startScreen .home-orbit[data-home-hub] .planet-hub-places__toggle:not([hidden]) {
+    top: calc(var(--planet-hub-nav-clearance) + 8px);
+    bottom: auto;
+  }
+
+  body.simple-ui #startScreen .home-orbit[data-home-hub][data-home-layout="compact"] .home-orbit__scene--forge {
+    bottom: var(--planet-hud-safe-bottom);
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) auto;
+    transform: none;
+  }
+
+  body.simple-ui #startScreen .home-orbit[data-home-hub][data-home-layout="compact"] .home-orbit__scene--forge .primary-orbit-panel {
+    display: grid;
+    grid-area: auto;
+    grid-column: 1;
+    grid-row: 1;
+  }
+}
+
+@keyframes planet-hub-places-sheet-in {
+  from { opacity: 0; transform: translateY(22px) scale(.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.simple-ui #startScreen .home-orbit[data-home-hub] .planet-hub-places {
+    animation: none;
+  }
+
+  body.simple-ui #startScreen .home-orbit[data-home-hub] .planet-hub-places__item {
+    transition: none;
+  }
+}
+
+@media (forced-colors: active) {
+  body.simple-ui #startScreen .home-orbit[data-home-hub] :is(.planet-hub-places, .planet-hub-places__item),
+  body.simple-ui #startScreen .home-orbit[data-home-hub] :is(.planet-hub-places__search, [data-planet-hub-places-all]) {
+    border-color: CanvasText;
+  }
+
+  body.simple-ui #startScreen .home-orbit[data-home-hub] .planet-hub-places__thumbnail {
+    forced-color-adjust: none;
+  }
+}
+
+/* Modern game Home: one play decision, with exploration on demand. */
+body.simple-ui #startScreen .start-nav {left:40px;right:40px;width:auto;max-width:none;top:20px;margin:0;padding:0 0 20px;border:0;background:none;box-shadow:none;}
+body.simple-ui #startScreen:has(>.practice-banner:not([hidden])) .start-nav {top:72px;}
+body.simple-ui #startScreen .brand-name {font:750 25px/1.1 Manrope, sans-serif;letter-spacing:-1.1px;}
+body.simple-ui #startScreen .brand>small {display:none;}
+body.simple-ui #startScreen .brand-star {border:0;background:none;box-shadow:none;color:#b9ebd5;}
+body.simple-ui #startScreen .start-actions {gap:10px;}
+body.simple-ui #startScreen :is(.hub-menu-button,.profile-chip,.stardust-wallet--home) {border:0;border-radius:10px;background:rgba(17,26,33,.76);box-shadow:none;color:#e9f1ed;min-height:46px;}
+body.simple-ui #startScreen #hubMenuButton {display:flex!important;gap:9px;min-width:90px;}
+body.simple-ui #startScreen #hubMenuButton b {display:block;font:650 14px Manrope,sans-serif;}
+body.simple-ui #startScreen #customizeButton b {font:650 14px Manrope,sans-serif;}
+body.simple-ui #startScreen .profile-chip__kind {display:none;}
+body.simple-ui #startScreen .stardust-wallet--home .stardust-wallet__copy small {font:600 10px Manrope,sans-serif;letter-spacing:0;}
+body.simple-ui #startScreen #homePlaySplit {--planet-hud-serif:Manrope,sans-serif;--planet-hud-mono:Manrope,sans-serif;--planet-hud-ink:#f3f6f4;--planet-hud-copy:#b7c6cd;--planet-hud-cyan:#b5e8d1;--planet-hud-gold:#b5e8d1;--planet-hud-card-height:380px;--planet-hud-action-width:240px;--planet-hud-rail-size:58px;--planet-hud-safe-left:40px;--planet-hud-safe-right:40px;--planet-hub-places-width:360px;background:#050b11;}
+body.simple-ui #startScreen #homePlaySplit .planet-hub {left:25%;width:75%;}
+body.simple-ui #startScreen #homePlaySplit .home-orbit__viewport:after {content:"";position:absolute;inset:0;z-index:5;pointer-events:none;background:linear-gradient(90deg,#050b11 0%,rgba(5,11,17,.96) 20%,rgba(5,11,17,.48) 42%,transparent 66%);}
+body.simple-ui #startScreen #homePlaySplit .home-orbit__scene {top:50%;bottom:auto;left:6vw;right:auto;width:min(480px,40vw);height:auto;min-height:0;max-height:calc(100dvh - 240px);padding:0;grid-template-columns:minmax(0,1fr);grid-template-rows:auto auto;gap:22px;transform:translateY(-45%);background:none;border:0;box-shadow:none;text-shadow:none;overflow:visible;}
+body.simple-ui #startScreen #homePlaySplit .home-orbit__scene:before,body.simple-ui #startScreen #homePlaySplit .home-orbit__scene:after {content:none!important;}
+body.simple-ui #startScreen #homePlaySplit :is(.primary-orbit-panel,.moon-home-voyage,.home-journey-locked,.arena-portal) {display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:auto auto;grid-template-areas:"copy" "action";height:auto;min-height:0;gap:28px;align-content:start;}
+body.simple-ui #startScreen #homePlaySplit :is(.primary-orbit-copy,.moon-home-voyage__copy,.arena-portal__copy) {gap:16px;align-content:start;}
+body.simple-ui #startScreen #homePlaySplit :is(.primary-orbit-panel h2,.moon-home-voyage__copy strong,.home-journey-locked>strong,.arena-portal__copy h2) {font:650 clamp(44px,5.2vw,76px)/1.05 Manrope,sans-serif;letter-spacing:-.055em;text-wrap:balance;}
+body.simple-ui #startScreen #homePlaySplit :is(.primary-orbit-kicker,.moon-home-voyage__copy>small,.home-journey-locked>small,.arena-portal__copy>small) {display:block;font:650 13px/1.5 Manrope,sans-serif;letter-spacing:.02em;text-transform:none;color:#b5e8d1;}
+body.simple-ui #startScreen #homePlaySplit :is(.primary-orbit-panel p,.moon-home-voyage__copy em,.home-journey-locked>p,#scrambleHomeStatus) {font:500 17px/1.65 Manrope,sans-serif;max-width:34ch;margin:0;color:#b7c6cd;}
+body.simple-ui #startScreen #homePlaySplit .primary-orbit-actions {justify-self:start;width:240px;gap:12px;}
+body.simple-ui #startScreen #homePlaySplit :is(.primary-orbit-button,.moon-home-voyage__action,.home-journey-locked>button,.arena-portal__action,.moon-home-project-visit) {background:#b5e8d1;color:#10251c;border:0;border-radius:12px;box-shadow:none;min-height:58px;padding:15px 22px;font:750 15px/1.3 Manrope,sans-serif;transition:background .18s,transform .18s;}
+body.simple-ui #startScreen #homePlaySplit :is(.primary-orbit-button,.moon-home-voyage__action,.arena-portal__action):hover {background:#d0f4e3;transform:translateY(-2px);}
+body.simple-ui #startScreen #homePlaySplit .primary-orbit-button:before,body.simple-ui #startScreen #homePlaySplit .primary-orbit-button:after {content:none;}
+body.simple-ui #startScreen #homePlaySplit .primary-orbit-meta {display:none;}
+body.simple-ui #startScreen #homePlaySplit :is(.home-forge-catalog-toggle,.primary-orbit-secondary) {min-height:44px;border:0;border-radius:8px;background:rgba(25,36,43,.8);box-shadow:none;color:#cad9d4;font:650 14px Manrope,sans-serif;}
+body.simple-ui #startScreen #homePlaySplit .home-orbit__rail {top:auto;bottom:32px;left:6vw;right:auto;transform:none!important;width:min(440px,42vw);max-width:none;height:58px;min-height:58px;padding:0;border:0;border-radius:0;background:none;box-shadow:none;backdrop-filter:none;}
+body.simple-ui #startScreen #homePlaySplit .home-orbit__tabs {display:flex;gap:24px;height:100%;padding:0;background:none;}
+body.simple-ui #startScreen #homePlaySplit .home-orbit__tab {display:flex;flex:0 1 auto;gap:10px;align-items:center;justify-content:start;min-width:70px;min-height:48px;padding:8px 0;border:0;border-bottom:2px solid transparent;border-radius:0;background:none;box-shadow:none;color:#879ba5;text-align:left;}
+body.simple-ui #startScreen #homePlaySplit .home-orbit__tab[aria-selected="true"] {color:#ecf5f0;border-bottom-color:#b5e8d1;background:none;box-shadow:none;}
+body.simple-ui #startScreen #homePlaySplit .home-orbit__tab b {font:700 15px Manrope,sans-serif;}
+body.simple-ui #startScreen #homePlaySplit .home-orbit__tab :is(small,span) {display:none;}
+body.simple-ui #startScreen #homePlaySplit .planet-hub__zoom-rail {top:auto;right:32px;bottom:34px;left:auto;width:auto;max-width:calc(54vw - 48px);height:52px;display:flex;flex-direction:row;gap:6px;align-items:center;padding:4px;border:1px solid #263239;border-radius:12px;background:rgba(12,21,28,.85);box-shadow:none;transform:none;}
+body.simple-ui #startScreen #homePlaySplit .planet-hub__zoom-stops {display:flex;gap:2px;}
+body.simple-ui #startScreen #homePlaySplit .planet-hub__zoom-stops button {min-width:0;min-height:44px;padding:9px 12px;border:0;border-radius:8px;background:none;color:#b7c6cd;font:650 12px Manrope,sans-serif;}
+body.simple-ui #startScreen #homePlaySplit .planet-hub__zoom-stops button[aria-checked="true"] {background:#263c3a;color:#d6f6e6;box-shadow:none;}
+body.simple-ui #startScreen #homePlaySplit .planet-hub__zoom-stops button span {display:none;}
+body.simple-ui #startScreen #homePlaySplit .planet-hub__distance-readout {display:none;}
+body.simple-ui #startScreen #homePlaySplit .planet-hub__zoom-reset {width:56px;min-height:44px;border:0;border-radius:8px;background:none;}
+body.simple-ui #startScreen #homePlaySplit .planet-hub-places__toggle:not([hidden]) {display:flex!important;top:calc(var(--planet-hub-nav-clearance) + 4px);left:auto;right:40px;bottom:auto;padding:10px 16px;border:1px solid #2a3941;border-radius:10px;background:#111d25;box-shadow:none;font:650 14px Manrope,sans-serif;}
+body.simple-ui #startScreen #homePlaySplit .planet-hub-places__toggle>span {display:none;}
+body.simple-ui #startScreen #homePlaySplit .planet-hub-places {top:calc(var(--planet-hub-nav-clearance) + 62px);left:auto;right:40px;bottom:110px;width:360px;height:auto;max-height:650px;min-height:220px;border:1px solid #2a3941;border-radius:16px;background:#101b24;box-shadow:0 24px 70px #0007;}
+body.simple-ui #startScreen #homePlaySplit .planet-hub-places__scrim:not([hidden]) {display:block!important;background:#02080d77;}
+body.simple-ui #startScreen #homePlaySplit .planet-hub-places__close:not([hidden]) {display:grid;min-width:44px;min-height:44px;}
+body.simple-ui #startScreen #homePlaySplit .planet-hub-places__header {padding:16px 18px 8px;}
+body.simple-ui #startScreen #homePlaySplit .planet-hub-places__header h2 {font:700 21px Manrope,sans-serif;}
+body.simple-ui #startScreen #homePlaySplit .planet-hub-places__mark {display:none;}
+body.simple-ui #startScreen #homePlaySplit .planet-hub-places__item {border:0;border-bottom:1px solid #25343e;border-radius:0;background:none;box-shadow:none;grid-template-columns:minmax(0,1fr) 58px;}
+body.simple-ui #startScreen #homePlaySplit .planet-hub-places__item[data-selected="true"] {background:#1b3336;box-shadow:none;}
+body.simple-ui #startScreen #homePlaySplit .planet-hub-places__copy strong {font-size:14px;}
+body.simple-ui #startScreen #homePlaySplit .planet-hub-places__copy small {font-size:11px;color:#acbdc7;}
+body.simple-ui #startScreen #homePlaySplit .planet-hub-places__visit {font-size:12px;color:#b5e8d1;border:0;}
+@media(max-width:900px) {
+ body.simple-ui #startScreen .start-nav {left:20px;right:20px;top:16px;}
+ body.simple-ui #startScreen .brand-name {font-size:21px;}
+ body.simple-ui #startScreen :is(#customizeButton,.stardust-wallet--home) {display:none;}
+ body.simple-ui #startScreen #homePlaySplit {--planet-hud-safe-left:24px;--planet-hud-safe-right:24px;}
+ body.simple-ui #startScreen #homePlaySplit .planet-hub {left:0;top:3%;width:100%;height:66%;}
+ body.simple-ui #startScreen #homePlaySplit .home-orbit__viewport:after {background:linear-gradient(0deg,#050b11 5%,rgba(5,11,17,.96) 20%,transparent 65%);}
+ body.simple-ui #startScreen #homePlaySplit .home-orbit__scene {top:auto;left:24px;right:24px;bottom:144px;width:auto;max-height:calc(100dvh - 280px);transform:none;gap:12px;}
+ body.simple-ui #startScreen #homePlaySplit :is(.primary-orbit-panel,.moon-home-voyage,.arena-portal) {gap:22px;}
+ body.simple-ui #startScreen #homePlaySplit :is(.primary-orbit-panel h2,.moon-home-voyage__copy strong,.arena-portal__copy h2) {font-size:46px;}
+ body.simple-ui #startScreen #homePlaySplit :is(.primary-orbit-panel p,.moon-home-voyage__copy em,#scrambleHomeStatus) {font-size:15px;line-height:1.5;}
+ body.simple-ui #startScreen #homePlaySplit .primary-orbit-actions {width:100%;}
+ body.simple-ui #startScreen #homePlaySplit .home-orbit__rail {left:24px;right:24px;bottom:78px;width:auto;height:48px;min-height:48px;}
+ body.simple-ui #startScreen #homePlaySplit .home-orbit__tabs {justify-content:center;}
+ body.simple-ui #startScreen #homePlaySplit .planet-hub__zoom-rail {left:16px;right:16px;bottom:14px;max-width:none;width:auto;height:48px;justify-content:center;}
+ body.simple-ui #startScreen #homePlaySplit .planet-hub__zoom-stops {flex:1;justify-content:space-around;}
+ body.simple-ui #startScreen #homePlaySplit .planet-hub__zoom-stops button {font-size:11px;padding:8px;}
+ body.simple-ui #startScreen #homePlaySplit .planet-hub__zoom-reset {width:44px;}
+ body.simple-ui #startScreen #homePlaySplit .planet-hub-places__toggle:not([hidden]) {top:calc(var(--planet-hub-nav-clearance) + 12px);right:20px;font-size:12px;}
+ body.simple-ui #startScreen #homePlaySplit .planet-hub-places {left:12px;right:12px;top:auto;bottom:74px;width:auto;height:55dvh;max-height:calc(100dvh - 180px);}
+}
+@media(orientation:landscape) and (max-width:900px) and (max-height:500px) {
+ body.simple-ui #startScreen #homePlaySplit .planet-hub {left:30%;top:0;width:70%;height:100%;}
+ body.simple-ui #startScreen #homePlaySplit .home-orbit__viewport:after {background:linear-gradient(90deg,#050b11 10%,#050b11cc 40%,transparent 75%);}
+ body.simple-ui #startScreen #homePlaySplit .home-orbit__scene {left:28px;right:auto;bottom:84px;width:46%;max-height:calc(100dvh - 158px);}
+ body.simple-ui #startScreen #homePlaySplit .primary-orbit-panel {grid-template-columns:minmax(0,1fr) 154px;grid-template-areas:"copy action";gap:16px;align-items:center;}
+ body.simple-ui #startScreen #homePlaySplit .primary-orbit-copy {gap:6px;align-content:center;}
+ body.simple-ui #startScreen #homePlaySplit .primary-orbit-panel h2 {font-size:32px;}
+ body.simple-ui #startScreen #homePlaySplit .primary-orbit-panel p {font-size:12px;}
+ body.simple-ui #startScreen #homePlaySplit .primary-orbit-actions {width:154px;}
+ body.simple-ui #startScreen #homePlaySplit .primary-orbit-button {min-height:48px;padding:12px;font-size:13px;}
+ body.simple-ui #startScreen #homePlaySplit .home-orbit__rail {left:28px;bottom:16px;width:30%;}
+ body.simple-ui #startScreen #homePlaySplit .planet-hub__zoom-rail {left:auto;width:52%;right:20px;bottom:16px;}
+ body.simple-ui #startScreen #homePlaySplit .planet-hub-places__toggle:not([hidden]) {top:80px;}
+ body.simple-ui #startScreen #homePlaySplit .planet-hub-places {left:auto;right:20px;top:74px;bottom:72px;width:350px;min-height:0;height:auto;max-height:none;}
+}
+@media(prefers-reduced-motion:reduce) {body.simple-ui #startScreen #homePlaySplit :is(button,.home-orbit__scene){transition:none!important;animation:none!important;}}
+
+/* Reset legacy grid tracks and glass treatment at the shell boundary. */
+body.simple-ui #startScreen .start-nav {position:fixed!important;display:flex!important;justify-content:space-between;align-items:center;width:calc(100% - 80px)!important;height:52px;box-sizing:border-box;z-index:40;padding:0;}
+body.simple-ui #startScreen .start-nav:after {content:none;}
+body.simple-ui #startScreen .start-actions {display:flex!important;align-items:center;min-width:0;}
+body.simple-ui #startScreen #homePlaySplit .home-orbit__scene {grid-template-areas:none!important;grid-template-columns:minmax(0,1fr)!important;grid-template-rows:auto!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;}
+body.simple-ui #startScreen #homePlaySplit .home-orbit__scene>.primary-orbit-panel {grid-area:auto!important;}
+body.simple-ui #startScreen #homePlaySplit .home-orbit__tabs {border:0;border-radius:0;box-shadow:none;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;}
+body.simple-ui #startScreen #homePlaySplit .planet-hub__zoom-rail {width:450px;}
+body.simple-ui #startScreen #homePlaySplit .planet-hub__zoom-stops {width:auto;flex:1;}
+body.simple-ui #startScreen #homePlaySplit .planet-hub__zoom-stops button {display:flex;flex:1;align-items:center;justify-content:center;width:auto;white-space:nowrap;}
+body.simple-ui #startScreen #homePlaySplit .planet-hub__zoom-stops button b {font:650 12px Manrope,sans-serif;}
+body.simple-ui #startScreen #homePlaySplit .primary-orbit-copy {text-align:left;}
+body.simple-ui #startScreen #homePlaySplit #primaryOrbitDescription {display:block!important;text-align:left;}
+@media(max-width:900px) {
+ body.simple-ui #startScreen .start-nav {width:calc(100% - 40px)!important;}
+ body.simple-ui #startScreen .brand {order:0;grid-area:auto;justify-self:start;}
+ body.simple-ui #startScreen .start-actions {order:1;gap:8px;}
+ body.simple-ui #startScreen #profileButton {order:0;}
+ body.simple-ui #startScreen #hubMenuButton {order:1;}
+ body.simple-ui #startScreen #homePlaySplit .planet-hub__zoom-rail {width:auto;}
+ body.simple-ui #startScreen #homePlaySplit .planet-hub__zoom-stops button b {font-size:11px;}
+ body.simple-ui #startScreen #homePlaySplit .primary-orbit-copy {gap:10px;}
+ body.simple-ui #startScreen #homePlaySplit .primary-orbit-panel h2 {text-align:left;}
+}
+@media(orientation:landscape) and (max-width:900px) and (max-height:500px) {
+ body.simple-ui #startScreen #homePlaySplit .planet-hub__zoom-rail {width:52%;}
+ body.simple-ui #startScreen #homePlaySplit .primary-orbit-panel {align-items:center!important;}
+ body.simple-ui #startScreen #homePlaySplit .primary-orbit-actions {align-self:center;}
+ body.simple-ui #startScreen #homePlaySplit .primary-orbit-button {height:52px;}
+ body.simple-ui #startScreen #homePlaySplit #primaryOrbitDescription {display:none!important;}
+ body.simple-ui #startScreen:has(>.practice-banner:not([hidden])) #homePlaySplit .planet-hub-places__toggle:not([hidden]) {top:140px;}
+}
+
+/* Journey is a single current project, with the locked state mutually exclusive. */
+body.simple-ui #startScreen #homePlaySplit .home-orbit__scene--journey[data-journey-ready="true"] .home-journey-locked {display:none!important;}
+body.simple-ui #startScreen #homePlaySplit :is(.moon-home-voyage,.home-journey-locked) {display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-start;height:auto;min-height:0;max-height:none;gap:24px;}
+body.simple-ui #startScreen #homePlaySplit .moon-home-voyage__origin {display:none;}
+body.simple-ui #startScreen #homePlaySplit :is(.moon-home-voyage__copy,.moon-home-voyage__action) {grid-area:auto;position:static;transform:none;}
+body.simple-ui #startScreen #homePlaySplit .moon-home-voyage__action {width:240px;}
+body.simple-ui #startScreen #homePlaySplit .moon-home-project-visit:not([hidden]):not(:disabled) {position:static;transform:none;width:240px;}
+body.simple-ui #startScreen #homePlaySplit .home-forge-catalog-toggle {grid-area:auto;}
+@media(max-width:900px) {body.simple-ui #startScreen #homePlaySplit .moon-home-voyage__action {width:100%;}}
+@media(orientation:landscape) and (max-width:900px) and (max-height:500px) {
+ body.simple-ui #startScreen #homePlaySplit :is(.moon-home-voyage__copy strong,.arena-portal__copy h2) {font-size:32px;}
+ body.simple-ui #startScreen #homePlaySplit :is(.moon-home-voyage,.arena-portal) {gap:14px;}
+ body.simple-ui #startScreen #homePlaySplit :is(.moon-home-voyage__action,.arena-portal__action) {min-height:48px;padding:10px 16px;}
+}
+
+/* Keep both play entries above navigation on short portrait screens. */
+@media (max-width:700px) and (max-height:650px) and (orientation:portrait) {
+ body.simple-ui #startScreen #homePlaySplit .home-orbit__scene--forge {overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;}
+ body.simple-ui #startScreen #homePlaySplit .primary-orbit-panel {gap:12px;}
+ body.simple-ui #startScreen #homePlaySplit .primary-orbit-copy {gap:6px;}
+ body.simple-ui #startScreen #homePlaySplit .primary-orbit-kicker {max-width:calc(100% - 112px);font-size:11px;line-height:1.4;}
+ body.simple-ui #startScreen #homePlaySplit .primary-orbit-panel h2 {font-size:34px;}
+ body.simple-ui #startScreen #homePlaySplit .primary-orbit-panel p {font-size:13px;}
+ body.simple-ui #startScreen #homePlaySplit .primary-orbit-button {min-height:48px;padding:12px 16px;}
+ body.simple-ui #startScreen #homePlaySplit .home-forge-catalog-toggle {position:static;min-height:44px;margin:0;padding:8px 10px;}
+ body.simple-ui #startScreen #homePlaySplit .home-forge-catalog-toggle small {display:none;}
+ body.simple-ui #startScreen #homePlaySplit .home-forge-catalog-toggle strong {font-size:12px;}
+}

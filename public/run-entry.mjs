@@ -82,6 +82,13 @@ export async function enterPreparedRun({
   }
   let request = null;
   let payload = null;
+  let readyPresented = false;
+  const presentReady = async () => {
+    if (readyPresented || !payload || typeof ready !== "function") return false;
+    readyPresented = true;
+    await ready(payload, request);
+    return true;
+  };
   const entered = await gate.enterBoard(async () => {
     request = await prepare();
     const requestedEntryId = String(entryIdFactory?.() || "").trim();
@@ -93,10 +100,12 @@ export async function enterPreparedRun({
     if (typeof commit === "function") await commit(payload, request);
   }, {
     label,
-    afterOpen: async () => {
-      if (typeof ready === "function") await ready(payload, request);
-    }
+    afterOpen: presentReady
   });
+  // A visual transition can be superseded after commit (for example by a late
+  // startup blackout handoff). The run already exists at that point, so its
+  // mission-ready surface remains mandatory even if the fold did not finish.
+  if (!entered && payload) await presentReady();
   return { entered, payload, request };
 }
 

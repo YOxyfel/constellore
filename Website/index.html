@@ -3,12 +3,12 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#071923">
-  <meta name="description" content="Constellore is a free word-combination game: build a route to the target alone or race a live rival on an open board.">
+  <meta name="theme-color" content="#070b12">
+  <meta name="description" content="Constellore is a free word-combination game in a living cosmos. Combine ideas, chart constellations, and grow a home on the Moon. Play in your browser.">
   <meta name="robots" content="index, follow, max-image-preview:large">
   <meta property="og:type" content="website">
-  <meta property="og:title" content="Constellore — make the target word">
-  <meta property="og:description" content="Combine words, reach checked targets, and race a live rival while every pairing is visible. Play free in your browser.">
+  <meta property="og:title" content="Constellore — Every idea opens a world.">
+  <meta property="og:description" content="Every discovery begins with two ideas. Find your path through a living cosmos, from your first combination to a home on the Moon.">
   <meta property="og:site_name" content="Constellore">
   <meta property="og:locale" content="en_US">
   <meta property="og:image" content="https://yoxyfel.github.io/constellore/social-card-v3.jpg">
@@ -17,13 +17,14 @@
   <meta property="og:image:type" content="image/jpeg">
   <meta property="og:image:alt" content="Constellore, a cosmic word-combination puzzle about reaching a target word.">
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="Constellore — make the target word">
-  <meta name="twitter:description" content="Build a route to the target alone or race a live rival on an open board.">
+  <meta name="twitter:title" content="Constellore — Every idea opens a world.">
+  <meta name="twitter:description" content="Combine ideas. Follow your curiosity. Discover a universe of your own.">
   <meta name="twitter:image" content="https://yoxyfel.github.io/constellore/social-card-v3.jpg">
-  <title>Constellore — make the target word</title>
+  <title>Constellore — Every idea opens a world.</title>
   <link rel="icon" href="icon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="website.css?v=5.0.0-beta.1">
-  <script src="website.js?v=5.0.0-beta.1" defer></script>
+  <link rel="preload" as="font" href="play/fonts/Manrope-Variable.ttf" type="font/ttf" crossorigin>
+  <link rel="stylesheet" href="website.css?v=5.0.0-beta.4">
+  <script src="website.js?v=5.0.0-beta.4" defer></script>
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -31,7 +32,7 @@
     "name": "Constellore",
     "url": "https://yoxyfel.github.io/constellore/",
     "image": "https://yoxyfel.github.io/constellore/social-card-v3.jpg",
-    "description": "A free cosmic word-combination puzzle where players build a reachable path to a target alone or in a live open-board race.",
+    "description": "A cosmic puzzle odyssey: combine ideas, explore a continuous universe, and shape a home on the Moon.",
     "applicationCategory": "GameApplication",
     "operatingSystem": "Any modern web browser",
     "playMode": ["SinglePlayer", "MultiPlayer"],
@@ -42,168 +43,102 @@
   }
   </script>
 </head>
-<body
-  data-beta-url="/play/"
-  data-itch-url=""
-  data-repository-url="https://github.com/YOxyfel/constellore"
-  data-build-version="5.0.0-beta.1"
-  data-build-id="5.0.0-beta.1+source"
->
-  <a class="skip-link" href="#main">Skip to the game</a>
-
-  <header class="site-header" id="top">
-    <a class="brand" href="#top" aria-label="Constellore home">
-      <span class="brand-mark" aria-hidden="true">✦</span>
-      <span>Constellore</span>
-    </a>
-    <a class="button header-button" href="/play/">Play free</a>
+<body class="expedition-site" data-beta-url="/play/" data-itch-url="" data-repository-url="https://github.com/YOxyfel/constellore" data-build-version="5.0.0-beta.4" data-build-id="5.0.0-beta.4+source">
+  <a class="skip-link" href="#main">Skip to the expedition</a>
+  <header class="site-header">
+    <a class="brand" href="#discover" aria-label="Constellore home"><img src="icon.svg" width="31" height="31" alt=""><span>CONSTELLORE</span></a>
+    <span class="header-descriptor">A COSMIC PUZZLE ODYSSEY</span>
+    <nav class="header-actions" aria-label="Site navigation"><button type="button" data-open-guide>Field guide</button><button type="button" data-open-lab>Cosmetic Lab</button><a class="button button-small" href="/play/?birthday=off">Play free <span aria-hidden="true">↗</span></a></nav>
   </header>
 
-  <main id="main">
-    <section class="hero section-shell" aria-labelledby="heroTitle">
-      <div class="hero-copy reveal">
-        <p class="label">Free browser game</p>
-        <h1 id="heroTitle">Make the word.</h1>
-        <p class="hero-lede">Every game gives you one word to find. Start with a few useful words, combine two to make something new, and keep building until you make the target word. Play at your pace, or race a live rival while both routes stay visible.</p>
-        <a class="button hero-button" href="/play/">Play free</a>
-        <p class="small-note">No email or password. Solo progress stays on this device and works offline. Live Scramble duels use the configured online service.</p>
-      </div>
+  <main id="main" class="expedition" data-chapter="discover">
+    <div class="expedition-backdrop" aria-hidden="true"></div>
+    <div class="expedition-wordmark" aria-hidden="true">CONSTELLORE</div>
+    <div class="atlas-stage" id="atlasStage" hidden></div>
+    <div class="atlas-scrim" aria-hidden="true"></div>
+    <div class="stage-topline"><span class="eyebrow" id="chapterCoordinate">01 / THE FIRST CONNECTION</span><span class="stage-status" id="stageStatus">IN THE CURRENT GAME</span></div>
 
-      <div class="hero-example reveal" data-delay="1" aria-hidden="true">
-        <span>Water</span>
-        <b>+</b>
-        <span>Fire</span>
-        <b>=</b>
-        <strong>Steam</strong>
+    <section class="chapter-panel" id="panel-discover" role="tabpanel" aria-labelledby="tab-discover" tabindex="0">
+      <div class="chapter-copy">
+        <h1>Two ideas.<br> Then <em>everything.</em></h1>
+        <p class="chapter-lede">Start with Earth and Water. Make Mud. Follow one connection into another until the impossible has a name.</p>
+        <a class="button" href="/play/?birthday=off">Make your first connection <span aria-hidden="true">↗</span></a>
+        <p class="entry-note">FREE BROWSER BETA / NO ACCOUNT NEEDED</p>
       </div>
+      <figure class="game-capture board-capture">
+        <div class="capture-label"><span>THE LIVING CONSTELLATION BOARD</span><span>IN-GAME CAPTURE</span></div>
+        <button class="capture-open" type="button" data-capture="board" aria-label="Enlarge the current game board"><img src="play/art/website/board-current.webp" width="1440" height="900" fetchpriority="high" alt="The current Constellore board, with words and connections arranged in its observatory interface."><span class="capture-expand">Inspect the board ↗</span></button>
+        <figcaption>Your discoveries become your tools. Your route becomes a constellation.</figcaption>
+      </figure>
+      <div class="chapter-footnote"><span>EARTH + WATER</span><span aria-hidden="true">→</span><strong>MUD</strong><p>The first step. Where you go next is yours.</p></div>
     </section>
 
-    <section class="try-section section-shell" aria-labelledby="previewHeading">
-      <div class="simple-heading reveal">
-        <p class="label">Try it</p>
-        <h2 id="previewHeading">Make Storm</h2>
-        <p>Tap two words to put them together.</p>
+    <section class="chapter-panel" id="panel-universe" role="tabpanel" aria-labelledby="tab-universe" tabindex="0" hidden>
+      <div class="chapter-copy">
+        <h1>Look closer.<br> Then go<br> <em>further.</em></h1>
+        <p class="chapter-lede">One continuous sky. From Earth’s orbit to the Solar System, the Milky Way, and the cosmic web. Change the scale and see it for yourself.</p>
+        <button class="text-action" type="button" id="atlasReset">Return to Earth <span>Reset your view ↗</span></button>
+        <p class="interaction-note">Drag the view to look around.<br> Choose a distance below to travel outward.</p>
       </div>
-
-      <div class="craft-preview reveal" data-delay="1" data-preview-goal="GOAL: STORM" aria-labelledby="previewTitle">
-        <div class="preview-topbar">
-          <strong id="previewTitle">Target: Storm</strong>
-          <span id="previewInstruction">Pick two words</span>
+      <div class="atlas-controls" id="atlasControls">
+        <div class="atlas-control-heading"><span class="eyebrow">SET YOUR DISTANCE</span><span id="atlasStateLabel" role="status">Opening the atlas…</span></div>
+        <div class="scale-stops" role="group" aria-label="Atlas distance">
+          <button type="button" data-scale="planet" aria-pressed="true">Earth</button><button type="button" data-scale="orbit" aria-pressed="false">Orbit</button><button type="button" data-scale="system" aria-pressed="false">Solar System</button><button type="button" data-scale="stars" aria-pressed="false">Stars</button><button type="button" data-scale="milky-way" aria-pressed="false">Milky Way</button><button type="button" data-scale="beyond" aria-pressed="false">Cosmic web</button>
         </div>
-
-        <div class="preview-board">
-          <div class="fusion-stage" aria-live="polite">
-            <div class="fusion-input" id="fusionFirst">?</div>
-            <span aria-hidden="true">+</span>
-            <div class="fusion-input" id="fusionSecond">?</div>
-            <span aria-hidden="true">=</span>
-            <div class="fusion-result" id="fusionResult">New word</div>
-          </div>
-
-          <div class="word-tray" id="wordTray" aria-label="Words you can choose">
-            <button type="button" class="word-chip" data-word="Earth" aria-pressed="false"><span aria-hidden="true">🌍</span>Earth</button>
-            <button type="button" class="word-chip" data-word="Water" aria-pressed="false"><span aria-hidden="true">💧</span>Water</button>
-            <button type="button" class="word-chip" data-word="Fire" aria-pressed="false"><span aria-hidden="true">🔥</span>Fire</button>
-            <button type="button" class="word-chip" data-word="Air" aria-pressed="false"><span aria-hidden="true">💨</span>Air</button>
-          </div>
-
-          <p class="preview-message" id="previewMessage">Need a hint? Make Steam, then add Air.</p>
-          <button class="plain-button" id="previewReset" type="button">Start over</button>
-        </div>
+        <p id="atlasFallbackNote" hidden>The interactive view is unavailable on this device. You can still explore the game from Play free.</p>
       </div>
     </section>
 
-    <section class="how section-shell" id="how" aria-labelledby="howTitle">
-      <div class="simple-heading reveal">
-        <p class="label">How to play</p>
-        <h2 id="howTitle">Three simple steps</h2>
+    <section class="chapter-panel" id="panel-worlds" role="tabpanel" aria-labelledby="tab-worlds" tabindex="0" hidden>
+      <div class="chapter-copy">
+        <h1>A distant world.<br> <em>A place<br> to belong.</em></h1>
+        <p class="chapter-lede">Reach the Moon. Bring power, shelter, and a signal to its surface. Grow Moonhaven, then decide what gives your community a heart.</p>
+        <div class="project-route" aria-label="Moon progression"><span>Power · Shelter · Signal</span><span>Moonhaven</span><strong>The Heart</strong></div>
+        <p class="interaction-note">Moon projects open after your first lessons.<br> The story grows with what you make.</p>
+        <button class="text-action" type="button" data-open-lab>Give it your signature <span>Explore the Cosmetic Lab ↗</span></button>
       </div>
-
-      <div class="steps">
-        <article class="step reveal">
-          <span class="step-number">1</span>
-          <div>
-            <h3>See your target</h3>
-            <p>The game shows the word you need to make.</p>
-          </div>
-        </article>
-        <article class="step reveal" data-delay="1">
-          <span class="step-number">2</span>
-          <div>
-            <h3>Combine ideas</h3>
-            <p>Drag one word onto another to make a new word.</p>
-          </div>
-        </article>
-        <article class="step reveal" data-delay="2">
-          <span class="step-number">3</span>
-          <div>
-            <h3>Reach the word</h3>
-            <p>Use your new words until you make the target.</p>
-          </div>
-        </article>
-      </div>
+      <figure class="game-capture moon-capture">
+        <div class="capture-label"><span>ON THE LUNAR SURFACE</span><span>IN-GAME CAPTURE</span></div>
+        <button class="capture-open" type="button" data-capture="moon" aria-label="Enlarge The Heart, the current Moon project"><img src="play/art/website/moonhaven-current.webp" width="1440" height="900" loading="lazy" alt="The Heart, a current Moon project in Constellore."><span class="capture-expand">Inspect The Heart ↗</span></button>
+      </figure>
     </section>
 
-    <section class="why section-shell" id="why" aria-labelledby="whyTitle">
-      <div class="simple-heading reveal">
-        <p class="label">Why Constellore?</p>
-        <h2 id="whyTitle">Word crafting with a purpose</h2>
+    <div class="expedition-bottom">
+      <div class="chapter-progress"><span id="chapterCount">01 — 03</span><span class="progress-track"><i id="progressFill"></i></span><button id="nextChapter" type="button">Cross the cosmos <span aria-hidden="true">→</span></button></div>
+      <div class="chapter-tabs" role="tablist" aria-label="Explore Constellore">
+        <button id="tab-discover" type="button" role="tab" data-chapter-target="discover" aria-selected="true" aria-controls="panel-discover" tabindex="0"><span>01</span><div><small>THE SPARK</small><strong>Make a connection</strong></div></button>
+        <button id="tab-universe" type="button" role="tab" data-chapter-target="universe" aria-selected="false" aria-controls="panel-universe" tabindex="-1"><span>02</span><div><small>THE COSMOS</small><strong>Change your perspective</strong></div></button>
+        <button id="tab-worlds" type="button" role="tab" data-chapter-target="worlds" aria-selected="false" aria-controls="panel-worlds" tabindex="-1"><span>03</span><div><small>THE WORLD YOU MAKE</small><strong>Find a place to belong</strong></div></button>
       </div>
-      <div class="reasons reveal" data-delay="1">
-        <article>
-          <h3>Clear goal</h3>
-          <p>You always know which word you are trying to make.</p>
-        </article>
-        <article>
-          <h3>Checked answers</h3>
-          <p>Your first 50 destinations are hand-tuned. All 500 targets have a real path.</p>
-        </article>
-        <article>
-          <h3>Made to share</h3>
-          <p>Send a spoiler-free path card, or invite a friend to a live open-board race where every pairing can be learned and stolen manually.</p>
-        </article>
-      </div>
-    </section>
-
-    <section class="play-section" id="play" aria-labelledby="playTitle">
-      <div class="section-shell play-card reveal">
-        <div class="play-copy">
-          <p class="label">Ready?</p>
-          <h2 id="playTitle">Play Constellore</h2>
-          <p>Play solo or live 1v1 with a mouse, keyboard, or touch screen.</p>
-        </div>
-
-        <button class="button play-now-button" id="posterPlayButton" type="button">Play free</button>
-
-        <div class="game-embed" id="gameEmbed" hidden>
-          <div class="embed-bar">
-            <strong>Constellore</strong>
-            <div>
-              <a href="/play/" target="_blank" rel="noopener noreferrer">Full screen</a>
-              <button class="plain-button" type="button" id="closeEmbed">Close</button>
-            </div>
-          </div>
-          <iframe id="gameFrame" title="Play Constellore" allow="fullscreen"></iframe>
-        </div>
-      </div>
-    </section>
+    </div>
   </main>
 
-  <footer class="site-footer">
-    <div>
-      <a class="brand footer-brand" href="#top" aria-label="Back to the top">
-        <span class="brand-mark" aria-hidden="true">✦</span>
-        <span>Constellore</span>
-      </a>
-      <p>A cosmic word puzzle by Oxyfel Games.</p>
+  <footer class="site-footer"><span>OXYFEL GAMES <b aria-hidden="true">/</b> <span id="siteBuildVersion">5.0.0-beta.4</span></span><div><button id="motionToggle" type="button" aria-pressed="false">Pause motion</button><a href="privacy.html">Privacy</a><a href="terms.html">Terms</a><a href="support.html">Help</a></div></footer>
+  <p id="siteAnnouncement" class="sr-only" role="status" aria-live="polite"></p>
+
+  <dialog id="guideDialog" class="field-guide" aria-labelledby="guideTitle">
+    <header class="dialog-header"><div><span class="eyebrow">YOUR FIELD GUIDE</span><h2 id="guideTitle">Choose your kind of discovery.</h2></div><button class="close-button" type="button" data-close-dialog aria-label="Close field guide">Close <span aria-hidden="true">×</span></button></header>
+    <div class="guide-body">
+      <aside class="guide-intro"><p>Stay a little.<br> Get completely lost.<br> Come back tomorrow.</p><span>Different ways into the same universe. More routes open as you progress.</span><a class="button" href="/play/?birthday=off">Find your route <span aria-hidden="true">↗</span></a></aside>
+      <div class="guide-modes">
+        <section><h3>Follow your curiosity</h3><dl><div><dt>Relaxed</dt><dd>Find the target in your own time.</dd></div><div><dt>Free play</dt><dd>Explore combinations without a destination.</dd></div><div><dt>Choose a word</dt><dd>Set your own target and find a way to it.</dd></div></dl></section>
+        <section><h3>Give yourself a challenge</h3><dl><div><dt>Timed</dt><dd>One target. Ninety seconds.</dd></div><div><dt>Limited moves</dt><dd>Make the target in twelve combinations.</dd></div><div><dt>Today’s word</dt><dd>A shared daily target to return to.</dd></div><div><dt>Scramble Arena</dt><dd>Race a live rival on two open boards. Unlocks at Silver; requires the configured online duel service.</dd></div></dl></section>
+        <section><h3>Set out on something longer</h3><dl><div><dt>Weekly routes</dt><dd>Three targets along a connected path.</dd></div><div><dt>Voyages</dt><dd>Build through a sequence of discoveries.</dd></div><div><dt>Events</dt><dd>Follow a rotating themed collection of targets.</dd></div></dl></section>
+      </div>
     </div>
-    <nav aria-label="Footer links">
-      <a href="privacy.html">Privacy</a>
-      <a href="terms.html">Terms</a>
-      <a href="support.html">Help</a>
-      <a href="https://github.com/YOxyfel/constellore" target="_blank" rel="noopener noreferrer">GitHub</a>
-    </nav>
-    <p>© 2026 Oxyfel Games · Beta <b id="siteBuildVersion">5.0.0-beta.1</b></p>
-  </footer>
+    <details class="practical-details"><summary>A few things before you go</summary><div><p><strong>Free during beta.</strong> No account, checkout, or advertising is required to play.</p><p><strong>Your discoveries stay with you.</strong> Solo progress stays on this device and works offline once the game is cached. Clearing browser storage removes that progress. Live Scramble duels use the configured online service.</p><p><strong>Connections have meaning.</strong> The game uses a curated world of recipes. Not every pair combines, and every included target has a checked route.</p><p><strong>Mouse, keyboard, or touch.</strong> Use a modern browser on your computer, tablet, or phone.</p></div></details>
+  </dialog>
+
+  <dialog id="labDialog" class="cosmetic-lab" aria-labelledby="labTitle">
+    <header class="dialog-header"><div><span class="eyebrow">FROM THE CURRENT GAME CATALOG</span><h2 id="labTitle">Your own atmosphere.</h2></div><button class="close-button" type="button" data-close-dialog aria-label="Close Cosmetic Lab">Close <span aria-hidden="true">×</span></button></header>
+    <div class="lab-layout">
+      <div class="lab-art-stage"><img id="labArtwork" alt="Selected collection artwork" hidden><video id="frameVideo" controls playsinline preload="none" hidden></video><div class="lab-art-caption"><span id="labPreviewKind">COLLECTION ARTWORK</span><h3 id="labSelectionName">Cosmetic Lab</h3></div></div>
+      <div class="lab-controls"><div class="lab-kind" role="group" aria-label="Preview category"><button type="button" data-lab-kind="collections" aria-pressed="true">Worlds</button><button type="button" data-lab-kind="frames" aria-pressed="false">Profile frames</button></div><label for="labSelect">Choose a collection</label><select id="labSelect"></select><div class="lab-surface" role="group" aria-label="Artwork view"><button type="button" data-lab-surface="gate" aria-pressed="true">Constellation Fold</button><button type="button" data-lab-surface="home" aria-pressed="false">Home</button></div><p id="labDescription"></p><p id="labAccess" class="lab-access"></p><button id="labSoundButton" class="text-action" type="button" hidden>Listen to this world <span>Sound theme preview ↗</span></button><audio id="labAudio" preload="none"></audio><p class="lab-note">A look inside the Cosmetic Lab. Previewing here doesn’t change your game or unlock items. Purchases are disabled during beta.</p></div>
+    </div>
+    <p class="dialog-error" id="labError" role="status" hidden></p>
+  </dialog>
+
+  <dialog id="captureDialog" class="capture-dialog" aria-labelledby="captureTitle"><header class="dialog-header"><div><span class="eyebrow">CAPTURED FROM THE CURRENT GAME</span><h2 id="captureTitle">Inside Constellore</h2></div><button class="close-button" type="button" data-close-dialog aria-label="Close game capture">Close <span aria-hidden="true">×</span></button></header><img id="fullCapture" alt="Current gameplay screenshot"><p id="captureDescription"></p></dialog>
+  <noscript><div class="noscript-note">Explore the chapters below. Enable JavaScript for the interactive atlas and previews, or <a href="/play/?birthday=off">open the game</a>.</div></noscript>
 </body>
 </html>

@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "contractSha256": "0459b858503d99cc30d04139b5aa6144d03fb81e4b2e95fb9be4973f149b1416",
+  "status": "blocked-template",
+  "source": "graded-composite",
+  "derivedFromGradedMaster": false,
+  "evidenceOutputPath": "production/voyage-projection/poster-evidence.json",
+  "records": [
+    {
+      "id": "opening",
+      "variantId": "promise",
+      "shotId": "solar",
+      "frame": 168,
+      "path": "public/cinematic/voyage-projection-opening-poster.webp",
+      "sourceCompositePath": "output/voyage-projection/composites/promise/solar/frame-0168.exr",
+      "sourceCompositeSha256": null,
+      "posterSha256": null,
+      "derivedFromGradedMaster": false,
+      "humanApproval": {
+        "reviewer": null,
+        "approvedAt": null
+      }
+    },
+    {
+      "id": "progress",
+      "variantId": "progress",
+      "shotId": "black-hole",
+      "frame": 912,
+      "path": "public/cinematic/voyage-projection-progress-poster.webp",
+      "sourceCompositePath": "output/voyage-projection/composites/progress/black-hole/frame-0912.exr",
+      "sourceCompositeSha256": null,
+      "posterSha256": null,
+      "derivedFromGradedMaster": false,
+      "humanApproval": {
+        "reviewer": null,
+        "approvedAt": null
+      }
+    },
+    {
+      "id": "finale",
+      "variantId": "completion",
+      "shotId": "beyond",
+      "frame": 1272,
+      "path": "public/cinematic/voyage-projection-finale-poster.webp",
+      "sourceCompositePath": "output/voyage-projection/composites/completion/beyond/frame-1272.exr",
+      "sourceCompositeSha256": null,
+      "posterSha256": null,
+      "derivedFromGradedMaster": false,
+      "humanApproval": {
+        "reviewer": null,
+        "approvedAt": null
+      }
+    }
+  ]
+}

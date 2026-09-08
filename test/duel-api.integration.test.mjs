@@ -1,13 +1,15 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { once } from "node:events";
+import { createRemixProgressionState, getRemixRank } from "../public/remix-progression.mjs";
 
 process.env.NODE_ENV = "test";
 process.env.CONSTELLORE_DUELS_ENABLED = "true";
 process.env.CONSTELLORE_PUBLIC_DUELS_ENABLED = "true";
 process.env.APP_ALLOWED_ORIGINS = "https://duel-client.example";
 
-const { server, shutdownServer } = await import("../server.mjs");
+const serverModule = await import("../server.mjs");
+const { server, shutdownServer } = serverModule;
 const ALLOWED_ORIGIN = "https://duel-client.example";
 
 function authHeaders(registration) {
@@ -119,10 +121,28 @@ test("authenticated HTTP Duel contract enforces CORS and streams replay plus liv
   assert.equal(invalidMatchmaking.response.status, 400);
   assert.equal(invalidMatchmaking.payload.code, "invalid_duel_matchmaking");
 
+  const bronzeInvite = await jsonRequest(baseUrl, "/api/duels/invites", {
+    method: "POST",
+    auth: hostAuth,
+    body: { actionId: "invite_bronze_lock" }
+  });
+  assert.equal(bronzeInvite.response.status, 403);
+  assert.equal(bronzeInvite.payload.code, "duel_route_rank_locked");
+  assert.equal(bronzeInvite.payload.details.minimumRouteRankName, "Silver");
+
+  const silver = getRemixRank("silver");
+  for (const registration of registrations) {
+    serverModule.duelService.store.data.players[registration.player.id].routeProgression = createRemixProgressionState({
+      rankId: silver.id,
+      masteryPoints: silver.masteryPoints,
+      completedChallenges: silver.completedChallenges
+    });
+  }
+
   const invited = await jsonRequest(baseUrl, "/api/duels/invites", {
     method: "POST",
     auth: hostAuth,
-    body: { actionId: "invite_http1" }
+    body: { actionId: "invite_http1", frameSlug: "berry-burrow" }
   });
   assert.equal(invited.response.status, 201);
   const joined = await jsonRequest(baseUrl, "/api/duels/join", {
@@ -130,10 +150,18 @@ test("authenticated HTTP Duel contract enforces CORS and streams replay plus liv
     auth: rivalAuth,
     body: {
       actionId: "join_http001",
-      inviteCode: invited.payload.inviteCode
+      inviteCode: invited.payload.inviteCode,
+      frameSlug: "lunar-reverie"
     }
   });
   assert.equal(joined.response.status, 200);
+  assert.deepEqual(
+    joined.payload.duel.players.map(({ side, frameSlug }) => ({ side, frameSlug })),
+    [
+      { side: "rival", frameSlug: "berry-burrow" },
+      { side: "self", frameSlug: "lunar-reverie" }
+    ]
+  );
   const duelId = joined.payload.duel.id;
 
   const hostReady = await jsonRequest(baseUrl, `/api/duels/${duelId}/ready`, {

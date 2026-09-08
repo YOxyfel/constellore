@@ -1,0 +1,141 @@
+{
+  "schemaVersion": 1,
+  "status": "non-final-guide",
+  "releaseEligible": false,
+  "createsRightsEvidence": false,
+  "contract": {
+    "path": "scripts/voyage-projection-cinematic.v1.json",
+    "sha256": "0459b858503d99cc30d04139b5aa6144d03fb81e4b2e95fb9be4973f149b1416"
+  },
+  "generator": {
+    "path": "scripts/build-voyage-projection-audio.py",
+    "sha256": "f2db33a6089283bf7f4ed30d4f4b82606010f417493d0b2ef6bce24fa5f2d29d",
+    "seed": 314159,
+    "method": "deterministic sample-free additive synthesis and filtered procedural noise",
+    "thirdPartySamples": false,
+    "generativeModelOutput": false
+  },
+  "cueSheet": {
+    "path": "production/voyage-projection/scaffold/audio-cue-sheet.csv",
+    "sha256": "c7e520a8de2874c8d072d4a45806fcc23c24b543a2d6926278081d237da959d6"
+  },
+  "format": {
+    "container": "wav",
+    "codec": "pcm_s24le",
+    "sampleRateHz": 48000,
+    "channels": 2,
+    "bitsPerSample": 24,
+    "durationSeconds": 57.0,
+    "maximumGuideSamplePeakDbfs": -3.0
+  },
+  "voice": {
+    "included": false,
+    "status": "absent",
+    "provider": null,
+    "performer": null,
+    "commercialUseDocumented": false,
+    "livingPerformerImitation": null,
+    "sourceSha256": null,
+    "masteredSha256": null
+  },
+  "rights": {
+    "commercialUseDocumented": false,
+    "humanApproval": null,
+    "composerOrLibraryLicense": null,
+    "statement": "Guide synthesis is inspectable and sample-free, but this record is not owner approval or a commercial-rights grant."
+  },
+  "limitations": [
+    "No narration is rendered into these stems.",
+    "No final mix, loudness master, true-peak approval, performer release, or synthetic-voice license exists here.",
+    "Passing the guide verifier does not satisfy navigation-voice or score-and-sound-design release provenance.",
+    "Files under output/voyage-projection/audio are production guides and must not be copied into public release assets."
+  ],
+  "outputs": [
+    {
+      "id": "score-completion",
+      "path": "output/voyage-projection/audio/stems/voyage-projection-score-completion-guide.wav",
+      "bus": "music",
+      "variants": [
+        "completion"
+      ],
+      "guideOnly": true,
+      "voiceIncluded": false,
+      "sampleRateHz": 48000,
+      "channels": 2,
+      "bitsPerSample": 24,
+      "targetSamplePeakDbfs": -12.0,
+      "bytes": 16416044,
+      "dataBytes": 16416000,
+      "frames": 2736000,
+      "durationSeconds": 57.0,
+      "samplePeakDbfs": -11.999999,
+      "rmsDbfs": -24.127717,
+      "sha256": "56a87b6eaf3edd9629c6d953248613416fe72bd7a4f69abdec22122c15063673"
+    },
+    {
+      "id": "score-unresolved",
+      "path": "output/voyage-projection/audio/stems/voyage-projection-score-unresolved-guide.wav",
+      "bus": "music",
+      "variants": [
+        "promise",
+        "progress"
+      ],
+      "guideOnly": true,
+      "voiceIncluded": false,
+      "sampleRateHz": 48000,
+      "channels": 2,
+      "bitsPerSample": 24,
+      "targetSamplePeakDbfs": -12.0,
+      "bytes": 16416044,
+      "dataBytes": 16416000,
+      "frames": 2736000,
+      "durationSeconds": 57.0,
+      "samplePeakDbfs": -11.999999,
+      "rmsDbfs": -24.030654,
+      "sha256": "35094fcc91a12d22d31ed079b58df936a15a84f837221237ef4d35066670d8ef"
+    },
+    {
+      "id": "sfx-completion",
+      "path": "output/voyage-projection/audio/stems/voyage-projection-sfx-completion-guide.wav",
+      "bus": "effects",
+      "variants": [
+        "completion"
+      ],
+      "guideOnly": true,
+      "voiceIncluded": false,
+      "sampleRateHz": 48000,
+      "channels": 2,
+      "bitsPerSample": 24,
+      "targetSamplePeakDbfs": -8.0,
+      "bytes": 16416044,
+      "dataBytes": 16416000,
+      "frames": 2736000,
+      "durationSeconds": 57.0,
+      "samplePeakDbfs": -8.000002,
+      "rmsDbfs": -22.237942,
+      "sha256": "83bdf1effaa750e3a429541e8d688f7cd5f5f31e1b9477c9ebdfff2dea66d102"
+    },
+    {
+      "id": "sfx-unresolved",
+      "path": "output/voyage-projection/audio/stems/voyage-projection-sfx-unresolved-guide.wav",
+      "bus": "effects",
+      "variants": [
+        "promise",
+        "progress"
+      ],
+      "guideOnly": true,
+      "voiceIncluded": false,
+      "sampleRateHz": 48000,
+      "channels": 2,
+      "bitsPerSample": 24,
+      "targetSamplePeakDbfs": -8.0,
+      "bytes": 16416044,
+      "dataBytes": 16416000,
+      "frames": 2736000,
+      "durationSeconds": 57.0,
+      "samplePeakDbfs": -8.000002,
+      "rmsDbfs": -22.297318,
+      "sha256": "6ca2e31db953edc6b6bb6427d809082f15f35de720e754314baf15d3ef3909c5"
+    }
+  ]
+}

@@ -1,31 +1,36 @@
 import { expect, test } from "@playwright/test";
 import { installSeenIntroFixture } from "./intro-fixture.mjs";
 
-async function installCompletedPlayer(page) {
-  await page.addInitScript(() => {
+async function installCompletedPlayer(page, frameSlug = "ember-sovereign") {
+  await page.addInitScript((selectedFrame) => {
     const profile = {
-      version: 8,
+      version: 10,
       wins: 3,
+      routeRank: { rank: "silver", challengeRank: "silver" },
       firstOrbit: { seen: true, completed: true },
       secondOrbit: { seen: true, completed: true }
     };
     localStorage.setItem("constellore-profile-v1", JSON.stringify(profile));
     localStorage.setItem("constellore-local-profile-v1", JSON.stringify(profile));
-  });
+    localStorage.setItem("constellore-profile-frame-v1", selectedFrame);
+    localStorage.setItem("constellore-birthday-voyage-complete-v1", "2026-01-01T00:00:00.000Z");
+  }, frameSlug);
   await installSeenIntroFixture(page);
 }
 
 async function createPrivatePair({ browser, host, guestViewport, format = "" }) {
-  await installCompletedPlayer(host);
+  await installCompletedPlayer(host, "ember-sovereign");
   const guestContext = await browser.newContext({
     viewport: guestViewport,
     serviceWorkers: "block"
   });
   const guest = await guestContext.newPage();
-  await installCompletedPlayer(guest);
+  await installCompletedPlayer(guest, "berry-burrow");
 
-  await host.goto("/play/");
+  await host.goto("/play/?birthday=off");
   await expect(host.locator("body")).toHaveAttribute("data-home-stage", "core");
+  await host.locator("#homeOrbitTabArena").click();
+  await expect(host.locator("#homePlaySplit")).toHaveAttribute("data-home-orbit-active", "arena");
   const entry = host.locator("#scrambleHomeButton");
   await expect(entry).toBeVisible();
   await expect(entry).toBeEnabled();
@@ -47,14 +52,24 @@ async function createPrivatePair({ browser, host, guestViewport, format = "" }) 
   await expect(guest.locator("#scrambleDialog")).toHaveJSProperty("open", true);
   await expect(host.locator("#scrambleReady")).toBeVisible();
   await expect(guest.locator("#scrambleReady")).toBeVisible();
+  await expect(host.locator("#scrambleLobbySelfCard [data-arena-duel-card]"))
+    .toHaveAttribute("data-frame", "ember-sovereign");
+  await expect(host.locator("#scrambleLobbyRivalCard [data-arena-duel-card]"))
+    .toHaveAttribute("data-frame", "berry-burrow");
+  await expect(guest.locator("#scrambleLobbySelfCard [data-arena-duel-card]"))
+    .toHaveAttribute("data-frame", "berry-burrow");
+  await expect(guest.locator("#scrambleLobbyRivalCard [data-arena-duel-card]"))
+    .toHaveAttribute("data-frame", "ember-sovereign");
 
   return { guest, guestContext };
 }
 
 async function openLobby(page) {
   await installCompletedPlayer(page);
-  await page.goto("/play/");
+  await page.goto("/play/?birthday=off");
   await expect(page.locator("body")).toHaveAttribute("data-home-stage", "core");
+  await page.locator("#homeOrbitTabArena").click();
+  await expect(page.locator("#homePlaySplit")).toHaveAttribute("data-home-orbit-active", "arena");
   const entry = page.locator("#scrambleHomeButton");
   await expect(entry).toBeVisible();
   await expect(entry).toBeEnabled();
@@ -62,16 +77,28 @@ async function openLobby(page) {
   await expect(page.locator("#scrambleDialog")).toHaveJSProperty("open", true);
 }
 
-async function readyBoth(host, guest) {
+async function readyBoth(host, guest, {
+  hostFrame = "ember-sovereign",
+  guestFrame = "berry-burrow"
+} = {}) {
   await host.locator("#scrambleReady").click();
   await guest.locator("#scrambleReady").click();
 
   await expect(guest.locator("#scrambleCountdown")).toBeVisible({ timeout: 5_000 });
   await expect(guest.locator("#scrambleCountdownValue")).toHaveText(/^[123]$/);
+  await expect(host.locator("#scrambleCountdownSelfCard [data-arena-duel-card]"))
+    .toHaveAttribute("data-frame", hostFrame);
+  await expect(guest.locator("#scrambleCountdownSelfCard [data-arena-duel-card]"))
+    .toHaveAttribute("data-frame", guestFrame);
   await expect(host.locator("#scrambleScorebar")).toBeVisible();
   await expect(guest.locator("#scrambleScorebar")).toBeVisible();
   await expect(guest.locator("#scrambleCountdown")).toBeHidden({ timeout: 10_000 });
   await expect(guest.locator("#scrambleConnection")).toHaveText("LIVE");
+  await expect(host.locator("#scrambleScorebar"))
+    .toHaveAttribute("data-self-arena-frame", hostFrame);
+  await expect(host.locator("#scrambleScorebar"))
+    .toHaveAttribute("data-rival-arena-frame", guestFrame);
+  await expect(host.locator("#scrambleScorebar [data-arena-duel-card]")).toHaveCount(0);
 }
 
 async function expectNoHorizontalOverflow(page) {
@@ -81,6 +108,72 @@ async function expectNoHorizontalOverflow(page) {
   }));
   expect(layout.content).toBeLessThanOrEqual(layout.viewport + 1);
 }
+
+test("short-landscape Arena setup keeps one contextual match choice in its initial view", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "chromium-desktop", "Compact setup geometry is covered once in Chromium.");
+  await page.setViewportSize({ width: 568, height: 320 });
+  await page.goto("/healthz");
+  await page.setContent(`
+    <main id="gameScreen">
+      <div class="game-layout">
+        <section id="board"></section>
+        <aside class="inventory"></aside>
+      </div>
+    </main>
+  `);
+  await page.addStyleTag({ url: "/play/scramble.css?v=compact-lobby-e2e" });
+  await page.evaluate(async () => {
+    const { createScrambleRuntime } = await import("/play/scramble-runtime.mjs?v=compact-lobby-e2e");
+    window.__compactArenaRuntime = createScrambleRuntime({
+      documentRef: document,
+      windowRef: window,
+      request: async () => ({}),
+      available: true
+    });
+    await window.__compactArenaRuntime.open({ ranked: true });
+  });
+  await expect(page.locator("#scrambleDialog")).toHaveJSProperty("open", true);
+
+  const dialog = page.locator("#scrambleDialog");
+  const privateTab = page.locator("#scrambleQueuePrivate");
+  const rankedTab = page.locator("#scrambleQueueRanked");
+  await expect(privateTab).toHaveAttribute("aria-selected", "true");
+  await expect(page.locator("#scramblePrivateCard")).toBeVisible();
+  await expect(page.locator("#scrambleRankedCard")).toBeHidden();
+
+  const initial = await dialog.evaluate((element) => {
+    const bounds = element.getBoundingClientRect();
+    const visibleControls = [...element.querySelectorAll("button:not([hidden])")]
+      .filter((control) => {
+        const style = getComputedStyle(control);
+        const rect = control.getBoundingClientRect();
+        return style.display !== "none" && style.visibility !== "hidden" && rect.width > 0 && rect.height > 0;
+      })
+      .map((control) => {
+        const rect = control.getBoundingClientRect();
+        return {
+          width: rect.width,
+          height: rect.height,
+          contained: rect.left >= bounds.left - 1 && rect.right <= bounds.right + 1
+            && rect.top >= bounds.top - 1 && rect.bottom <= bounds.bottom + 1
+        };
+      });
+    return {
+      horizontalOverflow: element.scrollWidth > element.clientWidth + 1,
+      verticalOverflow: element.scrollHeight > element.clientHeight + 1,
+      visibleControls
+    };
+  });
+  expect(initial.horizontalOverflow).toBe(false);
+  expect(initial.verticalOverflow).toBe(false);
+  expect(initial.visibleControls.every(({ width, height, contained }) => width >= 44 && height >= 44 && contained)).toBe(true);
+
+  await rankedTab.click();
+  await expect(rankedTab).toHaveAttribute("aria-selected", "true");
+  await expect(page.locator("#scramblePrivateCard")).toBeHidden();
+  await expect(page.locator("#scrambleRankedCard")).toBeVisible();
+  await expectNoHorizontalOverflow(page);
+});
 
 test("desktop private Scramble reaches a live two-board race", async ({ browser, page }, testInfo) => {
   test.skip(testInfo.project.name !== "chromium-desktop", "Desktop geometry is covered by the desktop project.");
@@ -112,6 +205,88 @@ test("desktop private Scramble reaches a live two-board race", async ({ browser,
     expect(geometry.rival.height).toBeGreaterThan(0);
     expect(geometry.own.right).toBeLessThanOrEqual(geometry.rival.left + 2);
     await expectNoHorizontalOverflow(page);
+  } finally {
+    await guestContext.close();
+  }
+});
+
+test("Arena frames stay intact from the versus reveal through the winner card", async ({ browser, page }, testInfo) => {
+  test.skip(testInfo.project.name !== "chromium-desktop", "The complete Duel Card ceremony is covered once on desktop.");
+  await page.setViewportSize({ width: 1440, height: 900 });
+  const { guest, guestContext } = await createPrivatePair({
+    browser,
+    host: page,
+    guestViewport: { width: 1200, height: 820 }
+  });
+
+  try {
+    const geometry = await page.locator("#scrambleLobbySelfCard [data-arena-duel-card]").evaluate((card) => {
+      const artboard = card.querySelector("[data-arena-duel-card-artboard]").getBoundingClientRect();
+      const art = card.querySelector("[data-arena-duel-card-art]").getBoundingClientRect();
+      const meta = card.querySelector(".arena-duel-card__meta").getBoundingClientRect();
+      return {
+        artboardRatio: artboard.width / artboard.height,
+        artMatchesArtboard: Math.abs(art.width - artboard.width) <= 1
+          && Math.abs(art.height - artboard.height) <= 1,
+        metadataClearsArtwork: meta.top >= artboard.bottom - 1
+      };
+    });
+    expect(geometry.artboardRatio).toBeCloseTo(0.75, 2);
+    expect(geometry.artMatchesArtboard).toBe(true);
+    expect(geometry.metadataClearsArtwork).toBe(true);
+
+    await readyBoth(page, guest);
+    await page.keyboard.press("Escape");
+    await expect(page.locator("#scrambleForfeitDialog")).toHaveJSProperty("open", true);
+    await page.locator("#scrambleConfirmForfeit").click();
+    await expect(page.locator("#scrambleResultDialog")).toHaveJSProperty("open", true);
+    await expect(page.locator("#scrambleResultFeaturedCard [data-arena-duel-card]"))
+      .toHaveAttribute("data-frame", "berry-burrow");
+    await expect(page.locator("#scrambleResultFeaturedCard [data-arena-duel-card]"))
+      .toHaveAttribute("data-side", "rival");
+    await expect(page.locator("#scrambleResultFeaturedCard [data-arena-duel-card-status]"))
+      .toHaveText("Winner");
+  } finally {
+    await guestContext.close();
+  }
+});
+
+test("short landscape keeps the versus and winner cards in the initial dialog view", async ({ browser, page }, testInfo) => {
+  test.skip(testInfo.project.name !== "chromium-desktop", "The rotated-phone geometry is covered once in Chromium.");
+  await page.setViewportSize({ width: 844, height: 390 });
+  const { guest, guestContext } = await createPrivatePair({
+    browser,
+    host: page,
+    guestViewport: { width: 844, height: 390 }
+  });
+
+  const expectCardInInitialView = async (dialogSelector, cardSelector) => {
+    const geometry = await page.locator(dialogSelector).evaluate((dialog, selector) => {
+      const card = document.querySelector(selector);
+      const dialogRect = dialog.getBoundingClientRect();
+      const cardRect = card?.getBoundingClientRect();
+      return {
+        intersects: Boolean(cardRect)
+          && cardRect.top < dialogRect.bottom
+          && cardRect.bottom > dialogRect.top,
+        cardTop: cardRect?.top ?? 0,
+        dialogBottom: dialogRect.bottom,
+        horizontalOverflow: document.documentElement.scrollWidth > document.documentElement.clientWidth + 1
+      };
+    }, cardSelector);
+    expect(geometry.intersects).toBe(true);
+    expect(geometry.cardTop).toBeLessThan(geometry.dialogBottom);
+    expect(geometry.horizontalOverflow).toBe(false);
+  };
+
+  try {
+    await expectCardInInitialView("#scrambleDialog", "#scrambleLobbySelfCard [data-arena-duel-card]");
+    await readyBoth(page, guest);
+    await page.keyboard.press("Escape");
+    await expect(page.locator("#scrambleForfeitDialog")).toHaveJSProperty("open", true);
+    await page.locator("#scrambleConfirmForfeit").click();
+    await expect(page.locator("#scrambleResultDialog")).toHaveJSProperty("open", true);
+    await expectCardInInitialView("#scrambleResultDialog", "#scrambleResultFeaturedCard [data-arena-duel-card]");
   } finally {
     await guestContext.close();
   }
@@ -294,7 +469,7 @@ test("public matchmaking pairs two eligible players into the same ranked countdo
     await expect(guest.locator("#scrambleReady")).toBeVisible({ timeout: 10_000 });
     await expect(page.locator("#scrambleWaitingKicker")).toHaveText("PUBLIC RANKED");
     await expect(guest.locator("#scrambleWaitingKicker")).toHaveText("PUBLIC RANKED");
-    await readyBoth(page, guest);
+    await readyBoth(page, guest, { guestFrame: "ember-sovereign" });
     await expect(page.locator("#scrambleScorebar")).toBeVisible();
   } finally {
     await guestContext.close();

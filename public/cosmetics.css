@@ -7,6 +7,7 @@
 
 body.simple-ui {
   /* Celestial Atlas is the neutral/default recipe. */
+  --arena-portal-art: var(--cosmic-gate-art);
   --cosmetic-word-edge: #d4b96f;
   --cosmetic-word-edge-soft: rgba(212, 185, 111, .25);
   --cosmetic-word-ink: #fff9e9;
@@ -1702,10 +1703,15 @@ body[data-cosmetic-effects="reduced"] {
 
 body[data-cosmetic-effects="reduced"] #startScreen::before,
 body[data-cosmetic-effects="reduced"] #startScreen::after,
+body[data-cosmetic-effects="reduced"] .arena-portal::before,
+body[data-cosmetic-effects="reduced"] .arena-portal__visual::before,
 body[data-cosmetic-effects="reduced"] :is(
   .home-vfx__halo,
   .cosmic-gate__particles,
-  .cosmic-gate__seal
+  .cosmic-gate__seal,
+  .arena-portal__ring,
+  .arena-portal__rift,
+  .arena-portal__topline i
 ) {
   animation-duration: 40s;
   animation-iteration-count: 1;
@@ -1732,6 +1738,8 @@ body[data-cosmetic-effects="off"] #startScreen::before,
 body[data-cosmetic-effects="off"] #startScreen::after,
 body[data-cosmetic-effects="off"] .cosmic-gate__door::before,
 body[data-cosmetic-effects="off"] .cosmic-gate__door::after,
+body[data-cosmetic-effects="off"] .arena-portal::before,
+body[data-cosmetic-effects="off"] .arena-portal__visual::before,
 body[data-cosmetic-effects="off"] :is(
   .home-vfx *,
   .cosmic-gate__door,
@@ -1739,7 +1747,10 @@ body[data-cosmetic-effects="off"] :is(
   .cosmic-gate__seam,
   .cosmic-gate__seal,
   .cosmic-gate__nova,
-  .cosmic-gate__confetti
+  .cosmic-gate__confetti,
+  .arena-portal__ring,
+  .arena-portal__rift,
+  .arena-portal__topline i
 ) {
   animation: none !important;
   transition-duration: .01ms !important;
@@ -1755,7 +1766,7 @@ body.simple-ui.cosmetic-collection--eclipse-sovereign[data-cosmetic-effects="off
   filter: none;
 }
 
-body.simple-ui.cosmetic-collection--eclipse-sovereign[data-cosmetic-effects="off"] #startScreen .hero-forge::after {
+body.simple-ui.cosmetic-collection--eclipse-sovereign[data-cosmetic-effects="off"] #startScreen .recipe-example::before {
   box-shadow: none;
   filter: none;
 }
@@ -1796,10 +1807,15 @@ body[data-reduced-data="true"] {
 
   body #startScreen::before,
   body #startScreen::after,
+  body .arena-portal::before,
+  body .arena-portal__visual::before,
   body :is(
     .home-vfx *,
     .cosmic-gate__particles,
     .cosmic-gate__seal,
+    .arena-portal__ring,
+    .arena-portal__rift,
+    .arena-portal__topline i,
     .board-word,
     .inventory-word
   ) {

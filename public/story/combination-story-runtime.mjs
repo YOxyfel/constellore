@@ -1,5 +1,5 @@
-import { buildCombinationStory } from "./combination-story.mjs?v=5.0.0-beta.1";
-import { createCombinationStoryView } from "./combination-story-view.mjs?v=5.0.0-beta.1";
+import { buildCombinationStory } from "./combination-story.mjs?v=5.0.0-beta.4";
+import { createCombinationStoryView } from "./combination-story-view.mjs?v=5.0.0-beta.4";
 
 const STYLE_MARKER = "data-combination-story-style";
 
@@ -7,7 +7,7 @@ function loadStyles(documentRef) {
   if (documentRef.querySelector?.(`[${STYLE_MARKER}]`)) return Promise.resolve();
   const link = documentRef.createElement("link");
   const moduleUrl = new URL(import.meta.url);
-  const styleUrl = new URL("./combination-story.css?v=5.0.0-beta.1", moduleUrl);
+  const styleUrl = new URL("./combination-story.css?v=5.0.0-beta.4", moduleUrl);
   styleUrl.search = moduleUrl.search;
   link.rel = "stylesheet";
   link.href = styleUrl.href;

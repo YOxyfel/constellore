@@ -38,6 +38,11 @@ test("hosted resume sends credentials only and rebuilds presentation from author
   const hydrate = between("function hydrateRestoredRun", "async function restoreInterruptedRun");
   assert.ok(hydrate.includes("state.history = decorateRestoredHistory(progress.history"), "authoritative history must still drive restored presentation");
   assert.ok(hydrate.includes("state.newDiscoveries = state.history.reduce"));
+  assert.match(hydrate, /snapshotMatchesHistory[\s\S]*restoredWorldHistoryAnchors\(matchingSnapshot[.]history\[index\]\)/);
+  const worldAnchors = between("function restoredWorldHistoryAnchors", "function reconcileRestoredMastery");
+  assert.match(worldAnchors, /anchorCoordinateSpace !== "world-v1"/);
+  assert.match(worldAnchors, /Number[.]isFinite\(x\)[\s\S]*Number[.]isFinite\(y\)/);
+  assert.match(worldAnchors, /clamp\(x, -1_000_000, 1_000_000\)[\s\S]*clamp\(y, -1_000_000, 1_000_000\)/);
 });
 
 test("client-only resume accepts only canonical lesson and sandbox reconstructions", () => {
@@ -100,7 +105,7 @@ test("client-only and unranked snapshots can never enter pending-score recovery"
 });
 
 test("completed-run progression receipts prevent reward replay across resume and cloud sync", () => {
-  assert.match(defaultProfile, /version:\s*8,[\s\S]*?rewardedRunIds:\s*\[\]/);
+  assert.match(defaultProfile, /version:\s*10,[\s\S]*?rewardedRunIds:\s*\[\]/);
   const sanitizer = between("function sanitizeRewardedRunIds", "function sanitizeEventProgress");
   assert.ok(sanitizer.includes("ids.length >= 256"));
   assert.ok(sanitizer.includes("seen.has(id)"));
@@ -127,9 +132,16 @@ test("event claims survive response loss and account recovery preserves server e
   assert.ok(merge.includes("sanitizeEventProgressForEvent(localEvent, state.cosmicEvent)"), "lagging cloud event data cannot replace endpoint truth");
 
   const recovery = between("async function recoverAccount", "async function loadConfig");
-  const cloudRestore = recovery.indexOf("await syncCloudProfile({ replaceRemote: true })");
+  assert.match(recovery, /const sameAccount = Boolean\(profile[.]playerId && profile[.]playerId === result[.]player[.]id\)/,
+    "preservation must follow the authenticated recovered identity, not the submitted ID alone");
+  assert.match(recovery, /if \(sameAccount\) profile[.]playerToken = result[.]playerToken;\s*else resetProfileForAccount\(\{ playerId: result[.]player[.]id, playerToken: result[.]playerToken \}\);/,
+    "recovering the current identity must rotate its token while only a different identity resets local progress");
+  assert.equal((recovery.match(/resetProfileForAccount\(/g) || []).length, 1,
+    "same-account recovery must not reach an additional unconditional profile reset");
+  const cloudRestore = recovery.indexOf("await syncCloudProfile({ replaceRemote: !sameAccount })");
   const eventRefresh = recovery.indexOf("await refreshCosmicEventState()", cloudRestore);
-  assert.ok(cloudRestore >= 0 && eventRefresh > cloudRestore, "recovery must restore cloud first, then reapply server event truth");
+  assert.ok(cloudRestore >= 0 && eventRefresh > cloudRestore,
+    "recovery must merge cloud for the current identity or replace it for a different identity, then reapply server event truth");
   assert.ok(recovery.includes("if (config.cloudProfileEnabled === true && state.cloudDirty)"));
 });
 

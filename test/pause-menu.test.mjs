@@ -108,6 +108,12 @@ test("pause actions resume, confirm a restart, or quit the active game immediate
   assert.match(restartAction, /retryGame\(\)/);
   assert.match(exitBinding, /pauseExit"\)[.]addEventListener\("click", quitActiveGame\)/);
   assert.match(quitAction, /const priorRun = state[.]run[\s\S]*const priorGame = state[.]game/);
+  assert.match(quitAction, /const priorJourneyContext = state[.]journeyContext/);
+  assert.match(
+    quitAction,
+    /priorJourneyContext[?][.]kind === "moon-project"[\s\S]*moonWorldweaving\(\)[.]returnToHeartProject\(priorJourneyContext, \{ skipForfeit: true \}\)/,
+    "quitting a Great Project orbit must return to The Heart instead of abandoning the player on Home"
+  );
   const forfeitAt = quitAction.indexOf("void queueRunForfeit(priorRun, priorGame");
   const homeAt = quitAction.indexOf("returnHome({ skipForfeit: true })");
   assert.ok(forfeitAt >= 0 && homeAt > forfeitAt, "forfeit bookkeeping must start before Home clears local run state");

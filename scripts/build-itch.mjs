@@ -9,6 +9,7 @@ import { AUDIO_PACKS } from "./audio-assets.mjs";
 import { validatePublicDuelApiUrl } from "./public-duel-config.mjs";
 import { createDeterministicZip, sha256 } from "./release-archive.mjs";
 import { writeReleaseMetadata } from "./release-metadata.mjs";
+import { assertPlanetHubReleaseInventory } from "./planet-hub-packaging.mjs";
 
 const execute = promisify(execFile);
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
@@ -60,6 +61,7 @@ await writeReleaseMetadata(join(siteOutput, "release.json"), { channel: "itch-ht
 
 const runtimeFiles = await listFiles(siteOutput);
 const runtimePaths = new Set(runtimeFiles.map(archivePath));
+assertPlanetHubReleaseInventory([...runtimePaths], "itch staging directory");
 for (const pack of COSMETIC_PACKS) {
   for (const asset of pack.assets) {
     assert.ok(runtimePaths.has(asset.path), `The itch package is missing on-demand cosmetic asset ${asset.path}.`);

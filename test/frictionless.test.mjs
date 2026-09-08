@@ -1,9 +1,29 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { findOpenSpawn, orderInventory, packOrbit, pickMagneticTarget } from "../public/frictionless.mjs";
+import {
+  findOpenSpawn,
+  fusionResultPlacement,
+  normalizedCombinationMemoryAnchor,
+  orderInventory,
+  packOrbit,
+  pickMagneticTarget
+} from "../public/frictionless.mjs";
 
 const rect = (id, left, top, width = 40, height = 30) => ({ id, rect: { left, top, width, height } });
+
+test("fusion midpoint and memory anchors remain geometry-only", () => {
+  const size = { width: 120, height: 48 };
+  assert.deepEqual(fusionResultPlacement({ x: 100, y: 80 }, { x: 300, y: 180 }, size), {
+    x: 140,
+    y: 106,
+    size
+  });
+  assert.deepEqual(normalizedCombinationMemoryAnchor({ x: 500, y: -20 }, { width: 400, height: 200 }), {
+    x: 1,
+    y: 0
+  });
+});
 
 test("magnetic targeting gives a sole direct hit priority over nearby chips", () => {
   const direct = rect("direct", 10, 10);

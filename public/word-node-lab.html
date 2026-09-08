@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Word Node Lab</title>
+    <link rel="stylesheet" href="/word-node-lab.css?v=5.0.0-beta.12" />
+  </head>
+  <body>
+    <main class="lab-shell">
+      <header class="lab-header">
+        <div>
+          <p class="lab-eyebrow">ISOLATED VISUAL PROTOTYPE</p>
+          <h1>Word Node Lab</h1>
+          <p class="lab-intro">Click a word, then tune the name and the living chemical structure behind it.</p>
+        </div>
+        <a class="lab-back" href="/play/">Back to game</a>
+      </header>
+
+      <section class="lab-workbench" aria-label="Word node workbench">
+        <aside class="lab-controls" aria-label="Node controls">
+          <div class="lab-controls__heading">
+            <span>NODE CONTROLS</span>
+            <strong id="controlTitle">Earth</strong>
+          </div>
+
+          <label class="lab-control lab-control--wide">
+            <span>Word</span>
+            <input id="nodeWord" type="text" value="Earth" maxlength="18" autocomplete="off" spellcheck="false" />
+          </label>
+
+          <label class="lab-control lab-control--wide">
+            <span>Base components</span>
+            <input id="nodeComponents" type="text" value="Earth" maxlength="90" autocomplete="off" spellcheck="false" aria-describedby="componentsHint" />
+            <small id="componentsHint">Comma-separated words. Each added component creates another combination layer.</small>
+          </label>
+
+          <label class="lab-control lab-control--color lab-control--wide">
+            <span>Accent</span>
+            <input id="accentColor" type="color" value="#70e7df" />
+          </label>
+
+          <label class="lab-control lab-control--wide">
+            <span>Node size <output id="nodeScaleOutput" for="nodeScale">100%</output></span>
+            <input id="nodeScale" type="range" min="78" max="145" value="100" />
+          </label>
+
+          <label class="lab-control lab-control--wide">
+            <span>Structure visibility <output id="structureOpacityOutput" for="structureOpacity">26%</output></span>
+            <input id="structureOpacity" type="range" min="8" max="58" value="26" />
+          </label>
+
+          <label class="lab-control lab-control--wide">
+            <span>Rotation <output id="motionSpeedOutput" for="motionSpeed">18s</output></span>
+            <input id="motionSpeed" type="range" min="6" max="48" value="18" />
+          </label>
+
+          <label class="lab-switch lab-control--wide">
+            <input id="nodeMotion" type="checkbox" checked />
+            <span aria-hidden="true"></span>
+            Animate structure
+          </label>
+
+          <div class="lab-actions lab-control--wide">
+            <button id="saveVariant" class="lab-action lab-action--primary" type="button">Save variant</button>
+            <button id="resetNode" class="lab-action" type="button">Reset</button>
+          </div>
+
+          <section class="lab-break-goal lab-control--wide" aria-labelledby="breakGoalTitle">
+            <div class="lab-break-goal__heading">
+              <span>DETERMINISTIC BREAK GOAL</span>
+              <strong id="breakGoalTitle">No break goal</strong>
+            </div>
+            <label for="breakGoalSelect">Target outcome</label>
+            <select id="breakGoalSelect" disabled>
+              <option>Base elements cannot be decomposed</option>
+            </select>
+            <p id="breakGoalRule">Recipe bonds decide words. Support bonds only change stability.</p>
+            <div class="lab-break-goal__footer">
+              <button id="breakGoalStart" type="button" disabled>Start goal</button>
+              <output id="breakGoalStatus" data-state="idle">Ready</output>
+            </div>
+          </section>
+        </aside>
+
+        <section class="lab-stage" aria-label="Live node preview">
+          <div class="lab-stage__grid" aria-hidden="true"></div>
+          <div class="lab-stage__orbit lab-stage__orbit--outer" aria-hidden="true"></div>
+          <div class="lab-stage__orbit lab-stage__orbit--inner" aria-hidden="true"></div>
+
+          <div class="lab-preview-wrap">
+            <p class="lab-stage__label">LIVE PREVIEW</p>
+            <button class="lab-word-node lab-word-node--hero" id="activeNode" type="button" aria-label="Earth word node preview" aria-describedby="hoverInstruction" aria-expanded="false">
+              <span class="lab-word-node__structure" aria-hidden="true"></span>
+              <span class="lab-word-node__label">Earth</span>
+            </button>
+            <div class="lab-word-split" id="wordSplit" hidden aria-live="polite">
+              <span class="lab-word-split__formula" id="wordSplitFormula">Earth remains intact</span>
+              <div class="lab-word-split__tokens" id="wordSplitTokens"></div>
+            </div>
+            <div class="lab-stage__copy">
+              <p class="lab-stage__hint" id="lineageFormula">Base element · Earth</p>
+              <p class="lab-stage__hold-hint" id="hoverInstruction">Hover 3 seconds or Shift-click the word · click atoms or bonds; Shift-click atoms to focus · changes remain drafts until Apply.</p>
+            </div>
+          </div>
+
+          <dl class="lab-readout" aria-live="polite">
+            <div><dt>COMPONENTS</dt><dd id="readoutComponents">1</dd></div>
+            <div><dt>COMBINATIONS</dt><dd id="readoutCombinations">0</dd></div>
+            <div><dt>BONDS</dt><dd id="readoutBonds">0</dd></div>
+            <div><dt>FRAGMENTS</dt><dd id="readoutFragments">1</dd></div>
+            <div><dt>WORDS</dt><dd id="readoutWords">1</dd></div>
+            <div><dt>COHESION</dt><dd id="readoutCohesion">100%</dd></div>
+            <div><dt>REACTIVITY</dt><dd id="readoutReactivity">0%</dd></div>
+            <div><dt>STATE</dt><dd id="readoutState">Stable</dd></div>
+          </dl>
+        </section>
+      </section>
+
+      <section class="lab-library" aria-labelledby="libraryTitle">
+        <div class="lab-section-heading">
+          <div>
+            <p class="lab-eyebrow">CLICK TO LOAD</p>
+            <h2 id="libraryTitle">Word samples</h2>
+          </div>
+          <p>Complexity comes from the real recipe ancestry, not a decorative preset.</p>
+        </div>
+        <div class="lab-node-rack" id="sampleRack">
+          <button class="lab-word-node" type="button" data-word="Earth" data-components="Earth" data-accent="#70e7df" aria-pressed="true">
+            <span class="lab-word-node__structure" aria-hidden="true"></span><span class="lab-word-node__label">Earth</span>
+          </button>
+          <button class="lab-word-node" type="button" data-word="Water" data-components="Water" data-accent="#70b7ed" aria-pressed="false">
+            <span class="lab-word-node__structure" aria-hidden="true"></span><span class="lab-word-node__label">Water</span>
+          </button>
+          <button class="lab-word-node" type="button" data-word="Mud" data-components="Earth|Water" data-accent="#e4b46b" aria-pressed="false">
+            <span class="lab-word-node__structure" aria-hidden="true"></span><span class="lab-word-node__label">Mud</span>
+          </button>
+          <button class="lab-word-node" type="button" data-word="Energy" data-components="Air|Fire" data-accent="#bd9cff" aria-pressed="false">
+            <span class="lab-word-node__structure" aria-hidden="true"></span><span class="lab-word-node__label">Energy</span>
+          </button>
+          <button class="lab-word-node" type="button" data-word="Life" data-components="Earth|Water|Air|Fire" data-intermediates="Mud|Energy" data-accent="#72efa8" aria-pressed="false">
+            <span class="lab-word-node__structure" aria-hidden="true"></span><span class="lab-word-node__label">Life</span>
+          </button>
+        </div>
+      </section>
+
+      <section class="lab-library" aria-labelledby="variantsTitle">
+        <div class="lab-section-heading">
+          <div>
+            <p class="lab-eyebrow">YOUR ITERATIONS</p>
+            <h2 id="variantsTitle">Saved variants</h2>
+          </div>
+          <p id="variantEmpty">Use “Save variant” to compare directions side by side.</p>
+        </div>
+        <div class="lab-node-rack lab-node-rack--saved" id="variantRack"></div>
+      </section>
+    </main>
+
+    <aside class="lab-hover-bubble" id="hoverPreview" hidden aria-hidden="true">
+      <button class="lab-hover-bubble__cancel" id="hoverCancel" type="button" aria-label="Cancel structure changes">×</button>
+      <span class="lab-hover-bubble__glare" aria-hidden="true"></span>
+      <span class="lab-hover-bubble__shadow" aria-hidden="true"></span>
+      <span class="lab-molecule-3d" id="hoverStructure3d" role="group" aria-label="Interactive molecule"></span>
+      <span class="lab-molecule-3d__labels" id="hoverStructureLabels" aria-hidden="true"></span>
+      <button class="lab-hover-bubble__apply" id="hoverApply" type="button" disabled>Apply</button>
+    </aside>
+
+    <section class="lab-bond-editor" id="bondEditor" hidden aria-live="polite" aria-label="Structure editor">
+      <header class="lab-bond-editor__header">
+        <div>
+          <span class="lab-bond-editor__eyebrow" id="bondEditorEyebrow">STRUCTURE</span>
+          <strong id="bondEditorTitle">Select an atom or bond</strong>
+        </div>
+        <span class="lab-bond-editor__quality" id="bondQuality" data-quality="strained" hidden>Strained</span>
+      </header>
+      <div class="lab-bond-editor__integrity" id="bondIntegrityWrap" hidden>
+        <span>Integrity</span>
+        <span class="lab-bond-editor__meter" role="meter" aria-label="Bond integrity" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+          <span id="bondIntegrityBar"></span>
+        </span>
+        <output id="bondIntegrity">0%</output>
+      </div>
+      <p class="lab-bond-editor__status" id="bondEditorStatus">Select a connection to inspect its quality.</p>
+      <div class="lab-bond-editor__actions">
+        <button type="button" id="bondWeaken" hidden>Weaken</button>
+        <button type="button" id="bondStrengthen" hidden>Strengthen</button>
+        <button type="button" id="bondBreak" class="is-destructive" hidden>Break</button>
+        <button type="button" id="bondConnect" hidden>Connect atom</button>
+        <button type="button" id="bondUndo" disabled>Undo</button>
+      </div>
+    </section>
+
+    <script type="module" src="/word-node-lab.mjs?v=5.0.0-beta.12"></script>
+  </body>
+</html>

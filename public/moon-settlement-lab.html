@@ -1,0 +1,304 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#070914" />
+    <title>Moon Settlement Lab · Constellore</title>
+    <link rel="stylesheet" href="/moon-settlement-lab.css" />
+  </head>
+  <body data-mode="walk" data-render-mode="standard" data-motion="full">
+    <a class="skip-link" href="#settlementCanvasHost">Skip to the Moon</a>
+
+    <main id="settlementApp" class="settlement-shell" data-ui="visor" data-mode="walk" data-render-mode="standard" aria-label="Moon Settlement Lab">
+      <header class="settlement-hud" hidden>
+        <div class="settlement-identity">
+          <a class="settlement-back" href="/play/" aria-label="Return to Constellore">CONSTELLORE</a>
+          <span aria-hidden="true">/</span>
+          <div>
+            <span class="hud-kicker">MOON · LIVING GROUND</span>
+            <strong id="expeditionPhase">Controlled landing</strong>
+          </div>
+        </div>
+
+        <dl class="resource-ledger" aria-label="Settlement resources">
+          <div class="resource-ledger__primary">
+            <dt>Matter</dt>
+            <dd id="resourceMatter">0</dd>
+          </div>
+          <div>
+            <dt>Storage</dt>
+            <dd><span id="resourceStorage">0</span><span aria-hidden="true"> / </span><span id="resourceStorageCapacity">12</span></dd>
+          </div>
+          <div class="resource-ledger__goods" aria-label="Stored goods">
+            <dt>Goods</dt>
+            <dd>
+              <span data-good="regolith">Regolith <b>0</b></span>
+              <span data-good="ice">Ice <b>0</b></span>
+              <span data-good="water">Water <b>0</b></span>
+              <span data-good="soil">Soil <b>0</b></span>
+              <span data-good="biomass">Biomass <b>0</b></span>
+              <span data-good="food">Food <b>0</b></span>
+              <span data-good="parts">Parts <b>0</b></span>
+              <span data-good="fuel">Fuel <b>0</b></span>
+            </dd>
+          </div>
+        </dl>
+
+        <div class="hud-actions">
+          <button id="cameraReset" class="quiet-button" type="button" data-action="camera-reset">Reset view</button>
+          <button id="settingsOpen" class="quiet-button" type="button" data-action="settings-open" aria-haspopup="dialog">Settings</button>
+        </div>
+      </header>
+
+      <section class="moon-stage" id="moonSettlementStage" aria-label="Living Ground settlement">
+        <picture id="settlementFallback" class="settlement-fallback" hidden aria-hidden="true">
+          <source media="(max-width: 700px)" srcset="/art/planet-hub/posters/moon-journey.webp" />
+          <img src="/art/planet-hub/posters/moon-forge.webp" alt="" />
+        </picture>
+        <div id="settlementCanvasHost" class="settlement-canvas" tabindex="0" role="application" aria-label="Moon settlement. Use W A S D to move, Space to hop, and E to interact." aria-describedby="controlGuide parcelPlacementInstructions"></div>
+        <div id="settlementHotspots" class="settlement-hotspots" role="group" aria-label="Nearby settlement objects"></div>
+
+        <div class="world-state-badge" id="worldStateBadge" role="status" hidden>
+          <span class="world-state-badge__signal" aria-hidden="true"></span>
+          <span id="worldStateText">Landing systems active</span>
+        </div>
+
+        <section class="objective-card" aria-labelledby="objectiveTitle" hidden>
+          <div class="objective-card__heading">
+            <span class="hud-kicker">CURRENT NEED</span>
+            <span id="objectiveProgress">1 / 6</span>
+          </div>
+          <h1 id="objectiveTitle">Make this ground livable</h1>
+          <p id="objectiveCopy">Reach the Lander and inspect the damaged biological starter vault.</p>
+          <div id="objectiveActions" class="settlement-objective__actions" aria-label="Available project actions"></div>
+          <div class="objective-card__meter" role="progressbar" aria-label="Living Ground progress" aria-valuemin="0" aria-valuemax="6" aria-valuenow="1">
+            <span id="objectiveProgressBar"></span>
+          </div>
+        </section>
+
+        <aside class="carry-tray" aria-label="Astronaut carry slots" hidden>
+          <span class="hud-kicker">CARRY</span>
+          <ol id="carrySlots">
+            <li data-carry-slot="0"><span>Empty</span></li>
+            <li data-carry-slot="1"><span>Empty</span></li>
+            <li data-carry-slot="2"><span>Empty</span></li>
+            <li data-carry-slot="3"><span>Empty</span></li>
+          </ol>
+        </aside>
+
+        <div id="visorFrame" class="visor-frame" aria-hidden="true"></div>
+        <button id="visorMenuButton" class="visor-menu" type="button" data-action="settings-open" aria-label="Pause and open settings">C</button>
+
+        <div class="context-prompt" id="contextPrompt" data-action-state="target" hidden>
+          <p id="primaryActionStatus" role="status" aria-live="polite" aria-atomic="true">Unknown ground signature</p>
+          <button id="primaryAction" type="button" data-primary-action aria-describedby="primaryActionStatus primaryActionDetail">
+            <span id="primaryActionKey" class="primary-action__key" aria-hidden="true">E</span>
+            <span id="contextPromptText" class="primary-action__label">Scan sample</span>
+            <span id="primaryActionValue" class="primary-action__value" aria-hidden="true"></span>
+            <progress id="primaryActionProgress" max="100" value="0" aria-label="Interaction progress"></progress>
+          </button>
+          <span id="primaryActionDetail" class="sr-only">Hold E to scan the highlighted Regolith sample.</span>
+        </div>
+
+        <p class="control-guide" id="controlGuide" hidden>
+          <span><kbd>WASD</kbd> Move</span>
+          <span><kbd>Space</kbd> Hop</span>
+          <span><kbd>E</kbd> Interact</span>
+          <span>Drag to orbit</span>
+          <span>Wheel to zoom</span>
+        </p>
+
+        <p id="parcelPlacementInstructions" class="sr-only">During placement, use the arrow keys to choose a snapped parcel cell, Q and R to rotate by ninety degrees, E or Enter to place, and Escape to cancel.</p>
+
+        <section id="parcelPlacementBar" class="parcel-placement" aria-labelledby="parcelPlacementTitle" aria-describedby="parcelPlacementStatus" aria-hidden="true" hidden>
+          <div class="parcel-placement__readout">
+            <span class="hud-kicker">BUILD PARCEL</span>
+            <strong id="parcelPlacementTitle">Structure</strong>
+            <span id="parcelPlacementStatus" role="status">Cell C3 · 0° · 3 × 3 footprint · Valid</span>
+          </div>
+          <div class="parcel-placement__controls" aria-label="Placement controls">
+            <button class="quiet-button" type="button" data-placement-rotate="-1" aria-label="Rotate placement left ninety degrees"><kbd>Q</kbd> Rotate left</button>
+            <button class="quiet-button" type="button" data-placement-rotate="1" aria-label="Rotate placement right ninety degrees">Rotate right <kbd>R</kbd></button>
+            <button id="parcelPlacementCancel" class="close-button close-button--danger" type="button" aria-label="Cancel placement">×</button>
+            <button id="parcelPlacementConfirm" class="primary-button" type="button">Place at C3</button>
+          </div>
+        </section>
+
+        <nav class="mode-dock" aria-label="Settlement mode" hidden>
+          <button type="button" data-mode-action="walk" aria-pressed="true">
+            <span>Walk</span><small>Move and operate</small>
+          </button>
+          <button type="button" data-mode-action="inspect" aria-pressed="false">
+            <span>Inspect</span><small>Read one concern</small>
+          </button>
+          <button type="button" data-mode-action="weave" aria-pressed="false" disabled>
+            <span>Weave</span><small>Change meaning</small>
+          </button>
+        </nav>
+
+        <section id="foundingChoiceSheet" class="choice-sheet" role="dialog" aria-modal="true" aria-labelledby="foundingChoiceTitle" hidden>
+          <header>
+            <span class="hud-kicker">FOUNDING DECISION</span>
+            <p id="foundingChoiceStep">Power · 1 of 3</p>
+            <h2 id="foundingChoiceTitle">How will this home wake?</h2>
+            <p id="foundingChoiceCopy">Each route reaches Living Ground. Its ports and bottleneck will shape how you build.</p>
+          </header>
+
+          <div class="choice-sheet__options" data-founding-group="power">
+            <button type="button" data-founding-choice="solar" aria-pressed="false">
+              <span class="choice-sheet__index">01</span><strong>Solar Power</strong>
+              <small>Reliable in the sunlit valley · Power + Signal</small>
+            </button>
+            <button type="button" data-founding-choice="lunar" aria-pressed="false">
+              <span class="choice-sheet__index">02</span><strong>Lunar Power</strong>
+              <small>Stores the long dark · Power + Material</small>
+            </button>
+          </div>
+          <div class="choice-sheet__options" data-founding-group="shelter" hidden>
+            <button type="button" data-founding-choice="bastion"><span class="choice-sheet__index">01</span><strong>Bastion</strong><small>Shielded shell · Material port</small></button>
+            <button type="button" data-founding-choice="hive"><span class="choice-sheet__index">02</span><strong>Hive</strong><small>Expandable cells · Life port</small></button>
+            <button type="button" data-founding-choice="haven"><span class="choice-sheet__index">03</span><strong>Haven</strong><small>Restful interior · Signal port</small></button>
+          </div>
+          <div class="choice-sheet__options" data-founding-group="signal" hidden>
+            <button type="button" data-founding-choice="beacon"><span class="choice-sheet__index">01</span><strong>Beacon</strong><small>Strong local guidance · Signal + Power</small></button>
+            <button type="button" data-founding-choice="stars"><span class="choice-sheet__index">02</span><strong>Star Map</strong><small>Far-reaching context · Signal + Life</small></button>
+          </div>
+          <footer>
+            <button id="foundingChoiceBack" class="quiet-button" type="button" disabled>Back</button>
+            <p id="foundingChoiceConsequence" aria-live="polite">Choose a module to preview its exact placement and ports.</p>
+            <button id="foundingChoiceConfirm" class="primary-button" type="button" disabled>Place module</button>
+          </footer>
+        </section>
+
+        <aside id="inspectPanel" class="inspect-panel" aria-labelledby="inspectTitle" hidden>
+          <header>
+            <div><span class="hud-kicker">INSPECT</span><h2 id="inspectTitle">Biological starter vault</h2></div>
+            <button id="inspectClose" class="close-button" type="button" aria-label="Close inspection">×</button>
+          </header>
+          <section>
+            <span class="inspect-panel__label">CURRENT CONCERN</span>
+            <p id="inspectConcern">Dust has entered the seal. The starter remains recoverable.</p>
+          </section>
+          <dl>
+            <div><dt>Production</dt><dd id="inspectProduction">Paused</dd></div>
+            <div><dt>Quality</dt><dd id="inspectQuality">Rough</dd></div>
+            <div><dt>Drift</dt><dd id="inspectDrift">Dust · Weak stress</dd></div>
+          </dl>
+          <section>
+            <span class="inspect-panel__label">PORTS</span>
+            <ul id="inspectPorts" class="port-list"><li data-port="life">Life · open</li><li data-port="material">Material · open</li></ul>
+          </section>
+          <footer>
+            <button id="inspectStructureButton" class="primary-button" type="button">Scan structure</button>
+          </footer>
+        </aside>
+
+        <section id="proofRibbon" class="proof-ribbon" role="status" aria-labelledby="proofTitle" hidden>
+          <span class="proof-ribbon__mark" aria-hidden="true">I</span>
+          <div><span class="hud-kicker">PROOF EARNED</span><h2 id="proofTitle">Living Ground</h2><p id="proofCopy">Matter can host Life.</p></div>
+          <button id="proofContinue" class="primary-button" type="button">Return home</button>
+        </section>
+      </section>
+
+      <div id="settlementAnnouncer" class="sr-only" aria-live="polite" aria-atomic="true"></div>
+    </main>
+
+    <section id="weaveLayer" class="weave-layer" role="dialog" aria-modal="true" aria-labelledby="weaveTitle" tabindex="-1" hidden>
+      <header class="weave-header">
+        <div>
+          <span class="hud-kicker">WORLD PAUSED · SCIENTIFIC WEAVE</span>
+          <h2 id="weaveTitle">Regolith sample</h2>
+          <p id="weaveInstruction">Scan the structure, select a bond, then Separate the useful Earth from Dust.</p>
+        </div>
+        <div class="weave-header__status"><span id="weaveCohesion">Cohesion 6 / 6</span><span id="weaveQuality">Stable</span></div>
+        <button id="weaveCancel" class="close-button close-button--danger" type="button" aria-label="Cancel structure draft">×</button>
+      </header>
+
+      <div class="weave-workspace">
+        <nav class="weave-tools" aria-label="Weave tools">
+          <button type="button" data-weave-tool="scan" aria-pressed="true"><strong>Scan</strong><small>Read structure</small></button>
+          <button type="button" data-weave-tool="separate" aria-pressed="false"><strong>Separate</strong><small>Remove a bond</small></button>
+          <button type="button" data-weave-tool="join" aria-pressed="false"><strong>Join</strong><small>Add a bond</small></button>
+          <button type="button" data-weave-tool="connect" aria-pressed="false"><strong>Connect</strong><small>Seat a component</small></button>
+          <button type="button" data-weave-tool="test" aria-pressed="false"><strong>Test</strong><small>Preview outcome</small></button>
+        </nav>
+
+        <section class="weave-structure" aria-label="Interactive structure">
+          <div id="weaveCanvasHost" class="weave-canvas" tabindex="0" role="application" aria-label="Three-dimensional concept structure. Select atoms and bonds with the pointer or use the accessible graph."></div>
+          <div id="weaveLabels" class="weave-labels" aria-hidden="true"></div>
+          <div class="weave-camera-help" aria-hidden="true">Drag to move · wheel to rotate · Shift-click to focus · +/− to zoom</div>
+          <div id="weaveAccessibleGraph" class="sr-only" role="group" aria-label="Accessible structure controls"></div>
+        </section>
+
+        <aside class="weave-inspector" aria-labelledby="weaveSelectionTitle">
+          <span class="hud-kicker">SELECTION</span>
+          <h3 id="weaveSelectionTitle">No bond selected</h3>
+          <p id="weaveSelectionCopy">Hover or focus a candidate. Large hit regions prefer the nearest visible atom or bond.</p>
+          <dl class="weave-inspector__readout">
+            <div><dt>Tier</dt><dd id="weaveBondTier">—</dd></div>
+            <div><dt>Stress</dt><dd id="weaveStressTier">Weak</dd></div>
+            <div><dt>Cost</dt><dd id="weaveSelectionCost">0 cohesion</dd></div>
+          </dl>
+          <div class="weave-inspector__actions">
+            <button type="button" data-weave-edit="weaken" disabled>Weaken</button>
+            <button type="button" data-weave-edit="reinforce" disabled>Reinforce</button>
+            <button type="button" data-weave-edit="cycle">Cycle candidate</button>
+          </div>
+          <p class="weave-inspector__hint" id="weaveDraftSummary">No draft changes.</p>
+        </aside>
+      </div>
+
+      <section id="weaveConsequences" class="consequence-tray" aria-labelledby="consequenceTitle">
+        <div><span class="hud-kicker">EXACT TEST</span><h3 id="consequenceTitle">Test before applying</h3><p id="consequenceSummary">No resources or world state will change until the draft passes Test.</p></div>
+        <dl>
+          <div><dt>Result</dt><dd id="consequenceWords">Regolith remains intact</dd></div>
+          <div><dt>Quality</dt><dd id="consequenceQuality">Stable</dd></div>
+          <div><dt>Resources</dt><dd id="consequenceResources">No change</dd></div>
+          <div><dt>Drift risk</dt><dd id="consequenceDrift">None</dd></div>
+          <div><dt>World</dt><dd id="consequenceWorld">No change</dd></div>
+        </dl>
+        <button id="weaveApply" class="primary-button consequence-tray__apply" type="button" disabled>Apply</button>
+      </section>
+    </section>
+
+    <aside id="rollbackBar" class="rollback-bar" role="status" hidden>
+      <p><strong id="rollbackTitle">Structure applied</strong><span id="rollbackCopy">Earth and Dust separated. Exact rollback remains available.</span></p>
+      <button id="rollbackButton" type="button">Rollback</button>
+    </aside>
+
+    <section id="settingsPanel" class="settings-panel" role="dialog" aria-modal="true" aria-labelledby="settingsTitle" hidden>
+      <header><div><span class="hud-kicker">PLAY YOUR WAY</span><h2 id="settingsTitle">Settings</h2></div><button id="settingsClose" class="close-button" type="button" aria-label="Close settings">×</button></header>
+          <div class="settings-grid">
+        <label><span>Rendering</span><select id="settingQuality"><option value="standard">Standard 3D</option><option value="low">Low-quality 3D</option><option value="fallback">2.5D fallback</option></select></label>
+        <label class="toggle-row"><input id="settingReducedMotion" type="checkbox" /><span>Reduced motion</span><small>Use fast crossfades and exact focus handoff.</small></label>
+        <label class="toggle-row"><input id="settingMotorAssist" type="checkbox" /><span>Motor assist</span><small>Snap movement, targets, atoms, and bonds.</small></label>
+        <label class="toggle-row"><input id="settingNonColor" type="checkbox" /><span>Noncolor cues</span><small>Add patterns and tier names to all color states.</small></label>
+            <label class="toggle-row"><input id="settingSubtitles" type="checkbox" checked /><span>Subtitles</span><small>Show dialogue and important sound cues.</small></label>
+            <label><span>Interaction</span><select id="settingHoldMode"><option value="hold">Hold to interact</option><option value="toggle">Press to interact</option></select></label>
+          </div>
+      <footer>
+        <a class="quiet-button" href="/play/">Return to Constellore</a>
+        <button class="quiet-button" type="button" data-action="camera-reset">Reset view</button>
+        <button id="settingsRollback" class="quiet-button" type="button" hidden>Undo last change</button>
+        <button id="settingsSave" class="primary-button" type="button">Save settings</button>
+      </footer>
+    </section>
+
+    <details id="developerToolkit" class="developer-toolkit" hidden>
+      <summary>Living Ground toolkit</summary>
+      <div>
+        <button type="button" data-dev-action="next-milestone">Next milestone</button>
+        <button type="button" data-dev-action="founding-presets">Founding presets</button>
+        <button type="button" data-dev-action="add-resources">Add resources</button>
+        <button type="button" data-dev-action="trigger-drift">Trigger Drift</button>
+        <button type="button" data-dev-action="inspect-transactions">Transactions</button>
+        <button type="button" data-dev-action="export-state">Export state</button>
+        <button type="button" data-dev-action="import-state">Import state</button>
+        <button type="button" data-dev-action="safe-reset">Safe reset</button>
+      </div>
+    </details>
+
+    <script type="module" src="/moon-settlement-lab.mjs"></script>
+  </body>
+</html>

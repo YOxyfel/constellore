@@ -1,17 +1,32 @@
 import {
+  COSMETIC_COLLECTION_FAMILIES,
   COSMETIC_COLLECTIONS,
   COSMETIC_ITEMS,
   COSMETIC_SLOTS,
   cosmeticAnalyticsPayload,
   isCosmeticOwned,
   sanitizeCosmeticLoadout
-} from "./cosmetic-economy.mjs?v=5.0.0-beta.1";
+} from "./cosmetic-economy.mjs?v=5.0.0-beta.4";
+import {
+  PROFILE_FRAMES
+} from "./profile-frame-catalog.mjs?v=5.0.0-beta.4";
+import {
+  createProfileFramePreviewVideo,
+  equipProfileFrame,
+  readStoredProfileFrame
+} from "./profile-rank-frame.mjs?v=5.0.0-beta.4";
+import {
+  createArenaDuelCard
+} from "./arena-duel-card.mjs?v=5.0.0-beta.4";
+import {
+  routeRankProgressPresentation
+} from "./route-rank-client.mjs?v=5.0.0-beta.4";
 
 const PREVIEW_SURFACES = Object.freeze(["board", "home", "gate", "menu", "sound"]);
 const PREVIEW_SURFACE_LABELS = Object.freeze({
   board: "Board",
   home: "Home",
-  gate: "Opening gate",
+  gate: "Constellation Fold",
   menu: "Menu",
   sound: "Sound theme"
 });
@@ -93,6 +108,8 @@ export function createCosmeticsObservatoryHost(options = {}) {
     return {
       ...item,
       acquisition: collection?.acquisition || item.access,
+      collectionFamily: collection?.collectionFamily || "",
+      styleLabel: collection?.styleLabel || "",
       badge: collection?.purchaseOnly
         ? "Purchase only"
         : collection?.rankUnlock
@@ -111,6 +128,19 @@ export function createCosmeticsObservatoryHost(options = {}) {
 
   function profile() {
     return getProfile?.() || {};
+  }
+
+  function profileFrameIdentity() {
+    const current = profile();
+    const rank = routeRankProgressPresentation(current.routeRank);
+    return {
+      callsign: current.callsign || "Offline Stargazer",
+      mark: rank.mark,
+      rankName: rank.name,
+      rankNumber: rank.number,
+      discoveries: Array.isArray(current.discovered) ? current.discovered.length : 0,
+      wins: current.wins
+    };
   }
 
   function ownershipOptions() {
@@ -280,6 +310,8 @@ export function createCosmeticsObservatoryHost(options = {}) {
   function present({ loadout, meta, surface }) {
     if (!elements.preview || cosmicGate?.isActive?.()) return false;
     if (preview) closePreview({ resumeObservatory: false });
+    const applied = applyCosmeticLoadout(loadout, { preview: true });
+    transientLoadout = applied;
     const scrollingElement = documentRef.scrollingElement || documentRef.documentElement;
     preview = {
       loadout: { ...loadout },
@@ -335,6 +367,8 @@ export function createCosmeticsObservatoryHost(options = {}) {
     delete documentRef.body.dataset.cosmeticPreviewBoard;
     gameAudio?.endPreview?.();
     gameAudio?.setScene?.(activePreview.audioScene);
+    transientLoadout = null;
+    applyCosmeticLoadout();
     startCosmos?.();
     const scrollingElement = documentRef.scrollingElement || documentRef.documentElement;
     if (scrollingElement) scrollingElement.scrollTop = activePreview.scrollTop;
@@ -387,9 +421,75 @@ export function createCosmeticsObservatoryHost(options = {}) {
   }
 
   const observatoryOptions = {
+    collectionFamilies: COSMETIC_COLLECTION_FAMILIES,
     collections: COSMETIC_COLLECTIONS,
     items: observatoryItems,
     slotOrder: COSMETIC_SLOTS,
+    profileFrames: PROFILE_FRAMES,
+    getProfileFrame: () => readStoredProfileFrame(),
+    createProfileFramePreview: (slug, entry) => {
+      const identity = profileFrameIdentity();
+      const card = createArenaDuelCard({
+        documentRef,
+        frameSlug: slug,
+        side: "self",
+        status: "ready",
+        featured: true,
+        player: {
+          callsign: identity.callsign,
+          mark: identity.mark,
+          rank: `${identity.rankName} · Rank ${String(identity.rankNumber).padStart(2, "0")}`,
+          frameSlug: slug
+        },
+        ariaLabel: `${entry?.name || "Unframed"} Arena Duel Card preview`
+      });
+      const connection = (
+        windowRef?.navigator?.connection
+        || windowRef?.navigator?.mozConnection
+        || windowRef?.navigator?.webkitConnection
+      );
+      const previewVideo = createProfileFramePreviewVideo({
+        documentRef,
+        entry,
+        cosmeticEffects: sanitizeCosmeticEffects(profile().cosmeticEffects),
+        reducedMotion: windowRef?.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches,
+        reducedData: windowRef?.matchMedia?.("(prefers-reduced-data: reduce)")?.matches,
+        saveData: (
+          connection?.saveData === true
+          || documentRef.body?.dataset?.saveData === "true"
+        )
+      });
+      const livePreview = documentRef.createElement("div");
+      livePreview.className = "cosmetics-observatory__profile-frame-live-preview";
+      livePreview.dataset.frame = entry?.slug || "none";
+      livePreview.dataset.hasVideo = String(Boolean(previewVideo));
+      livePreview.setAttribute("data-profile-frame-live-preview", "");
+      if (entry?.palette?.length) {
+        livePreview.style.setProperty("--profile-frame-accent", entry.palette[0]);
+        livePreview.style.setProperty("--profile-frame-color-2", entry.palette[1]);
+        livePreview.style.setProperty("--profile-frame-color-3", entry.palette[2]);
+      }
+      if (previewVideo) livePreview.append(previewVideo);
+      if (card?.element) livePreview.append(card.element);
+      return Object.freeze({
+        element: livePreview,
+        card,
+        previewVideo
+      });
+    },
+    onProfileFrameCommit: (slug, meta) => {
+      const selectedSlug = equipProfileFrame(slug, {
+        eventTarget: documentRef,
+        CustomEventCtor: windowRef?.CustomEvent
+      });
+      track?.("arena_frame_changed", {
+        source: "cosmetic_lab",
+        frame: selectedSlug || "none",
+        action: selectedSlug ? "equipped" : "removed",
+        selection: meta?.id || "none"
+      });
+      return selectedSlug;
+    },
     getLoadout: () => profile().cosmetics,
     isOwned: (item) => isCosmeticOwned(item, ownershipOptions()),
     getBalance: () => profile().credits,
@@ -407,6 +507,10 @@ export function createCosmeticsObservatoryHost(options = {}) {
       return result;
     },
     onPreview: (loadout, meta) => {
+      if (meta?.carousel === true) {
+        transientLoadout = null;
+        return;
+      }
       const transient = meta?.transient === true;
       const applied = applyCosmeticLoadout(loadout, { preview: transient });
       transientLoadout = transient ? applied : null;

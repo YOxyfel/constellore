@@ -1,0 +1,85 @@
+{
+  "schemaVersion": 1,
+  "releaseUse": "commercial-distribution",
+  "records": [
+    {
+      "id": "earth-globe",
+      "kind": "cc-by-4.0",
+      "title": "Earth",
+      "author": "AirStudios",
+      "authorUrl": "https://sketchfab.com/sebbe613",
+      "sourceUrl": "https://sketchfab.com/3d-models/earth-5f9c35be31a047928eace8b415a8ee3a",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+      "commercialUseDocumented": true
+    },
+    {
+      "id": "moon-globe",
+      "kind": "cc-by-4.0",
+      "title": "Moon",
+      "author": "matousekfoto",
+      "authorUrl": "https://sketchfab.com/matousekfoto",
+      "sourceUrl": "https://sketchfab.com/3d-models/moon-5a917c638c1344d7af7e34e5d4122f72",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+      "commercialUseDocumented": true
+    },
+    {
+      "id": "sun-globe",
+      "kind": "cc-by-4.0",
+      "title": "Sun",
+      "author": "SebastianSosnowski",
+      "authorUrl": "https://sketchfab.com/SebastianSosnowski",
+      "sourceUrl": "https://sketchfab.com/3d-models/sun-9ef1c68fbb944147bcfcc891d3912645",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+      "source": "itch-assets/Models/Sun/sun.glb",
+      "sourceSha256": "5b17f3d40ca7a577413e7b5083a9dad5720033e76909597246088b9d65b3eab2",
+      "commercialUseDocumented": true
+    },
+    {
+      "id": "tripo-landmarks",
+      "kind": "project-owner-rights-attestation",
+      "sources": [
+        "itch-assets/Models/MainZone/MainZoneTextured.glb",
+        "itch-assets/Models/PortalZone/Portal.glb",
+        "itch-assets/Models/Rocket/RocketTextured.glb",
+        "itch-assets/Models/Earth/earth landing.glb",
+        "itch-assets/Models/Moon/moon landing.glb"
+      ],
+      "commercialUseDocumented": true,
+      "basis": "The project owner supplied these Tripo-generated assets and affirmed distributable commercial rights for this release."
+    },
+    {
+      "id": "portal-vfx",
+      "kind": "project-owner-rights-attestation",
+      "sources": [
+        "itch-assets/Models/PortalZone/VFX/Front_Portal_5_2682_2K/Front_Portal_5_2682_2K.mov",
+        "itch-assets/Models/PortalZone/VFX/Front_Portal_5_2682_2K/Front_Portal_5_Matte_2K.mov"
+      ],
+      "commercialUseDocumented": true,
+      "basis": "The project owner supplied the Portal VFX color and matte sources and affirmed distributable commercial rights for this release."
+    },
+    {
+      "id": "milky-way-texture",
+      "kind": "project-generated-art",
+      "title": "Milky Way display texture",
+      "sources": [
+        "itch-assets/Models/SpaceLayers/milky-way-source.png"
+      ],
+      "sourceSha256": "5b78ab87694ed09e0bd383f4aebef9105359fc3a1e604fd1b07d0e7983ae5828",
+      "generator": "OpenAI built-in image generation",
+      "commercialUseDocumented": true,
+      "basis": "Generated specifically for this project, then resized and hashed by the deterministic Planet Hub asset pipeline."
+    },
+    {
+      "id": "solar-places-thumbnails",
+      "kind": "project-generated-art",
+      "title": "Solar-system Places thumbnail portraits",
+      "sources": [
+        "itch-assets/Models/PlaceThumbnails/solar-bodies-source.png"
+      ],
+      "sourceSha256": "c4ac2d882694e9f439c082820534609e04eba77bbbdc55809b7713dbce7b75cf",
+      "generator": "OpenAI built-in image generation",
+      "commercialUseDocumented": true,
+      "basis": "Generated specifically for this project, then cropped into a deterministic single-request WebP sprite by the Planet Hub asset pipeline."
+    }
+  ]
+}

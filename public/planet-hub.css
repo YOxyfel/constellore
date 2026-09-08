@@ -1,0 +1,1814 @@
+/* Living Planet Home Hub --------------------------------------------------
+ * The canvas is presentation only. The existing Home scenes remain the real
+ * labelled, focusable controls and collapse into one contextual card.
+ */
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] {
+  --planet-hub-card-width: min(460px, calc(100% - 176px));
+  --planet-hub-focused-card-width: min(568px, calc(100% - 176px));
+  --planet-hub-rail-height: 64px;
+  --planet-hub-nav-clearance: calc(80px + var(--planet-hub-banner-clearance, 0px) + env(safe-area-inset-top));
+  --planet-hub-safe-left: max(10px, calc(env(safe-area-inset-left) + 8px));
+  --planet-hub-safe-right: max(10px, calc(env(safe-area-inset-right) + 8px));
+  position: fixed;
+  z-index: 1;
+  inset: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+  min-height: 0;
+  max-width: none;
+  margin: 0;
+  grid-template-columns: minmax(0, 1fr) !important;
+  grid-template-rows: minmax(0, 1fr) !important;
+  gap: 0 !important;
+  overflow: hidden;
+  border: 0 !important;
+  border-radius: 0 !important;
+  outline: 0 !important;
+  background: none !important;
+  box-shadow: none !important;
+  transform: none;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub]::before,
+body.simple-ui #startScreen .home-orbit[data-home-hub]::after {
+  display: none !important;
+  content: none !important;
+}
+
+/* The WebGL/poster stage owns the complete Home sky. The older painted-cosmos
+   pseudos and orbital halo otherwise remain visible through its transparent
+   canvas, doubling the star field and exposing the halo's amber conic slice as
+   a stray wedge along the viewport edge. */
+body.simple-ui #startScreen.start-screen[data-planet-hub-home] {
+  height: 100vh;
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
+  background: #01060f !important;
+  background-image: none !important;
+}
+
+/* The Living Planet stage already owns the viewport. Legacy Home flow still
+   stacks the practice banner, navigation, and start-content heights, which can
+   manufacture a page scrollbar even though the hub itself is fixed. Keep the
+   release return link comfortably tappable without allowing that hidden flow
+   to resize the WebGL presentation. */
+body.simple-ui #startScreen.start-screen[data-planet-hub-home] > .practice-banner a {
+  min-height: 44px;
+}
+
+body.simple-ui #startScreen.start-screen[data-planet-hub-home]::before,
+body.simple-ui #startScreen.start-screen[data-planet-hub-home]::after {
+  display: none !important;
+  content: none !important;
+  background: none !important;
+  animation: none !important;
+}
+
+body.simple-ui #startScreen.start-screen[data-planet-hub-home] > .home-vfx {
+  display: none !important;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .home-orbit__viewport {
+  grid-row: 1;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  border: 0;
+  border-radius: 0;
+  outline: 0;
+  background: transparent;
+  box-shadow: none;
+  touch-action: pan-y pinch-zoom;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .home-orbit__viewport::before {
+  display: none !important;
+  content: none !important;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .home-orbit__viewport::after {
+  display: none !important;
+  content: none !important;
+}
+
+.planet-hub {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  overflow: hidden;
+  border-radius: 0;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+  overscroll-behavior: contain;
+}
+
+.planet-hub::before,
+.planet-hub::after {
+  display: none;
+}
+
+/* Body names are projected from their real 3D positions. A fixed pseudo-label
+   made Earth look attached to the viewport and immediately broke when the
+   camera orbited or another body became the navigation centre. */
+.planet-hub__labels {
+  position: absolute;
+  z-index: 5;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  contain: layout paint style;
+}
+
+.planet-hub__label {
+  --planet-hub-label-scale: 1;
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 22px;
+  padding: 4px 8px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  color: rgba(190, 235, 255, .9);
+  background: rgba(1, 8, 18, .58);
+  box-shadow: 0 2px 12px rgba(0, 2, 10, .24), 0 0 0 1px rgba(57, 169, 223, .07);
+  font: 800 11px/1 Consolas, "DM Mono", monospace;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  text-shadow: 0 0 12px rgba(44, 160, 229, .58);
+  white-space: nowrap;
+  appearance: none;
+  pointer-events: auto;
+  cursor: pointer;
+  opacity: .84;
+  transform: translate3d(var(--planet-hub-label-x, -200px), var(--planet-hub-label-y, -200px), 0)
+    translate(-50%, calc(-100% - 7px)) scale(var(--planet-hub-label-scale));
+  transform-origin: 50% 100%;
+  transition: opacity 150ms ease, color 150ms ease, border-color 150ms ease,
+    background-color 150ms ease, box-shadow 150ms ease;
+  will-change: transform;
+}
+
+.planet-hub__label::before {
+  width: 5px;
+  height: 5px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 9px currentColor;
+  content: "";
+}
+
+.planet-hub__label[data-visible="false"] {
+  display: none;
+}
+
+.planet-hub__label[data-selected="true"] {
+  color: #d9f7ff;
+  border-color: rgba(119, 226, 255, .5);
+  background: rgba(2, 15, 29, .78);
+  box-shadow: 0 0 22px rgba(53, 189, 255, .2);
+  opacity: 1;
+}
+
+.planet-hub__label[data-focused="true"] {
+  color: #ffe7a5;
+  border-color: rgba(255, 213, 112, .54);
+  box-shadow: 0 0 24px rgba(255, 190, 76, .18);
+  opacity: 1;
+}
+
+.planet-hub__label small {
+  color: #f4c977;
+  font-size: 7px;
+  letter-spacing: .1em;
+}
+
+.planet-hub__label small:empty {
+  display: none;
+}
+
+.planet-hub__label small:not(:empty) {
+  padding: 2px 4px;
+  border: 1px solid rgba(244, 201, 119, .32);
+  border-radius: 999px;
+  background: rgba(77, 46, 13, .42);
+}
+
+.planet-hub__label:has(small:not(:empty)):not([data-selected="true"]):not([data-focused="true"]) {
+  color: rgba(169, 205, 221, .68);
+  border-color: rgba(127, 166, 186, .12);
+}
+
+.planet-hub canvas,
+.planet-hub__poster {
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: contain;
+  object-position: 50% 43%;
+  transition: opacity 240ms ease, filter 560ms cubic-bezier(.16, .76, .2, 1), transform 560ms cubic-bezier(.16, .76, .2, 1);
+}
+
+.planet-hub[data-worldweave-phase="gathering"] :is(canvas, .planet-hub__poster),
+.planet-hub[data-worldweave-phase="folded"] :is(canvas, .planet-hub__poster) {
+  filter: brightness(1.14) saturate(1.18) contrast(1.04);
+}
+
+/* Scaling the WebGL element asks the compositor to enlarge an already
+   rasterized backing store. During an astronomical dolly that turns every
+   planet and point sprite into a softened/pixelated card. Keep cinematic
+   poster motion on the replaceable bitmap only; the 3D camera owns canvas
+   framing. */
+.planet-hub[data-worldweave-phase="gathering"] .planet-hub__poster,
+.planet-hub[data-worldweave-phase="folded"] .planet-hub__poster {
+  transform: scale(1.025);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .planet-hub[data-worldweave-phase] :is(canvas, .planet-hub__poster) {
+    transform: none;
+  }
+}
+
+.planet-hub canvas {
+  z-index: 3;
+  outline: none;
+  opacity: 0;
+  cursor: grab;
+}
+
+.planet-hub canvas:active {
+  cursor: grabbing;
+}
+
+.planet-hub[data-home-hub-mode="focused"] canvas,
+.planet-hub[data-planet-hub-mode="focused"] canvas {
+  cursor: pointer;
+}
+
+.planet-hub__poster {
+  padding: 0;
+  filter: saturate(.92) contrast(1.04);
+}
+
+.planet-hub[data-home-hub-renderer="webgl"] canvas,
+.planet-hub[data-planet-hub-renderer="webgl"] canvas {
+  opacity: 1;
+}
+
+.planet-hub[data-home-hub-renderer="webgl"] .planet-hub__poster,
+.planet-hub[data-planet-hub-renderer="webgl"] .planet-hub__poster {
+  opacity: 0;
+}
+
+.planet-hub__loading {
+  position: absolute;
+  z-index: 5;
+  top: 50%;
+  left: 50%;
+  display: grid;
+  place-items: center;
+  gap: 9px;
+  min-width: 154px;
+  padding: 13px 17px 12px;
+  color: rgba(230, 249, 250, .92);
+  background: radial-gradient(circle at 50% 18%, rgba(29, 76, 84, .7), rgba(3, 16, 24, .88) 72%);
+  border: 1px solid rgba(126, 238, 243, .2);
+  border-radius: 18px;
+  box-shadow: 0 18px 52px rgba(0, 0, 0, .44), inset 0 0 28px rgba(92, 221, 226, .06);
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  transition: opacity 180ms ease;
+}
+
+.planet-hub:is([data-home-hub-phase="loading"], [data-planet-hub-phase="loading"]) .planet-hub__loading {
+  opacity: 1;
+}
+
+.planet-hub__loading > span {
+  width: 42px;
+  height: 42px;
+  border: 1px solid rgba(126, 238, 243, .22);
+  border-top-color: #ffe09a;
+  border-radius: 50%;
+  animation: planet-hub-charting 1.4s linear infinite;
+}
+
+.planet-hub__loading small {
+  font: 800 9px/1 Consolas, "DM Mono", monospace;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+}
+
+@keyframes planet-hub-charting {
+  to { transform: rotate(1turn); }
+}
+
+/* The controller continues to own aria-hidden/inert. The visual track no
+   longer moves three full pages; it hosts one compact active card. */
+body.simple-ui #startScreen .home-orbit[data-home-hub] .home-orbit__track {
+  position: absolute;
+  z-index: 6;
+  inset: 0;
+  width: auto;
+  height: auto;
+  display: block;
+  pointer-events: none;
+  transform: none !important;
+  transition: none !important;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .home-orbit__scene {
+  position: absolute;
+  z-index: 8;
+  right: auto;
+  bottom: clamp(18px, 3vh, 34px);
+  left: max(var(--planet-hub-safe-left), clamp(18px, 4vw, 76px));
+  width: min(
+    var(--planet-hub-card-width),
+    calc(100% - var(--planet-hub-safe-left) - var(--planet-hub-safe-right))
+  );
+  max-width: calc(100% - var(--planet-hub-safe-left) - var(--planet-hub-safe-right));
+  height: auto;
+  min-height: 0;
+  max-height: min(298px, calc(100% - 36px));
+  padding: 13px;
+  display: none;
+  overflow-x: hidden;
+  overflow-y: auto;
+  border: 0;
+  border-radius: 20px;
+  opacity: 0;
+  background:
+    linear-gradient(115deg, rgba(6, 29, 42, .9), rgba(2, 13, 26, .88)),
+    radial-gradient(circle at 15% 20%, rgba(126, 238, 243, .09), transparent 38%);
+  box-shadow: inset 0 1px rgba(255, 255, 255, .065), 0 18px 44px rgba(0, 3, 14, .32);
+  -webkit-backdrop-filter: blur(18px) saturate(1.08);
+  backdrop-filter: blur(18px) saturate(1.08);
+  pointer-events: none;
+  transform: translateY(10px) scale(.98);
+  transition: opacity 180ms ease, transform 240ms cubic-bezier(.2, .82, .2, 1);
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .home-orbit__scene[aria-hidden="false"] {
+  display: grid;
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0) scale(1);
+}
+
+/* Forge card */
+body.simple-ui #startScreen .home-orbit[data-home-hub] .home-orbit__scene--forge {
+  grid-template-columns: minmax(0, 1fr);
+  align-items: center;
+  gap: 5px;
+  text-align: left;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .home-orbit__scene--forge :is(.hero-kicker, h1, .hero-promise, .universe-summary) {
+  display: none !important;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .home-forge-catalog-toggle {
+  grid-column: 1;
+  width: 100%;
+  min-height: 44px;
+  margin: 0;
+  padding-block: 4px;
+  border-radius: 14px;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .home-orbit__scene--forge .hero-forge {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 0;
+  width: auto;
+  min-height: 0;
+  margin: 0;
+  display: block;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .hero-forge__orbit {
+  opacity: .38;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .recipe-example {
+  display: none !important;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .daily-star-lane {
+  min-height: 44px;
+  margin: 0;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .daily-star-launcher {
+  min-height: 44px;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .primary-orbit-panel {
+  width: 100%;
+  min-height: 0;
+  margin: 0;
+  padding: 8px 10px;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  grid-template-columns: minmax(0, 1fr) minmax(144px, 176px);
+  gap: 12px;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .primary-orbit-panel h2 {
+  font-size: clamp(22px, 2.5vw, 31px);
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .primary-orbit-panel p {
+  line-height: 1.35;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .primary-orbit-button {
+  min-height: 52px;
+}
+
+/* Journey card */
+body.simple-ui #startScreen .home-orbit[data-home-hub] .home-orbit__scene--journey,
+body.simple-ui #startScreen .home-orbit[data-home-hub] .home-orbit__scene--arena {
+  grid-template-columns: minmax(0, 1fr);
+  place-items: stretch;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .home-journey-locked {
+  width: 100%;
+  max-width: 100%;
+  min-height: 0;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 9px 12px;
+  grid-template-columns: minmax(0, 1fr) minmax(144px, 168px);
+  justify-items: start;
+  gap: 5px 14px;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  text-align: left;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .home-journey-locked__planet {
+  display: none;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .home-journey-locked > :is(small, strong, p) {
+  grid-column: 1;
+  min-width: 0;
+  max-width: none;
+  overflow-wrap: anywhere;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .home-journey-locked > strong {
+  /* Keep the complete editorial word intact beside the desktop CTA. The
+     inherited Home scale was a fraction too large and `anywhere` could strand
+     the final glyph on its own line after returning from focused mode. */
+  font-size: clamp(30px, 3vw, 40px);
+  overflow-wrap: normal;
+  word-break: normal;
+  hyphens: none;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .home-journey-locked > button {
+  grid-column: 2;
+  grid-row: 1 / 4;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  align-self: center;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .moon-home-voyage {
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  min-height: 118px;
+  max-height: none;
+  margin: 0;
+  padding: 17px 18px;
+  display: grid;
+  /* The overview card has 398px of usable inline space at its authored
+     desktop width. Keep the copy cinematic while reserving a contained CTA;
+     the previous 230px + 176px + 24px minimum tracks pushed the pill through
+     the card's clipped right edge. */
+  grid-template-columns: minmax(220px, 1fr) minmax(148px, 168px);
+  grid-template-areas: "copy action" "origin action";
+  align-items: center;
+  gap: 7px 10px;
+  border: 0;
+  border-radius: 17px;
+  background: transparent;
+  box-shadow: none;
+  text-align: left;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .moon-home-voyage :is(.moon-home-voyage__sky, .moon-home-voyage__platform, .moon-home-voyage__rocket) {
+  display: none !important;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .moon-home-voyage__copy {
+  position: static;
+  grid-area: copy;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  transform: none;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .moon-home-voyage__copy strong {
+  max-width: 15ch;
+  font-size: clamp(30px, 2.7vw, 40px);
+  line-height: .94;
+  overflow-wrap: normal;
+  word-break: normal;
+  hyphens: none;
+  text-wrap: balance;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .moon-home-voyage__copy em {
+  max-width: 32ch;
+  font-size: 15px;
+  line-height: 1.35;
+  overflow-wrap: normal;
+  word-break: normal;
+  text-wrap: pretty;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .moon-home-voyage__origin {
+  position: static;
+  grid-area: origin;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .moon-home-voyage__action {
+  position: static;
+  grid-area: action;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  min-height: 50px;
+  padding-inline: 18px;
+  transform: none;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .moon-home-voyage__action small {
+  max-width: 17ch;
+  line-height: 1.25;
+  overflow-wrap: normal;
+  word-break: normal;
+  text-wrap: balance;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .moon-home-project-visit {
+  width: 100%;
+  margin-top: 6px;
+}
+
+/* Arena card */
+body.simple-ui #startScreen .home-orbit[data-home-hub] .home-orbit__scene--arena .arena-portal {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  height: auto;
+  min-height: 96px;
+  max-height: none;
+  margin: 0;
+  padding: 12px 14px;
+  display: grid;
+  grid-template-areas: "copy action";
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 18px;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .home-orbit__scene--arena .arena-portal::before,
+body.simple-ui #startScreen .home-orbit[data-home-hub] .home-orbit__scene--arena .arena-portal::after,
+body.simple-ui #startScreen .home-orbit[data-home-hub] .home-orbit__scene--arena .arena-portal__visual {
+  display: none !important;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .arena-portal__copy {
+  grid-area: copy;
+  min-width: 0;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .arena-portal__copy h2 {
+  margin: 0 0 4px;
+  font-size: clamp(25px, 3vw, 36px);
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .arena-portal__action {
+  grid-area: action;
+  width: min(188px, 100%);
+  min-width: 0;
+  max-width: 100%;
+  min-height: 52px;
+  margin: 0;
+}
+
+/* Navigation rail */
+body.simple-ui #startScreen .home-orbit[data-home-hub] .home-orbit__rail {
+  position: absolute;
+  z-index: 20;
+  grid-row: 1 !important;
+  grid-column: 1 !important;
+  right: auto;
+  bottom: max(10px, env(safe-area-inset-bottom));
+  left: 50%;
+  box-sizing: border-box;
+  width: min(760px, calc(100% - 28px));
+  height: var(--planet-hub-rail-height);
+  min-height: var(--planet-hub-rail-height);
+  margin: 0;
+  padding: 4px;
+  border: 0;
+  border-radius: 0;
+  outline: 0;
+  background: transparent;
+  box-shadow: none;
+  opacity: 1;
+  visibility: visible;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  transform: translateX(-50%);
+  transition:
+    opacity 280ms ease,
+    transform 680ms cubic-bezier(.16, 1, .3, 1),
+    visibility 0s linear;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .home-orbit__heading {
+  display: none;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .home-orbit__tabs {
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  grid-auto-columns: minmax(0, 1fr);
+  border: 0;
+  background: rgba(1, 10, 21, .46);
+  box-shadow: 0 12px 34px rgba(0, 3, 14, .2);
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .home-orbit__tab {
+  box-sizing: border-box;
+  height: 100%;
+  min-height: 0;
+}
+
+/* The renderer publishes overview/focused as a presentation state. Overview
+   keeps the world visually dominant. Focusing a landmark moves its concise
+   HTML action to the opposite edge instead of laying a modal over the site. */
+body.simple-ui #startScreen .home-orbit[data-home-hub][data-home-hub-mode="overview"] .home-orbit__scene {
+  bottom: calc(var(--planet-hub-rail-height) + clamp(14px, 2vh, 24px));
+  background: linear-gradient(112deg, rgba(5, 28, 41, .86), rgba(2, 13, 26, .76));
+  -webkit-backdrop-filter: blur(12px) saturate(1.05);
+  backdrop-filter: blur(12px) saturate(1.05);
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub][data-home-hub-mode="focused"] .home-orbit__scene {
+  top: clamp(62px, 9vh, 108px);
+  right: max(var(--planet-hub-safe-right), clamp(18px, 4vw, 76px));
+  bottom: auto;
+  left: auto;
+  width: min(
+    var(--planet-hub-focused-card-width),
+    calc(100% - var(--planet-hub-safe-left) - var(--planet-hub-safe-right))
+  );
+}
+
+/* Focused cards remain a cinematic landscape composition. The enlarged card
+   gives editorial titles and their CTA independent minimum columns instead of
+   squeezing either into a phone-like strip on desktop. */
+body.simple-ui #startScreen .home-orbit[data-home-hub][data-home-hub-mode="focused"] .home-orbit__scene--forge .primary-orbit-panel {
+  grid-template-columns: minmax(240px, 1fr) minmax(168px, 196px);
+  align-items: center;
+  gap: 18px;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub][data-home-hub-mode="focused"] .home-orbit__scene--forge .primary-orbit-button {
+  grid-column: 2;
+  width: 100%;
+  max-width: none;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub][data-home-hub-mode="focused"] .moon-home-voyage {
+  grid-template-columns: minmax(250px, 1fr) minmax(184px, 210px);
+  column-gap: 24px;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub][data-home-hub-mode="focused"] .home-orbit__scene--arena .arena-portal {
+  grid-template-columns: minmax(240px, 1fr) minmax(176px, 202px);
+}
+
+/* The locked Journey message contains a long editorial headline. In the
+   focused card, giving the CTA a parallel grid column made the headline's
+   longest words paint underneath the button and forced a horizontal scroll
+   track. Stack this exceptional state so copy and action retain their full
+   hit area without escaping the viewport. */
+body.simple-ui #startScreen .home-orbit[data-home-hub][data-home-hub-mode="focused"] .home-journey-locked {
+  grid-template-columns: minmax(0, 1fr);
+  align-content: start;
+  gap: 6px;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub][data-home-hub-mode="focused"] .home-journey-locked > strong {
+  font-size: clamp(28px, 2.6vw, 34px);
+  line-height: 1;
+  text-wrap: balance;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub][data-home-hub-mode="focused"] .home-journey-locked > p {
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub][data-home-hub-mode="focused"] .home-journey-locked > button {
+  grid-column: 1;
+  grid-row: auto;
+  min-height: 48px;
+  margin-top: 4px;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] [data-planet-hub-orbit-return] {
+  position: absolute;
+  z-index: 24;
+  top: max(14px, env(safe-area-inset-top));
+  left: max(18px, env(safe-area-inset-left));
+  min-width: 132px;
+  min-height: 46px;
+  padding: 8px 15px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  border: 1px solid rgba(126, 238, 243, .32);
+  border-radius: 999px;
+  color: #eafafb;
+  background: rgba(2, 17, 29, .78);
+  box-shadow: 0 12px 32px rgba(0, 3, 14, .28);
+  -webkit-backdrop-filter: blur(14px) saturate(1.1);
+  backdrop-filter: blur(14px) saturate(1.1);
+  font: 800 12px/1.1 Consolas, "DM Mono", monospace;
+  letter-spacing: .06em;
+  cursor: pointer;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateY(-8px) scale(.96);
+  transition:
+    opacity 220ms ease,
+    transform 360ms cubic-bezier(.16, 1, .3, 1),
+    visibility 0s linear 220ms;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] [data-planet-hub-orbit-return][hidden] {
+  display: none !important;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub]:is(
+  [data-home-hub-mode="focused"],
+  [data-home-hub-return="body-focus"],
+  [data-home-hub-return="body-selection"],
+  [data-home-hub-return="place-history"]
+):not([data-home-hub-transition]) [data-planet-hub-orbit-return] {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: translateY(0) scale(1);
+  transition-delay: 0s;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] [data-planet-hub-orbit-return][data-planet-hub-return-kind="body-focus"] {
+  border-color: rgba(255, 214, 130, .42);
+  color: #fff0c5;
+  background: linear-gradient(135deg, rgba(32, 24, 22, .9), rgba(2, 17, 29, .9));
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] [data-planet-hub-orbit-return][data-planet-hub-return-kind="body-selection"] {
+  border-color: rgba(105, 221, 239, .42);
+  color: #d9faff;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] [data-planet-hub-orbit-return][data-planet-hub-return-kind="place-history"] {
+  border-color: rgba(255, 214, 130, .42);
+  color: #fff0c5;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] [data-planet-hub-orbit-return]:is(:hover, :focus-visible) {
+  border-color: rgba(255, 220, 146, .72);
+  background: rgba(5, 30, 42, .94);
+  box-shadow: 0 0 0 3px rgba(126, 238, 243, .12), 0 14px 38px rgba(0, 3, 14, .32);
+}
+
+
+/* Semantic distance control -------------------------------------------------
+ * Scrolling remains continuous; this compact HTML rail supplies dependable
+ * named landmarks for players who prefer explicit, keyboard-safe navigation. */
+body.simple-ui #startScreen .home-orbit[data-home-hub] .planet-hub__zoom-rail {
+  position: absolute;
+  z-index: 23;
+  top: 50%;
+  right: max(var(--planet-hub-safe-right), 14px);
+  width: 108px;
+  padding: 5px;
+  display: grid;
+  gap: 4px;
+  border: 1px solid rgba(126, 238, 243, .18);
+  border-radius: 18px;
+  color: #e8fbfc;
+  background: rgba(1, 10, 22, .62);
+  box-shadow: 0 16px 46px rgba(0, 3, 14, .28), inset 0 1px rgba(255, 255, 255, .04);
+  -webkit-backdrop-filter: blur(14px) saturate(1.12);
+  backdrop-filter: blur(14px) saturate(1.12);
+  transform: translateY(-50%);
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .planet-hub__zoom-rail[hidden],
+body.simple-ui #startScreen .home-orbit[data-home-hub][data-planet-hub-journey-flight="true"] .planet-hub__zoom-rail,
+body.simple-ui:has(dialog[open], [role="dialog"][aria-modal="true"]:not([hidden])) #startScreen .planet-hub__zoom-rail {
+  display: none !important;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] :is(.planet-hub__zoom-reset, .planet-hub__zoom-stops > button) {
+  box-sizing: border-box;
+  min-width: 48px;
+  min-height: 48px;
+  border: 0;
+  border-radius: 12px;
+  color: rgba(224, 248, 250, .7);
+  background: transparent;
+  font: 700 10px/1.1 Manrope, Inter, sans-serif;
+  cursor: pointer;
+  transition: color 160ms ease, background 160ms ease, transform 160ms ease;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] :is(.planet-hub__zoom-reset, .planet-hub__zoom-stops > button):is(:hover, :focus-visible) {
+  color: #fff3c9;
+  background: rgba(126, 238, 243, .11);
+  outline: 2px solid rgba(126, 238, 243, .48);
+  outline-offset: -2px;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .planet-hub__zoom-reset {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border-bottom: 1px solid rgba(126, 238, 243, .12);
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .planet-hub__zoom-reset > span {
+  font-size: 17px;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .planet-hub__zoom-reset > small {
+  font: inherit;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .planet-hub__distance-readout {
+  box-sizing: border-box;
+  min-height: 42px;
+  padding: 7px 5px 6px;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 2px;
+  border-bottom: 1px solid rgba(126, 238, 243, .12);
+  color: #fff0c5;
+  background: linear-gradient(90deg, rgba(126, 238, 243, .05), rgba(255, 210, 120, .06));
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .planet-hub__distance-readout > small {
+  color: rgba(183, 231, 235, .58);
+  font: 800 7px/1 Manrope, Inter, sans-serif;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .planet-hub__distance-readout > span {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .planet-hub__distance-readout strong {
+  font: 750 11px/1.05 Manrope, Inter, sans-serif;
+  letter-spacing: -.02em;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .planet-hub__distance-readout abbr {
+  color: #7eeef3;
+  font: 800 8px/1 Manrope, Inter, sans-serif;
+  letter-spacing: .04em;
+  text-decoration: none;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .planet-hub__zoom-stops {
+  display: grid;
+  gap: 1px;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .planet-hub__zoom-stops > button {
+  width: 100%;
+  padding: 5px 7px;
+  display: grid;
+  grid-template-columns: 10px 1fr;
+  align-items: center;
+  gap: 7px;
+  text-align: left;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .planet-hub__zoom-stops > button > span {
+  width: 7px;
+  aspect-ratio: 1;
+  border: 1px solid rgba(126, 238, 243, .44);
+  border-radius: 50%;
+  box-shadow: 0 0 0 3px transparent;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .planet-hub__zoom-stops > button[aria-checked="true"] {
+  color: #fff3c9;
+  background: linear-gradient(90deg, rgba(126, 238, 243, .14), rgba(255, 210, 120, .08));
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .planet-hub__zoom-stops > button[aria-checked="true"] > span {
+  border-color: #ffe2a0;
+  background: #ffe2a0;
+  box-shadow: 0 0 0 3px rgba(255, 216, 130, .13), 0 0 14px rgba(255, 216, 130, .4);
+}
+
+@media (max-width: 900px), (orientation: portrait) and (max-width: 1100px) {
+  body.simple-ui #startScreen .home-orbit[data-home-hub] .planet-hub__zoom-rail {
+    top: calc(var(--planet-hub-nav-clearance) + 6px);
+    right: max(var(--planet-hub-safe-right), 8px);
+    left: max(var(--planet-hub-safe-left), 8px);
+    width: auto;
+    max-width: 390px;
+    margin-inline: auto;
+    padding: 3px;
+    grid-template-columns: 48px minmax(0, 1fr);
+    gap: 2px;
+    border-radius: 15px;
+    transform: none;
+  }
+
+  body.simple-ui #startScreen .home-orbit[data-home-hub] .planet-hub__zoom-reset {
+    grid-column: 1;
+    grid-row: 1;
+    padding: 0;
+    border-right: 1px solid rgba(126, 238, 243, .12);
+    border-bottom: 0;
+  }
+
+  body.simple-ui #startScreen .home-orbit[data-home-hub] .planet-hub__zoom-reset > small {
+    position: absolute;
+    overflow: hidden;
+    width: 1px;
+    height: 1px;
+    clip-path: inset(50%);
+  }
+
+  body.simple-ui #startScreen .home-orbit[data-home-hub] .planet-hub__zoom-stops {
+    grid-column: 2;
+    grid-row: 1;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+
+  body.simple-ui #startScreen .home-orbit[data-home-hub] .planet-hub__distance-readout {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    min-height: 27px;
+    padding: 4px 8px;
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: 7px;
+    border-top: 1px solid rgba(126, 238, 243, .1);
+    border-bottom: 0;
+  }
+
+  body.simple-ui #startScreen .home-orbit[data-home-hub] .planet-hub__zoom-stops > button {
+    padding: 3px 1px;
+    grid-template-columns: 1fr;
+    justify-items: center;
+    gap: 3px;
+    text-align: center;
+    font-size: 8px;
+    letter-spacing: -.02em;
+  }
+
+}
+
+/* Locked satellite inspection keeps the rendered world as the scene. The HTML
+   layer contributes only the status and a dependable keyboard/touch exit. */
+body.simple-ui #startScreen .home-orbit[data-home-hub] .planet-hub-inspection {
+  position: absolute;
+  z-index: 26;
+  inset: 0;
+  box-sizing: border-box;
+  padding:
+    max(72px, calc(env(safe-area-inset-top) + 62px))
+    max(18px, env(safe-area-inset-right))
+    max(22px, env(safe-area-inset-bottom))
+    max(18px, env(safe-area-inset-left));
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, rgba(0, 7, 18, .12), transparent 30%, transparent 66%, rgba(0, 7, 18, .48));
+  opacity: 1;
+  transition: opacity 180ms ease;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .planet-hub-inspection[hidden] {
+  display: none !important;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .planet-hub-inspection__return {
+  grid-row: 1;
+  justify-self: start;
+  min-width: 148px;
+  min-height: 48px;
+  padding: 9px 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  border: 1px solid rgba(126, 238, 243, .38);
+  border-radius: 999px;
+  color: #effcfd;
+  background: rgba(2, 17, 29, .76);
+  box-shadow: 0 12px 34px rgba(0, 3, 14, .28);
+  -webkit-backdrop-filter: blur(14px) saturate(1.08);
+  backdrop-filter: blur(14px) saturate(1.08);
+  font: 800 12px/1.1 Consolas, "DM Mono", monospace;
+  letter-spacing: .04em;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .planet-hub-inspection__return:is(:hover, :focus-visible) {
+  border-color: rgba(255, 220, 146, .78);
+  background: rgba(5, 31, 43, .94);
+  box-shadow: 0 0 0 3px rgba(126, 238, 243, .13), 0 15px 38px rgba(0, 3, 14, .32);
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .planet-hub-inspection__footer {
+  grid-row: 3;
+  align-self: end;
+  justify-self: center;
+  width: min(560px, calc(100vw - 36px));
+  display: grid;
+  justify-items: center;
+  gap: 15px;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .planet-hub-inspection__copy {
+  display: grid;
+  gap: 5px;
+  color: #f8fbf5;
+  text-align: center;
+  text-shadow: 0 3px 18px rgba(0, 2, 12, .9);
+  pointer-events: none;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .planet-hub-inspection__copy small {
+  color: #7eeef3;
+  font: 800 10px/1 Consolas, "DM Mono", monospace;
+  letter-spacing: .2em;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .planet-hub-inspection__copy strong {
+  font: 700 clamp(28px, 4vw, 52px)/.95 Georgia, "Times New Roman", serif;
+  text-wrap: balance;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .planet-hub-inspection__copy p {
+  max-width: 42ch;
+  margin: 2px 0 0;
+  color: rgba(222, 242, 242, .86);
+  font: 600 clamp(13px, 1.25vw, 16px)/1.45 Manrope, Inter, sans-serif;
+  text-wrap: balance;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .planet-hub-inspection__select,
+body.simple-ui #startScreen .home-orbit[data-home-hub] .planet-hub__world-switch {
+  min-height: 48px;
+  border: 1px solid rgba(126, 238, 243, .42);
+  border-radius: 999px;
+  color: #effcfd;
+  background:
+    radial-gradient(circle at 15% 20%, rgba(126, 238, 243, .18), transparent 42%),
+    rgba(2, 17, 29, .82);
+  box-shadow: 0 14px 38px rgba(0, 3, 14, .34), inset 0 1px 0 rgba(255, 255, 255, .06);
+  -webkit-backdrop-filter: blur(16px) saturate(1.12);
+  backdrop-filter: blur(16px) saturate(1.12);
+  cursor: pointer;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .planet-hub-inspection__select {
+  min-width: min(330px, 100%);
+  padding: 9px 15px;
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 11px;
+  text-align: left;
+  pointer-events: auto;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .planet-hub-inspection__select > span:first-child {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid rgba(255, 220, 146, .45);
+  border-radius: 50%;
+  color: #ffdc92;
+  box-shadow: 0 0 18px rgba(126, 238, 243, .22);
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .planet-hub-inspection__select > span:nth-child(2),
+body.simple-ui #startScreen .home-orbit[data-home-hub] .planet-hub__world-switch > span:nth-child(2) {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .planet-hub-inspection__select small,
+body.simple-ui #startScreen .home-orbit[data-home-hub] .planet-hub__world-switch small {
+  color: #7eeef3;
+  font: 800 9px/1 Consolas, "DM Mono", monospace;
+  letter-spacing: .14em;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .planet-hub-inspection__select strong,
+body.simple-ui #startScreen .home-orbit[data-home-hub] .planet-hub__world-switch strong {
+  overflow: hidden;
+  font: 800 13px/1.15 Manrope, Inter, sans-serif;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .planet-hub-inspection__select:is(:hover, :focus-visible),
+body.simple-ui #startScreen .home-orbit[data-home-hub] .planet-hub__world-switch:is(:hover, :focus-visible) {
+  border-color: rgba(255, 220, 146, .8);
+  background:
+    radial-gradient(circle at 15% 20%, rgba(255, 220, 146, .2), transparent 44%),
+    rgba(5, 31, 43, .96);
+  box-shadow: 0 0 0 3px rgba(126, 238, 243, .12), 0 16px 42px rgba(0, 3, 14, .4);
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .planet-hub__world-switch {
+  position: absolute;
+  z-index: 25;
+  top: var(--planet-hub-nav-clearance);
+  left: max(18px, env(safe-area-inset-left));
+  max-width: min(260px, calc(100vw - 36px));
+  padding: 8px 15px 8px 10px;
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  text-align: left;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .planet-hub__world-switch[hidden],
+body.simple-ui #startScreen .home-orbit[data-home-hub] .planet-hub-inspection__select[hidden] {
+  display: none !important;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] .planet-hub__world-switch > span:first-child {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  color: #ffdc92;
+  background: rgba(126, 238, 243, .1);
+}
+
+body.simple-ui #startScreen:has(.home-orbit[data-home-hub][data-home-hub-mode="world-inspection"]) > .start-nav {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+body.simple-ui #startScreen:has(.home-orbit[data-home-hub][data-home-hub-mode="world-inspection"]) .start-content {
+  position: fixed !important;
+  z-index: 80;
+  inset: 0 !important;
+  width: 100vw !important;
+  max-width: none !important;
+  height: 100dvh !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub][data-home-hub-mode="world-inspection"] {
+  width: 100% !important;
+  max-width: none !important;
+  height: 100% !important;
+  min-height: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  gap: 0 !important;
+  grid-template-rows: minmax(0, 1fr) !important;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub][data-home-hub-orbit-body="moon"] .home-orbit__viewport {
+  grid-row: 1;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub][data-home-hub-orbit-body="moon"] :is(.home-orbit__track, .home-orbit__rail) {
+  display: none !important;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+@media (max-width: 600px) {
+  body.simple-ui #startScreen .home-orbit[data-home-hub] .planet-hub-inspection {
+    padding:
+      max(68px, calc(env(safe-area-inset-top) + 58px))
+      max(10px, env(safe-area-inset-right))
+      max(16px, env(safe-area-inset-bottom))
+      max(10px, env(safe-area-inset-left));
+  }
+
+  body.simple-ui #startScreen .home-orbit[data-home-hub] .planet-hub-inspection__return {
+    min-width: 136px;
+    min-height: 44px;
+    padding-inline: 13px;
+  }
+
+  body.simple-ui #startScreen .home-orbit[data-home-hub] .planet-hub-inspection__copy strong {
+    font-size: clamp(27px, 9vw, 38px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.simple-ui #startScreen .home-orbit[data-home-hub] .planet-hub-inspection {
+    transition: none;
+  }
+}
+
+/* Legacy compact Home styles still publish a multi-row carousel. The Living
+   Planet keeps one stable canvas and overlays its labelled rail, preventing a
+   focus click from resizing (and therefore snapping) the WebGL world. */
+@media (min-width: 901px) {
+  body.simple-ui[data-home-layout="compact"] #startScreen .home-orbit[data-home-hub] {
+    grid-template-columns: minmax(0, 1fr) !important;
+    grid-template-rows: minmax(0, 1fr) !important;
+    gap: 0 !important;
+  }
+}
+
+@media (min-width: 901px) and (max-height: 800px) {
+  body.simple-ui[data-home-layout] #startScreen .start-content {
+    min-height: 0;
+    padding: 4px 0 max(4px, env(safe-area-inset-bottom));
+    justify-content: flex-start;
+  }
+}
+
+/* Match the legacy layout selectors at their full specificity. Every released
+   Home layout now keeps one stable, full-size stage; the rail is an overlay,
+   never a second grid track that can resize WebGL during focus. */
+body.simple-ui #startScreen .hero-row.home-orbit[data-home-hub] {
+  --planet-hub-nav-clearance: calc(80px + var(--planet-hub-banner-clearance, 0px) + env(safe-area-inset-top));
+  position: fixed !important;
+  z-index: 1;
+  inset: 0;
+  left: 0;
+  width: 100vw !important;
+  max-width: none;
+  height: 100vh;
+  height: 100dvh !important;
+  min-height: 0;
+  margin: 0;
+  overflow: hidden;
+  transform: none;
+  grid-template-columns: minmax(0, 1fr) !important;
+  grid-template-rows: minmax(0, 1fr) !important;
+  gap: 0 !important;
+}
+
+body.simple-ui #startScreen .hero-row.home-orbit[data-home-hub] > .home-orbit__viewport {
+  position: absolute;
+  inset: 0;
+  grid-column: 1 !important;
+  grid-row: 1 !important;
+  width: 100%;
+  height: 100% !important;
+  min-height: 0;
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub][data-home-hub-mode="focused"] .home-orbit__scene {
+  top: max(var(--planet-hub-nav-clearance), clamp(82px, 10vh, 118px));
+}
+
+body.simple-ui #startScreen .home-orbit[data-home-hub] [data-planet-hub-orbit-return] {
+  top: var(--planet-hub-nav-clearance);
+}
+
+@media (max-width: 900px), (orientation: portrait) and (max-width: 1100px) {
+  body.simple-ui #startScreen .hero-row.home-orbit[data-home-hub] {
+    --planet-hub-nav-clearance: calc(68px + var(--planet-hub-banner-clearance, 0px) + env(safe-area-inset-top));
+  }
+
+  body.simple-ui #startScreen .home-orbit[data-home-hub][data-home-hub-mode="focused"] .home-orbit__scene {
+    top: auto;
+  }
+
+  body.simple-ui #startScreen .home-orbit[data-home-hub] [data-planet-hub-orbit-return] {
+    top: var(--planet-hub-nav-clearance);
+  }
+}
+
+@media (orientation: landscape) and (max-width: 900px) and (max-height: 500px) {
+  body.simple-ui #startScreen .hero-row.home-orbit[data-home-hub] {
+    --planet-hub-nav-clearance: calc(60px + var(--planet-hub-banner-clearance, 0px) + env(safe-area-inset-top));
+  }
+}
+
+/* Focus never changes the canvas geometry. Chrome recedes over the stable
+   full-size stage while the renderer centers the complete physical world. */
+body.simple-ui #startScreen .home-orbit[data-home-hub][data-home-hub-mode="focused"] > .home-orbit__rail,
+body.simple-ui #startScreen .home-orbit[data-home-hub][data-home-hub-transition="focus-out"] > .home-orbit__rail {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translate(-50%, 18px) scale(.98);
+  transition:
+    opacity 280ms ease,
+    transform 680ms cubic-bezier(.16, 1, .3, 1),
+    visibility 0s linear 280ms;
+}
+
+/* Journey is staged as one uninterrupted spatial shot. Once ignition begins,
+   ordinary Home controls dissolve instead of floating over the launch, orbit,
+   and landing compositions. The renderer restores this attribute on every
+   completion and cancellation path, so navigation remains available afterward. */
+body.simple-ui #startScreen .home-orbit[data-home-hub][data-planet-hub-journey-flight="true"] > .home-orbit__rail,
+body.simple-ui #startScreen .home-orbit[data-home-hub][data-planet-hub-journey-flight="true"] .home-orbit__track,
+body.simple-ui #startScreen .home-orbit[data-home-hub][data-planet-hub-journey-flight="true"] [data-planet-hub-orbit-return],
+body.simple-ui #startScreen .home-orbit[data-home-hub][data-planet-hub-journey-flight="true"] .planet-hub-inspection,
+body.simple-ui #startScreen .home-orbit[data-home-hub][data-planet-hub-journey-flight="true"] .planet-hub__world-switch {
+  opacity: 0 !important;
+  visibility: hidden;
+  pointer-events: none !important;
+  transition:
+    opacity 260ms ease,
+    visibility 0s linear 260ms;
+}
+
+body.simple-ui #startScreen[data-planet-hub-journey-flight="true"] > :is(.start-nav, .practice-banner) {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    opacity 260ms ease,
+    visibility 0s linear 260ms;
+}
+
+/* The contextual card uses different collision-safe anchors in overview and
+   focus. Keep that discrete relocation invisible, then let the existing card
+   transition reveal it after the planet finishes centering. */
+body.simple-ui #startScreen .home-orbit[data-home-hub][data-home-hub-transition] .home-orbit__scene[aria-hidden="false"] {
+  opacity: 0 !important;
+  pointer-events: none;
+}
+
+@media (orientation: landscape) and (max-width: 900px) and (max-height: 500px) {
+  body.simple-ui #startScreen .home-orbit[data-home-hub][data-home-hub-mode="focused"] > .home-orbit__rail,
+  body.simple-ui #startScreen .home-orbit[data-home-hub][data-home-hub-transition="focus-out"] > .home-orbit__rail {
+    transform: translateX(18px) scale(.98);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .planet-hub *,
+  body.simple-ui #startScreen .home-orbit[data-home-hub] .home-orbit__scene {
+    animation: none !important;
+    transition-duration: 120ms !important;
+  }
+
+  .planet-hub:is([data-home-hub-phase="transitioning"], [data-home-hub-phase="preview"], [data-planet-hub-phase="transitioning"], [data-planet-hub-phase="preview"]) canvas {
+    opacity: 0;
+  }
+
+  .planet-hub:is([data-home-hub-phase="transitioning"], [data-home-hub-phase="preview"], [data-planet-hub-phase="transitioning"], [data-planet-hub-phase="preview"]) .planet-hub__poster {
+    opacity: 1;
+  }
+}
+
+@media (forced-colors: active) {
+  .planet-hub {
+    forced-color-adjust: none;
+    opacity: .46;
+  }
+
+  body.simple-ui #startScreen .home-orbit[data-home-hub] :is(.home-orbit__scene, .home-orbit__rail) {
+    border: 2px solid CanvasText;
+    color: CanvasText;
+    background: Canvas;
+    forced-color-adjust: none;
+  }
+}
+
+.planet-hub-attribution {
+  margin: 0;
+  color: var(--muted, #b9ced1);
+  font-size: 14px;
+  line-height: 1.65;
+}
+
+.planet-hub-attribution a {
+  color: var(--cyan, #7eeef3);
+  text-underline-offset: .18em;
+}
+
+/* Astronomical chart presentation -----------------------------------------
+ * Once the camera leaves the close planetary band, the destination caption
+ * is no longer the primary task surface. Keeping its full lower-third over a
+ * solar-system chart hid planets, labels, and the spatial grid. The published
+ * view band now gives chart exploration a clear viewport while preserving the
+ * labelled destination rail as the dependable HTML navigation surface.
+ *
+ * These selectors intentionally include the published view attribute so they
+ * outrank the lazily loaded cinematic HUD without changing the close/planet
+ * composition. */
+body.simple-ui #startScreen .hero-row.home-orbit[data-home-hub]:is(
+  [data-home-hub-view="orbit"],
+  [data-home-hub-view="system"],
+  [data-home-hub-view="galaxy"],
+  [data-home-hub-view="universe"]
+) .home-orbit__scene[aria-hidden="false"] {
+  opacity: 0 !important;
+  visibility: hidden;
+  pointer-events: none !important;
+  transform: translateY(10px) scale(.985) !important;
+  transition:
+    opacity 220ms ease,
+    transform 320ms cubic-bezier(.2, .82, .2, 1),
+    visibility 0s linear 220ms;
+}
+
+/* Centering a celestial body is chart inspection, not a Forge/Journey/Arena
+   selection. Keep the destination card out of the telescope view even though
+   the focused body's local zoom naturally re-enters the close `planet` band.
+   Without renderer metadata, the static/offline Home must keep its launch card. */
+body.simple-ui #startScreen .hero-row.home-orbit[data-home-hub][data-home-world="earth"][data-home-hub-orbit-body]:not([data-home-hub-orbit-body="earth"]) .home-orbit__scene[aria-hidden="false"],
+body.simple-ui #startScreen .hero-row.home-orbit[data-home-hub][data-home-world="moon"][data-home-hub-orbit-body]:not([data-home-hub-orbit-body="moon"]) .home-orbit__scene[aria-hidden="false"] {
+  opacity: 0 !important;
+  visibility: hidden;
+  pointer-events: none !important;
+  transform: translateY(10px) scale(.985) !important;
+}
+
+/* The Moon owns its richer project-aware inspection surface. Other centered
+   bodies use this restrained chart caption so the interaction remains clear
+   without replacing the astronomical scene with another panel. */
+body.simple-ui #startScreen .hero-row.home-orbit[data-home-hub]:not([data-home-hub-orbit-body="earth"]):not([data-home-hub-orbit-body="moon"]) .home-orbit__status {
+  position: absolute;
+  z-index: 24;
+  top: calc(var(--planet-hub-nav-clearance) + 8px);
+  left: 50%;
+  width: auto;
+  max-width: min(560px, calc(100vw - 32px));
+  height: auto;
+  padding: 7px 14px;
+  overflow: visible;
+  clip: auto;
+  clip-path: none;
+  border: 1px solid rgba(126, 238, 243, .22);
+  border-radius: 999px;
+  color: rgba(225, 247, 250, .88);
+  background: rgba(1, 9, 19, .64);
+  box-shadow: 0 10px 30px rgba(0, 3, 14, .24);
+  font: 700 11px/1.35 Manrope, Inter, sans-serif;
+  letter-spacing: .02em;
+  text-align: center;
+  white-space: normal;
+  transform: translateX(-50%);
+  backdrop-filter: blur(10px);
+}
+
+/* Labels keep their true canvas coordinates, but are clipped before reaching
+   the persistent header and rail. This avoids the false impression that a
+   body name belongs to a navigation control while retaining proper 3D label
+   projection and occlusion. */
+body.simple-ui #startScreen .hero-row.home-orbit[data-home-hub]:is(
+  [data-home-hub-view="orbit"],
+  [data-home-hub-view="system"],
+  [data-home-hub-view="galaxy"],
+  [data-home-hub-view="universe"]
+) .planet-hub__labels {
+  clip-path: inset(
+    calc(var(--planet-hub-nav-clearance) + 6px)
+    calc(var(--planet-hud-safe-right, 12px) + 122px)
+    calc(var(--planet-hud-rail-size, 60px) + var(--planet-hud-safe-bottom, 12px) + 8px)
+    var(--planet-hud-safe-left, 12px)
+  );
+}
+
+@media (max-width: 900px), (orientation: portrait) and (max-width: 1100px) {
+  body.simple-ui #startScreen .hero-row.home-orbit[data-home-hub]:is(
+    [data-home-hub-view="orbit"],
+    [data-home-hub-view="system"],
+    [data-home-hub-view="galaxy"],
+    [data-home-hub-view="universe"]
+  ) .planet-hub__labels {
+    clip-path: inset(
+      calc(var(--planet-hub-nav-clearance) + 60px)
+      var(--planet-hud-safe-right, 12px)
+      calc(var(--planet-hud-rail-size, 60px) + var(--planet-hud-safe-bottom, 12px) + 8px)
+      var(--planet-hud-safe-left, 12px)
+    );
+  }
+}
+
+body.simple-ui #startScreen .hero-row.home-orbit[data-home-hub]:is(
+  [data-home-hub-view="system"],
+  [data-home-hub-view="galaxy"],
+  [data-home-hub-view="universe"]
+) .planet-hub__label {
+  min-height: 20px;
+  padding: 3px 7px;
+  font-size: 10px;
+  letter-spacing: .105em;
+  background: rgba(1, 8, 18, .52);
+  opacity: .78;
+}
+
+body.simple-ui #startScreen .hero-row.home-orbit[data-home-hub]:is(
+  [data-home-hub-view="system"],
+  [data-home-hub-view="galaxy"],
+  [data-home-hub-view="universe"]
+) .planet-hub__label:is([data-selected="true"], [data-focused="true"]) {
+  background: rgba(2, 15, 29, .82);
+  opacity: 1;
+}
+
+/* At chart scale the rail becomes a quiet compass rather than another large
+   panel. It remains labelled, keyboard accessible, and safely inset. */
+body.simple-ui #startScreen .hero-row.home-orbit[data-home-hub]:is(
+  [data-home-hub-view="orbit"],
+  [data-home-hub-view="system"],
+  [data-home-hub-view="galaxy"],
+  [data-home-hub-view="universe"]
+):not([data-planet-hub-journey-flight="true"]) .home-orbit__rail {
+  --planet-hud-rail-size: 64px;
+  /* Chart mode is viewport-owned. Keeping this absolute inside the legacy
+     max-width Home wrapper reintroduced its horizontal offset at resized and
+     embedded widths, which could move the first or last destination offscreen. */
+  position: fixed;
+  right: var(--planet-hud-safe-right, 12px);
+  left: var(--planet-hud-safe-left, 12px);
+  width: auto;
+  max-width: 540px;
+  height: var(--planet-hud-rail-size);
+  min-height: var(--planet-hud-rail-size);
+  margin-inline: auto;
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+  transform: none !important;
+  /* Semantic zoom must not tween from the legacy translateX centering: that
+     intermediate transform places half the rail outside the viewport. */
+  transition: opacity 280ms ease, visibility 0s linear;
+}
+
+body.simple-ui #startScreen .hero-row.home-orbit[data-home-hub]:is(
+  [data-home-hub-view="orbit"],
+  [data-home-hub-view="system"],
+  [data-home-hub-view="galaxy"],
+  [data-home-hub-view="universe"]
+) .home-orbit__tabs {
+  min-height: 56px;
+  border-color: rgba(137, 242, 241, .1);
+  background: rgba(1, 8, 17, .42);
+  box-shadow: 0 10px 28px rgba(0, 3, 14, .16), inset 0 1px rgba(255, 255, 255, .025);
+}
+
+body.simple-ui #startScreen .hero-row.home-orbit[data-home-hub]:is(
+  [data-home-hub-view="orbit"],
+  [data-home-hub-view="system"],
+  [data-home-hub-view="galaxy"],
+  [data-home-hub-view="universe"]
+) .home-orbit__tab {
+  min-height: 48px;
+}
+
+/* Short landscape uses a right-side compass. Its label-safe region therefore
+   clears the rail horizontally instead of removing scarce vertical chart
+   space. */
+@media (orientation: landscape) and (max-width: 900px) and (max-height: 500px) {
+  body.simple-ui #startScreen .hero-row.home-orbit[data-home-hub]:is(
+    [data-home-hub-view="orbit"],
+    [data-home-hub-view="system"],
+    [data-home-hub-view="galaxy"],
+    [data-home-hub-view="universe"]
+  ):not([data-planet-hub-journey-flight="true"]) .home-orbit__rail {
+    --planet-hud-rail-size: 94px;
+    top: max(var(--planet-hub-nav-clearance), var(--planet-hud-safe-top, 9px));
+    right: var(--planet-hud-safe-right, 9px);
+    bottom: var(--planet-hud-safe-bottom, 9px);
+    left: auto;
+    width: var(--planet-hud-rail-size);
+    height: auto;
+    min-height: 0;
+    transform: none !important;
+  }
+
+  body.simple-ui #startScreen .hero-row.home-orbit[data-home-hub]:is(
+    [data-home-hub-view="orbit"],
+    [data-home-hub-view="system"],
+    [data-home-hub-view="galaxy"],
+    [data-home-hub-view="universe"]
+  ) .home-orbit__tab > span {
+    display: none;
+  }
+
+  body.simple-ui #startScreen .hero-row.home-orbit[data-home-hub]:is(
+    [data-home-hub-view="orbit"],
+    [data-home-hub-view="system"],
+    [data-home-hub-view="galaxy"],
+    [data-home-hub-view="universe"]
+  ) .home-orbit__tab small {
+    display: block;
+    font-size: 7px;
+  }
+
+  body.simple-ui #startScreen .hero-row.home-orbit[data-home-hub]:is(
+    [data-home-hub-view="orbit"],
+    [data-home-hub-view="system"],
+    [data-home-hub-view="galaxy"],
+    [data-home-hub-view="universe"]
+  ) .planet-hub__labels {
+    clip-path: inset(
+      calc(var(--planet-hub-nav-clearance) + 4px)
+      calc(var(--planet-hud-rail-size) + var(--planet-hud-safe-right, 9px) + 6px)
+      var(--planet-hud-safe-bottom, 9px)
+      var(--planet-hud-safe-left, 9px)
+    );
+  }
+}
+
+/* Extremely shallow players already switch the compass back to a horizontal
+   bottom rail; match that geometry in the projected-label safe window. */
+@media (orientation: landscape) and (max-width: 900px) and (max-height: 240px) {
+  body.simple-ui #startScreen .hero-row.home-orbit[data-home-hub]:is(
+    [data-home-hub-view="orbit"],
+    [data-home-hub-view="system"],
+    [data-home-hub-view="galaxy"],
+    [data-home-hub-view="universe"]
+  ):not([data-planet-hub-journey-flight="true"]) .home-orbit__rail {
+    --planet-hud-rail-size: 64px;
+    top: auto;
+    right: var(--planet-hud-safe-right, 9px);
+    bottom: var(--planet-hud-safe-bottom, 9px);
+    left: var(--planet-hud-safe-left, 9px);
+    width: auto;
+    max-width: 540px;
+    height: var(--planet-hud-rail-size);
+    min-height: var(--planet-hud-rail-size);
+    margin-inline: auto;
+    transform: none !important;
+  }
+
+  /* The short-landscape rule above hides icons for a vertical compass. When
+     the shallow layout switches back to a horizontal rail, restore a stable
+     icon/title/eyebrow grid so the title cannot be auto-placed into the former
+     18px icon column. */
+  body.simple-ui #startScreen .hero-row.home-orbit[data-home-hub]:is(
+    [data-home-hub-view="orbit"],
+    [data-home-hub-view="system"],
+    [data-home-hub-view="galaxy"],
+    [data-home-hub-view="universe"]
+  ) .home-orbit__tab {
+    grid-template-columns: 18px minmax(0, 1fr);
+    grid-template-rows: auto auto;
+    place-items: initial;
+    text-align: left;
+  }
+
+  body.simple-ui #startScreen .hero-row.home-orbit[data-home-hub]:is(
+    [data-home-hub-view="orbit"],
+    [data-home-hub-view="system"],
+    [data-home-hub-view="galaxy"],
+    [data-home-hub-view="universe"]
+  ) .home-orbit__tab > span {
+    display: block;
+    grid-column: 1;
+    grid-row: 1 / -1;
+    align-self: center;
+  }
+
+  body.simple-ui #startScreen .hero-row.home-orbit[data-home-hub]:is(
+    [data-home-hub-view="orbit"],
+    [data-home-hub-view="system"],
+    [data-home-hub-view="galaxy"],
+    [data-home-hub-view="universe"]
+  ) .home-orbit__tab :is(b, small) {
+    grid-column: 2;
+    min-width: 0;
+  }
+
+  body.simple-ui #startScreen .hero-row.home-orbit[data-home-hub]:is(
+    [data-home-hub-view="orbit"],
+    [data-home-hub-view="system"],
+    [data-home-hub-view="galaxy"],
+    [data-home-hub-view="universe"]
+  ) .planet-hub__labels {
+    clip-path: inset(
+      calc(var(--planet-hub-nav-clearance) + 2px)
+      var(--planet-hud-safe-right, 9px)
+      calc(var(--planet-hud-rail-size) + var(--planet-hud-safe-bottom, 9px) + 5px)
+      var(--planet-hud-safe-left, 9px)
+    );
+  }
+}
+
+/* Keep projected names out from under the Places controls without changing
+   their canvas-space coordinates. The inset follows the actual responsive
+   panel state published by the optional controller. */
+@media (min-width: 901px) and (orientation: landscape) {
+  body.simple-ui #startScreen .hero-row.home-orbit[data-home-hub][data-planet-hub-places-visible="true"]:is(
+    [data-home-hub-view="orbit"],
+    [data-home-hub-view="system"],
+    [data-home-hub-view="galaxy"],
+    [data-home-hub-view="universe"]
+  ) .planet-hub__labels {
+    clip-path: inset(
+      calc(var(--planet-hub-nav-clearance) + 6px)
+      calc(var(--planet-hud-safe-right, 12px) + 122px)
+      calc(var(--planet-hud-rail-size, 60px) + var(--planet-hud-safe-bottom, 12px) + 8px)
+      calc(var(--planet-hub-places-width) + var(--planet-hub-safe-left) + 20px)
+    );
+  }
+}
+
+@media (max-width: 900px), (orientation: portrait) and (max-width: 1100px) {
+  body.simple-ui #startScreen .hero-row.home-orbit[data-home-hub][data-planet-hub-places-visible="true"]:is(
+    [data-home-hub-view="orbit"],
+    [data-home-hub-view="system"],
+    [data-home-hub-view="galaxy"],
+    [data-home-hub-view="universe"]
+  ) .planet-hub__labels {
+    clip-path: inset(
+      calc(var(--planet-hub-nav-clearance) + 60px)
+      var(--planet-hud-safe-right, 12px)
+      calc(var(--planet-hub-places-sheet-height) + var(--planet-hud-rail-size, 60px) + var(--planet-hud-safe-bottom, 12px) + 14px)
+      var(--planet-hud-safe-left, 12px)
+    );
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.simple-ui #startScreen .hero-row.home-orbit[data-home-hub]:is(
+    [data-home-hub-view="orbit"],
+    [data-home-hub-view="system"],
+    [data-home-hub-view="galaxy"],
+    [data-home-hub-view="universe"]
+  ) .home-orbit__scene[aria-hidden="false"] {
+    transform: none !important;
+    transition-duration: 120ms;
+  }
+}
+
+/* Static practice adds its return/status banner before the existing navigation. */
+body.simple-ui #startScreen:has(> .practice-banner:not([hidden])) .hero-row.home-orbit[data-home-hub] {
+  --planet-hub-banner-clearance: 60px;
+}

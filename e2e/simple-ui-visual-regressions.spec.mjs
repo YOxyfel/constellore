@@ -188,6 +188,17 @@ for (const viewport of viewports) {
       body.classList.remove("first-session", "choices-ready", "adventures-ready", "advanced-ready");
       body.classList.add("explore-ready");
     });
+    await page.evaluate(async () => {
+      const { syncHomeOrbitView } = await import("/home-menu-view.mjs?v=5.0.0-beta.1");
+      syncHomeOrbitView({
+        forgeAvailable: true,
+        journeyAvailable: true,
+        arenaAvailable: true,
+        catalogAvailable: true
+      }, document);
+    });
+    await page.locator("#homeForgeCatalogToggle").click();
+    await expect(page.locator("#homeForgeCatalog")).toBeVisible();
     await expect(exploreHub).toBeVisible();
     await expect(page.locator("#modePicker")).toBeHidden();
     await expect(page.locator("#adventuresHub")).toBeHidden();
@@ -232,6 +243,9 @@ for (const viewport of viewports) {
       ["#modePicker", "#modePicker .mode-card", "#adventuresHub", "#adventuresHub button"],
       `${viewport.name} Gold catalogs`
     );
+
+    await page.keyboard.press("Escape");
+    await expect(page.locator("#homeForgeCatalog")).toBeHidden();
 
     await primaryButton.click();
     const briefing = page.locator("#missionBriefingDialog");
@@ -322,7 +336,7 @@ test("an unfinished first constellation returns to a cinematic one-action home",
   await expect(page.locator("#cosmicGate")).toBeHidden();
   await expect(page.locator("#startScreen")).toBeVisible();
   await expect(page.locator("#primaryOrbitTitle")).toHaveText("Make Mud");
-  await expect(page.locator("#primaryOrbitButton")).toContainText("Begin");
+  await expect(page.locator("#primaryOrbitButton")).toContainText("Start playing");
   await expect(page.locator("#primaryOrbitSecondary")).toBeHidden();
   await expect(page.locator("#modePicker")).toBeHidden();
   await expect(page.locator("#exploreHub")).toBeHidden();
@@ -330,8 +344,6 @@ test("an unfinished first constellation returns to a cinematic one-action home",
 
   await page.locator("#primaryOrbitButton").click();
   const briefing = page.locator("#missionBriefingDialog");
-  await expect(briefing).toHaveJSProperty("open", true);
-  await page.locator("#beginMission").click();
   await expect(briefing).toHaveJSProperty("open", false);
   await expect(page.locator("#gameScreen")).toBeVisible();
   await expect(page.locator("#targetWord")).toHaveText("Mud");
@@ -463,9 +475,9 @@ for (const viewport of [
       dialog.querySelector("#resultTitle").textContent = "You made Telescope!";
       dialog.querySelector("#resultStats").textContent = "7 words found · 8 moves · 200 Run IQ";
       for (const button of dialog.querySelectorAll("#resultActions > button")) button.hidden = false;
-      dialog.querySelector("#resultRetry").textContent = "Next challenge";
-      dialog.querySelector("#resultReplay").textContent = "Restart challenge";
-      dialog.querySelector("#resultPrimary span").textContent = "Main menu";
+      dialog.querySelector("#resultRetry").textContent = "Next target";
+      dialog.querySelector("#resultReplay").textContent = "Try this target again";
+      dialog.querySelector("#resultPrimary span").textContent = "Return home";
       dialog.showModal();
     });
     await expect(result).toBeVisible();

@@ -1,0 +1,54 @@
+{
+  "capturedAt": "2026-09-05T20:16:25.866Z",
+  "build": "5.0.0-beta.4+source",
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "deviceScaleFactor": 1,
+  "browser": "Playwright Chromium, fresh isolated contexts",
+  "runtime": "Current source renderer served from localhost:4193/play. Only the captured document was configured with data-runtime=local-practice; its missing generated local-world.mjs was served from existing dist-pages/play/local-world.mjs. No repository game code changes. Normal game renderer, real UI interactions, no screenshot overlays.",
+  "isolation": "No user browser profile used. Profiles and intro completion existed only in fresh browser contexts. No player registration or gameplay writes sent to server; game APIs used built-in browser-local runtime.",
+  "screenshots": [
+    {
+      "file": "board-current.webp",
+      "route": "http://localhost:4193/play/?challenge=1&target=Horizon&seed=73&birthday=off",
+      "type": "Actual current board screenshot",
+      "fixture": "Existing e2e seen-intro fixture plus isolated Silver progression; seeded tutorial completed. Challenge started through current UI. Seven recipes played through actual inventory controls, then Tidy.",
+      "observedWords": [
+        "Mud",
+        "Energy",
+        "Steam",
+        "Mist",
+        "Lava",
+        "Dust",
+        "Cloud"
+      ],
+      "observedInventory": 11,
+      "limitations": "Source renderer with generated local-practice recipe data; not a live multiplayer session."
+    },
+    {
+      "file": "moonhaven-current.webp",
+      "route": "http://localhost:4193/play/?birthday=off",
+      "type": "Actual current The Heart project screenshot",
+      "fixture": "Existing e2e seen-intro fixture and Moon anchor completion built through current worldweaving modules. The Heart itself has 0/16 experiments complete.",
+      "actions": [
+        "Journey tab",
+        "Moon Home rocket"
+      ],
+      "observedTitle": "The Heart",
+      "observedChapter": "A Place That Can Breathe",
+      "limitations": "Isolated seeded progression used to reach this current project screen; not a claim of organic playthrough completion."
+    }
+  ],
+  "sourceHashes": {
+    "public/app.js": "98578e77b4ec84ec2d91a284b6c18cdc9720e1006fa106671c88df94bb8ab94a",
+    "public/index.html": "09d070ab308a25f01ff516ac7481d26affb8dfb1639db8bab8f8165f031359f0",
+    "public/styles.css": "9ed7a373038bc5d4aa6e2b362c90a0a9cb92f7426abe7fd0066461c311dcd57d",
+    "public/moon-heart-project.mjs": "f02923911add51eea1c9afe748f09aa3568a2c594c7d14caff4c3979d02804a0",
+    "public/concept-matter-app.mjs": "7653f5345b9511f98c8ffb4de761eb2c8774c04986bcff524415a316774498fb",
+    "dist-pages/play/local-world.mjs": "8089898ce0d1fa0616198a1a86a83a92238b3d5f1dcfc27cdb2ac893a14c26f8",
+    "public/art/website/board-current.webp": "861769f3520c7ffc521bb1e6148aa74449ffe865ce07628fcc22336591a6cb15",
+    "public/art/website/moonhaven-current.webp": "397b4e8f0ca203178190e48b91ccc059d56765517937d1a63e5b4f3e7b9a98eb"
+  }
+}

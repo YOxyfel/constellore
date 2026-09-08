@@ -2,7 +2,10 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import {
+  GOLDEN_PAIR_MIN_ACTIVE_MS,
   GOLDEN_PAIR_MAX_ACTIVE_MS,
+  GOLDEN_PAIR_FASTER_DURATION_SCALE,
+  GOLDEN_PAIR_FASTER_MIN_ACTIVE_MS,
   GOLDEN_PAIR_MOTIONS,
   GOLDEN_PAIR_VIEW_SELECTORS,
   createGoldenPairView
@@ -207,9 +210,11 @@ function model(overrides = {}) {
     family: "weather",
     motion: "fall",
     palette: "tidal-cyan",
+    presentation: "authored",
+    authored: true,
     beats: ["Condense", "Release", "Ripple"],
     glyphs: ["◇", "↓", "✦"],
-    duration: 760,
+    duration: 3_300,
     announcement: "Cloud and Water combine to create Rain.",
     ...overrides
   };
@@ -239,12 +244,20 @@ test("the overlay is pointer-free, aria-hidden, bounded, and built without activ
 
   assert.equal(result.played, true);
   assert.equal(result.motion, "pulse");
+  assert.equal(result.presentation, "authored");
+  assert.equal(result.authored, true);
   assert.equal(result.duration, GOLDEN_PAIR_MAX_ACTIVE_MS);
   assert.equal(state.root.getAttribute("aria-hidden"), "true");
   assert.equal(state.root.style.getPropertyValue("pointer-events"), "none");
   assert.equal(state.root.getAttribute("data-golden-phase"), "active");
   assert.equal(state.root.getAttribute("data-golden-id"), "goldenscript");
+  assert.equal(state.root.getAttribute("data-golden-presentation"), "authored");
+  assert.equal(state.root.getAttribute("data-golden-authored"), "true");
   assert.equal(state.root.querySelectorAll(GOLDEN_PAIR_VIEW_SELECTORS.source).length, 2);
+  assert.equal(state.root.querySelectorAll(GOLDEN_PAIR_VIEW_SELECTORS.meteorTrail).length, 2);
+  for (const trail of state.root.querySelectorAll(GOLDEN_PAIR_VIEW_SELECTORS.meteorTrail)) {
+    assert.equal(trail.getAttribute("aria-hidden"), "true");
+  }
   assert.equal(state.root.querySelectorAll(GOLDEN_PAIR_VIEW_SELECTORS.glyph).length, 3);
   assert.equal(state.root.querySelectorAll(GOLDEN_PAIR_VIEW_SELECTORS.beat).length, 3);
   assert.equal(state.root.querySelectorAll(GOLDEN_PAIR_VIEW_SELECTORS.core).length, 1);
@@ -261,6 +274,56 @@ test("the overlay is pointer-free, aria-hidden, bounded, and built without activ
   assert.equal(state.documentRef.createdTags.includes("video"), false);
   assert.equal(state.documentRef.createdTags.includes("img"), false);
   assert.equal(state.timers.pendingCount, 1);
+});
+
+test("generic major presentation exposes safe metadata and dedicated meteor choreography", () => {
+  const state = harness();
+  const result = state.view.play(model({
+    id: "major-meteor",
+    presentation: "generic",
+    authored: false,
+    family: "major",
+    palette: "meteor-cyan",
+    duration: 3_400,
+    a: { word: "Earth", emoji: "🌍" },
+    b: { word: "Water", emoji: "💧" },
+    result: { word: "Mud", emoji: "🟤" }
+  }));
+
+  assert.equal(result.played, true);
+  assert.equal(result.presentation, "generic");
+  assert.equal(result.authored, false);
+  assert.equal(result.duration, 3_400);
+  assert.equal(state.root.getAttribute("data-golden-presentation"), "generic");
+  assert.equal(state.root.getAttribute("data-golden-authored"), "false");
+  assert.equal(state.root.getAttribute("data-golden-phase"), "active");
+  assert.equal(state.root.querySelectorAll(GOLDEN_PAIR_VIEW_SELECTORS.meteorTrail).length, 2);
+
+  const css = readFileSync(
+    new URL("../public/story/golden-fusions/golden-pair.css", import.meta.url),
+    "utf8"
+  );
+  const genericRule = css.match(/\[data-golden-presentation="generic"\]\s*\{([^}]+)\}/u)?.[1] || "";
+  assert.match(genericRule, /--gp-a-x:\s*-26rem/u);
+  assert.match(genericRule, /--gp-a-y:\s*0rem/u);
+  assert.match(genericRule, /--gp-b-x:\s*26rem/u);
+  assert.match(genericRule, /--gp-b-y:\s*0rem/u);
+  assert.match(css, /@keyframes\s+golden-meteor-tail/u);
+  assert.match(css, /@keyframes\s+golden-meteor-result/u);
+  assert.match(
+    css,
+    /\[data-golden-phase="active"\]\[data-golden-presentation="generic"\]\s+\[data-golden-result\]\s*\{\s*animation-name:\s*golden-meteor-result/u
+  );
+  assert.match(css, /calc\(-50%\s*-\s*5[.]2rem\)/u);
+  assert.match(
+    css,
+    /\[data-golden-motion-mode="reduced"\]\s+\[data-golden-meteor-trail\]\s*\{\s*display:\s*none/u
+  );
+  assert.match(css, /body\[data-cosmetic-effects="off"\]\s+\[data-golden-pair\]/u);
+  assert.match(
+    css,
+    /@media\s*\(forced-colors:\s*active\)[\s\S]*\[data-golden-meteor-trail\]\s*\{[\s\S]*background:\s*CanvasText;[\s\S]*filter:\s*none;/u
+  );
 });
 
 test("all and only the twelve authored motions have distinct CSS choreography", () => {
@@ -326,6 +389,34 @@ test("replay cancels the old generation, flushes layout, and ignores a stale cal
   assert.equal(state.timers.pendingCount, 0);
 });
 
+test("full motion cannot be compressed below a readable three-second sequence", () => {
+  const state = harness();
+  const result = state.view.play(model({ duration: 100 }));
+
+  assert.equal(result.played, true);
+  assert.equal(result.reducedMotion, false);
+  assert.equal(result.duration, GOLDEN_PAIR_MIN_ACTIVE_MS);
+  state.timers.advance(GOLDEN_PAIR_MIN_ACTIVE_MS - 1);
+  assert.equal(state.root.hidden, false);
+  state.timers.advance(1);
+  assert.equal(state.root.hidden, true);
+});
+
+test("the Faster preference shortens the cinematic while keeping a readable two-second scene", () => {
+  const state = harness();
+  const result = state.view.play(model({ duration: 3_500 }), { pace: "faster" });
+
+  assert.equal(result.played, true);
+  assert.equal(result.pace, "faster");
+  assert.equal(result.duration, Math.max(GOLDEN_PAIR_FASTER_MIN_ACTIVE_MS, Math.round(3_500 * GOLDEN_PAIR_FASTER_DURATION_SCALE)));
+  assert.equal(state.root.getAttribute("data-golden-pace"), "faster");
+  assert.equal(state.root.style.getPropertyValue("--golden-duration"), `${result.duration}ms`);
+  state.timers.advance(result.duration - 1);
+  assert.equal(state.root.hidden, false);
+  state.timers.advance(1);
+  assert.equal(state.root.hidden, true);
+});
+
 test("reduced motion presents a short static frame without a layout restart", () => {
   const state = harness({ reducedMotion: () => true });
   const result = state.view.play(model({ duration: 850 }));
@@ -369,10 +460,12 @@ test("runtime owns one board overlay, preserves gameplay children, honors Effect
   board.append(gameplay);
   documentRef.body.append(board);
 
+  let fusionAnimation = "normal";
   const options = {
     board,
     timers,
-    reducedMotion: () => documentRef.body.dataset.cosmeticEffects === "reduced"
+    reducedMotion: () => documentRef.body.dataset.cosmeticEffects === "reduced",
+    fusionAnimation: () => fusionAnimation
   };
   const [runtime, sameRuntime] = await Promise.all([
     createGoldenPairRuntime(options),
@@ -407,8 +500,51 @@ test("runtime owns one board overlay, preserves gameplay children, honors Effect
     result: { word: "Rain", emoji: "🌧️" }
   });
   assert.equal(played.played, true);
+  assert.equal(played.presentation, "authored");
+  assert.equal(played.authored, true);
   assert.equal(played.reducedMotion, true);
   assert.equal(timers.pendingCount, 1);
+
+  documentRef.body.dataset.cosmeticEffects = "full";
+  const skipped = runtime.play({
+    a: { word: "Earth", emoji: "🌍" },
+    b: { word: "Water", emoji: "💧" },
+    result: { word: "Mud", emoji: "🟤" }
+  });
+  assert.deepEqual(skipped, { played: false, reason: "not-authored" });
+
+  const generic = runtime.play({
+    a: { word: "Earth", emoji: "🌍" },
+    b: { word: "Water", emoji: "💧" },
+    result: { word: "Mud", emoji: "🟤" },
+    major: true
+  });
+  assert.equal(generic.played, true);
+  assert.equal(generic.presentation, "generic");
+  assert.equal(generic.authored, false);
+  assert.ok(generic.duration <= GOLDEN_PAIR_MAX_ACTIVE_MS);
+  assert.equal(overlay.getAttribute("data-golden-presentation"), "generic");
+  assert.equal(overlay.getAttribute("data-golden-authored"), "false");
+
+  documentRef.body.dataset.cosmeticEffects = "full";
+  fusionAnimation = "faster";
+  const faster = runtime.play({
+    a: { word: "Cloud", emoji: "вЃпёЏ" },
+    b: { word: "Water", emoji: "рџ’§" },
+    result: { word: "Rain", emoji: "рџЊ§пёЏ" }
+  });
+  assert.equal(faster.played, true);
+  assert.equal(faster.pace, "faster");
+  assert.ok(faster.duration >= GOLDEN_PAIR_FASTER_MIN_ACTIVE_MS);
+  assert.ok(faster.duration < GOLDEN_PAIR_MIN_ACTIVE_MS);
+
+  fusionAnimation = "off";
+  assert.deepEqual(runtime.play({
+    a: { word: "Cloud" },
+    b: { word: "Water" },
+    result: { word: "Rain" }
+  }), { played: false, reason: "fusion-animation-off" });
+  assert.equal(timers.pendingCount, 0);
 
   runtime.dispose();
   runtime.dispose();

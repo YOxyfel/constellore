@@ -154,6 +154,7 @@ test("local practice Sense has the same non-spoiling, permanently assisted contr
   context.after(() => rm(directory, { recursive: true, force: true }));
   await writeLocalWorldModule(join(directory, "local-world.mjs"));
   await copyFile(new URL("../public/local-beta.mjs", import.meta.url), join(directory, "local-beta.mjs"));
+  await copyFile(new URL("../public/concept-chemistry.mjs", import.meta.url), join(directory, "concept-chemistry.mjs"));
   await copyFile(new URL("../public/cosmic-twists.mjs", import.meta.url), join(directory, "cosmic-twists.mjs"));
   await copyFile(new URL("../public/engagement-features.mjs", import.meta.url), join(directory, "engagement-features.mjs"));
   await copyFile(new URL("../public/universe-director.mjs", import.meta.url), join(directory, "universe-director.mjs"));
@@ -184,7 +185,7 @@ test("local practice Sense has the same non-spoiling, permanently assisted contr
     body: JSON.stringify({ ...credentials, a: "Earth", b: "Water" })
   });
   assert.equal(combined.word, "Mud", "Sense must not auto-complete or block continued play");
-  assert.equal(combined.division, "local-assisted");
+  assert.equal(combined.division, "open");
 
   const resumed = await localRequest("/api/run/resume", { method: "POST", body: JSON.stringify(credentials) });
   assert.equal(resumed.run.assist, "sense");

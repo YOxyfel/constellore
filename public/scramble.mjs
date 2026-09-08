@@ -2,13 +2,19 @@ import {
   SCRAMBLE_DEFAULT_MODE_ID,
   getScrambleModeDefinition,
   normalizeScrambleModeId
-} from "./scramble-arena.mjs?v=5.0.0-beta.1";
+} from "./scramble-arena.mjs?v=5.0.0-beta.4";
+import { profileFrameBySlug } from "./profile-frame-catalog.mjs?v=5.0.0-beta.4";
 
 export const SCRAMBLE_COUNTDOWN_SECONDS = 3;
 export const SCRAMBLE_MATCH_SECONDS = 5 * 60;
 export const SCRAMBLE_EVENT_LIMIT = 600;
 export const SCRAMBLE_BOARD_WORD_LIMIT = 512;
 export const SCRAMBLE_BOARD_HISTORY_LIMIT = 256;
+
+export function sanitizeScrambleFrameSlug(value) {
+  const slug = String(value ?? "").trim();
+  return profileFrameBySlug(slug)?.slug || "";
+}
 
 const EVENT_TYPES = new Set([
   "attempt",
@@ -551,6 +557,9 @@ export function sanitizeScramblePlayer(value, format = SCRAMBLE_DEFAULT_MODE_ID)
   return {
     id,
     callsign: boundedText(firstOwnValue(source, ["callsign", "name"]), 32) || "STARGAZER",
+    frameSlug: sanitizeScrambleFrameSlug(
+      firstOwnValue(source, ["frameSlug", "arenaFrameSlug", "profileFrameSlug"])
+    ),
     ready: ownValue(source, "ready") === true,
     connected: ownValue(source, "connected") !== false,
     discoveries: boundedInteger(firstOwnValue(source, ["discoveries", "successes"]), 0, 999),
@@ -1224,8 +1233,12 @@ export function scrambleResultPresentation(state) {
   ));
   const selfFormatState = sanitizeScrambleFormatState(self?.formatState, format);
   const rivalFormatState = sanitizeScrambleFormatState(rival?.formatState, format);
+  const finishReason = boundedText(ownValue(source, "finishReason"), 100);
+  const wonByForfeit = ["forfeit", "player_forfeit", "disconnect_forfeit"].includes(finishReason.toLowerCase());
   let title;
-  if (format === "wordstorm") {
+  if (wonByForfeit && !tied) {
+    title = won ? "You won by forfeit" : `${rival?.callsign || "Your rival"} won by forfeit`;
+  } else if (format === "wordstorm") {
     title = tied
       ? "Wordstorm draw"
       : won ? "You won the Wordstorm" : `${rival?.callsign || "Your rival"} won the Wordstorm`;
@@ -1249,9 +1262,8 @@ export function scrambleResultPresentation(state) {
   const ranked = ownValue(source, "ranked") === true;
   const modeLabel = definition?.label || "Target Race";
   const kicker = format === SCRAMBLE_DEFAULT_MODE_ID
-    ? ranked ? "RANKED CONSTELLATION SCRAMBLE" : "PRIVATE CONSTELLATION SCRAMBLE"
+    ? ranked ? "RANKED 1V1" : "PRIVATE 1V1"
     : `${ranked ? "RANKED" : "PRIVATE"} ${modeLabel.toUpperCase()}`;
-  const finishReason = boundedText(ownValue(source, "finishReason"), 100);
   return {
     won,
     tied,
@@ -1269,7 +1281,7 @@ export function scrambleResultPresentation(state) {
     finishReasonLabel: scrambleFinishReasonText(finishReason, { format, won, tied }),
     ratingDelta,
     ratingLabel: ranked
-      ? `${format === SCRAMBLE_DEFAULT_MODE_ID ? "Duel" : modeLabel} Rating ${ratingDelta > 0 ? "+" : ""}${ratingDelta}`
+      ? `${format === SCRAMBLE_DEFAULT_MODE_ID ? "1v1" : modeLabel} Rating ${ratingDelta > 0 ? "+" : ""}${ratingDelta}`
       : "Private match \u00b7 no rating"
   };
 }
@@ -1281,7 +1293,7 @@ export function scrambleShareText(state, url = "") {
   if (result.format === SCRAMBLE_DEFAULT_MODE_ID) {
     const legacyOutcome = result.tied ? "drew" : result.won ? "won" : "raced";
     return [
-      `I ${legacyOutcome} a Constellation Scramble${rival ? ` against ${rival.callsign}` : ""}.`,
+      `I ${legacyOutcome} in Scramble Arena${rival ? ` against ${rival.callsign}` : ""}.`,
       ownValue(source, "target") ? `Target: ${boundedText(ownValue(source, "target"), 48)}.` : "",
       "Every pairing was visible. Can you reach it first?",
       boundedText(url, 500)

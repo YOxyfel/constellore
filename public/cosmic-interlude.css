@@ -166,7 +166,10 @@
   box-shadow:
     0 0 0 6px rgba(129, 233, 244, .08),
     0 0 22px rgba(129, 233, 244, .18);
-  font: 700 15px/1 inherit;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1;
   translate: -50% -50%;
   pointer-events: auto;
   cursor: pointer;

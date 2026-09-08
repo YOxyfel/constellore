@@ -1,7 +1,7 @@
 /*
- * Constellore cinematic gate
+ * Constellore constellation fold
  *
- * This module is intentionally opt-in. The full-screen gate expects a direct
+ * This module is intentionally opt-in. The full-screen fold expects a direct
  * child of <body>; dialog companions only activate when their classes are added.
  */
 
@@ -31,6 +31,12 @@
   --gate-open-time: 760ms;
   --gate-ease-in: cubic-bezier(.72, 0, .22, 1);
   --gate-ease-out: cubic-bezier(.16, .76, .2, 1);
+  --fold-map-scale: 1;
+  --fold-map-start-scale: 1.06;
+  --fold-draw-time: 560ms;
+  --fold-fade-time: 360ms;
+  --fold-veil-color: #02040d;
+  --fold-horizon-color: color-mix(in srgb, var(--gate-accent-2) 18%, #02040d);
   position: fixed;
   z-index: 2147483000;
   inset: 0;
@@ -42,7 +48,7 @@
   opacity: 0;
   pointer-events: none;
   color: #f8fbff;
-  background: var(--gate-ink);
+  background: transparent;
   font-family: Manrope, Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
   font-size: 15px;
   line-height: 1.45;
@@ -80,8 +86,8 @@ body.transition-active {
 #cosmicGate[data-kind="enter"] {
   --gate-accent: #6de8ff;
   --gate-accent-2: #a58cff;
-  --gate-close-time: 1050ms;
-  --gate-open-time: 1150ms;
+  --gate-close-time: 560ms;
+  --gate-open-time: 520ms;
 }
 
 #cosmicGate[data-kind="pause"] {
@@ -106,225 +112,260 @@ body.transition-active {
   --gate-accent-2: #a77dbb;
 }
 
-.cosmic-gate__door,
-.cosmic-door {
+body:has([data-home-destination="forge"]) #cosmicGate,
+body[data-home-destination="forge"] #cosmicGate,
+#cosmicGate[data-destination="forge"] {
+  --gate-accent: #ffe19a;
+  --gate-accent-2: #69e4ed;
+  --gate-warm: #ffc96f;
+}
+
+body:has([data-home-destination="journey"]) #cosmicGate,
+body[data-home-destination="journey"] #cosmicGate,
+#cosmicGate[data-destination="journey"] {
+  --gate-accent: #8ff5ff;
+  --gate-accent-2: #9ca8ff;
+  --gate-warm: #d9f7ff;
+}
+
+body:has([data-home-destination="arena"]) #cosmicGate,
+body[data-home-destination="arena"] #cosmicGate,
+#cosmicGate[data-destination="arena"] {
+  --gate-accent: #b5a2ff;
+  --gate-accent-2: #55e8ff;
+  --gate-warm: #f2b2ff;
+}
+
+.cosmic-gate__fold {
   position: absolute;
   z-index: 1;
-  top: 0;
-  bottom: 0;
-  width: calc(50% + 2px);
-  overflow: hidden;
-  background: #070b18;
-  box-shadow: 0 0 70px rgba(0, 0, 0, .72);
-  will-change: transform;
-  transition-property: transform;
-  transition-duration: var(--gate-open-time);
-  transition-timing-function: var(--gate-ease-out);
-}
-
-.cosmic-gate__door::before,
-.cosmic-door::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  width: 100vw;
-  min-width: 100dvw;
-  background:
-    radial-gradient(circle at 50% 52%, transparent 0 17%, rgba(2, 4, 12, .12) 31%, rgba(2, 4, 12, .5) 100%),
-    var(--cosmic-gate-art) center / cover no-repeat;
-  filter: saturate(.96) brightness(.72) contrast(1.08);
-}
-
-.cosmic-gate__door::after,
-.cosmic-door::after {
-  content: "";
-  position: absolute;
   inset: 0;
-  opacity: .92;
-  background:
-    linear-gradient(90deg, rgba(3, 7, 17, .42), transparent 26%, transparent 74%, rgba(3, 7, 17, .5)),
-    repeating-linear-gradient(0deg, transparent 0 46px, color-mix(in srgb, var(--gate-accent) 8%, transparent) 47px, transparent 48px),
-    radial-gradient(circle at 50% 50%, color-mix(in srgb, var(--gate-accent-2) 7%, transparent), transparent 57%);
-  mix-blend-mode: screen;
+  overflow: hidden;
   pointer-events: none;
 }
 
-.cosmic-gate__door--left,
-.cosmic-door--left {
-  left: 0;
-  border-right: 1px solid color-mix(in srgb, var(--gate-accent) 40%, transparent);
-  transform: translate3d(-102%, 0, 0);
+.cosmic-gate__fold::after {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  inset: -4%;
+  opacity: 0;
+  transform: scale(1.08);
+  background: var(--cosmic-gate-art) center / cover no-repeat;
+  filter: blur(22px) saturate(1.08) brightness(.5) contrast(1.08);
+  mix-blend-mode: screen;
+  transition: opacity var(--fold-fade-time) ease;
+  pointer-events: none;
 }
 
-.cosmic-gate__door--left::before,
-.cosmic-door--left::before {
-  left: 0;
+#cosmicGate:is([data-phase="closing"], [data-phase="closed"], [data-phase="primed"]) .cosmic-gate__fold::after {
+  opacity: .11;
 }
 
-.cosmic-gate__door--right,
-.cosmic-door--right {
-  right: 0;
-  border-left: 1px solid color-mix(in srgb, var(--gate-accent-2) 42%, transparent);
-  transform: translate3d(102%, 0, 0);
+.cosmic-gate__veil {
+  position: absolute;
+  z-index: 0;
+  left: 50%;
+  top: 50%;
+  width: 150vmax;
+  height: 150vmax;
+  border-radius: 50%;
+  opacity: 0;
+  transform: translate3d(-50%, -50%, 0) scale(.003);
+  background:
+    radial-gradient(circle at 50% 50%, var(--fold-veil-color) 0 42%, var(--fold-horizon-color) 63%, #010208 100%);
+  box-shadow:
+    0 0 12vmax color-mix(in srgb, var(--gate-accent) 15%, transparent),
+    0 0 26vmax color-mix(in srgb, var(--gate-accent-2) 12%, transparent);
+  will-change: transform, opacity;
+  transition:
+    transform var(--gate-open-time) var(--gate-ease-out),
+    opacity var(--fold-fade-time) ease-out;
 }
 
-.cosmic-gate__door--right::before,
-.cosmic-door--right::before {
-  right: 0;
+#cosmicGate:is([data-phase="closing"], [data-phase="closed"], [data-phase="primed"]) .cosmic-gate__veil {
+  opacity: 1;
+  transform: translate3d(-50%, -50%, 0) scale(1);
+  transition-duration: var(--gate-close-time), var(--fold-fade-time);
+  transition-timing-function: var(--gate-ease-in), ease-in;
 }
 
-#cosmicGate:is([data-phase="closing"], [data-phase="closed"]) :is(
-  .cosmic-gate__door--left,
-  .cosmic-gate__door--right,
-  .cosmic-door--left,
-  .cosmic-door--right
-) {
-  transform: translate3d(0, 0, 0);
-  transition-duration: var(--gate-close-time);
-  transition-timing-function: var(--gate-ease-in);
-}
-
-#cosmicGate[data-phase="primed"] :is(
-  .cosmic-gate__door--left,
-  .cosmic-gate__door--right,
-  .cosmic-door--left,
-  .cosmic-door--right
-) {
-  transform: translate3d(0, 0, 0);
+#cosmicGate[data-phase="primed"] .cosmic-gate__veil {
   transition: none;
 }
 
-#cosmicGate[data-phase="opening"] :is(.cosmic-gate__door--left, .cosmic-door--left) {
-  transform: translate3d(-102%, 0, 0);
-}
-
-#cosmicGate[data-phase="opening"] :is(.cosmic-gate__door--right, .cosmic-door--right) {
-  transform: translate3d(102%, 0, 0);
-}
-
-#cosmicGate[data-kind="victory"] :is(.cosmic-gate__door, .cosmic-door)::before {
-  filter: saturate(1.12) brightness(.82) contrast(1.06);
-}
-
-.cosmic-gate__particles {
+.cosmic-gate__fold-map {
   position: absolute;
-  z-index: 2;
+  z-index: 1;
   inset: 0;
-  overflow: hidden;
+  width: 100%;
+  height: 100%;
   opacity: 0;
+  overflow: visible;
+  transform: scale(var(--fold-map-start-scale));
+  transform-origin: 50% 50%;
   pointer-events: none;
-  background-image:
-    radial-gradient(circle at 13% 24%, var(--gate-accent) 0 1px, transparent 1.8px),
-    radial-gradient(circle at 77% 18%, var(--gate-warm) 0 1px, transparent 1.8px),
-    radial-gradient(circle at 24% 76%, #fff 0 1px, transparent 1.6px),
-    radial-gradient(circle at 88% 69%, var(--gate-accent-2) 0 1px, transparent 1.8px);
-  background-size: 151px 151px, 211px 211px, 127px 127px, 181px 181px;
-  transition: opacity 260ms ease;
-}
-
-.cosmic-gate__particle {
-  --particle-x: 0px;
-  --particle-y: -70px;
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 4px;
-  height: 4px;
-  border-radius: 50%;
-  color: var(--gate-accent);
-  background: currentColor;
-  box-shadow: 0 0 11px 3px currentColor;
-  animation: cosmic-gate-particle 1.7s ease-in-out infinite alternate;
-}
-
-.cosmic-gate__particle:nth-child(1) { --particle-x: -34vw; --particle-y: -27vh; }
-.cosmic-gate__particle:nth-child(2) { --particle-x: 31vw; --particle-y: -19vh; color: var(--gate-warm); animation-delay: -1s; }
-.cosmic-gate__particle:nth-child(3) { --particle-x: -27vw; --particle-y: 28vh; color: var(--gate-accent-2); animation-delay: -.35s; }
-.cosmic-gate__particle:nth-child(4) { --particle-x: 37vw; --particle-y: 25vh; animation-delay: -1.4s; }
-.cosmic-gate__particle:nth-child(5) { --particle-x: 12vw; --particle-y: -35vh; color: #fff; animation-delay: -.75s; }
-.cosmic-gate__particle:nth-child(n+6) { display: none; }
-
-#cosmicGate:is([data-phase="closing"], [data-phase="closed"]) .cosmic-gate__particles {
-  opacity: .76;
-  transition-delay: 240ms;
-}
-
-.cosmic-gate__seam {
-  position: absolute;
-  z-index: 3;
-  left: 50%;
-  top: 0;
-  bottom: 0;
-  width: 2px;
-  opacity: 0;
-  transform: translateX(-50%) scaleY(.16);
-  background: linear-gradient(transparent 3%, var(--gate-accent) 28%, #fff 50%, var(--gate-accent-2) 72%, transparent 97%);
-  box-shadow:
-    0 0 8px var(--gate-accent),
-    0 0 28px color-mix(in srgb, var(--gate-accent) 62%, transparent),
-    0 0 70px color-mix(in srgb, var(--gate-accent-2) 45%, transparent);
   transition:
-    opacity 200ms ease,
-    transform 440ms var(--gate-ease-out);
-  pointer-events: none;
+    opacity 260ms ease,
+    transform var(--gate-close-time) var(--gate-ease-out);
 }
 
-.cosmic-gate__seal {
-  position: absolute;
-  z-index: 4;
-  left: 50%;
-  top: 50%;
-  width: clamp(82px, 10vw, 136px);
-  aspect-ratio: 1;
-  border: 1px solid color-mix(in srgb, var(--gate-accent) 78%, white);
-  border-radius: 50%;
+.cosmic-gate__fold-map :is(path, ellipse) {
+  fill: none;
+  vector-effect: non-scaling-stroke;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.cosmic-gate__world-threads path {
+  stroke: color-mix(in srgb, var(--gate-accent) 50%, transparent);
+  stroke-width: 1.3;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  transition: stroke-dashoffset var(--fold-draw-time) var(--gate-ease-out) 70ms;
+}
+
+.cosmic-gate__world-threads path:nth-child(even) {
+  stroke: color-mix(in srgb, var(--gate-accent-2) 46%, transparent);
+}
+
+.cosmic-gate__orbit-threads {
+  fill: none;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.cosmic-gate__orbit-threads ellipse {
+  stroke: color-mix(in srgb, var(--gate-accent-2) 44%, transparent);
+  stroke-width: 1.2;
+  stroke-dasharray: .08 .045;
+  stroke-dashoffset: .5;
+  transition: stroke-dashoffset var(--gate-close-time) var(--gate-ease-out);
+}
+
+.cosmic-gate__orbit-threads ellipse:nth-child(2) {
+  stroke: color-mix(in srgb, var(--gate-accent) 38%, transparent);
+  stroke-dasharray: .018 .055;
+}
+
+.cosmic-gate__constellation-lines path {
+  stroke: color-mix(in srgb, var(--gate-warm) 78%, white);
+  stroke-width: 1.8;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  filter: drop-shadow(0 0 5px color-mix(in srgb, var(--gate-warm) 60%, transparent));
+  transition: stroke-dashoffset var(--fold-draw-time) var(--gate-ease-out) 120ms;
+}
+
+.cosmic-gate__constellation-points circle {
+  fill: color-mix(in srgb, var(--gate-accent) 72%, white);
   opacity: 0;
-  transform: translate(-50%, -50%) scale(.46) rotate(-38deg);
-  background:
-    radial-gradient(circle, rgba(4, 8, 19, .96) 0 22%, transparent 23%),
-    conic-gradient(from 45deg, transparent, color-mix(in srgb, var(--gate-accent) 54%, transparent), transparent 22%, color-mix(in srgb, var(--gate-accent-2) 58%, transparent), transparent 48%, color-mix(in srgb, var(--gate-warm) 45%, transparent), transparent 76%);
-  box-shadow:
-    inset 0 0 25px color-mix(in srgb, var(--gate-accent-2) 30%, transparent),
-    0 0 0 10px rgba(4, 8, 18, .36),
-    0 0 42px color-mix(in srgb, var(--gate-accent) 45%, transparent);
+  transform: scale(.25);
+  transform-box: fill-box;
+  transform-origin: center;
+  filter: drop-shadow(0 0 8px var(--gate-accent));
   transition:
     opacity 180ms ease,
-    transform 520ms var(--gate-ease-out);
+    transform 420ms var(--gate-ease-out);
+}
+
+.cosmic-gate__constellation-points circle:nth-child(3n+2) {
+  fill: color-mix(in srgb, var(--gate-accent-2) 70%, white);
+  filter: drop-shadow(0 0 8px var(--gate-accent-2));
+}
+
+.cosmic-gate__constellation-points circle:nth-child(3n) {
+  fill: color-mix(in srgb, var(--gate-warm) 72%, white);
+  filter: drop-shadow(0 0 8px var(--gate-warm));
+}
+
+#cosmicGate:is([data-phase="closing"], [data-phase="closed"], [data-phase="primed"]) .cosmic-gate__fold-map {
+  opacity: .82;
+  transform: scale(var(--fold-map-scale));
+}
+
+#cosmicGate:is([data-phase="closing"], [data-phase="closed"], [data-phase="primed"]) :is(
+  .cosmic-gate__world-threads path,
+  .cosmic-gate__constellation-lines path
+) {
+  stroke-dashoffset: 0;
+}
+
+#cosmicGate:is([data-phase="closing"], [data-phase="closed"], [data-phase="primed"]) .cosmic-gate__orbit-threads ellipse {
+  stroke-dashoffset: 0;
+}
+
+#cosmicGate:is([data-phase="closing"], [data-phase="closed"], [data-phase="primed"]) .cosmic-gate__constellation-points circle {
+  opacity: 1;
+  transform: scale(1);
+}
+
+#cosmicGate[data-phase="primed"] :is(
+  .cosmic-gate__fold-map,
+  .cosmic-gate__world-threads path,
+  .cosmic-gate__orbit-threads ellipse,
+  .cosmic-gate__constellation-lines path,
+  .cosmic-gate__constellation-points circle
+) {
+  transition: none;
+}
+
+.cosmic-gate__lens {
+  position: absolute;
+  z-index: 2;
+  left: 50%;
+  top: 50%;
+  width: clamp(112px, 17vmin, 216px);
+  aspect-ratio: 1;
+  opacity: 0;
+  transform: translate3d(-50%, -50%, 0) scale(.38) rotate(-16deg);
+  transition:
+    opacity 220ms ease,
+    transform 560ms var(--gate-ease-out);
   pointer-events: none;
 }
 
-.cosmic-gate__seal::before,
-.cosmic-gate__seal::after {
-  content: "";
+.cosmic-gate__lens-orbit,
+.cosmic-gate__lens-core {
   position: absolute;
-  inset: 13%;
-  border: 1px dashed color-mix(in srgb, var(--gate-accent-2) 62%, transparent);
+  inset: 0;
   border-radius: 50%;
+  pointer-events: none;
 }
 
-.cosmic-gate__seal::after {
-  inset: 35%;
-  border-style: solid;
-  background: var(--gate-accent);
-  box-shadow: 0 0 18px var(--gate-accent);
+.cosmic-gate__lens-orbit--outer {
+  border: 1px solid color-mix(in srgb, var(--gate-accent) 72%, white);
+  box-shadow:
+    inset 0 0 24px color-mix(in srgb, var(--gate-accent-2) 22%, transparent),
+    0 0 30px color-mix(in srgb, var(--gate-accent) 30%, transparent);
 }
 
-#cosmicGate:is([data-phase="closing"], [data-phase="closed"]) .cosmic-gate__seam {
-  opacity: .9;
-  transform: translateX(-50%) scaleY(1);
-  transition-delay: 310ms;
+.cosmic-gate__lens-orbit--inner {
+  inset: 17%;
+  border: 1px dashed color-mix(in srgb, var(--gate-accent-2) 68%, transparent);
+  transform: rotate(40deg);
 }
 
-#cosmicGate:is([data-phase="closing"], [data-phase="closed"]) .cosmic-gate__seal {
+.cosmic-gate__lens-core {
+  inset: 34%;
+  background: radial-gradient(circle at 43% 38%, #fff 0 4%, var(--gate-accent) 18%, var(--gate-accent-2) 47%, #02040c 72%);
+  box-shadow:
+    0 0 18px var(--gate-accent),
+    0 0 48px color-mix(in srgb, var(--gate-accent-2) 64%, transparent);
+}
+
+#cosmicGate:is([data-phase="closing"], [data-phase="closed"], [data-phase="primed"]) .cosmic-gate__lens {
   opacity: 1;
-  transform: translate(-50%, -50%) scale(1) rotate(0);
-  transition-delay: 330ms;
+  transform: translate3d(-50%, -50%, 0) scale(1) rotate(0);
+  transition-delay: 90ms;
 }
 
-#cosmicGate[data-phase="opening"] :is(.cosmic-gate__seam, .cosmic-gate__seal) {
-  opacity: 0;
-  transition-delay: 0ms;
+#cosmicGate:is([data-phase="closing"], [data-phase="closed"]) .cosmic-gate__lens-orbit--outer {
+  animation: cosmic-fold-orbit 5.4s linear infinite;
+}
+
+#cosmicGate:is([data-phase="closing"], [data-phase="closed"]) .cosmic-gate__lens-orbit--inner {
+  animation: cosmic-fold-orbit-reverse 4.1s linear infinite;
 }
 
 .cosmic-gate__content {
@@ -449,7 +490,6 @@ dialog.cosmic-dialog-transition {
   --dialog-cosmic-accent: #83e9e7;
   --dialog-cosmic-accent-2: #9f88ff;
   overflow: hidden;
-  font-size: 15px;
   transform-origin: 50% 48%;
   box-shadow:
     0 30px 100px rgba(0, 0, 0, .62),
@@ -506,10 +546,6 @@ dialog.cosmic-dialog-transition[data-phase="closing"]::backdrop {
 dialog.cosmic-dialog-transition[data-phase="closed"] {
   opacity: 1;
   transform: none;
-}
-
-dialog.cosmic-dialog-transition :is(small, .eyebrow, .kicker) {
-  font-size: 15px;
 }
 
 .cosmic-gate__first-discovery {
@@ -716,9 +752,14 @@ dialog.cosmic-dialog-transition :is(small, .eyebrow, .kicker) {
   animation: cosmic-first-discovery-title 1.05s cubic-bezier(.16, .76, .2, 1) both;
 }
 
-@keyframes cosmic-gate-particle {
-  from { transform: translate3d(var(--particle-x), var(--particle-y), 0) scale(.7); opacity: .35; }
-  to { transform: translate3d(var(--particle-x), calc(var(--particle-y) - 14px), 0) scale(1.15); opacity: 1; }
+@keyframes cosmic-fold-orbit {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes cosmic-fold-orbit-reverse {
+  from { transform: rotate(40deg); }
+  to { transform: rotate(-320deg); }
 }
 
 @keyframes cosmic-first-discovery-wash {
@@ -794,9 +835,13 @@ dialog.cosmic-dialog-transition :is(small, .eyebrow, .kicker) {
 }
 
 @media (max-width: 600px) {
-  .cosmic-gate__door::before,
-  .cosmic-door::before {
-    background-position: 50% 48%;
+  #cosmicGate {
+    --fold-map-scale: 1.11;
+    --fold-map-start-scale: 1.17;
+  }
+
+  .cosmic-gate__lens {
+    width: clamp(98px, 31vw, 142px);
   }
 
   .cosmic-gate__content {
@@ -817,10 +862,6 @@ dialog.cosmic-dialog-transition :is(small, .eyebrow, .kicker) {
     font-size: clamp(23px, 7.4vw, 34px);
   }
 
-  .cosmic-gate__seal {
-    width: clamp(76px, 24vw, 108px);
-  }
-
   .cosmic-gate__first-discovery-title {
     gap: 5px;
     padding-inline: 14px;
@@ -832,6 +873,15 @@ dialog.cosmic-dialog-transition :is(small, .eyebrow, .kicker) {
 }
 
 @media (max-height: 520px) and (orientation: landscape) {
+  #cosmicGate {
+    --fold-map-scale: 1.04;
+    --fold-map-start-scale: 1.1;
+  }
+
+  .cosmic-gate__lens {
+    width: clamp(76px, 29vh, 126px);
+  }
+
   .cosmic-gate__content {
     width: min(620px, calc(100% - 96px));
     padding: max(10px, env(safe-area-inset-top)) max(34px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(34px, env(safe-area-inset-left));
@@ -866,9 +916,22 @@ dialog.cosmic-dialog-transition :is(small, .eyebrow, .kicker) {
     margin-top: 7px;
   }
 
-  .cosmic-gate__seal {
-    width: clamp(66px, 18vh, 94px);
-  }
+}
+
+body[data-cosmetic-effects="off"] #cosmicGate :is(
+  .cosmic-gate__world-threads,
+  .cosmic-gate__orbit-threads,
+  .cosmic-gate__lens-orbit
+) {
+  display: none;
+}
+
+body[data-cosmetic-effects="off"] #cosmicGate .cosmic-gate__fold::after {
+  display: none;
+}
+
+body[data-cosmetic-effects="off"] #cosmicGate :is(.cosmic-gate__veil, .cosmic-gate__lens-core) {
+  box-shadow: none;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -913,6 +976,18 @@ dialog.cosmic-dialog-transition :is(small, .eyebrow, .kicker) {
     transform: none;
     filter: none;
   }
+
+  #cosmicGate :is(.cosmic-gate__world-threads, .cosmic-gate__orbit-threads) {
+    display: none;
+  }
+
+  #cosmicGate .cosmic-gate__fold-map {
+    transform: none;
+  }
+
+  #cosmicGate .cosmic-gate__lens {
+    transform: translate3d(-50%, -50%, 0) scale(1);
+  }
 }
 
 @media (forced-colors: active) {
@@ -921,29 +996,34 @@ dialog.cosmic-dialog-transition :is(small, .eyebrow, .kicker) {
     --gate-accent-2: Highlight;
     --gate-warm: CanvasText;
     color: CanvasText;
-    background: Canvas;
+    background: transparent;
     forced-color-adjust: none;
   }
 
-  .cosmic-gate__door,
-  .cosmic-door,
+  .cosmic-gate__veil,
   .cosmic-gate__panel {
     border-color: CanvasText;
     background: Canvas;
     box-shadow: none;
   }
 
-  .cosmic-gate__door::before,
-  .cosmic-door::before,
-  .cosmic-gate__door::after,
-  .cosmic-door::after,
-  .cosmic-gate__particles,
   .cosmic-gate__nova,
   .cosmic-gate__confetti,
+  .cosmic-gate__fold::after,
   .cosmic-gate__first-discovery::before,
   .cosmic-gate__first-discovery::after,
   .cosmic-gate__panel::before {
     display: none;
+  }
+
+  .cosmic-gate__fold-map :is(path, ellipse) {
+    stroke: Highlight;
+    filter: none;
+  }
+
+  .cosmic-gate__constellation-points circle {
+    fill: Highlight;
+    filter: none;
   }
 
   .cosmic-gate__first-discovery {
@@ -957,9 +1037,8 @@ dialog.cosmic-dialog-transition :is(small, .eyebrow, .kicker) {
     text-shadow: none;
   }
 
-  .cosmic-gate__seam,
-  .cosmic-gate__seal,
-  .cosmic-gate__seal::after {
+  .cosmic-gate__lens-orbit,
+  .cosmic-gate__lens-core {
     color: HighlightText;
     border-color: Highlight;
     background: Highlight;

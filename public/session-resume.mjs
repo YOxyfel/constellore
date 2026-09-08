@@ -1,8 +1,8 @@
-import { assistancePolicy } from "./engagement-features.mjs?v=5.0.0-beta.1";
-import { createFirstOrbitGame } from "./first-orbit.mjs?v=5.0.0-beta.1";
-import { createSecondOrbitGame, secondOrbitProgress } from "./second-orbit.mjs?v=5.0.0-beta.1";
-import { exploreGame } from "./explore-sandbox.mjs?v=5.0.0-beta.1";
-import { selectUniverse } from "./universe-director.mjs?v=5.0.0-beta.1";
+import { assistancePolicy } from "./engagement-features.mjs?v=5.0.0-beta.4";
+import { createFirstOrbitGame } from "./first-orbit.mjs?v=5.0.0-beta.4";
+import { createSecondOrbitGame, secondOrbitProgress } from "./second-orbit.mjs?v=5.0.0-beta.4";
+import { exploreGame } from "./explore-sandbox.mjs?v=5.0.0-beta.4";
+import { selectUniverse } from "./universe-director.mjs?v=5.0.0-beta.4";
 
 export const CLIENT_ONLY_RESUME_MODES = new Set(["training", "second-orbit", "explore"]);
 export const FIRST_OPEN_CINEMATIC_SESSION_KEY = "constellore-launch-cinematic-session-v1";

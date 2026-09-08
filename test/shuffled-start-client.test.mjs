@@ -4,10 +4,12 @@ import test from "node:test";
 
 import { buildMissionBriefing } from "../public/mission-briefing.mjs";
 
-const [app, styles] = await Promise.all([
+const [appCore, inventoryRuntime, styles] = await Promise.all([
   readFile(new URL("../public/app.js", import.meta.url), "utf8"),
+  readFile(new URL("../public/inventory-view-runtime.mjs", import.meta.url), "utf8"),
   readFile(new URL("../public/styles.css", import.meta.url), "utf8")
 ]);
+const app = `${appCore}\n${inventoryRuntime}`;
 
 test("temporary Shuffled starters are visible but never saved as collection discoveries", () => {
   assert.match(app, /item[.]source !== "loaned-start"/);

@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { once } from "node:events";
+import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { curatedCombination, server } from "../server.mjs";
 import { COSMETIC_COLLECTIONS } from "../public/cosmetic-economy.mjs";
@@ -75,8 +76,10 @@ test("authenticated HTTP runs produce verified Pure and Open leaderboard scores"
   assert.match(landingResponse.headers.get("content-type"), /^text\/html/);
   assert.match(landingResponse.headers.get("content-security-policy"), /frame-src 'self'/);
   const landingHtml = await landingResponse.text();
-  assert.match(landingHtml, /Every game gives you one word to find[.][\s\S]{0,220}make the target word[.]/i);
-  assert.match(landingHtml, /Three simple steps/);
+  assert.match(landingHtml, /free word-combination game in a living cosmos/i);
+  for (const chapter of ["discover", "universe", "worlds"]) {
+    assert.ok(landingHtml.includes(`id="panel-${chapter}"`), `Landing page exposes its ${chapter} chapter`);
+  }
 
   const healthResponse = await fetch(`${baseUrl}/healthz`);
   assert.equal(healthResponse.status, 200);
@@ -88,7 +91,15 @@ test("authenticated HTTP runs produce verified Pure and Open leaderboard scores"
 
   const playResponse = await fetch(`${baseUrl}/play/`);
   assert.equal(playResponse.status, 200);
-  assert.match(await playResponse.text(), /id="startScreen"/);
+  const playHtml = await playResponse.text();
+  assert.match(playHtml, /id="startScreen"/);
+  const importMapText = playHtml.match(/<script\b[^>]*\btype="importmap"[^>]*>([\s\S]*?)<\/script\s*>/i)?.[1];
+  assert.ok(importMapText, "The play document is missing its inline import map.");
+  const importMapHash = createHash("sha256").update(importMapText.replace(/\r\n?/g, "\n"), "utf8").digest("base64");
+  assert.match(playResponse.headers.get("content-security-policy") || "", new RegExp(`script-src 'self' 'sha256-${importMapHash.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}'`));
+  assert.doesNotMatch(playResponse.headers.get("content-security-policy") || "", /script-src[^;]*'unsafe-inline'/);
+  assert.match(playResponse.headers.get("content-security-policy") || "", /img-src 'self' data: blob:/);
+  assert.match(playResponse.headers.get("content-security-policy") || "", /connect-src 'self' blob:/);
 
   const siteScriptResponse = await fetch(`${baseUrl}/website.js`);
   assert.equal(siteScriptResponse.status, 200);

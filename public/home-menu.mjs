@@ -7,6 +7,7 @@ export const HOME_MENU_DAILY_RANK = 1;
 export const HOME_MENU_CHOICES_RANK = 3;
 export const HOME_MENU_EXPLORE_RANK = 2;
 export const HOME_MENU_ADVENTURES_RANK = 3;
+export const HOME_MENU_ARENA_RANK = 2;
 const ROUTE_RANK_NUMBERS = new Map([
   ["bronze", 1],
   ["silver", 2],
@@ -55,7 +56,7 @@ function recognizedRouteRankNumber(value) {
   return ROUTE_RANK_NUMBERS.get(id) || 0;
 }
 
-export function createHomeMenuState({ firstOrbit, secondOrbit, wins, routeRank, dailyCompleted, todayKey } = {}) {
+export function createHomeMenuState({ firstOrbit, secondOrbit, wins, routeRank, dailyCompleted, dailyPlayed, todayKey } = {}) {
   const training = normalizeTraining(firstOrbit);
   const bridge = normalizeTraining(secondOrbit);
   const completedWins = normalizeWins(wins);
@@ -71,6 +72,7 @@ export function createHomeMenuState({ firstOrbit, secondOrbit, wins, routeRank, 
     && completedWins >= HOME_MENU_DAILY_WINS
     && rankReadyForDaily;
   const dailyLocked = !dailyReady;
+  const arenaReady = onboardingComplete && routeRankNumber >= HOME_MENU_ARENA_RANK;
   const choicesReady = completedWins >= HOME_MENU_CHOICES_WINS
     && routeRankNumber >= HOME_MENU_CHOICES_RANK;
   const exploreReady = completedWins >= HOME_MENU_EXPLORE_WINS
@@ -80,17 +82,18 @@ export function createHomeMenuState({ firstOrbit, secondOrbit, wins, routeRank, 
   const advancedReady = adventuresReady;
   const focusMode = !advancedReady;
   const dailyAvailable = dailyReady && Boolean(todayKey) && dailyCompleted !== todayKey;
+  const dailyAttention = dailyAvailable && dailyPlayed !== todayKey;
 
   let primary;
   if (!training.completed && completedWins === 0) {
     primary = {
       action: "training",
-      kicker: training.seen ? "ORBIT IN PROGRESS" : "FIRST CONSTELLATION",
+      kicker: training.seen ? "Continue playing" : "Your first discovery",
       title: training.seen ? "Return to Mud" : "Make Mud",
       description: training.seen
         ? "Your first constellation is waiting."
-        : "Earth + Water. One move. You can’t get lost.",
-      label: training.seen ? "Continue" : "Begin",
+        : "Combine Earth and Water to discover your first word.",
+      label: training.seen ? "Continue playing" : "Start playing",
       meta: "Mud · 1 combination",
       secondaryAction: "modes",
       secondaryLabel: "Choose game"
@@ -98,7 +101,7 @@ export function createHomeMenuState({ firstOrbit, secondOrbit, wins, routeRank, 
   } else if (!bridgeComplete) {
     primary = {
       action: "second-orbit",
-      kicker: "NEXT CONSTELLATION",
+      kicker: "Keep discovering",
       title: "Make Mountain",
       description: "A short guided route through your new universe.",
       label: "Continue",
@@ -106,24 +109,13 @@ export function createHomeMenuState({ firstOrbit, secondOrbit, wins, routeRank, 
       secondaryAction: "modes",
       secondaryLabel: "Choose game"
     };
-  } else if (dailyAvailable) {
-    primary = {
-      action: "daily",
-      kicker: "TODAY'S WORD",
-      title: "A new word is calling",
-      description: "One shared target. A different path for every player.",
-      label: "Enter",
-      meta: "Today’s target",
-      secondaryAction: "modes",
-      secondaryLabel: "Choose game"
-    };
   } else {
     primary = {
       action: "reach",
-      kicker: "YOUR NEXT ORBIT",
+      kicker: "A universe of possibilities",
       title: "Create something impossible",
       description: "Find the target at your own pace.",
-      label: "Enter",
+      label: "Play a new game",
       meta: "No timer",
       secondaryAction: "modes",
       secondaryLabel: "Choose game"
@@ -138,6 +130,8 @@ export function createHomeMenuState({ firstOrbit, secondOrbit, wins, routeRank, 
     dailyReady,
     dailyLocked,
     dailyAvailable,
+    dailyAttention,
+    arenaReady,
     choicesReady,
     exploreReady,
     adventuresReady,
@@ -145,6 +139,7 @@ export function createHomeMenuState({ firstOrbit, secondOrbit, wins, routeRank, 
     focusMode,
     routeRankNumber,
     rankReadyForDaily,
+    rankReadyForArena: routeRankNumber >= HOME_MENU_ARENA_RANK,
     rankReadyForChoices: routeRankNumber >= HOME_MENU_CHOICES_RANK,
     rankReadyForExplore: routeRankNumber >= HOME_MENU_EXPLORE_RANK,
     rankReadyForAdvanced: routeRankNumber >= HOME_MENU_ADVENTURES_RANK,

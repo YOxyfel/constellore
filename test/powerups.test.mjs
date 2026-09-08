@@ -180,7 +180,7 @@ test("local-practice Word Gift mirrors the safe contract and fails closed during
   const directory = await mkdtemp(join(tmpdir(), "constellore-local-gift-"));
   context.after(() => rm(directory, { recursive: true, force: true }));
   await writeLocalWorldModule(join(directory, "local-world.mjs"));
-  for (const file of ["local-beta.mjs", "cosmic-twists.mjs", "engagement-features.mjs", "universe-director.mjs", "recipe-feedback.mjs", "adaptive-difficulty.mjs", "remix-progression.mjs", "remix-readiness.mjs", "path-guard.mjs", "route-remixes.mjs", "shuffled-start.mjs"]) {
+  for (const file of ["local-beta.mjs", "concept-chemistry.mjs", "cosmic-twists.mjs", "engagement-features.mjs", "universe-director.mjs", "recipe-feedback.mjs", "adaptive-difficulty.mjs", "remix-progression.mjs", "remix-readiness.mjs", "path-guard.mjs", "route-remixes.mjs", "shuffled-start.mjs"]) {
     await copyFile(new URL(`../public/${file}`, import.meta.url), join(directory, file));
   }
   const moduleUrl = pathToFileURL(join(directory, "local-beta.mjs")).href;

@@ -6,6 +6,7 @@ coverage/
 playwright-report/
 test-results/
 /tmp/
+.codex-tmp/
 *.log
 data/
 .agents/
@@ -18,6 +19,8 @@ workers/feedback/tmp/
 .idea/
 dist-pages/
 dist-itch/
+/output/
+/production/voyage-projection/review-candidate.local.json
 /constellore-html5.zip
 legal/
 LAUNCH.md
@@ -27,3 +30,17 @@ __pycache__/
 *.py[cod]
 *.tmp
 *.bak
+
+# Private birthday source media and locally generated review catalog.
+# Originals in this directory must never be committed or published.
+birthday-media-inbox/**
+
+# Local verification evidence and browser profiles are never publication inputs.
+/.tmp-codex-build/
+/.tmp/
+
+# Keep large authoring files local; ship optimized public derivatives.
+/itch-assets/Models/**
+!/itch-assets/Models/PlaceThumbnails/
+!/itch-assets/Models/PlaceThumbnails/solar-bodies-source.png
+/production/moon-settlement/

@@ -123,7 +123,7 @@ test("the online and generated offline runtimes return the same spoiler-safe sha
   const build = await readFile(new URL("../scripts/build-local-world.mjs", import.meta.url), "utf8");
   assert.match(server, /routeProgress:\s*routeProgressForRun\(run\)/);
   assert.match(local, /routeProgress:\s*localRouteProgressForRun\(run\)/);
-  assert.match(local, /function localRouteProgressForRun\(run\)[\s\S]{0,260}localRouteProgressFor\([\s\S]{0,160}run[.]solutionRoute[\s\S]{0,120}run[.]available/);
+  assert.match(local, /function localRouteProgressForRun\(run\)[\s\S]*?const progress = localRouteProgressFor\(\s*run[.]solutionRoute,\s*run[.]game[.]target,\s*run[.]available\s*\);/);
   assert.match(build, /export function localRouteProgress\(value, available\)/);
   for (const source of [server, local, build]) {
     assert.doesNotMatch(source, /routeProgress\s*:\s*\{[^}]*\b(?:a|b|word|recipe|route)\b/s);

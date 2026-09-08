@@ -3,7 +3,7 @@ export const MAX_SENSE_CHARGES = 9;
 
 export const ASSISTANCE_POLICIES = Object.freeze({
   none: Object.freeze({ id: "none", label: "Pure", division: "pure", scoreMultiplier: 1, scoreEligible: true, study: false }),
-  tip: Object.freeze({ id: "tip", label: "Route Signal", division: "pure", scoreMultiplier: 1, scoreEligible: true, study: false }),
+  tip: Object.freeze({ id: "tip", label: "Route Signal", division: "open", scoreMultiplier: 1, scoreEligible: true, study: false }),
   open: Object.freeze({ id: "open", label: "Open", division: "open", scoreMultiplier: .85, scoreEligible: true, study: false }),
   wish: Object.freeze({ id: "wish", label: "Wish", division: "open", scoreMultiplier: .8, scoreEligible: true, study: false }),
   market: Object.freeze({ id: "market", label: "Vault Word", division: "open", scoreMultiplier: .8, scoreEligible: true, study: false }),
@@ -290,6 +290,57 @@ export function rankSenseCandidates({ words = [], target = "", history = [], rou
 }
 
 export const QUICK_TIP_LIMIT = 3;
+export const HELP_NUDGE_MIN_DELAY_MS = 10_000;
+export const HELP_NUDGE_MAX_DELAY_MS = 20_000;
+export const HELP_NUDGE_SCORE_STEP = .1;
+
+/**
+ * Each accepted low-rank nudge keeps ninety percent of the run's current
+ * maximum score/reward. It composes multiplicatively with stronger assistance
+ * while remaining score-eligible and never changing Route Rank credit.
+ */
+export function scoreMultiplierAfterNudges({ baseMultiplier = 1, nudgesUsed = 0 } = {}) {
+  const base = Math.min(1, Math.max(0, Number(baseMultiplier) || 0));
+  const used = clampInteger(nudgesUsed, 0, QUICK_TIP_LIMIT, 0);
+  return Math.max(0, Number((base * ((1 - HELP_NUDGE_SCORE_STEP) ** used)).toFixed(6)));
+}
+
+/** Stable 10-20 second cadence so tests and restored runs do not depend on Math.random. */
+export function nextHelpNudgeDelay({ seed = 0, sequence = 0 } = {}) {
+  const span = HELP_NUDGE_MAX_DELAY_MS - HELP_NUDGE_MIN_DELAY_MS;
+  return HELP_NUDGE_MIN_DELAY_MS + (
+    stableHash(`help-nudge|${Number(seed) || 0}|${clampInteger(sequence, 0, 1_000_000, 0)}`)
+    % (span + 1)
+  );
+}
+
+/** Pure eligibility gate for the optional Bronze/Silver idle prompt. */
+export function lowRankHelpNudgeEligible({
+  enabled = true,
+  onboardingComplete = false,
+  rankNumber = 1,
+  mode = "reach",
+  active = true,
+  paused = false,
+  busy = false,
+  dialogOpen = false,
+  tipsUsed = 0
+} = {}) {
+  const normalizedMode = String(mode || "").trim().toLowerCase();
+  const normalizedRank = clampInteger(rankNumber, 0, 100, 100);
+  return Boolean(
+    enabled
+    && onboardingComplete
+    && active
+    && !paused
+    && !busy
+    && !dialogOpen
+    && normalizedRank >= 1
+    && normalizedRank <= 2
+    && clampInteger(tipsUsed, 0, QUICK_TIP_LIMIT, QUICK_TIP_LIMIT) < QUICK_TIP_LIMIT
+    && normalizedMode === "reach"
+  );
+}
 
 const ROUTE_TIP_CATEGORIES = new Set(["force", "nature", "life", "structure"]);
 
@@ -322,7 +373,7 @@ function firstSpoilerSafeText(candidates, forbidden) {
 
 /**
  * Returns short mechanics advice using only public run state. Route data is
- * deliberately not accepted, so Quick Tips can remain score-safe.
+ * deliberately not accepted, so Quick Tips can remain spoiler-safe.
  */
 export function selectQuickTip(options = {}) {
   const source = options && typeof options === "object" && !Array.isArray(options) ? options : {};
@@ -677,11 +728,16 @@ export function sanitizeFeedbackPreferences(raw) {
     const volume = Number(value);
     return Number.isFinite(volume) ? Math.min(1, Math.max(0, volume)) : fallback;
   };
+  const fusionAnimation = ["normal", "faster", "off"].includes(source.fusionAnimation)
+    ? source.fusionAnimation
+    : "normal";
   return {
     sound: booleanPreference(source.sound, true),
     music: booleanPreference(source.music, true),
     haptics: booleanPreference(source.haptics, true),
     resultDetails: booleanPreference(source.resultDetails, false),
+    helpNudges: booleanPreference(source.helpNudges, true),
+    fusionAnimation,
     muted: booleanPreference(source.muted, false),
     volume: volumePreference(source.volume ?? source.masterVolume, .75),
     musicVolume: volumePreference(source.musicVolume, 1),

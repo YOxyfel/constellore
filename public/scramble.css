@@ -23,39 +23,62 @@
   width: min(900px, calc(100% - 28px));
   max-height: min(880px, calc(100dvh - 28px));
   overflow: auto;
-  border: 1px solid color-mix(in srgb, var(--scramble-cyan) 32%, rgba(255, 255, 255, .12));
-  border-radius: 24px;
-  background:
-    radial-gradient(circle at 12% 0%, rgba(105, 230, 255, .12), transparent 34%),
-    radial-gradient(circle at 96% 90%, rgba(168, 134, 255, .14), transparent 31%),
-    linear-gradient(155deg, #101a2b, #070a15 72%);
-  color: var(--text, #f4f4fb);
-  box-shadow: 0 30px 100px rgba(0, 0, 0, .72), inset 0 1px rgba(255, 255, 255, .04);
+  border: 1px solid var(--cosmetic-panel-line, var(--ui-line, rgba(177, 218, 213, .2)));
+  border-radius: var(--ui-radius-dialog, 22px);
+  background: var(
+    --cosmetic-panel-surface,
+    radial-gradient(circle at 12% 0%, rgba(105, 216, 204, .11), transparent 34%),
+    linear-gradient(145deg, rgba(18, 53, 62, .99), rgba(6, 27, 36, .99))
+  );
+  color: var(--ui-text, var(--text, #f4f4fb));
+  box-shadow: var(--ui-dialog-shadow, 0 32px 90px rgba(0, 7, 11, .52));
 }
 
 .scramble-dialog::backdrop,
 .scramble-forfeit-dialog::backdrop,
 .scramble-result-dialog::backdrop {
-  background: rgba(0, 2, 8, .86);
-  backdrop-filter: blur(12px);
+  background: var(--ui-dialog-backdrop, rgba(2, 13, 19, .78));
+  backdrop-filter: blur(7px);
+}
+
+.scramble-dialog::backdrop {
+  background: var(--ui-dialog-backdrop, rgba(2, 13, 19, .78));
+  backdrop-filter: blur(7px);
 }
 
 .scramble-dialog {
+  --scramble-lobby-accent: var(--cosmetic-ui-accent-2, var(--ui-focus, #69d8cc));
   padding: clamp(24px, 4vw, 42px);
+  border-color: var(
+    --cosmetic-panel-line,
+    color-mix(in srgb, var(--scramble-lobby-accent) 34%, rgba(177, 218, 213, .2))
+  );
+  border-radius: var(--ui-radius-dialog, 22px);
+  background:
+    radial-gradient(circle at 100% 0, color-mix(in srgb, var(--scramble-lobby-accent) 11%, transparent), transparent 32%),
+    radial-gradient(circle at 4% 100%, rgba(168, 134, 255, .07), transparent 30%),
+    var(--cosmetic-panel-surface, linear-gradient(145deg, rgba(18, 53, 62, .99), rgba(6, 27, 36, .99)));
+  box-shadow: var(--ui-dialog-shadow, 0 32px 90px rgba(0, 7, 11, .52));
+  scrollbar-color: color-mix(in srgb, var(--scramble-lobby-accent) 42%, transparent) transparent;
+  scrollbar-width: thin;
 }
 
 .scramble-close {
   position: absolute;
   top: 10px;
   right: 10px;
-  width: 44px;
-  height: 44px;
-  border: 0;
-  border-radius: 50%;
-  background: transparent;
-  color: rgba(232, 239, 247, .72);
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--cosmetic-panel-line, var(--ui-line, rgba(177, 218, 213, .2)));
+  border-radius: var(--ui-radius-control, 10px);
+  background: rgba(7, 25, 35, .7);
+  color: var(--ui-muted, rgba(232, 239, 247, .78));
   cursor: pointer;
-  font-size: 28px;
+  font-size: 24px;
+  line-height: 1;
+  backdrop-filter: blur(8px);
 }
 
 .scramble-close:hover {
@@ -63,8 +86,35 @@
   background: rgba(255, 255, 255, .07);
 }
 
+.scramble-dialog > .scramble-close {
+  top: 14px;
+  right: 14px;
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--scramble-lobby-accent) 38%, rgba(177, 218, 213, .18));
+  border-radius: var(--ui-radius-control, 10px);
+  background: rgba(7, 25, 35, .7);
+  color: var(--ui-muted, rgba(232, 239, 247, .78));
+  font-size: 24px;
+  line-height: 1;
+  backdrop-filter: blur(8px);
+  transition: border-color .16s, background-color .16s, color .16s, transform .16s;
+}
+
+.scramble-dialog > .scramble-close:hover {
+  border-color: color-mix(in srgb, var(--scramble-lobby-accent) 65%, white 8%);
+  background: rgba(17, 55, 64, .94);
+  color: var(--ui-text, white);
+}
+
+.scramble-dialog > .scramble-close:active {
+  transform: translateY(1px);
+}
+
 .scramble-heading {
-  padding-right: 45px;
+  padding-right: 60px;
   display: grid;
   grid-template-columns: 64px minmax(0, 1fr);
   align-items: center;
@@ -101,9 +151,11 @@
 
 .scramble-heading h2 {
   margin: 4px 0 0;
+  font-family: var(--ui-font-display, Georgia, "Times New Roman", serif);
+  font-weight: 600;
   font-size: clamp(30px, 5vw, 46px);
-  line-height: 1;
-  letter-spacing: -.045em;
+  line-height: 1.05;
+  letter-spacing: -.035em;
 }
 
 .scramble-heading h2:focus,
@@ -130,7 +182,9 @@
 .scramble-format-picker legend {
   margin-bottom: 9px;
   color: rgba(224, 233, 242, .72);
-  font: 600 12px "DM Mono", monospace;
+  font-family: var(--ui-font-label, "DM Mono", Consolas, monospace);
+  font-size: 13px;
+  font-weight: 600;
   letter-spacing: .1em;
   text-transform: uppercase;
 }
@@ -138,7 +192,31 @@
 .scramble-format-picker > div {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 8px;
+  gap: clamp(8px, 1.5dvh, 14px);
+}
+
+.scramble-countdown__cards {
+  width: min(760px, calc(100vw - 32px));
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) clamp(42px, 6vw, 58px) minmax(0, 1fr);
+  align-items: center;
+  gap: clamp(8px, 2vw, 18px);
+}
+
+.scramble-countdown__cards .scramble-duel-card-host {
+  width: min(100%, clamp(140px, 20vmin, 220px));
+}
+
+.scramble-countdown__cards .scramble-duel-card-host:first-child {
+  justify-self: end;
+}
+
+.scramble-countdown__cards .scramble-duel-card-host:last-child {
+  justify-self: start;
+}
+
+.scramble-countdown__cards .arena-duel-card__meta {
+  backdrop-filter: blur(8px);
 }
 
 .scramble-format-option {
@@ -151,7 +229,7 @@
   align-items: start;
   gap: 8px;
   border: 1px solid rgba(255, 255, 255, .1);
-  border-radius: 14px;
+  border-radius: var(--ui-radius-card, 14px);
   background: rgba(255, 255, 255, .024);
   cursor: pointer;
 }
@@ -184,20 +262,22 @@
 
 .scramble-format-option strong {
   color: #f7fbff;
-  font-size: 14px;
+  font-size: 15px;
 }
 
 .scramble-format-option small {
   margin-top: 5px;
   color: rgba(224, 233, 242, .58);
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.35;
 }
 
 .scramble-format-option em {
   margin-top: 7px;
   color: var(--scramble-cyan);
-  font: 600 9px "DM Mono", monospace;
+  font-family: var(--ui-font-label, "DM Mono", Consolas, monospace);
+  font-size: 11px;
+  font-weight: 600;
   font-style: normal;
   letter-spacing: .09em;
   text-transform: uppercase;
@@ -211,13 +291,15 @@
   min-height: 23px;
   margin: 9px 2px 0;
   color: rgba(224, 233, 242, .7);
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.45;
 }
 
 #scrambleFormatObjective strong {
   color: var(--scramble-cyan);
-  font: 600 10px "DM Mono", monospace;
+  font-family: var(--ui-font-label, "DM Mono", Consolas, monospace);
+  font-size: 11px;
+  font-weight: 600;
   letter-spacing: .08em;
   text-transform: uppercase;
 }
@@ -230,7 +312,7 @@
   min-height: 24px;
   margin: 6px 0 15px;
   color: var(--scramble-cyan);
-  font-size: 14px;
+  font-size: 15px;
 }
 
 .scramble-status.is-error {
@@ -243,12 +325,39 @@
   gap: 12px;
 }
 
+.scramble-queue-picker {
+  display: none;
+}
+
+.scramble-queue-picker button {
+  min-width: 0;
+  min-height: 48px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 14px;
+  border: 1px solid rgba(255, 255, 255, .12);
+  border-radius: var(--ui-radius-control, 10px);
+  color: rgba(224, 233, 242, .72);
+  background: rgba(255, 255, 255, .025);
+  cursor: pointer;
+  font: inherit;
+}
+
+.scramble-queue-picker button[aria-selected="true"] {
+  border-color: color-mix(in srgb, var(--scramble-cyan) 52%, transparent);
+  color: #f7fbff;
+  background: linear-gradient(145deg, rgba(105, 230, 255, .11), rgba(168, 134, 255, .06));
+  box-shadow: inset 0 -2px var(--scramble-cyan);
+}
+
 .scramble-mode-card {
   min-width: 0;
   min-height: 340px;
   padding: 21px;
   border: 1px solid rgba(255, 255, 255, .11);
-  border-radius: 18px;
+  border-radius: var(--ui-radius-feature, 18px);
   background: rgba(255, 255, 255, .025);
 }
 
@@ -290,7 +399,7 @@
   min-height: 48px;
   margin: 0 0 17px;
   color: rgba(224, 233, 242, .7);
-  font-size: 14px;
+  font-size: 15px;
   line-height: 1.5;
 }
 
@@ -300,14 +409,17 @@
 .scramble-result-actions button,
 .scramble-forfeit-dialog button,
 .scramble-invite-output button {
-  min-height: 44px;
+  min-height: 48px;
   border: 1px solid rgba(105, 230, 255, .46);
-  border-radius: 999px;
+  border-radius: var(--ui-radius-control, 10px);
   padding: 0 18px;
   background: linear-gradient(100deg, rgba(105, 230, 255, .13), rgba(168, 134, 255, .13));
   color: var(--text, #f4f4fb);
   cursor: pointer;
-  font: 600 14px inherit;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.2;
 }
 
 .scramble-primary:hover:not(:disabled),
@@ -376,6 +488,24 @@
   background: rgba(105, 230, 255, .035);
 }
 
+.scramble-arena-rank {
+  margin-top: 15px;
+  padding: 9px 12px;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 0 9px;
+  border-left: 2px solid currentColor;
+  color: #c9875b;
+  background: rgba(201, 135, 91, .06);
+}
+
+.scramble-arena-rank > span { grid-row: 1 / 3; font-size: 22px; }
+.scramble-arena-rank > strong { color: var(--text, #f4f4fb); font-size: 14px; }
+.scramble-arena-rank > small { color: currentColor; font: 600 9px "DM Mono", monospace; letter-spacing: .12em; }
+.scramble-arena-rank[data-arena-rank="silver"] { color: #cbd5e1; background: rgba(203, 213, 225, .06); }
+.scramble-arena-rank[data-arena-rank="gold"] { color: #f8cf68; background: rgba(248, 207, 104, .07); }
+
 .scramble-rating span {
   color: rgba(224, 233, 242, .67);
   font-size: 13px;
@@ -394,18 +524,24 @@
 }
 
 .scramble-waiting {
-  min-height: 360px;
-  padding: 24px;
+  min-height: 0;
+  padding: clamp(20px, 3vw, 30px);
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
   border: 1px solid rgba(105, 230, 255, .22);
   border-radius: 18px;
-  background: rgba(3, 7, 18, .48);
+  background:
+    radial-gradient(circle at 50% 42%, rgba(105, 230, 255, .09), transparent 34%),
+    radial-gradient(circle at 50% 80%, rgba(168, 134, 255, .08), transparent 38%),
+    rgba(3, 7, 18, .62);
   text-align: center;
 }
 
 .scramble-waiting-orbit {
-  width: 74px;
-  height: 74px;
-  margin: 0 auto 15px;
+  width: 62px;
+  height: 62px;
+  margin: 0 auto 10px;
   display: block;
   border: 1px solid rgba(105, 230, 255, .26);
   border-radius: 50%;
@@ -420,50 +556,54 @@
 }
 
 .scramble-versus {
-  max-width: 620px;
-  margin: 20px auto;
+  width: min(100%, 720px);
+  margin: clamp(16px, 3vw, 24px) auto;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 44px minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) clamp(42px, 6vw, 58px) minmax(0, 1fr);
   align-items: center;
-  gap: 10px;
+  gap: clamp(8px, 2vw, 18px);
 }
 
-.scramble-versus > span {
+.scramble-versus__combatant {
   min-width: 0;
-  padding: 15px;
-  border: 1px solid rgba(255, 255, 255, .1);
-  border-radius: 14px;
-  background: rgba(255, 255, 255, .025);
+  display: grid;
+  place-items: center;
 }
 
-.scramble-versus small,
-.scramble-versus strong,
-.scramble-versus em {
-  display: block;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.scramble-duel-card-host {
+  width: min(100%, 250px);
+  min-width: 0;
+  display: grid;
+  place-items: center;
 }
 
-.scramble-versus small {
-  color: rgba(224, 233, 242, .55);
-  font-size: 11px;
+.scramble-duel-card-host > .arena-duel-card {
+  width: 100%;
 }
 
-.scramble-versus strong {
-  margin: 5px 0;
-  font-size: 17px;
+.scramble-versus > b,
+.scramble-countdown__cards > b {
+  width: clamp(42px, 5vw, 54px);
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(168, 134, 255, .5);
+  border-radius: 50%;
+  color: #eee5ff;
+  background:
+    radial-gradient(circle, rgba(168, 134, 255, .18), rgba(4, 9, 19, .88));
+  box-shadow:
+    0 0 0 7px rgba(168, 134, 255, .04),
+    0 0 32px rgba(168, 134, 255, .2);
+  font: 700 clamp(11px, 1.5vw, 15px)/1 "DM Mono", monospace;
 }
 
-.scramble-versus em {
-  color: var(--scramble-cyan);
-  font-size: 12px;
-  font-style: normal;
-}
-
-.scramble-versus > b {
-  color: var(--scramble-violet);
-  font: 600 15px "DM Mono", monospace;
+.scramble-dialog[data-arena-phase="combatants"] :is(
+  #scrambleIntro,
+  #scrambleFormatPicker,
+  #scrambleLobbyChoices
+) {
+  display: none !important;
 }
 
 .scramble-waiting-actions {
@@ -497,10 +637,57 @@
 
 .scramble-player-score {
   min-width: 0;
+  position: relative;
+  padding: 8px 10px;
+  overflow: hidden;
+  border: 1px solid color-mix(
+    in srgb,
+    var(--scramble-self-frame-accent, var(--scramble-cyan)) 32%,
+    rgba(255, 255, 255, .08)
+  );
+  border-radius: 11px;
+  background:
+    linear-gradient(
+      120deg,
+      color-mix(in srgb, var(--scramble-self-frame-accent, var(--scramble-cyan)) 8%, transparent),
+      rgba(255, 255, 255, .018)
+    );
+}
+
+.scramble-player-score::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 3px;
+  background: linear-gradient(
+    var(--scramble-self-frame-accent-alt, var(--scramble-cyan)),
+    var(--scramble-self-frame-accent, var(--scramble-cyan))
+  );
+  box-shadow: 0 0 16px var(--scramble-self-frame-accent, var(--scramble-cyan));
 }
 
 .scramble-player-score.is-rival {
+  border-color: color-mix(
+    in srgb,
+    var(--scramble-rival-frame-accent, var(--scramble-violet)) 32%,
+    rgba(255, 255, 255, .08)
+  );
+  background:
+    linear-gradient(
+      240deg,
+      color-mix(in srgb, var(--scramble-rival-frame-accent, var(--scramble-violet)) 8%, transparent),
+      rgba(255, 255, 255, .018)
+    );
   text-align: right;
+}
+
+.scramble-player-score.is-rival::before {
+  inset: 0 0 0 auto;
+  background: linear-gradient(
+    var(--scramble-rival-frame-accent-alt, var(--scramble-violet)),
+    var(--scramble-rival-frame-accent, var(--scramble-violet))
+  );
+  box-shadow: 0 0 16px var(--scramble-rival-frame-accent, var(--scramble-violet));
 }
 
 .scramble-player-score strong,
@@ -537,21 +724,14 @@
   text-align: right;
 }
 
-[data-scramble-format="wordstorm"] {
-  --scramble-cyan: #7ef5c8;
-  --scramble-violet: #79b8ff;
-}
-
-[data-scramble-format="forge-clash"] {
-  --scramble-cyan: #ffd27b;
-  --scramble-violet: #ff826f;
-}
-
-[data-scramble-format="riddle-saga"] {
-  --scramble-cyan: #ffd77e;
-  --scramble-violet: #a88aff;
-  --scramble-amber: #ffe8a6;
-}
+[data-scramble-format="target-race"]{--ab:radial-gradient(#15406b,#070719);--afx:repeating-linear-gradient(110deg,#0000 0 39px,#69e6ff22 40px 41px)}
+[data-scramble-format="wordstorm"]{--scramble-cyan:#7ef5c8;--scramble-violet:#79b8ff;--ab:conic-gradient(#185b55,#071027,#164a75);--afx:repeating-conic-gradient(#7ef5c817 0 2deg,#0000 3deg 25deg)}
+[data-scramble-format="forge-clash"]{--scramble-cyan:#ffd27b;--scramble-violet:#ff826f;--ab:radial-gradient(at 50% 100%,#5c281d,#09070e);--afx:radial-gradient(circle,#ffd27b99 0 1px,#0000 2px);--afs:71px 103px}
+[data-scramble-format="riddle-saga"]{--scramble-cyan:#ffd77e;--scramble-violet:#a88aff;--scramble-amber:#ffe8a6;--ab:radial-gradient(#291a3b,#070a19);--afx:repeating-radial-gradient(#ffe6a275 0 1px,#0000 2px 51px)}
+body.scramble-active .cosmos-board,.scramble-rival-board,.scramble-countdown{background:var(--ab)}
+body.scramble-active .cosmos-board::after{background-image:var(--afx);background-size:var(--afs,100% 100%);opacity:.5;animation:sae 9s linear infinite}
+body[data-cosmetic-effects="reduced"].scramble-active .cosmos-board::after{animation:none}
+body[data-cosmetic-effects="off"].scramble-active .cosmos-board::after{display:none}
 
 [data-scramble-format="claim-war"] {
   --scramble-cyan: #b5ff8a;
@@ -716,7 +896,7 @@
 
 .scramble-saga-target span {
   color: var(--scramble-cyan);
-  font: 600 8px "DM Mono", monospace;
+  font: 600 12px var(--ui-font-label, "DM Mono", monospace);
   letter-spacing: .1em;
 }
 
@@ -745,7 +925,7 @@
 .scramble-saga-scores em {
   overflow: hidden;
   color: rgba(224, 233, 242, .55);
-  font-size: 8px;
+  font-size: 12px;
   font-style: normal;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -919,6 +1099,47 @@ body.scramble-active .game-layout {
   grid-template-columns: minmax(0, 1fr) minmax(310px, .82fr) 260px;
 }
 
+/* Arena owns its controls and grid; the solo workspace toolbar is a sibling
+   of the board and must not consume an extra multiplayer grid cell. */
+body.scramble-active #gameScreen .board-workspace-bar {
+  display: none !important;
+}
+
+@media (min-width: 1180px) {
+  body.scramble-active #gameScreen .game-layout {
+    grid-template-rows: minmax(0, 1fr);
+  }
+  body.scramble-active #gameScreen #board { grid-column: 1; grid-row: 1; }
+  body.scramble-active #gameScreen .scramble-rival-board { grid-column: 2; grid-row: 1; }
+  body.scramble-active #gameScreen .inventory { grid-column: 3; grid-row: 1; }
+}
+
+body.simple-ui.scramble-active #gameScreen > .game-nav .game-target {
+  display: block;
+  min-width: 0;
+  text-align: center;
+}
+
+body.simple-ui.scramble-active #gameScreen > .game-nav .game-target > div {
+  display: block;
+}
+
+body.simple-ui.scramble-active #gameScreen > .game-nav .game-target > div::before {
+  display: none;
+}
+
+body.simple-ui.scramble-active #gameScreen > .game-nav .game-target strong {
+  display: block;
+  overflow: visible;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.2;
+}
+
+body.simple-ui.scramble-active #gameScreen > .game-nav .game-target :is(#modeName, small, .remix-pill) {
+  display: none !important;
+}
+
 .scramble-rival-board {
   min-width: 0;
   min-height: 0;
@@ -1069,7 +1290,7 @@ body.scramble-active .game-layout {
 
 .scramble-countdown > strong {
   color: white;
-  font: 700 clamp(82px, 20vw, 170px) "DM Mono", monospace;
+  font: 700 clamp(54px, 12vmin, 112px) "DM Mono", monospace;
   line-height: .95;
   text-shadow: 0 0 42px rgba(105, 230, 255, .44);
   animation: scramble-count .7s ease-out both;
@@ -1085,6 +1306,7 @@ body.scramble-active :is(
   #timerHud,
   #movesHud,
   .powerup-shortcuts,
+  .board-assistance-rail,
   #runMilestone,
   #hintObjective,
   #combinationStory,
@@ -1177,6 +1399,31 @@ body.scramble-counting-down :is(#boardItems, #wordList, .board-quick-tools) {
   color: var(--scramble-cyan);
   background: rgba(105, 230, 255, .045);
   font: 600 13px "DM Mono", monospace;
+}
+
+.scramble-result-combatant {
+  width: min(100%, 230px);
+  margin: 18px auto;
+  display: grid;
+  place-items: center;
+}
+
+.scramble-result-combatant[hidden] {
+  display: none;
+}
+
+.scramble-result-combatant .scramble-duel-card-host {
+  width: 100%;
+}
+
+.scramble-result-combatant[data-outcome="self"] .arena-duel-card {
+  filter:
+    drop-shadow(0 0 30px color-mix(in srgb, var(--scramble-self-frame-accent, #69e6ff) 24%, transparent));
+}
+
+.scramble-result-combatant[data-outcome="rival"] .arena-duel-card {
+  filter:
+    drop-shadow(0 0 30px color-mix(in srgb, var(--scramble-rival-frame-accent, #a886ff) 24%, transparent));
 }
 
 .scramble-result-stats {
@@ -1299,6 +1546,8 @@ body.scramble-counting-down :is(#boardItems, #wordList, .board-quick-tools) {
   from { opacity: 0; transform: scale(.92); }
 }
 
+@keyframes sae { to { background-position: 120px -90px; } }
+
 @media (min-width: 701px) and (max-width: 1179px) {
   .scramble-format-picker > div {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1390,6 +1639,11 @@ body.scramble-counting-down :is(#boardItems, #wordList, .board-quick-tools) {
     padding: max(22px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(22px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
   }
 
+  .scramble-dialog > .scramble-close {
+    top: max(8px, env(safe-area-inset-top));
+    right: max(8px, env(safe-area-inset-right));
+  }
+
   .scramble-heading {
     grid-template-columns: 50px minmax(0, 1fr);
     gap: 12px;
@@ -1410,16 +1664,80 @@ body.scramble-counting-down :is(#boardItems, #wordList, .board-quick-tools) {
   }
 
   .scramble-format-picker > div {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 2px 2px 7px;
+    scroll-padding-inline: 2px;
+    scroll-snap-type: x mandatory;
+    scrollbar-color: color-mix(in srgb, var(--scramble-cyan) 38%, transparent) transparent;
+    scrollbar-width: thin;
   }
 
   .scramble-format-option {
-    min-height: 104px;
-    padding: 11px 9px;
+    flex: 0 0 clamp(142px, 47vw, 188px);
+    min-height: 64px;
+    padding: 10px 9px;
+    align-items: center;
+    scroll-snap-align: center;
+  }
+
+  .scramble-format-option small {
+    display: none;
+  }
+
+  .scramble-format-option em {
+    margin-top: 3px;
+    font-size: 12px;
+    letter-spacing: .04em;
+  }
+
+  .scramble-queue-picker {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 7px;
+    margin: 4px 0 10px;
   }
 
   .scramble-mode-card {
     min-height: 0;
+    padding: 16px;
+  }
+
+  .scramble-mode-card[hidden] {
+    display: none;
+  }
+
+  .scramble-mode-card .scramble-card-mark {
+    float: left;
+    width: 44px;
+    height: 44px;
+    margin: 0 12px 8px 0;
+  }
+
+  .scramble-mode-card h3 {
+    margin-block: 4px 6px;
+    font-size: 20px;
+  }
+
+  .scramble-mode-card > p {
+    min-height: 0;
+    margin-bottom: 12px;
+    font-size: 14px;
+    line-height: 1.4;
+  }
+
+  .scramble-arena-rank,
+  .scramble-rating {
+    min-height: 48px;
+    margin-block: 9px;
+  }
+
+  .scramble-mode-card form {
+    clear: both;
+    margin-top: 10px;
+    padding-top: 10px;
   }
 
   .scramble-waiting {
@@ -1428,7 +1746,26 @@ body.scramble-counting-down :is(#boardItems, #wordList, .board-quick-tools) {
   }
 
   .scramble-versus {
-    grid-template-columns: minmax(0, 1fr) 34px minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr) 38px minmax(0, 1fr);
+    gap: 6px;
+  }
+
+  .scramble-versus .scramble-duel-card-host {
+    width: min(100%, 42vw);
+  }
+
+  .scramble-countdown__cards {
+    width: calc(100vw - 20px);
+    grid-template-columns: minmax(0, 1fr) 38px minmax(0, 1fr);
+    gap: 6px;
+  }
+
+  .scramble-countdown__cards .scramble-duel-card-host {
+    width: min(100%, 40vw);
+  }
+
+  .scramble-result-combatant {
+    width: min(52vw, 210px);
   }
 
   .scramble-scorebar {
@@ -1501,7 +1838,7 @@ body.scramble-counting-down :is(#boardItems, #wordList, .board-quick-tools) {
   }
 
   .scramble-player-score span {
-    font-size: 9px;
+    font-size: 12px;
   }
 
   .scramble-clock {
@@ -1590,9 +1927,317 @@ body.scramble-counting-down :is(#boardItems, #wordList, .board-quick-tools) {
   .scramble-forfeit-dialog > div {
     grid-template-columns: 1fr;
   }
+
+  .scramble-dialog[data-arena-phase="combatants"] .scramble-heading {
+    padding-right: 52px;
+  }
+
+  .scramble-dialog[data-arena-phase="combatants"] .scramble-heading .scramble-emblem {
+    width: 42px;
+    height: 42px;
+  }
+
+  .scramble-dialog[data-arena-phase="combatants"] .scramble-heading h2 {
+    font-size: 26px;
+  }
+
+  .scramble-versus,
+  .scramble-countdown__cards {
+    grid-template-columns: minmax(0, 1fr) 32px minmax(0, 1fr);
+  }
+
+  .scramble-versus > b,
+  .scramble-countdown__cards > b {
+    width: 32px;
+  }
 }
 
-@media (max-height: 520px) and (min-width: 520px) and (max-width: 900px) {
+@media (orientation: landscape) and (max-height: 520px) and (max-width: 900px) {
+  .scramble-dialog[data-arena-phase="modes"] {
+    width: 100vw;
+    max-width: none;
+    height: 100dvh;
+    max-height: none;
+    min-height: 0;
+    margin: 0;
+    padding: max(8px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+    display: grid;
+    grid-template-areas:
+      "heading heading"
+      "formats queue"
+      "formats choices";
+    grid-template-columns: minmax(220px, .88fr) minmax(280px, 1.12fr);
+    grid-template-rows: 44px 44px minmax(0, 1fr);
+    gap: 6px 12px;
+    overflow: hidden;
+    border: 0;
+    border-radius: 0;
+  }
+
+  .scramble-dialog[data-arena-phase="modes"] > .scramble-close {
+    top: max(6px, env(safe-area-inset-top));
+    right: max(8px, env(safe-area-inset-right));
+    width: 44px;
+    height: 44px;
+  }
+
+  .scramble-dialog[data-arena-phase="modes"] .scramble-heading {
+    grid-area: heading;
+    min-width: 0;
+    grid-template-columns: 36px minmax(0, 1fr);
+    gap: 9px;
+    padding-right: 52px;
+  }
+
+  .scramble-dialog[data-arena-phase="modes"] .scramble-heading .scramble-emblem {
+    width: 36px;
+    height: 36px;
+    font-size: 17px;
+  }
+
+  .scramble-dialog[data-arena-phase="modes"] .scramble-heading h2 {
+    margin-top: 0;
+    font-size: 22px;
+  }
+
+  .scramble-dialog[data-arena-phase="modes"] .scramble-heading small,
+  .scramble-dialog[data-arena-phase="modes"] #scrambleIntro,
+  .scramble-dialog[data-arena-phase="modes"] .scramble-format-picker legend {
+    display: none;
+  }
+
+  .scramble-dialog[data-arena-phase="modes"] .scramble-format-picker {
+    grid-area: formats;
+    min-height: 0;
+    margin: 0;
+    display: grid;
+    grid-template-rows: minmax(0, 1fr) auto;
+    gap: 4px;
+  }
+
+  .scramble-dialog[data-arena-phase="modes"] .scramble-format-picker > div {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-content: start;
+    gap: 5px;
+    overflow-x: hidden;
+    overflow-y: auto;
+    padding: 1px 4px 1px 1px;
+    scroll-snap-type: y proximity;
+  }
+
+  .scramble-dialog[data-arena-phase="modes"] .scramble-format-option {
+    min-width: 0;
+    min-height: 48px;
+    padding: 6px 7px;
+    grid-template-columns: 18px minmax(0, 1fr);
+    gap: 5px;
+    scroll-snap-align: start;
+  }
+
+  .scramble-dialog[data-arena-phase="modes"] .scramble-format-option strong {
+    font-size: 13px;
+  }
+
+  .scramble-dialog[data-arena-phase="modes"] .scramble-format-option em {
+    display: none;
+  }
+
+  .scramble-dialog[data-arena-phase="modes"] #scrambleFormatObjective {
+    min-height: 30px;
+    margin: 0;
+    display: -webkit-box;
+    overflow: hidden;
+    font-size: 12px;
+    line-height: 1.25;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  .scramble-dialog[data-arena-phase="modes"] .scramble-queue-picker {
+    grid-area: queue;
+    margin: 0;
+  }
+
+  .scramble-dialog[data-arena-phase="modes"] .scramble-queue-picker button {
+    min-height: 44px;
+  }
+
+  .scramble-dialog[data-arena-phase="modes"] .scramble-lobby-grid {
+    grid-area: choices;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .scramble-dialog[data-arena-phase="modes"] .scramble-mode-card {
+    height: 100%;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 9px 11px;
+  }
+
+  .scramble-dialog[data-arena-phase="modes"] .scramble-mode-card .scramble-card-mark,
+  .scramble-dialog[data-arena-phase="modes"] .scramble-mode-card > p,
+  .scramble-dialog[data-arena-phase="modes"] .scramble-mode-card > small {
+    display: none;
+  }
+
+  .scramble-dialog[data-arena-phase="modes"] .scramble-mode-card h3 {
+    margin: 0 0 6px;
+    font-size: 18px;
+  }
+
+  .scramble-dialog[data-arena-phase="modes"] .scramble-mode-card form {
+    margin-top: 7px;
+    padding-top: 7px;
+  }
+
+  .scramble-dialog[data-arena-phase="modes"] .scramble-mode-card form label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  .scramble-dialog[data-arena-phase="modes"] .scramble-mode-card form > div {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .scramble-dialog[data-arena-phase="modes"] .scramble-mode-card :is(input, button),
+  .scramble-dialog[data-arena-phase="modes"] .scramble-mode-card > .scramble-primary {
+    min-height: 44px;
+  }
+
+  .scramble-dialog[data-arena-phase="modes"] :is(.scramble-arena-rank, .scramble-rating) {
+    min-height: 44px;
+    margin-block: 5px;
+    padding-block: 5px;
+  }
+
+  .scramble-dialog[data-arena-phase="modes"] .scramble-ranked-lock {
+    margin: 5px 0 0;
+    font-size: 12px;
+    line-height: 1.25;
+  }
+
+  .scramble-dialog[data-arena-phase="modes"] .scramble-status {
+    position: absolute;
+    right: max(14px, env(safe-area-inset-right));
+    bottom: max(6px, env(safe-area-inset-bottom));
+    left: calc(39% + 12px);
+    z-index: 3;
+    min-height: 0;
+    margin: 0;
+    overflow: hidden;
+    pointer-events: none;
+    font-size: 12px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .scramble-dialog[data-arena-phase="combatants"],
+  .scramble-result-dialog {
+    padding: 10px 14px;
+  }
+
+  .scramble-dialog[data-arena-phase="combatants"] .scramble-heading {
+    min-height: 42px;
+    grid-template-columns: 36px minmax(0, 1fr);
+    gap: 9px;
+  }
+
+  .scramble-dialog[data-arena-phase="combatants"] .scramble-heading .scramble-emblem {
+    width: 36px;
+    height: 36px;
+    font-size: 17px;
+  }
+
+  .scramble-dialog[data-arena-phase="combatants"] .scramble-heading h2 {
+    margin-top: 1px;
+    font-size: 22px;
+  }
+
+  .scramble-dialog[data-arena-phase="combatants"] .scramble-heading small,
+  .scramble-waiting-orbit,
+  .scramble-dialog[data-arena-phase="combatants"] #scrambleWaitingCopy {
+    display: none;
+  }
+
+  .scramble-waiting {
+    padding: 7px 12px 9px;
+  }
+
+  .scramble-waiting h3 {
+    margin: 2px 0 3px;
+    font-size: 18px;
+  }
+
+  .scramble-invite-output {
+    margin: 5px auto 7px;
+  }
+
+  .scramble-versus {
+    margin: 5px auto 7px;
+    grid-template-columns: minmax(0, 1fr) 30px minmax(0, 1fr);
+    gap: 7px;
+  }
+
+  .scramble-versus .scramble-duel-card-host,
+  .scramble-result-combatant {
+    width: min(100%, clamp(88px, 29dvh, 113px));
+  }
+
+  .scramble-versus > b {
+    width: 30px;
+    box-shadow: 0 0 20px rgba(168, 134, 255, .16);
+  }
+
+  .scramble-dialog[data-arena-phase="combatants"] .arena-duel-card,
+  .scramble-result-dialog .arena-duel-card {
+    gap: 3px;
+  }
+
+  .scramble-dialog[data-arena-phase="combatants"] .arena-duel-card__meta,
+  .scramble-result-dialog .arena-duel-card__meta {
+    padding: 4px;
+    grid-template-columns: 22px minmax(0, 1fr) auto;
+    gap: 4px;
+    border-radius: 8px;
+  }
+
+  .scramble-dialog[data-arena-phase="combatants"] .arena-duel-card__mark,
+  .scramble-result-dialog .arena-duel-card__mark {
+    width: 22px;
+  }
+
+  .scramble-dialog[data-arena-phase="combatants"] .arena-duel-card__rank,
+  .scramble-result-dialog .arena-duel-card__rank {
+    display: none;
+  }
+
+  .scramble-dialog[data-arena-phase="combatants"] .arena-duel-card__callsign,
+  .scramble-result-dialog .arena-duel-card__callsign {
+    font-size: 12px;
+  }
+
+  .scramble-dialog[data-arena-phase="combatants"] .arena-duel-card__status,
+  .scramble-result-dialog .arena-duel-card__status {
+    grid-column: auto;
+    justify-self: end;
+    padding: 3px 4px;
+    font-size: 12px;
+  }
+
+  .scramble-waiting-actions {
+    gap: 6px;
+  }
+
+  .scramble-waiting-actions button {
+    min-height: 44px;
+    padding-block: 7px;
+  }
+
   .scramble-scorebar {
     min-height: 66px;
     grid-template-columns: 1fr 82px 1fr;
@@ -1610,12 +2255,169 @@ body.scramble-counting-down :is(#boardItems, #wordList, .board-quick-tools) {
   body.scramble-active .game-nav {
     display: none;
   }
+
+  .scramble-countdown {
+    gap: 4px;
+  }
+
+  .scramble-countdown__cards .scramble-duel-card-host {
+    width: min(100%, clamp(92px, 30dvh, 132px));
+  }
+
+  .scramble-countdown__cards .arena-duel-card__rank,
+  .scramble-countdown__cards .arena-duel-card__status {
+    display: none;
+  }
+
+  .scramble-countdown > strong {
+    font-size: clamp(38px, 14dvh, 58px);
+  }
+
+  .scramble-result-orb {
+    width: 34px;
+    height: 34px;
+    margin-bottom: 3px;
+  }
+
+  .scramble-result-dialog h2 {
+    margin: 2px 0 3px;
+    font-size: 24px;
+  }
+
+  #scrambleResultReason {
+    overflow: hidden;
+    font-size: 12px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .scramble-result-rating {
+    margin: 5px auto;
+    padding: 4px 8px;
+    font-size: 12px;
+  }
+
+  .scramble-result-combatant {
+    margin-block: 5px;
+  }
+
+  .scramble-result-stats {
+    gap: 5px;
+  }
+
+  .scramble-result-stats section {
+    padding: 7px 9px;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 520px) and (max-width: 519px) {
+  .scramble-dialog[data-arena-phase="modes"] {
+    grid-template-areas:
+      "heading heading"
+      "formats queue"
+      "choices choices";
+    grid-template-columns: minmax(0, 1fr) 164px;
+    grid-template-rows: 38px 44px minmax(0, 1fr);
+    gap: 4px 8px;
+    padding-block: max(5px, env(safe-area-inset-top)) max(5px, env(safe-area-inset-bottom));
+  }
+
+  .scramble-dialog[data-arena-phase="modes"] .scramble-heading {
+    grid-template-columns: 32px minmax(0, 1fr);
+    padding-right: 48px;
+  }
+
+  .scramble-dialog[data-arena-phase="modes"] .scramble-heading .scramble-emblem {
+    width: 32px;
+    height: 32px;
+  }
+
+  .scramble-dialog[data-arena-phase="modes"] .scramble-heading h2 {
+    font-size: 19px;
+  }
+
+  .scramble-dialog[data-arena-phase="modes"] .scramble-format-picker {
+    display: block;
+  }
+
+  .scramble-dialog[data-arena-phase="modes"] .scramble-format-picker > div {
+    height: 44px;
+    display: flex;
+    gap: 4px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 0 3px 0 0;
+    scroll-snap-type: x mandatory;
+  }
+
+  .scramble-dialog[data-arena-phase="modes"] .scramble-format-option {
+    flex: 0 0 112px;
+    min-height: 44px;
+    padding-block: 4px;
+  }
+
+  .scramble-dialog[data-arena-phase="modes"] #scrambleFormatObjective {
+    display: none;
+  }
+
+  .scramble-dialog[data-arena-phase="modes"] .scramble-mode-card {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(128px, .72fr);
+    align-content: center;
+    align-items: center;
+    gap: 6px 10px;
+    overflow: hidden;
+    padding: 7px 9px;
+  }
+
+  .scramble-dialog[data-arena-phase="modes"] .scramble-mode-card h3 {
+    margin: 0;
+  }
+
+  .scramble-dialog[data-arena-phase="modes"] .scramble-mode-card > .scramble-primary {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .scramble-dialog[data-arena-phase="modes"] .scramble-mode-card form {
+    grid-column: 1 / -1;
+    margin: 0;
+    padding: 0;
+    border-top: 0;
+  }
+
+  .scramble-dialog[data-arena-phase="modes"] .scramble-ranked-card {
+    grid-template-columns: minmax(0, 1fr) minmax(118px, .6fr) minmax(118px, .6fr);
+  }
+
+  .scramble-dialog[data-arena-phase="modes"] .scramble-ranked-card h3 {
+    grid-column: 1;
+  }
+
+  .scramble-dialog[data-arena-phase="modes"] .scramble-ranked-card :is(.scramble-arena-rank, .scramble-rating) {
+    margin: 0;
+  }
+
+  .scramble-dialog[data-arena-phase="modes"] .scramble-ranked-card > .scramble-primary {
+    grid-column: 3;
+    grid-row: 2;
+  }
+
+  .scramble-dialog[data-arena-phase="modes"] .scramble-ranked-lock {
+    grid-column: 1 / 3;
+    grid-row: 2;
+  }
+
+  .scramble-dialog[data-arena-phase="modes"] .scramble-status {
+    display: none;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .scramble-waiting-orbit,
   .scramble-rival-word,
-  .scramble-countdown > strong {
+  .scramble-countdown > strong,
+  body.scramble-active .cosmos-board::after {
     animation: none;
   }
 
@@ -1629,6 +2431,15 @@ body.scramble-counting-down :is(#boardItems, #wordList, .board-quick-tools) {
 }
 
 @media (forced-colors: active) {
+  body.scramble-active .cosmos-board,
+  .scramble-countdown {
+    background: Canvas;
+  }
+
+  body.scramble-active .cosmos-board::after {
+    display: none;
+  }
+
   .scramble-dialog,
   .scramble-forfeit-dialog,
   .scramble-result-dialog,
@@ -1663,4 +2474,58 @@ body.scramble-counting-down :is(#boardItems, #wordList, .board-quick-tools) {
 .scramble-rival-board :focus-visible {
   outline: 3px solid var(--scramble-cyan);
   outline-offset: 3px;
+}
+
+/* Keep the live objective visible alongside Menu and Sound in landscape. */
+body.simple-ui.scramble-active #gameScreen[data-play-layout="short-landscape"] > .game-nav,
+body.simple-ui.scramble-active #gameScreen[data-play-layout="short-landscape"] > .game-nav:has(#playVolumeControl) {
+  position: relative;
+  z-index: 32;
+  inset: 0 0 auto;
+  width: 100%;
+  height: calc(44px + env(safe-area-inset-top, 0px));
+  min-height: 0;
+  flex: 0 0 auto;
+  padding: env(safe-area-inset-top, 0px) max(6px, env(safe-area-inset-right, 0px)) 0 max(6px, env(safe-area-inset-left, 0px));
+  display: grid;
+  grid-template-columns: 58px minmax(0, 1fr) 44px;
+  grid-template-rows: 44px;
+  gap: 5px;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  pointer-events: none;
+}
+
+body.simple-ui.scramble-active #gameScreen[data-play-layout="short-landscape"] > .game-nav :is(#pauseRunButton, #playVolumeControl, #playSoundToggle, #playSoundPanel) {
+  pointer-events: auto;
+}
+
+body.simple-ui.scramble-active #gameScreen[data-play-layout="short-landscape"] > .game-nav .game-target {
+  visibility: visible;
+  pointer-events: none;
+}
+
+body.simple-ui.scramble-active #gameScreen[data-play-layout="short-landscape"] > .scramble-scorebar {
+  min-height: calc(66px + env(safe-area-inset-top, 0px));
+  padding-top: calc(6px + env(safe-area-inset-top, 0px));
+  padding-right: max(12px, env(safe-area-inset-right, 0px));
+  padding-left: max(12px, env(safe-area-inset-left, 0px));
+  grid-template-columns: minmax(0, 1fr) minmax(70px, 82px) minmax(0, 1fr);
+  gap: 5px;
+}
+
+body.simple-ui.scramble-active #gameScreen[data-play-layout="short-landscape"] > .scramble-scorebar .scramble-player-score {
+  min-width: 0;
+  padding: 5px 7px;
+}
+
+body.simple-ui.scramble-active #gameScreen[data-play-layout="short-landscape"] > .scramble-scorebar .scramble-player-score :is(span, em) {
+  display: none;
+}
+
+@media (forced-colors: active) {
+  body.simple-ui.scramble-active #gameScreen[data-play-layout="short-landscape"] > .game-nav {
+    background: transparent;
+  }
 }

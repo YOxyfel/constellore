@@ -1,0 +1,217 @@
+@font-face {
+  font-family: "Manrope";
+  src: url("./fonts/Manrope-Variable.ttf") format("truetype-variations");
+  font-style: normal;
+  font-weight: 200 800;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "DM Mono";
+  src: url("./fonts/DMMono-Medium.ttf") format("truetype");
+  font-style: normal;
+  font-weight: 500 700;
+  font-display: swap;
+}
+
+/* Author-level layout rules must never override the native closed-dialog state. */
+dialog:not([open]) {
+  display: none !important;
+}
+
+@layer ui-reset, ui-tokens, ui-primitives, ui-surfaces, ui-states, ui-accessibility, ui-overrides;
+
+@layer ui-tokens {
+  :root {
+    --ui-font-body: "Manrope", Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --ui-font-display: Georgia, "Times New Roman", serif;
+    --ui-font-label: "DM Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    --font-body: var(--ui-font-body);
+    --font-display: var(--ui-font-display);
+    --font-label: var(--ui-font-label);
+
+    --ui-bg: #071923;
+    --ui-bg-raised: #0b2631;
+    --ui-surface: #102f39;
+    --ui-surface-strong: #071d25;
+    --ui-surface-hover: #173c46;
+    --ui-control: rgba(14, 44, 53, .9);
+    --ui-control-hover: rgba(22, 61, 70, .96);
+    --ui-line: rgba(177, 218, 213, .17);
+    --ui-line-strong: rgba(177, 218, 213, .34);
+    --ui-text: #f5f1e7;
+    --ui-muted: #adc3c2;
+    --ui-teal: #69d8cc;
+    --ui-gold: #f1ca78;
+    --ui-gold-bright: #ffe0a1;
+    --ui-coral: #ec927d;
+    --ui-primary: var(--ui-gold);
+    --ui-primary-hover: var(--ui-gold-bright);
+    --ui-primary-ink: #17231f;
+    --ui-accent-soft: rgba(105, 216, 204, .12);
+    --ui-focus: var(--ui-teal);
+    --ui-danger: var(--ui-coral);
+
+    --radius-control: 10px;
+    --radius-card: 14px;
+    --radius-feature: 18px;
+    --radius-dialog: 22px;
+    --radius-pill: 999px;
+    --ui-radius-control: var(--radius-control);
+    --ui-radius-card: var(--radius-card);
+    --ui-radius-feature: var(--radius-feature);
+    --ui-radius-dialog: var(--radius-dialog);
+
+    --hit-default: 48px;
+    --hit-compact: 44px;
+    --text-floor: 12px;
+    --text-support: 14px;
+    --text-action: 15px;
+
+    --motion-fast: 160ms;
+    --motion-standard: 240ms;
+    --motion-surface: 360ms;
+    --motion-scene: 550ms;
+    --ease-standard: cubic-bezier(.2, .8, .2, 1);
+    --ease-enter: cubic-bezier(.16, .82, .24, 1);
+    --ease-exit: cubic-bezier(.4, 0, 1, 1);
+
+    --elevation-control: 0 8px 20px rgba(0, 0, 0, .2);
+    --elevation-card: 0 18px 44px rgba(0, 0, 0, .24);
+    --elevation-floating: 0 24px 64px rgba(0, 0, 0, .34);
+    --elevation-dialog: 0 34px 100px rgba(0, 0, 0, .5);
+    --ui-dialog-shadow: var(--elevation-dialog);
+    --ui-dialog-backdrop: rgba(2, 13, 19, .76);
+
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-right: env(safe-area-inset-right, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-left: env(safe-area-inset-left, 0px);
+    --ui-vv-width: 100vw;
+    --ui-vv-height: 100dvh;
+    --ui-vv-offset-left: 0px;
+    --ui-vv-offset-top: 0px;
+  }
+}
+
+@layer ui-primitives {
+  :where(.ui-button, .ui-icon-button, .ui-back-button, .ui-close-button) {
+    min-width: var(--hit-default);
+    min-height: var(--hit-default);
+    border: 1px solid var(--ui-line-strong);
+    font: 700 var(--text-action)/1.15 var(--font-body);
+    transition:
+      transform var(--motion-fast) var(--ease-standard),
+      border-color var(--motion-fast) var(--ease-standard),
+      background-color var(--motion-fast) var(--ease-standard),
+      color var(--motion-fast) var(--ease-standard),
+      opacity var(--motion-fast) var(--ease-standard);
+  }
+
+  :where(.ui-button) {
+    border-radius: var(--radius-control);
+    padding: 0 18px;
+  }
+
+  :where(.ui-button--primary) {
+    border-color: color-mix(in srgb, var(--ui-gold) 74%, white 12%);
+    background: linear-gradient(115deg, var(--ui-gold), #9de5cb);
+    color: var(--ui-primary-ink);
+    box-shadow: var(--elevation-control);
+  }
+
+  :where(.ui-button--secondary, .ui-back-button) {
+    background: var(--ui-control);
+    color: var(--ui-text);
+  }
+
+  :where(.ui-button--safe) {
+    border-color: color-mix(in srgb, var(--ui-teal) 72%, white 10%);
+    background: linear-gradient(180deg, #82eadb, #4fc5c8);
+    color: #08272a;
+  }
+
+  :where(.ui-button--danger) {
+    border-color: color-mix(in srgb, var(--ui-coral) 70%, white 10%);
+    background: color-mix(in srgb, var(--ui-coral) 18%, var(--ui-control));
+    color: #ffdcd5;
+  }
+
+  :where(.ui-icon-button, .ui-close-button) {
+    width: var(--hit-default);
+    padding: 0;
+    border-radius: var(--radius-control);
+    display: inline-grid;
+    place-items: center;
+    background: var(--ui-control);
+    color: var(--ui-text);
+  }
+
+  :where(.ui-back-button) {
+    border-radius: var(--radius-pill);
+    padding: 0 16px;
+  }
+
+  :where(.ui-segmented) {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
+    gap: 4px;
+    padding: 4px;
+    border: 1px solid var(--ui-line);
+    border-radius: var(--radius-card);
+    background: color-mix(in srgb, var(--ui-bg) 76%, transparent);
+  }
+
+  :where(.ui-segmented > button, .ui-segmented > [role="tab"], .ui-segmented > [role="radio"]) {
+    min-height: var(--hit-compact);
+    border-radius: var(--radius-control);
+  }
+
+  @media (hover: hover) and (pointer: fine) {
+    :where(.ui-button, .ui-icon-button, .ui-back-button, .ui-close-button):not(:disabled):hover {
+      transform: translateY(-1px);
+      border-color: var(--ui-teal);
+    }
+  }
+
+  :where(.ui-button, .ui-icon-button, .ui-back-button, .ui-close-button):not(:disabled):active {
+    transform: translateY(1px) scale(.985);
+  }
+}
+
+@layer ui-states {
+  :where(button, [role="button"], [role="tab"], [role="radio"]):disabled,
+  :where(button, [role="button"], [role="tab"], [role="radio"])[aria-disabled="true"] {
+    cursor: not-allowed;
+    opacity: .58;
+    filter: saturate(.55);
+  }
+
+  html[data-ui-layout="stacked"] :where(.ui-button, .ui-icon-button, .ui-back-button, .ui-close-button),
+  html[data-ui-layout="short-landscape"] :where(.ui-button, .ui-icon-button, .ui-back-button, .ui-close-button) {
+    min-width: var(--hit-compact);
+    min-height: var(--hit-compact);
+  }
+}
+
+@layer ui-accessibility {
+  :where(.ui-button, .ui-icon-button, .ui-back-button, .ui-close-button, .ui-segmented > button):focus-visible {
+    outline: 3px solid var(--ui-teal);
+    outline-offset: 3px;
+    box-shadow: 0 0 0 6px color-mix(in srgb, var(--ui-teal) 22%, transparent);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    :where(.ui-button, .ui-icon-button, .ui-back-button, .ui-close-button) {
+      transition-duration: 1ms;
+    }
+  }
+
+  @media (forced-colors: active) {
+    :where(.ui-button, .ui-icon-button, .ui-back-button, .ui-close-button, .ui-segmented) {
+      border-color: ButtonText;
+      forced-color-adjust: auto;
+    }
+  }
+}

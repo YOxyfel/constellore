@@ -23,6 +23,24 @@ export const MOTIONS = Object.freeze([
 
 const MAX_WORD_LENGTH = 48;
 const MAX_EMOJI_POINTS = 8;
+export const GOLDEN_PAIR_FULL_MIN_DURATION_MS = 3_200;
+export const GOLDEN_PAIR_FULL_MAX_DURATION_MS = 3_500;
+export const GENERIC_MAJOR_DURATION_MS = 3_400;
+const LEGACY_DURATION_MIN_MS = 620;
+const LEGACY_DURATION_MAX_MS = 850;
+
+function readableFullMotionDuration(duration) {
+  const legacyDuration = Math.min(
+    LEGACY_DURATION_MAX_MS,
+    Math.max(LEGACY_DURATION_MIN_MS, Math.round(Number(duration) || LEGACY_DURATION_MIN_MS))
+  );
+  const progress = (legacyDuration - LEGACY_DURATION_MIN_MS)
+    / (LEGACY_DURATION_MAX_MS - LEGACY_DURATION_MIN_MS);
+  return Math.round(
+    GOLDEN_PAIR_FULL_MIN_DURATION_MS
+      + progress * (GOLDEN_PAIR_FULL_MAX_DURATION_MS - GOLDEN_PAIR_FULL_MIN_DURATION_MS)
+  );
+}
 
 function deepFreeze(value, seen = new WeakSet()) {
   if (!value || typeof value !== "object" || seen.has(value)) return value;
@@ -42,7 +60,7 @@ function animation(id, a, b, target, family, motion, palette, beats, glyphs, dur
     palette,
     beats,
     glyphs,
-    duration
+    duration: readableFullMotionDuration(duration)
   });
 }
 
@@ -597,7 +615,10 @@ function safeWordToken(value) {
 /**
  * Builds a renderer-ready snapshot from the actual inventory/result objects.
  * No caller object is retained, no HTML is returned, and every nested value is
- * frozen. Invalid or non-Golden combinations return null.
+ * frozen. Exact Golden recipes retain their authored presentation. A bounded
+ * generic meteor model is available only when the caller explicitly marks the
+ * result as a major moment; ordinary non-Golden combinations still return
+ * null.
  */
 export function buildGoldenPairAnimation(options = {}) {
   if (!options || typeof options !== "object" || Array.isArray(options)) return null;
@@ -607,11 +628,35 @@ export function buildGoldenPairAnimation(options = {}) {
   if (!a || !b || !result) return null;
 
   const definition = goldenPairAnimation(a.word, b.word, result.word);
-  if (!definition) return null;
+  const major = safeProperty(options, "major") === true;
+  if (!definition && !major) return null;
+
+  if (!definition) {
+    return deepFreeze({
+      version: VERSION,
+      id: "major-meteor",
+      presentation: "generic",
+      authored: false,
+      family: "major",
+      motion: "pulse",
+      palette: "meteor-cyan",
+      duration: GENERIC_MAJOR_DURATION_MS,
+      target: result.word,
+      authoredPair: null,
+      a,
+      b,
+      result,
+      beats: ["APPROACH", "IMPACT", "ASCEND"],
+      glyphs: ["✦", "◆", "↑"],
+      announcement: `${a.word} and ${b.word} combine to create ${result.word}.`
+    });
+  }
 
   return deepFreeze({
     version: VERSION,
     id: definition.id,
+    presentation: "authored",
+    authored: true,
     family: definition.family,
     motion: definition.motion,
     palette: definition.palette,

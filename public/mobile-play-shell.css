@@ -1,0 +1,1205 @@
+/* --------------------------------------------------------------------------
+   Responsive play shell
+
+   These rules are deliberately last. Layout is selected by the game-screen
+   state instead of another set of overlapping viewport guesses. Desktop keeps
+   the established presentation; stacked and short-landscape expose the same
+   controls through compact, mutually-exclusive mobile surfaces.
+   -------------------------------------------------------------------------- */
+
+.simple-ui .mobile-assist-surface,
+.simple-ui .mobile-tools-panel,
+.simple-ui .inventory-drawer-body {
+  display: contents;
+}
+
+.simple-ui :is(.mobile-assist-toggle, .inventory-drawer-toggle),
+.simple-ui .board-quick-tools .mobile-tools-toggle {
+  display: none;
+}
+
+body.simple-ui #gameScreen:is([data-play-layout="stacked"], [data-play-layout="short-landscape"]) {
+  --play-shell-safe-top: env(safe-area-inset-top, 0px);
+  --play-shell-safe-right: env(safe-area-inset-right, 0px);
+  --play-shell-safe-bottom: env(safe-area-inset-bottom, 0px);
+  --play-shell-safe-left: env(safe-area-inset-left, 0px);
+  --play-shell-edge: 8px;
+  --play-shell-header: 56px;
+  --play-shell-hit: 44px;
+  --play-shell-inventory-peek: 88px;
+  --play-shell-inventory-open: min(44dvh, 420px);
+  --play-shell-panel: rgba(5, 23, 31, .97);
+  position: relative;
+  min-width: 0;
+  isolation: isolate;
+}
+
+/* One-row phone header: Menu / objective / Sound. */
+body.simple-ui #gameScreen[data-play-layout="stacked"] > .game-nav,
+body.simple-ui #gameScreen[data-play-layout="stacked"] > .game-nav:has(#playVolumeControl) {
+  height: calc(var(--play-shell-header) + var(--play-shell-safe-top));
+  min-height: calc(var(--play-shell-header) + var(--play-shell-safe-top));
+  flex-basis: calc(var(--play-shell-header) + var(--play-shell-safe-top));
+  padding: var(--play-shell-safe-top) max(var(--play-shell-edge), var(--play-shell-safe-right)) 0 max(var(--play-shell-edge), var(--play-shell-safe-left));
+  display: grid;
+  grid-template-columns: 84px minmax(0, 1fr) 84px;
+  grid-template-rows: var(--play-shell-header);
+  align-items: center;
+  gap: 6px;
+  overflow: visible;
+}
+
+body.simple-ui #gameScreen:is([data-play-layout="stacked"], [data-play-layout="short-landscape"]) .game-nav > .pause-run-button {
+  position: relative;
+  inset: auto;
+  width: auto;
+  min-width: 64px;
+  max-width: 84px;
+  height: var(--play-shell-hit);
+  min-height: var(--play-shell-hit);
+  margin: 0;
+  padding-inline: 10px;
+  overflow: visible;
+  white-space: nowrap;
+}
+
+body.simple-ui #gameScreen:is([data-play-layout="stacked"], [data-play-layout="short-landscape"]) .game-nav > .pause-run-button > span {
+  display: none;
+}
+
+body.simple-ui #gameScreen:is([data-play-layout="stacked"], [data-play-layout="short-landscape"]) .game-target {
+  position: relative;
+  inset: auto;
+  transform: none;
+  grid-column: 2;
+  grid-row: 1;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  min-height: 0;
+  overflow: hidden;
+  align-self: center;
+  justify-self: stretch;
+}
+
+body.simple-ui #gameScreen:is([data-play-layout="stacked"], [data-play-layout="short-landscape"]) .game-target > div {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  min-height: 0;
+  overflow: hidden;
+  flex-flow: row nowrap;
+  justify-content: center;
+  gap: 0;
+  text-align: center;
+}
+
+body.simple-ui #gameScreen:is([data-play-layout="stacked"], [data-play-layout="short-landscape"]) .game-target > div::before,
+body.simple-ui #gameScreen:is([data-play-layout="stacked"], [data-play-layout="short-landscape"]) .game-target :is(.difficulty-pill, .remix-pill, .run-division-pill, #journeyPill, #universePill) {
+  display: none !important;
+}
+
+body.simple-ui #gameScreen:is([data-play-layout="stacked"], [data-play-layout="short-landscape"]) .game-target #lawPill.path-guard-status:not([hidden]) {
+  width: 20px;
+  min-width: 20px;
+  height: 20px;
+  min-height: 20px;
+  margin-left: 4px;
+  padding: 0;
+  display: grid !important;
+  flex: 0 0 20px;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--gold) 42%, transparent);
+  border-radius: 50%;
+  color: transparent;
+  font-size: 0;
+}
+
+body.simple-ui #gameScreen:is([data-play-layout="stacked"], [data-play-layout="short-landscape"]) .game-target #lawPill.path-guard-status:not([hidden])::before {
+  content: "◆";
+  color: var(--gold);
+  font-size: 9px;
+  line-height: 1;
+}
+
+body.simple-ui #gameScreen:is([data-play-layout="stacked"], [data-play-layout="short-landscape"]) .game-target strong {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  display: block;
+  overflow: hidden;
+  font-size: clamp(15px, 4.2vw, 18px);
+  line-height: 1.15;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+body.simple-ui #gameScreen:is([data-play-layout="stacked"], [data-play-layout="short-landscape"]) .game-hud {
+  width: var(--play-shell-hit);
+  min-width: var(--play-shell-hit);
+  max-width: var(--play-shell-hit);
+  height: var(--play-shell-hit);
+  overflow: visible;
+  justify-self: end;
+}
+
+body.simple-ui #gameScreen:is([data-play-layout="stacked"], [data-play-layout="short-landscape"]) .game-hud > :not(#playVolumeControl) {
+  display: none !important;
+}
+
+body.simple-ui #gameScreen:is([data-play-layout="stacked"], [data-play-layout="short-landscape"]) #playVolumeControl {
+  position: relative;
+  inset: auto;
+  width: var(--play-shell-hit);
+  min-width: var(--play-shell-hit);
+  max-width: var(--play-shell-hit);
+  height: var(--play-shell-hit);
+  padding: 0;
+  display: block;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+body.simple-ui #gameScreen:is([data-play-layout="stacked"], [data-play-layout="short-landscape"]) #playVolumeControl > :is(#playVolumeDown, #playMasterVolumeQuickValue, #playVolumeUp) {
+  display: none !important;
+}
+
+body.simple-ui #gameScreen:is([data-play-layout="stacked"], [data-play-layout="short-landscape"]) #playSoundDisclosure,
+body.simple-ui #gameScreen:is([data-play-layout="stacked"], [data-play-layout="short-landscape"]) #playSoundToggle {
+  width: var(--play-shell-hit);
+  min-width: var(--play-shell-hit);
+  height: var(--play-shell-hit);
+  min-height: var(--play-shell-hit);
+  margin: 0;
+}
+
+body.simple-ui #gameScreen:is([data-play-layout="stacked"], [data-play-layout="short-landscape"]) #playSoundToggle {
+  display: grid;
+  place-items: center;
+  padding: 0;
+  list-style: none;
+}
+
+body.simple-ui #gameScreen:is([data-play-layout="stacked"], [data-play-layout="short-landscape"]) #playSoundToggle::-webkit-details-marker,
+body.simple-ui #gameScreen:is([data-play-layout="stacked"], [data-play-layout="short-landscape"]) #playSoundToggle > b {
+  display: none;
+}
+
+body.simple-ui #gameScreen:is([data-play-layout="stacked"], [data-play-layout="short-landscape"]) #playSoundPanel {
+  position: fixed;
+  z-index: 80;
+  top: calc(var(--play-shell-safe-top) + var(--play-shell-header) + 6px);
+  right: max(var(--play-shell-edge), var(--play-shell-safe-right));
+  left: auto;
+  width: min(320px, calc(100vw - var(--play-shell-safe-left) - var(--play-shell-safe-right) - 16px));
+  max-width: calc(100vw - var(--play-shell-safe-left) - var(--play-shell-safe-right) - 16px);
+  max-height: calc(100dvh - var(--play-shell-safe-top) - var(--play-shell-header) - var(--play-shell-safe-bottom) - 18px);
+  padding: 14px;
+  overflow: auto;
+  overscroll-behavior: contain;
+  border: 1px solid color-mix(in srgb, var(--cyan) 42%, transparent);
+  border-radius: 14px;
+  background: var(--play-shell-panel);
+  box-shadow: 0 18px 52px rgba(0, 0, 0, .52);
+}
+
+body.simple-ui #gameScreen:is([data-play-layout="stacked"], [data-play-layout="short-landscape"]) #playSoundDisclosure[open] #playSoundPanel {
+  animation: mobile-play-surface-in .18s cubic-bezier(.2, .8, .2, 1) both;
+}
+
+body.simple-ui #gameScreen:is([data-play-layout="stacked"], [data-play-layout="short-landscape"])[data-mobile-surface="tools"] #playSoundPanel,
+body.simple-ui #gameScreen:is([data-play-layout="stacked"], [data-play-layout="short-landscape"])[data-mobile-surface="assistance"] #playSoundPanel {
+  display: none !important;
+}
+
+/* Board command strip and the Tools disclosure. */
+body.simple-ui #gameScreen:is([data-play-layout="stacked"], [data-play-layout="short-landscape"]) .board-top-hud {
+  inset: var(--play-shell-edge) max(var(--play-shell-edge), var(--play-shell-safe-right)) auto max(var(--play-shell-edge), var(--play-shell-safe-left));
+  width: auto;
+  max-width: none;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-rows: var(--play-shell-hit) auto;
+  align-items: start;
+  gap: 6px;
+  pointer-events: none;
+}
+
+body.simple-ui #gameScreen:is([data-play-layout="stacked"], [data-play-layout="short-landscape"]) .board-top-hud > * {
+  pointer-events: auto;
+}
+
+body.simple-ui #gameScreen:is([data-play-layout="stacked"], [data-play-layout="short-landscape"]) .board-quick-tools {
+  position: relative;
+  grid-column: 1;
+  grid-row: 1;
+  width: auto;
+  min-width: 0;
+  max-width: none;
+  height: var(--play-shell-hit);
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(2, var(--play-shell-hit));
+  gap: 2px;
+  overflow: visible;
+}
+
+body.simple-ui #gameScreen:is([data-play-layout="stacked"], [data-play-layout="short-landscape"]) .board-quick-tools > #undoBoardAction,
+body.simple-ui #gameScreen:is([data-play-layout="stacked"], [data-play-layout="short-landscape"]) #mobileToolsToggle {
+  width: var(--play-shell-hit);
+  min-width: var(--play-shell-hit);
+  height: var(--play-shell-hit);
+  min-height: var(--play-shell-hit);
+  padding: 0;
+  display: grid;
+  place-items: center;
+  gap: 0;
+}
+
+body.simple-ui #gameScreen:is([data-play-layout="stacked"], [data-play-layout="short-landscape"]) .board-quick-tools > #undoBoardAction > b,
+body.simple-ui #gameScreen:is([data-play-layout="stacked"], [data-play-layout="short-landscape"]) #mobileToolsToggle > b {
+  display: none;
+}
+
+body.simple-ui #gameScreen:is([data-play-layout="stacked"], [data-play-layout="short-landscape"]) .mobile-tools-panel {
+  position: absolute;
+  z-index: 22;
+  top: calc(100% + 6px);
+  left: 0;
+  width: min(224px, calc(100vw - var(--play-shell-safe-left) - var(--play-shell-safe-right) - 16px));
+  padding: 5px;
+  display: none;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+  border: 1px solid color-mix(in srgb, var(--cyan) 36%, transparent);
+  border-radius: 12px;
+  background: var(--play-shell-panel);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, .42);
+}
+
+body.simple-ui #gameScreen:is([data-play-layout="stacked"], [data-play-layout="short-landscape"])[data-mobile-surface="tools"] .mobile-tools-panel {
+  display: grid;
+  animation: mobile-play-surface-in .18s cubic-bezier(.2, .8, .2, 1) both;
+}
+
+body.simple-ui #gameScreen:is([data-play-layout="stacked"], [data-play-layout="short-landscape"]) .mobile-tools-panel > button {
+  width: 100%;
+  min-width: 0;
+  min-height: var(--play-shell-hit);
+  padding: 5px 3px;
+}
+
+body.simple-ui #gameScreen:is([data-play-layout="stacked"], [data-play-layout="short-landscape"]) .run-milestone {
+  position: relative;
+  inset: auto;
+  grid-column: 2;
+  grid-row: 1;
+  width: 100%;
+  min-width: 0;
+  max-width: none;
+  min-height: var(--play-shell-hit);
+  height: var(--play-shell-hit);
+  margin: 0;
+  padding: 7px 10px 9px;
+  overflow: hidden;
+  border-radius: 11px;
+}
+
+body.simple-ui #gameScreen:is([data-play-layout="stacked"], [data-play-layout="short-landscape"]) .run-milestone > div:first-child {
+  min-width: 0;
+  gap: 8px;
+}
+
+body.simple-ui #gameScreen:is([data-play-layout="stacked"], [data-play-layout="short-landscape"]) .run-milestone :is(#milestoneText, #routeStepCount) {
+  overflow: hidden;
+  line-height: 1.1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+body.simple-ui #gameScreen:is([data-play-layout="stacked"], [data-play-layout="short-landscape"]) .run-milestone #milestoneText {
+  font-size: 12px;
+}
+
+body.simple-ui #gameScreen:is([data-play-layout="stacked"], [data-play-layout="short-landscape"]) .run-milestone.has-route-signal #milestoneText {
+  display: block;
+  flex: 1 1 auto;
+}
+
+body.simple-ui #gameScreen:is([data-play-layout="stacked"], [data-play-layout="short-landscape"]) .run-milestone.has-route-signal #routeStepCount {
+  display: none;
+}
+
+body.simple-ui #gameScreen:is([data-play-layout="stacked"], [data-play-layout="short-landscape"]) .run-milestone #routeStepCount {
+  flex: 0 0 auto;
+  font-size: 11px;
+}
+
+body.simple-ui #gameScreen:is([data-play-layout="stacked"], [data-play-layout="short-landscape"]) .run-milestone .route-star-strip {
+  display: none;
+}
+
+body.simple-ui #gameScreen:is([data-play-layout="stacked"], [data-play-layout="short-landscape"]) .run-milestone .route-line {
+  right: 10px;
+  bottom: 6px;
+  left: 10px;
+}
+
+body.simple-ui #gameScreen:is([data-play-layout="stacked"], [data-play-layout="short-landscape"]) .hint-objective {
+  position: relative;
+  inset: auto;
+  grid-column: 1 / -1;
+  grid-row: 2;
+  width: 100%;
+  min-width: 0;
+  min-height: 32px;
+  max-height: 38px;
+  margin: 0;
+  padding: 6px 9px;
+  overflow: hidden;
+  border-radius: 10px;
+  align-items: center;
+  gap: 7px;
+}
+
+body.simple-ui #gameScreen:is([data-play-layout="stacked"], [data-play-layout="short-landscape"]) .hint-objective :is(small, strong) {
+  overflow: hidden;
+  line-height: 1.1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* One Assist orb replaces the permanent five-button rail on mobile. */
+body.simple-ui #gameScreen:is([data-play-layout="stacked"], [data-play-layout="short-landscape"]) .mobile-assist-surface {
+  position: absolute;
+  z-index: 18;
+  top: calc(var(--play-shell-edge) + var(--play-shell-hit) + 8px);
+  left: max(var(--play-shell-edge), var(--play-shell-safe-left));
+  display: block;
+  pointer-events: none;
+}
+
+body.simple-ui #gameScreen:is([data-play-layout="stacked"], [data-play-layout="short-landscape"]) #mobileAssistToggle {
+  width: 48px;
+  min-width: 48px;
+  height: 48px;
+  min-height: 48px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--cyan) 48%, transparent);
+  border-radius: 50%;
+  background: radial-gradient(circle, color-mix(in srgb, var(--cyan) 16%, var(--play-shell-panel)), var(--play-shell-panel));
+  color: var(--cyan);
+  box-shadow: 0 0 0 4px rgba(105, 230, 255, .05), 0 12px 28px rgba(0, 0, 0, .38);
+  pointer-events: auto;
+}
+
+body.simple-ui #gameScreen:is([data-play-layout="stacked"], [data-play-layout="short-landscape"]) #mobileAssistToggle > span {
+  font: 700 19px "DM Mono", monospace;
+}
+
+body.simple-ui #gameScreen:is([data-play-layout="stacked"], [data-play-layout="short-landscape"]) #mobileAssistToggle > b {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+body.simple-ui #gameScreen:is([data-play-layout="stacked"], [data-play-layout="short-landscape"]) #boardAssistanceRail {
+  position: absolute;
+  inset: calc(100% + 7px) auto auto 0;
+  width: 58px;
+  max-height: min(304px, calc(100dvh - var(--play-shell-safe-top) - var(--play-shell-header) - var(--play-shell-safe-bottom) - 126px));
+  padding: 5px;
+  display: none;
+  flex-direction: column;
+  gap: 4px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  transform: none;
+  border: 1px solid color-mix(in srgb, var(--cyan) 36%, transparent);
+  border-radius: 16px;
+  background: var(--play-shell-panel);
+  box-shadow: 0 16px 38px rgba(0, 0, 0, .45);
+  pointer-events: auto;
+}
+
+body.simple-ui #gameScreen:is([data-play-layout="stacked"], [data-play-layout="short-landscape"])[data-mobile-surface="assistance"] #boardAssistanceRail {
+  display: flex;
+  animation: mobile-play-surface-in .18s cubic-bezier(.2, .8, .2, 1) both;
+}
+
+body.simple-ui #gameScreen[data-play-layout="stacked"][data-mobile-surface="tools"] .mobile-assist-surface {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+body.simple-ui #gameScreen:is([data-play-layout="stacked"], [data-play-layout="short-landscape"]) #boardAssistanceRail :is(.assist-rail-action, .assist-rail-info) {
+  width: 46px;
+  min-width: 46px;
+  height: 46px;
+  min-height: 46px;
+}
+
+@media (hover: none) and (pointer: coarse) {
+  body.simple-ui #gameScreen:is([data-play-layout="stacked"], [data-play-layout="short-landscape"]) #boardAssistanceRail kbd {
+    display: none;
+  }
+}
+
+/* Stacked inventory is a live peek row, not a closed/disabled drawer. */
+body.simple-ui #gameScreen[data-play-layout="stacked"] .game-layout {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+body.simple-ui #gameScreen[data-play-layout="stacked"] #board {
+  min-height: 0;
+  flex: 1 1 auto;
+}
+
+body.simple-ui #gameScreen[data-play-layout="stacked"] .inventory {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+  height: var(--play-shell-inventory-peek);
+  min-height: var(--play-shell-inventory-peek);
+  max-height: var(--play-shell-inventory-peek);
+  flex: 0 0 var(--play-shell-inventory-peek);
+  padding: 0 max(var(--play-shell-edge), var(--play-shell-safe-right)) var(--play-shell-safe-bottom) max(var(--play-shell-edge), var(--play-shell-safe-left));
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 52px;
+  grid-template-rows: 34px minmax(0, 1fr);
+  overflow: hidden;
+  border-top: 1px solid color-mix(in srgb, var(--cyan) 24%, transparent);
+  border-left: 0;
+  transition: flex-basis .24s cubic-bezier(.2, .8, .2, 1), height .24s cubic-bezier(.2, .8, .2, 1), max-height .24s cubic-bezier(.2, .8, .2, 1);
+}
+
+body.simple-ui #gameScreen[data-play-layout="stacked"][data-inventory-expanded="true"] .inventory {
+  height: var(--play-shell-inventory-open);
+  min-height: var(--play-shell-inventory-open);
+  max-height: var(--play-shell-inventory-open);
+  flex-basis: var(--play-shell-inventory-open);
+}
+
+body.simple-ui #gameScreen[data-play-layout="stacked"] .inventory-head {
+  position: relative;
+  grid-column: 1 / -1;
+  grid-row: 1;
+  min-width: 0;
+  min-height: 34px;
+  padding: 4px 50px 2px 6px;
+  display: flex;
+  align-items: center;
+  border: 0;
+}
+
+body.simple-ui #gameScreen[data-play-layout="stacked"] .inventory-head h2 {
+  font-size: 13px;
+  line-height: 1;
+}
+
+body.simple-ui #gameScreen[data-play-layout="stacked"] .inventory-head #collectionCount {
+  min-width: 22px;
+  font-size: 11px;
+}
+
+body.simple-ui #gameScreen:is([data-play-layout="stacked"], [data-play-layout="short-landscape"]) #inventoryDrawerToggle {
+  position: absolute;
+  z-index: 3;
+  top: 2px;
+  right: 2px;
+  width: var(--play-shell-hit);
+  min-width: var(--play-shell-hit);
+  height: var(--play-shell-hit);
+  min-height: var(--play-shell-hit);
+  padding: 0;
+  display: grid;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--cyan) 28%, transparent);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--cyan) 7%, var(--play-shell-panel));
+  color: var(--cyan);
+}
+
+body.simple-ui #gameScreen:is([data-play-layout="stacked"], [data-play-layout="short-landscape"]) #inventoryDrawerToggle > span {
+  display: block;
+  transition: transform .24s ease;
+}
+
+body.simple-ui #gameScreen:is([data-play-layout="stacked"], [data-play-layout="short-landscape"])[data-inventory-expanded="true"] #inventoryDrawerToggle > span {
+  transform: rotate(180deg);
+}
+
+body.simple-ui #gameScreen[data-play-layout="stacked"] .inventory-drawer-body {
+  grid-column: 1;
+  grid-row: 2;
+  min-width: 0;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr);
+  overflow: hidden;
+}
+
+body.simple-ui #gameScreen[data-play-layout="stacked"] .inventory-search,
+body.simple-ui #gameScreen[data-play-layout="stacked"] .inventory-drawer-body > :is(#inventorySearchStatus, #wishWord) {
+  display: none;
+}
+
+body.simple-ui #gameScreen[data-play-layout="stacked"] .word-list {
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  padding: 3px 3px 5px;
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  touch-action: pan-x;
+  overscroll-behavior-inline: contain;
+}
+
+body.simple-ui #gameScreen[data-play-layout="stacked"] .word-list::-webkit-scrollbar {
+  display: none;
+}
+
+body.simple-ui #gameScreen[data-play-layout="stacked"] .inventory-word {
+  width: auto;
+  min-width: 78px;
+  min-height: 44px;
+  height: auto;
+  padding: 5px 7px;
+  flex: 0 0 auto;
+  touch-action: pan-x;
+}
+
+body.simple-ui #gameScreen[data-play-layout="stacked"][data-inventory-expanded="true"] .inventory {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: 48px minmax(0, 1fr);
+  padding-top: 2px;
+}
+
+body.simple-ui #gameScreen[data-play-layout="stacked"][data-inventory-expanded="true"] .inventory-head {
+  min-height: 48px;
+  padding-block: 6px;
+}
+
+body.simple-ui #gameScreen[data-play-layout="stacked"][data-inventory-expanded="true"] #inventoryDrawerToggle {
+  top: 0;
+}
+
+body.simple-ui #gameScreen[data-play-layout="stacked"][data-inventory-expanded="true"] .inventory-head h2 {
+  font-size: 17px;
+}
+
+body.simple-ui #gameScreen[data-play-layout="stacked"][data-inventory-expanded="true"] .inventory-drawer-body {
+  grid-column: 1;
+  grid-row: 2;
+  grid-template-rows: 42px minmax(0, 1fr);
+  gap: 5px;
+}
+
+body.simple-ui #gameScreen[data-play-layout="stacked"][data-inventory-expanded="true"] .inventory-search {
+  min-height: 42px;
+  margin: 0;
+  display: flex;
+}
+
+body.simple-ui #gameScreen[data-play-layout="stacked"][data-inventory-expanded="true"] .word-list {
+  padding: 4px 3px 8px;
+  align-content: start;
+  align-items: stretch;
+  flex-wrap: wrap;
+  overflow-x: hidden;
+  overflow-y: auto;
+  touch-action: pan-y;
+}
+
+body.simple-ui #gameScreen[data-play-layout="stacked"][data-inventory-expanded="true"] .inventory-word {
+  min-width: 104px;
+  min-height: 64px;
+  flex: 1 0 104px;
+  touch-action: pan-y;
+}
+
+/* A single bounded lane for transient board notices. */
+body.simple-ui .board-word.route-derived {
+  border-color: color-mix(in srgb, var(--atlas-gold, var(--amber)) 58%, var(--atlas-teal, var(--cyan)));
+  box-shadow:
+    0 0 0 3px color-mix(in srgb, var(--atlas-teal, var(--cyan)) 9%, transparent),
+    0 10px 28px rgba(0, 8, 12, .36),
+    0 0 25px color-mix(in srgb, var(--atlas-gold, var(--amber)) 14%, transparent);
+}
+
+body.simple-ui #gameScreen:is([data-play-layout="stacked"], [data-play-layout="short-landscape"]) :is(.board-bottom-hud, #helpNudge) {
+  position: absolute;
+  inset: auto max(var(--play-shell-edge), var(--play-shell-safe-right)) max(var(--play-shell-edge), var(--play-shell-safe-bottom)) max(var(--play-shell-edge), var(--play-shell-safe-left));
+  width: min(420px, calc(100% - var(--play-shell-safe-left) - var(--play-shell-safe-right) - 16px));
+  max-width: none;
+  margin-inline: auto;
+}
+
+body.simple-ui #gameScreen:is([data-play-layout="stacked"], [data-play-layout="short-landscape"]) .board-bottom-hud {
+  max-height: min(36dvh, 220px);
+  display: grid;
+  overflow: visible;
+}
+
+body.simple-ui #gameScreen:is([data-play-layout="stacked"], [data-play-layout="short-landscape"]) #helpNudge {
+  top: auto;
+  min-height: 0;
+  grid-template-columns: minmax(0, 1fr) 44px;
+  border-radius: 14px;
+}
+
+body.simple-ui #gameScreen:is([data-play-layout="stacked"], [data-play-layout="short-landscape"]) #helpNudge .help-nudge-action {
+  min-width: 0;
+  padding: 9px 10px;
+}
+
+body.simple-ui #gameScreen:is([data-play-layout="stacked"], [data-play-layout="short-landscape"]) #helpNudge .help-nudge-action small {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+body.simple-ui #gameScreen[data-play-layout="stacked"] .cosmos-board:has(> #helpNudge:not([hidden])) > .board-bottom-hud {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/* Training, Explore, cinematic, and Reveal each get an uncluttered board. */
+body.simple-ui #gameScreen:is(.training-orbit, .second-orbit, .explore-orbit, .scramble-orbit, [data-play-phase="tutorial"], [data-play-phase="reveal"], [data-play-phase="cinematic"]):is([data-play-layout="stacked"], [data-play-layout="short-landscape"]) .mobile-assist-surface,
+body.simple-ui #gameScreen:is(.training-orbit, .second-orbit, [data-play-phase="tutorial"], [data-play-phase="reveal"], [data-play-phase="cinematic"]):is([data-play-layout="stacked"], [data-play-layout="short-landscape"]) .board-quick-tools,
+body.simple-ui #gameScreen:is(.training-orbit, .second-orbit, .explore-orbit, [data-play-phase="tutorial"], [data-play-phase="reveal"], [data-play-phase="cinematic"]):is([data-play-layout="stacked"], [data-play-layout="short-landscape"]) :is(.run-milestone, .hint-objective) {
+  display: none !important;
+}
+
+body.simple-ui #gameScreen:is([data-play-phase="reveal"], [data-play-phase="cinematic"]):is([data-play-layout="stacked"], [data-play-layout="short-landscape"]) :is(.board-guide, #helpNudge, .board-bottom-hud) {
+  display: none !important;
+}
+
+body.simple-ui #gameScreen.scramble-orbit:is([data-play-layout="stacked"], [data-play-layout="short-landscape"]) :is(.run-milestone, .hint-objective, #helpNudge) {
+  display: none !important;
+}
+
+body.simple-ui #gameScreen:is([data-play-phase="reveal"], [data-play-phase="cinematic"])[data-play-layout="stacked"] .inventory {
+  height: var(--play-shell-inventory-peek);
+  min-height: var(--play-shell-inventory-peek);
+  max-height: var(--play-shell-inventory-peek);
+  flex-basis: var(--play-shell-inventory-peek);
+}
+
+body.simple-ui #gameScreen:is(.training-orbit, .second-orbit, [data-play-phase="tutorial"])[data-play-layout="stacked"] #firstOrbitGuide {
+  inset: var(--play-shell-edge) auto auto max(var(--play-shell-edge), var(--play-shell-safe-left));
+  width: min(296px, calc(100% - var(--play-shell-safe-left) - var(--play-shell-safe-right) - 16px));
+  max-width: none;
+  max-height: min(160px, calc(100% - 16px));
+  margin: 0;
+  padding: 8px 10px 9px;
+  overflow: auto;
+  border-radius: 12px;
+}
+
+body.simple-ui #gameScreen:is(.training-orbit, .second-orbit, [data-play-phase="tutorial"]):is([data-play-layout="stacked"], [data-play-layout="short-landscape"]) #firstOrbitGuide > header {
+  min-height: 44px;
+}
+
+body.simple-ui #gameScreen:is(.training-orbit, .second-orbit, [data-play-phase="tutorial"]):is([data-play-layout="stacked"], [data-play-layout="short-landscape"]) #firstOrbitStep {
+  display: none !important;
+}
+
+body.simple-ui #gameScreen:is(.training-orbit, .second-orbit, [data-play-phase="tutorial"]):is([data-play-layout="stacked"], [data-play-layout="short-landscape"]) .first-orbit-step {
+  margin-top: 1px;
+  display: flex;
+  align-items: baseline;
+  gap: 0;
+}
+
+body.simple-ui #gameScreen:is(.training-orbit, .second-orbit, [data-play-phase="tutorial"]):is([data-play-layout="stacked"], [data-play-layout="short-landscape"]) .first-orbit-step span {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.25;
+}
+
+body.simple-ui #gameScreen:is(.training-orbit, .second-orbit, [data-play-phase="tutorial"]):is([data-play-layout="stacked"], [data-play-layout="short-landscape"]) #firstOrbitInstruction {
+  margin: 2px 0 0;
+  overflow: hidden;
+  font-size: 15px;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+body.simple-ui #gameScreen:is(.training-orbit, .second-orbit, [data-play-phase="tutorial"]):is([data-play-layout="stacked"], [data-play-layout="short-landscape"]) .first-orbit-progress {
+  height: 3px;
+  margin-top: 6px;
+}
+
+body.simple-ui #gameScreen:is(.training-orbit, .second-orbit, [data-play-phase="tutorial"])[data-play-layout="short-landscape"] #firstOrbitGuide {
+  inset: 6px auto auto max(6px, var(--play-shell-safe-left));
+  width: min(280px, calc(100% - var(--play-shell-safe-left) - var(--play-shell-safe-right) - 12px));
+  max-width: none;
+  max-height: calc(100% - 12px);
+  margin: 0;
+  padding: 6px 9px 7px;
+  overflow: auto;
+  border-radius: 11px;
+}
+
+body.simple-ui #gameScreen:is(.training-orbit, .second-orbit, [data-play-phase="tutorial"], [data-play-phase="reveal"], [data-play-phase="cinematic"]):is([data-play-layout="stacked"], [data-play-layout="short-landscape"]) .board-top-hud {
+  display: none !important;
+}
+
+body.simple-ui #gameScreen:is([data-play-layout="stacked"], [data-play-layout="short-landscape"]) #skipFirstOrbit {
+  min-width: 44px;
+  min-height: 44px;
+}
+
+body.simple-ui #gameScreen:is([data-play-phase="reveal"]):is([data-play-layout="stacked"], [data-play-layout="short-landscape"]) #revealController,
+body.simple-ui #gameScreen:is([data-play-layout="stacked"], [data-play-layout="short-landscape"]) .cosmos-board.reveal-active #revealController {
+  right: max(var(--play-shell-edge), var(--play-shell-safe-right));
+  bottom: max(var(--play-shell-edge), var(--play-shell-safe-bottom));
+  left: max(var(--play-shell-edge), var(--play-shell-safe-left));
+  width: auto;
+  max-width: none;
+}
+
+/* Short landscape keeps a 48px header and a live right-hand word drawer. */
+body.simple-ui #gameScreen[data-play-layout="short-landscape"] {
+  --play-shell-header: 48px;
+  --play-shell-side-peek: clamp(56px, 8vw, 64px);
+  --play-shell-side-open: min(42vw, 240px);
+}
+
+/* Extremely short desktop windows keep desktop navigation and the normal
+   inventory, but place persistent board blockers on one measured row. */
+@media (min-width: 901px) and (max-height: 440px) {
+  body.simple-ui #gameScreen[data-play-layout="wide"] {
+    --words-pane-width: clamp(220px, 21vw, 270px);
+    --words-pane-half: clamp(110px, 10.5vw, 135px);
+  }
+
+  body.simple-ui #gameScreen[data-play-layout="wide"] > .game-nav {
+    height: calc(56px + env(safe-area-inset-top));
+    min-height: calc(56px + env(safe-area-inset-top));
+    flex-basis: calc(56px + env(safe-area-inset-top));
+    padding-top: env(safe-area-inset-top);
+  }
+
+  body.simple-ui #gameScreen[data-play-layout="wide"] .board-top-hud {
+    inset: 7px 10px auto;
+    width: auto;
+    max-width: none;
+    grid-template-columns: minmax(250px, 470px) minmax(220px, 580px);
+    grid-template-rows: 44px;
+    justify-content: center;
+    justify-items: stretch;
+    align-items: start;
+    gap: 10px;
+  }
+
+  body.simple-ui #gameScreen[data-play-layout="wide"] .board-quick-tools {
+    width: 100% !important;
+    height: 44px;
+  }
+
+  body.simple-ui #gameScreen[data-play-layout="wide"] .run-milestone {
+    width: 100%;
+    min-height: 44px;
+    max-height: 44px;
+    padding: 5px 9px;
+    gap: 3px;
+    overflow: hidden;
+    border-radius: 12px;
+  }
+
+  body.simple-ui #gameScreen[data-play-layout="wide"] .run-milestone > div:first-child {
+    min-width: 0;
+    gap: 8px;
+  }
+
+  body.simple-ui #gameScreen[data-play-layout="wide"] .run-milestone :is(#milestoneText, #routeStepCount) {
+    min-width: 0;
+    overflow: hidden;
+    font-size: 13px;
+    line-height: 1.1;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  body.simple-ui #gameScreen[data-play-layout="wide"] .run-milestone .route-line {
+    height: 3px;
+  }
+
+  body.simple-ui #gameScreen[data-play-layout="wide"] .inventory {
+    padding: 6px 8px;
+  }
+
+  body.simple-ui #gameScreen[data-play-layout="wide"] .inventory-head {
+    min-height: 28px;
+  }
+
+  body.simple-ui #gameScreen[data-play-layout="wide"] .inventory-head h2 {
+    font-size: 18px;
+  }
+
+  body.simple-ui #gameScreen[data-play-layout="wide"] .inventory-search {
+    min-height: 38px;
+    margin-block: 4px;
+  }
+
+  body.simple-ui #gameScreen[data-play-layout="wide"] .word-list {
+    padding-block: 5px;
+  }
+}
+
+body.simple-ui #gameScreen[data-play-layout="short-landscape"] > .game-nav,
+body.simple-ui #gameScreen[data-play-layout="short-landscape"] > .game-nav:has(#playVolumeControl) {
+  position: relative;
+  inset: auto;
+  height: calc(var(--play-shell-header) + var(--play-shell-safe-top));
+  min-height: calc(var(--play-shell-header) + var(--play-shell-safe-top));
+  flex-basis: calc(var(--play-shell-header) + var(--play-shell-safe-top));
+  padding: var(--play-shell-safe-top) max(5px, var(--play-shell-safe-right)) 0 max(5px, var(--play-shell-safe-left));
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr) 64px;
+  grid-template-rows: var(--play-shell-header);
+  gap: 5px;
+  overflow: visible;
+}
+
+body.simple-ui #gameScreen[data-play-layout="short-landscape"] .game-nav > .pause-run-button {
+  min-width: 58px;
+  max-width: 58px;
+  height: var(--play-shell-hit);
+  min-height: var(--play-shell-hit);
+  padding-inline: 6px;
+}
+
+body.simple-ui #gameScreen[data-play-layout="short-landscape"] .game-target strong {
+  font-size: 15px;
+}
+
+body.simple-ui #gameScreen[data-play-layout="short-landscape"] .game-layout {
+  min-width: 0;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--play-shell-side-peek);
+  grid-template-rows: minmax(0, 1fr);
+  transition: grid-template-columns .24s cubic-bezier(.2, .8, .2, 1);
+}
+
+body.simple-ui #gameScreen[data-play-layout="short-landscape"][data-inventory-expanded="true"] .game-layout {
+  grid-template-columns: minmax(0, 1fr) var(--play-shell-side-open);
+}
+
+body.simple-ui #gameScreen[data-play-layout="short-landscape"] #board {
+  min-width: 0;
+  min-height: 0;
+  grid-column: 1;
+  grid-row: 1;
+}
+
+body.simple-ui #gameScreen[data-play-layout="short-landscape"] .board-top-hud {
+  left: calc(max(var(--play-shell-edge), var(--play-shell-safe-left)) + 54px);
+  grid-template-rows: var(--play-shell-hit);
+}
+
+body.simple-ui #gameScreen[data-play-layout="short-landscape"] .hint-objective {
+  display: none !important;
+}
+
+body.simple-ui #gameScreen[data-play-layout="short-landscape"] .mobile-assist-surface {
+  top: var(--play-shell-edge);
+}
+
+body.simple-ui #gameScreen[data-play-layout="short-landscape"] #boardAssistanceRail {
+  inset: 0 auto auto calc(100% + 7px);
+  width: min(304px, calc(100vw - var(--play-shell-safe-left) - var(--play-shell-safe-right) - 76px));
+  max-height: 58px;
+  flex-direction: row;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+body.simple-ui #gameScreen[data-play-layout="short-landscape"] #boardAssistanceRail .assist-rail-separator {
+  width: 1px;
+  height: 34px;
+  flex: 0 0 1px;
+}
+
+body.simple-ui #gameScreen[data-play-layout="short-landscape"] .inventory {
+  position: relative;
+  grid-column: 2;
+  grid-row: 1;
+  width: auto;
+  min-width: 0;
+  height: 100%;
+  min-height: 0;
+  max-height: none;
+  padding: 48px max(3px, var(--play-shell-safe-right)) max(4px, var(--play-shell-safe-bottom)) 3px;
+  display: block;
+  overflow: hidden;
+  border-top: 0;
+  border-left: 1px solid color-mix(in srgb, var(--cyan) 24%, transparent);
+}
+
+body.simple-ui #gameScreen[data-play-layout="short-landscape"] .inventory-head {
+  position: absolute;
+  z-index: 3;
+  inset: 2px max(2px, var(--play-shell-safe-right)) auto 2px;
+  min-width: 0;
+  min-height: 44px;
+  padding: 0 48px 0 5px;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  border: 0;
+}
+
+body.simple-ui #gameScreen[data-play-layout="short-landscape"] .inventory-head > :not(#inventoryDrawerToggle) {
+  display: none;
+}
+
+body.simple-ui #gameScreen[data-play-layout="short-landscape"][data-inventory-expanded="true"] .inventory-head > :not(#inventoryDrawerToggle) {
+  display: flex;
+}
+
+body.simple-ui #gameScreen[data-play-layout="short-landscape"] .inventory-drawer-body {
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr);
+  overflow: hidden;
+}
+
+body.simple-ui #gameScreen[data-play-layout="short-landscape"] .inventory-search,
+body.simple-ui #gameScreen[data-play-layout="short-landscape"] .inventory-drawer-body > :is(#inventorySearchStatus, #wishWord) {
+  display: none;
+}
+
+body.simple-ui #gameScreen[data-play-layout="short-landscape"] .word-list {
+  min-width: 0;
+  min-height: 0;
+  padding: 2px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  touch-action: pan-y;
+  overscroll-behavior-block: contain;
+  scrollbar-width: none;
+}
+
+body.simple-ui #gameScreen[data-play-layout="short-landscape"] .word-list::-webkit-scrollbar {
+  display: none;
+}
+
+body.simple-ui #gameScreen[data-play-layout="short-landscape"] .inventory-word {
+  width: 100%;
+  min-width: 0;
+  min-height: 46px;
+  padding: 4px;
+  flex: 0 0 auto;
+  justify-content: center;
+  touch-action: pan-y;
+}
+
+body.simple-ui #gameScreen[data-play-layout="short-landscape"] .inventory-word :is(.word, .source-tag, .mastery-tag) {
+  display: none;
+}
+
+body.simple-ui #gameScreen[data-play-layout="short-landscape"][data-inventory-expanded="true"] .inventory {
+  padding-inline: 6px max(6px, var(--play-shell-safe-right));
+}
+
+body.simple-ui #gameScreen[data-play-layout="short-landscape"][data-inventory-expanded="true"] .inventory-drawer-body {
+  grid-template-rows: 38px minmax(0, 1fr);
+  gap: 4px;
+}
+
+body.simple-ui #gameScreen[data-play-layout="short-landscape"][data-inventory-expanded="true"] .inventory-search {
+  min-height: 38px;
+  margin: 0;
+  display: flex;
+}
+
+body.simple-ui #gameScreen[data-play-layout="short-landscape"][data-inventory-expanded="true"] .inventory-word {
+  min-height: 48px;
+  flex-direction: row;
+  justify-content: flex-start;
+  gap: 7px;
+}
+
+body.simple-ui #gameScreen[data-play-layout="short-landscape"][data-inventory-expanded="true"] .inventory-word .word {
+  min-width: 0;
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Measured visual viewport and final compact-shell invariants. */
+body.simple-ui #gameScreen:is([data-play-layout="stacked"], [data-play-layout="short-landscape"]) {
+  height: var(--play-vv-height, 100dvh);
+  max-height: var(--play-vv-height, 100dvh);
+}
+
+body.simple-ui #gameScreen[data-play-layout="stacked"] {
+  --play-shell-inventory-open: min(
+    44dvh,
+    420px,
+    calc(100dvh - var(--play-shell-safe-top) - var(--play-shell-safe-bottom) - var(--play-shell-header) - 288px)
+  );
+}
+
+body.simple-ui #gameScreen[data-play-layout="stacked"]:has(.inventory-search:focus) {
+  --play-shell-inventory-open: min(
+    44dvh,
+    calc(var(--play-vv-height, 100dvh) - var(--play-shell-header) - var(--play-shell-safe-top) - var(--play-shell-safe-bottom) - 96px)
+  );
+}
+
+body.simple-ui #gameScreen:is([data-play-layout="stacked"], [data-play-layout="short-landscape"]) #playSoundPanel {
+  max-height: calc(var(--play-vv-height, 100dvh) - var(--play-shell-safe-top) - var(--play-shell-header) - var(--play-shell-safe-bottom) - 18px);
+}
+
+body.simple-ui #gameScreen:is([data-play-layout="stacked"], [data-play-layout="short-landscape"]) #inventoryDrawerToggle {
+  width: 48px;
+  min-width: 48px;
+  height: 48px;
+  min-height: 48px;
+}
+
+body.simple-ui #gameScreen:is([data-play-layout="stacked"], [data-play-layout="short-landscape"]) .hint-objective {
+  display: none !important;
+}
+
+body.simple-ui #gameScreen[data-play-layout="stacked"] #helpNudge {
+  inset: calc(var(--play-shell-edge) + var(--play-shell-hit) + 8px) max(var(--play-shell-edge), var(--play-shell-safe-right)) auto calc(max(var(--play-shell-edge), var(--play-shell-safe-left)) + 56px);
+  width: min(360px, calc(100% - var(--play-shell-safe-left) - var(--play-shell-safe-right) - 72px));
+  margin: 0;
+  transform: none;
+  animation: help-nudge-arrive .22s ease-out both;
+}
+
+body.simple-ui #gameScreen[data-play-layout="short-landscape"] #helpNudge {
+  display: none !important;
+}
+
+body.simple-ui:has(#gameScreen:is([data-play-layout="stacked"], [data-play-layout="short-landscape"]):not([hidden])) .pause-target {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: baseline;
+  justify-content: stretch;
+  gap: 7px 12px;
+}
+
+body.simple-ui:has(#gameScreen:is([data-play-layout="stacked"], [data-play-layout="short-landscape"]):not([hidden])) .pause-target > span {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+body.simple-ui:has(#gameScreen:is([data-play-layout="stacked"], [data-play-layout="short-landscape"]):not([hidden])) #pauseTarget {
+  grid-column: 2;
+  grid-row: 1;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+body.simple-ui:has(#gameScreen:is([data-play-layout="stacked"], [data-play-layout="short-landscape"]):not([hidden])) #pauseMode {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  display: block !important;
+  min-width: 0;
+  max-width: 100%;
+  margin: 0;
+  padding-top: 7px;
+  overflow: hidden;
+  border-top: 1px solid color-mix(in srgb, var(--cyan) 16%, transparent);
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+body.simple-ui #gameScreen:is([data-play-layout="stacked"], [data-play-layout="short-landscape"]) #alchemyNote[data-notice-kind="gesture"] {
+  display: none !important;
+}
+
+body.simple-ui #gameScreen:is([data-play-layout="stacked"], [data-play-layout="short-landscape"]) .game-target #lawPill.path-guard-status:not([hidden]) {
+  width: auto;
+  min-width: 54px;
+  padding-inline: 6px;
+  border-radius: 999px;
+}
+
+body.simple-ui #gameScreen:is([data-play-layout="stacked"], [data-play-layout="short-landscape"]) .game-target #lawPill.path-guard-status:not([hidden])::before {
+  content: "GUARD ON";
+  font-size: 8px;
+  white-space: nowrap;
+}
+
+@media (max-width: 340px) {
+  body.simple-ui #gameScreen[data-play-layout="stacked"] .game-target #lawPill.path-guard-status:not([hidden]) {
+    width: 20px;
+    min-width: 20px;
+    padding: 0;
+    border-radius: 50%;
+  }
+
+  body.simple-ui #gameScreen[data-play-layout="stacked"] .game-target #lawPill.path-guard-status:not([hidden])::before {
+    content: "\25C6";
+    font-size: 9px;
+  }
+}
+
+@keyframes mobile-play-surface-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(.97);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.simple-ui #gameScreen:is([data-play-layout="stacked"], [data-play-layout="short-landscape"]) :is(.inventory, .game-layout, #inventoryDrawerToggle > span) {
+    transition: none;
+  }
+
+  body.simple-ui #gameScreen:is([data-play-layout="stacked"], [data-play-layout="short-landscape"]) :is(#mobileToolsPanel, #boardAssistanceRail, #playSoundPanel) {
+    animation: none;
+    transition: none;
+  }
+}
+
+@media (forced-colors: active) {
+  body.simple-ui #gameScreen:is([data-play-layout="stacked"], [data-play-layout="short-landscape"]) :is(#mobileAssistToggle, #mobileToolsToggle, #inventoryDrawerToggle, #mobileToolsPanel, #boardAssistanceRail, #playSoundPanel, .run-milestone, .hint-objective, .inventory) {
+    border-color: CanvasText;
+    background: Canvas;
+    color: CanvasText;
+    forced-color-adjust: auto;
+  }
+
+  body.simple-ui #gameScreen:is([data-play-layout="stacked"], [data-play-layout="short-landscape"]) :is(#mobileAssistToggle, #mobileToolsToggle, #inventoryDrawerToggle):focus-visible {
+    outline: 3px solid Highlight;
+    outline-offset: 2px;
+  }
+}

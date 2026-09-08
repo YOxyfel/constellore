@@ -28,7 +28,7 @@ const CIRCUIT_DEPENDENCIES = [
   "star-path"
 ];
 
-const readProjectFile = (path) => readFile(new URL(`../${path}`, import.meta.url), "utf8");
+const readProjectFile = async (path) => (await readFile(new URL(`../${path}`, import.meta.url), "utf8")).replace(/\r\n?/g, "\n");
 
 test("every Voyage and Cosmic Event destination remains playable in static practice", async () => {
   const data = await generateLocalWorldData();
@@ -127,6 +127,13 @@ test("all current feature modules and release artwork are copied, cached, and ve
     assert.match(pagesVerify, new RegExp(`"${asset.replaceAll(".", "[.]")}"`), `${asset} must be checked in the Pages artifact`);
     assert.match(itchVerify, new RegExp(`"${asset.replaceAll(".", "[.]")}"`), `${asset} must be checked in the itch ZIP`);
   }
+  for (const asset of ["cosmetics-observatory-full-page.css", "profile-rank-frame.css"]) {
+    const versioned = new RegExp(`${asset.replaceAll(".", "[.]")}[?]v=${releaseVersionPattern}`);
+    assert.match(secondaryLoader, versioned, `${asset} must load through the secondary-surface boundary`);
+    assert.match(onlineWorker, versioned, `${asset} must be available through the hosted worker's lazy-file allowlist`);
+    assert.match(pagesVerify, new RegExp(`"${asset.replaceAll(".", "[.]")}"`), `${asset} must be checked in the Pages artifact`);
+    assert.match(itchVerify, new RegExp(`"${asset.replaceAll(".", "[.]")}"`), `${asset} must be checked in the itch ZIP`);
+  }
 
   assert.match(app, new RegExp(`developer-console-runtime[.]mjs[?]v=${releaseVersionPattern}`));
   assert.match(app, new RegExp(`share-card-runtime[.]mjs[?]v=${releaseVersionPattern}`));
@@ -149,11 +156,10 @@ test("all current feature modules and release artwork are copied, cached, and ve
   assert.match(itchBuild, /cp\(join\(pagesOutput, "play"\)/, "itch packaging must derive from the verified Pages play tree");
 });
 
-test("new feature copy keeps the 18px primary reading floor", async () => {
-  const [gameStyles, simpleStyles, websiteStyles] = await Promise.all([
+test("game feature copy keeps the 18px primary reading floor", async () => {
+  const [gameStyles, simpleStyles] = await Promise.all([
     readProjectFile("public/styles.css"),
-    readProjectFile("public/simple-ui.css"),
-    readProjectFile("Website/styles.css")
+    readProjectFile("public/simple-ui.css")
   ]);
   const featureStyles = gameStyles.split("/* Signature Constellations")[1] || "";
   assert.ok(featureStyles, "the 2.1 feature stylesheet block must exist");
@@ -166,9 +172,7 @@ test("new feature copy keeps the 18px primary reading floor", async () => {
 
   assert.match(simpleStyles, /body[.]simple-ui\s*\{[^}]*font-size:\s*18px/);
   assert.match(simpleStyles, /[.]simple-ui :is\(p, label, input, select, textarea\)\s*\{[^}]*font-size:\s*18px/);
-  for (const selector of [".hero-lede", ".preview-message", ".site-footer p"]) {
-    const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    const rule = websiteStyles.match(new RegExp(`${escaped}\\s*\\{[^}]*\\}`))?.[0] || "";
-    assert.match(rule, /font-size:\s*(?:clamp\()?(?:1[8-9]|[2-9][0-9])px/, `${selector} must keep the 18px reading floor`);
-  }
+  // The expedition website retired the old hero, preview-message and footer
+  // paragraph components. This contract remains scoped to in-game feature copy.
+
 });

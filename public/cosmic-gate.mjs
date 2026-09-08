@@ -1,23 +1,24 @@
-import { selectCosmicQuote } from "./cosmic-quotes.mjs?v=5.0.0-beta.1";
+import { selectCosmicQuote } from "./cosmic-quotes.mjs?v=5.0.0-beta.4";
 import {
   FIRST_DISCOVERY_HOLD_MS,
   firstDiscoveryBurstPlan
-} from "./first-game-experience.mjs?v=5.0.0-beta.1";
+} from "./first-game-experience.mjs?v=5.0.0-beta.4";
 
 const DEFAULT_TIMINGS = Object.freeze({
-  introHold: 300,
-  seamDraw: 900,
-  introQuoteHold: 3200,
-  introOpen: 1250,
-  enterClose: 1050,
-  enterQuoteHold: 2800,
-  enterOpen: 1150,
-  reducedQuoteHold: 2200,
-  reducedTransition: 70,
-  doorOpen: 980,
-  dialogClose: 720,
-  dialogOpen: 280,
-  dialogArrive: 430,
+  introHold: 220,
+  seamDraw: 720,
+  introQuoteHold: 2400,
+  introOpen: 850,
+  enterClose: 560,
+  enterQuoteHold: 90,
+  enterOpen: 520,
+  reducedQuoteHold: 850,
+  reducedEnterHold: 30,
+  reducedTransition: 160,
+  doorOpen: 260,
+  dialogClose: 180,
+  dialogOpen: 180,
+  dialogArrive: 320,
   firstDiscoveryHold: FIRST_DISCOVERY_HOLD_MS,
   firstDiscoveryReducedHold: 280
 });
@@ -93,10 +94,11 @@ function waitForTransformTransition(element, fallbackMilliseconds) {
   });
 }
 
-function waitForDoorClose(root, fallbackMilliseconds) {
-  const doors = Array.from(root?.querySelectorAll?.(".cosmic-gate__door, .cosmic-door") || []);
-  if (!doors.length) return delay(fallbackMilliseconds);
-  return Promise.all(doors.map((door) => waitForTransformTransition(door, fallbackMilliseconds)));
+function waitForFoldTransition(root, fallbackMilliseconds) {
+  const sentinel = root?.querySelector?.(".cosmic-gate__veil");
+  return sentinel
+    ? waitForTransformTransition(sentinel, fallbackMilliseconds)
+    : delay(fallbackMilliseconds);
 }
 
 function prefersReducedMotion() {
@@ -123,6 +125,27 @@ export function createCosmicGate({
     try {
       if (typeof onTransition === "function") onTransition(cue, detail);
     } catch { /* Audio and analytics hooks must never interrupt navigation. */ }
+  };
+
+  const publishWeavePhase = (phase, detail = {}) => {
+    if (!root) return;
+    root.dataset.weavePhase = phase;
+    const ownerDocument = root.ownerDocument;
+    const startScreen = ownerDocument?.querySelector?.("#startScreen");
+    const gathering = !startScreen?.hidden && (phase === "gathering" || phase === "folded");
+    for (const node of [startScreen, ownerDocument?.querySelector?.("[data-planet-hub]")]) {
+      if (!node?.dataset) continue;
+      if (gathering) node.dataset.worldweavePhase = phase;
+      else delete node.dataset.worldweavePhase;
+    }
+    const EventClass = ownerDocument?.defaultView?.CustomEvent || globalThis.CustomEvent;
+    if (typeof EventClass !== "function" || typeof root.dispatchEvent !== "function") return;
+    try {
+      root.dispatchEvent(new EventClass("constellore:worldweave", {
+        bubbles: true,
+        detail: Object.freeze({ phase, ...detail })
+      }));
+    } catch { /* Visual choreography is advisory and must never block navigation. */ }
   };
 
   const setBusy = (busy) => {
@@ -213,7 +236,7 @@ export function createCosmicGate({
     const copy = root.querySelector?.(".cosmic-gate__copy");
     const messages = {
       intro: ["", "CONSTELLORE", ""],
-      enter: ["YOUR NEXT ORBIT", "Enter the cosmos", label || "A new path is ready."],
+      enter: ["WORLDWEAVE", "Reality is drawing near", label || "A new constellation is ready."],
       pause: ["THE COSMOS WAITS", "Game paused", label],
       victory: ["CONSTELLATION COMPLETE", "Target found", label],
       result: ["ROUTE COMPLETE", "Game complete", label]
@@ -273,6 +296,8 @@ export function createCosmicGate({
     root.setAttribute("aria-hidden", "true");
     root.dataset.phase = "idle";
     delete root.dataset.content;
+    delete root.dataset.weavePhase;
+    delete root.dataset.destination;
   };
 
   function skipIntro() {
@@ -342,38 +367,24 @@ export function createCosmicGate({
     dialog.dataset.phase = "opening";
     setBusy(true);
     try {
-      if (root) {
+      if (root && firstDiscovery) {
         root.hidden = false;
         root.setAttribute("aria-hidden", "true");
         root.dataset.kind = kind;
         setGateMessage(kind, label);
-        const firstDiscoveryPrepared = firstDiscovery && prepareFirstDiscovery(celebration);
+        const firstDiscoveryPrepared = prepareFirstDiscovery(celebration);
         if (firstDiscoveryPrepared) restoreCelebrationSurfaces = suspendSurfaces();
-        root.dataset.phase = firstDiscoveryPrepared ? "closed" : "opening";
+        root.dataset.phase = "closed";
         if (firstDiscoveryPrepared) {
           root.dataset.content = "hidden";
+          publishWeavePhase("celebration", { kind, surface: "dialog" });
           await nextFrame();
           if (token !== sequence) return false;
           await delay(reduced() ? timing.firstDiscoveryReducedHold : timing.firstDiscoveryHold);
           if (token !== sequence) return false;
           clearFirstDiscovery();
           delete root.dataset.content;
-          root.dataset.phase = "opening";
-        } else {
-          delete root.dataset.content;
         }
-        await nextFrame();
-        if (token !== sequence) return false;
-        root.dataset.phase = "closing";
-        emitTransition("gateClose", { kind, surface: "dialog" });
-        if (reduced()) {
-          await delay(90);
-        } else {
-          await waitForDoorClose(root, timing.dialogClose);
-        }
-        if (token !== sequence) return false;
-        root.dataset.phase = "closed";
-        root.dataset.content = "hidden";
         clearFirstDiscovery();
       }
       dialog.showModal();
@@ -391,11 +402,15 @@ export function createCosmicGate({
       restoreCelebrationSurfaces?.();
       clearFirstDiscovery();
       setBusy(false);
-      if (!dialog.open) hideGate();
+      if (root && !root.hidden) hideGate();
     }
   }
 
-  async function enterBoard(swap, { label = "", afterOpen = null } = {}) {
+  async function enterBoard(swap, {
+    label = "",
+    afterOpen = null,
+    destination = "forge"
+  } = {}) {
     if (typeof swap !== "function") return false;
     const restoreSurfaces = suspendSurfaces();
     if (!root) {
@@ -408,34 +423,51 @@ export function createCosmicGate({
       }
     }
     const token = ++sequence;
+    let completed = false;
     root.hidden = false;
     root.setAttribute("aria-hidden", "false");
     root.dataset.kind = "enter";
+    root.dataset.destination = String(destination || "forge").toLowerCase();
     root.dataset.phase = "opening";
-    setGateQuote("enter", label);
+    setGateMessage("enter", label);
+    root.dataset.content = "transit";
     setBusy(true);
     try {
       await nextFrame();
       if (token !== sequence) return false;
       root.dataset.phase = "closing";
-      emitTransition("gateClose", { kind: "enter", surface: "board" });
-      await delay(reduced() ? timing.reducedTransition : timing.enterClose);
+      publishWeavePhase("gathering", { kind: "enter", surface: "board", destination: root.dataset.destination });
+      // These identifiers are stable audio-sprite slots; visually they now mean
+      // fold gather and fold resolve rather than physical doors.
+      emitTransition("gateClose", { kind: "enter", surface: "board", semantic: "foldGather" });
+      await (reduced()
+        ? delay(timing.reducedTransition)
+        : waitForFoldTransition(root, timing.enterClose));
       if (token !== sequence) return false;
       root.dataset.phase = "closed";
+      publishWeavePhase("folded", { kind: "enter", surface: "board", destination: root.dataset.destination });
       await swap();
-      if (token !== sequence) return false;
-      await delay(reduced() ? timing.reducedQuoteHold : timing.enterQuoteHold);
       if (token !== sequence) return false;
       await nextFrame();
       if (token !== sequence) return false;
+      await delay(reduced() ? timing.reducedEnterHold : timing.enterQuoteHold);
+      if (token !== sequence) return false;
       root.dataset.phase = "opening";
-      emitTransition("gateOpen", { kind: "enter", surface: "board" });
-      await delay(reduced() ? timing.reducedTransition : timing.enterOpen);
+      publishWeavePhase("unfolding", { kind: "enter", surface: "board", destination: root.dataset.destination });
+      emitTransition("gateOpen", { kind: "enter", surface: "board", semantic: "foldResolve" });
+      await (reduced()
+        ? delay(timing.reducedTransition)
+        : waitForFoldTransition(root, timing.enterOpen));
       if (token !== sequence) return false;
       if (typeof afterOpen === "function") await afterOpen();
+      publishWeavePhase("complete", { kind: "enter", surface: "board", destination: root.dataset.destination });
+      completed = true;
       return token === sequence;
     } finally {
-      if (token === sequence) hideGate();
+      if (token === sequence) {
+        if (!completed) publishWeavePhase("cancelled", { kind: "enter", surface: "board", destination: root.dataset.destination });
+        hideGate();
+      }
       setBusy(false);
       restoreSurfaces();
     }
@@ -451,13 +483,7 @@ export function createCosmicGate({
       if (token !== sequence || !dialog.open) return false;
       dialog.close();
       clearDialog(dialog);
-      if (root && !root.hidden) {
-        root.dataset.content = "hidden";
-        root.dataset.phase = "opening";
-        emitTransition("gateOpen", { kind: "dialog", surface: "dialog" });
-        if (!immediate) await delay(reduced() ? 70 : timing.doorOpen);
-        if (token === sequence) hideGate();
-      }
+      if (root && !root.hidden) hideGate();
       requestAnimationFrame(() => restoreFocus?.focus?.({ preventScroll: true }));
       return true;
     } finally {

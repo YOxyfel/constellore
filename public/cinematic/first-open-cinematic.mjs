@@ -355,7 +355,7 @@ function ensureStyles(documentRef) {
 
   const link = documentRef.createElement("link");
   const moduleUrl = new URL(import.meta.url);
-  const styleUrl = new URL("./first-open-cinematic.css?v=5.0.0-beta.1", moduleUrl);
+  const styleUrl = new URL("./first-open-cinematic.css?v=5.0.0-beta.4", moduleUrl);
   styleUrl.search = moduleUrl.search;
   link.rel = "stylesheet";
   link.href = styleUrl.href;

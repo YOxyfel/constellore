@@ -1,4 +1,4 @@
-import { COMBINATION_STORY_MAX_CHAPTERS } from "./combination-story.mjs?v=5.0.0-beta.1";
+import { COMBINATION_STORY_MAX_CHAPTERS } from "./combination-story.mjs?v=5.0.0-beta.4";
 
 /**
  * On-demand host contract (the controller owns and replaces its children):

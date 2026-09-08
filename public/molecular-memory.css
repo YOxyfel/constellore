@@ -1,0 +1,421 @@
+/* Molecular Memory is intentionally self-contained. Its inert compact mark may
+   live inside a board-word button; the inspector is always mounted separately. */
+
+.molecular-memory-host {
+  isolation: isolate;
+}
+
+.molecular-memory-host > :not(.molecular-memory) {
+  position: relative;
+  z-index: 1;
+}
+
+.molecular-memory {
+  position: absolute;
+  z-index: 0;
+  inset: 2px 5px 2px 30px;
+  display: grid;
+  place-items: center;
+  min-width: 42px;
+  overflow: hidden;
+  border-radius: inherit;
+  opacity: .2;
+  color: color-mix(in srgb, var(--word-accent, #71e9ed) 70%, #f6e7b3);
+  pointer-events: none;
+  transition: opacity .24s ease, filter .24s ease, transform .3s cubic-bezier(.2, .82, .3, 1);
+}
+
+.molecular-memory[data-state="preview"],
+.molecular-memory.is-preview {
+  opacity: .52;
+  filter: drop-shadow(0 0 6px color-mix(in srgb, currentColor 44%, transparent));
+  transform: scale(1.035);
+}
+
+.molecular-memory[data-state="expanded"],
+.molecular-memory.is-expanded {
+  opacity: .68;
+  filter: drop-shadow(0 0 8px color-mix(in srgb, currentColor 54%, transparent));
+}
+
+.molecular-memory__glyph {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-width: 54px;
+  max-width: 112px;
+  overflow: visible;
+}
+
+.molecular-memory__bond-line {
+  stroke: currentColor;
+  stroke-width: 1.4;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
+
+.molecular-memory__bond--side-chain .molecular-memory__bond-line {
+  stroke-width: 1;
+  stroke-dasharray: 2 1.7;
+  opacity: .82;
+}
+
+.molecular-memory__bond--route .molecular-memory__bond-line {
+  stroke: color-mix(in srgb, #f1c86e 84%, currentColor);
+  stroke-width: 1.8;
+}
+
+.molecular-memory__atom-shape,
+.molecular-memory__functional-group-shape {
+  fill: color-mix(in srgb, #07131f 82%, currentColor);
+  stroke: currentColor;
+  stroke-width: 1.1;
+  vector-effect: non-scaling-stroke;
+}
+
+.molecular-memory__atom--final .molecular-memory__atom-shape {
+  fill: color-mix(in srgb, currentColor 24%, #07131f);
+  stroke-width: 1.7;
+}
+
+.molecular-memory__atom-label,
+.molecular-memory__functional-group-label,
+.molecular-memory__functional-group-count {
+  fill: #f9f2d7;
+  font-family: ui-rounded, "Segoe UI", system-ui, sans-serif;
+  font-size: 6.5px;
+  font-weight: 760;
+  letter-spacing: -.03em;
+  paint-order: stroke;
+  stroke: rgba(2, 7, 13, .78);
+  stroke-width: .7px;
+  stroke-linejoin: round;
+}
+
+.molecular-memory__functional-group-label {
+  font-size: 5.8px;
+}
+
+.molecular-memory__functional-group-count {
+  fill: #f1c86e;
+  font-size: 4.8px;
+  stroke-width: .55px;
+}
+
+.molecular-memory__isomer-marker {
+  fill: transparent;
+  stroke: currentColor;
+  stroke-width: .8;
+  vector-effect: non-scaling-stroke;
+}
+
+.molecular-memory__isomer-marker.is-active {
+  fill: #f1c86e;
+  stroke: #fff0b9;
+}
+
+.molecular-memory__panel {
+  --molecular-memory-panel-x: 50vw;
+  --molecular-memory-panel-y: 20vh;
+  position: fixed;
+  z-index: 140;
+  left: var(--molecular-memory-panel-x);
+  top: var(--molecular-memory-panel-y);
+  width: min(352px, calc(100vw - 24px));
+  max-height: min(480px, calc(100dvh - 24px));
+  overflow: auto;
+  overscroll-behavior: contain;
+  padding: 15px;
+  border: 1px solid color-mix(in srgb, var(--word-accent, #71e9ed) 42%, rgba(255, 255, 255, .18));
+  border-radius: 20px;
+  background:
+    radial-gradient(circle at 88% 8%, color-mix(in srgb, var(--word-accent, #71e9ed) 13%, transparent), transparent 33%),
+    linear-gradient(145deg, rgba(11, 27, 39, .97), rgba(5, 10, 23, .985));
+  color: #f5f2e8;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, .55), 0 0 0 1px rgba(255, 255, 255, .035) inset;
+  backdrop-filter: blur(18px) saturate(1.16);
+  transform: translateX(-50%) scale(.98);
+  transform-origin: 50% 0;
+  animation: molecular-memory-panel-arrive .22s cubic-bezier(.2, .82, .3, 1) both;
+}
+
+.molecular-memory__panel[hidden] {
+  display: none !important;
+}
+
+.molecular-memory__panel[data-placement="above"] {
+  transform-origin: 50% 100%;
+}
+
+.molecular-memory__panel::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background:
+    linear-gradient(115deg, transparent 10%, rgba(255, 255, 255, .035) 31%, transparent 50%),
+    repeating-linear-gradient(120deg, transparent 0 38px, rgba(113, 233, 237, .018) 39px 40px);
+}
+
+.molecular-memory__panel-header,
+.molecular-memory__title-wrap,
+.molecular-memory__step-copy {
+  display: flex;
+}
+
+.molecular-memory__panel-header {
+  position: relative;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.molecular-memory__title-wrap,
+.molecular-memory__step-copy {
+  flex-direction: column;
+  min-width: 0;
+}
+
+.molecular-memory__kicker {
+  color: color-mix(in srgb, var(--word-accent, #71e9ed) 76%, white);
+  font-size: 10px;
+  font-weight: 760;
+  letter-spacing: .16em;
+}
+
+.molecular-memory__title {
+  margin-top: 2px;
+  font-size: 20px;
+  letter-spacing: -.02em;
+}
+
+.molecular-memory__close {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  min-width: 44px;
+  height: 44px;
+  min-height: 44px;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, .14);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, .055);
+  color: inherit;
+  font: 500 22px/1 system-ui, sans-serif;
+  cursor: pointer;
+}
+
+.molecular-memory__close:is(:hover, :focus-visible),
+.molecular-memory__isomer:is(:hover, :focus-visible) {
+  border-color: color-mix(in srgb, var(--word-accent, #71e9ed) 74%, white);
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--word-accent, #71e9ed) 16%, transparent);
+}
+
+.molecular-memory__summary {
+  margin: 12px 0 0;
+  color: rgba(239, 243, 241, .74);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.molecular-memory__formula {
+  position: relative;
+  margin: 10px 0 0;
+  padding: 9px 11px;
+  overflow-wrap: anywhere;
+  border: 1px solid rgba(241, 200, 110, .2);
+  border-radius: 12px;
+  background: rgba(241, 200, 110, .055);
+  color: #f4d993;
+  font: 650 13px/1.35 ui-monospace, "Cascadia Code", monospace;
+}
+
+.molecular-memory__isomers {
+  position: relative;
+  display: flex;
+  gap: 6px;
+  margin-top: 11px;
+  padding: 3px;
+  overflow-x: auto;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, .035);
+}
+
+.molecular-memory__isomers[hidden] {
+  display: none !important;
+}
+
+.molecular-memory__isomer {
+  min-height: 44px;
+  padding: 6px 10px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  background: transparent;
+  color: rgba(245, 242, 232, .68);
+  font: 700 11px/1.2 system-ui, sans-serif;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.molecular-memory__isomer[aria-selected="true"] {
+  border-color: rgba(113, 233, 237, .22);
+  background: rgba(113, 233, 237, .095);
+  color: #ecfeff;
+}
+
+.molecular-memory__recipe-heading {
+  position: relative;
+  margin: 14px 0 7px;
+  color: rgba(245, 242, 232, .82);
+  font-size: 11px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.molecular-memory__recipe-ledger {
+  position: relative;
+  display: grid;
+  gap: 7px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.molecular-memory__recipe-step {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  gap: 8px;
+  align-items: start;
+  padding: 8px;
+  border: 1px solid rgba(255, 255, 255, .075);
+  border-radius: 11px;
+  background: rgba(255, 255, 255, .028);
+}
+
+.molecular-memory__step-number {
+  display: grid;
+  place-items: center;
+  width: 27px;
+  height: 27px;
+  border: 1px solid rgba(113, 233, 237, .25);
+  border-radius: 50%;
+  color: #9fe8eb;
+  font: 700 10px/1 ui-monospace, monospace;
+}
+
+.molecular-memory__equation {
+  overflow-wrap: anywhere;
+  color: #f4efe0;
+  font: 620 12px/1.4 ui-monospace, "Cascadia Code", monospace;
+}
+
+.molecular-memory__recipe-id {
+  margin-top: 2px;
+  overflow-wrap: anywhere;
+  color: rgba(218, 231, 229, .48);
+  font-size: 9px;
+  line-height: 1.35;
+  letter-spacing: .025em;
+}
+
+.molecular-memory__origin-step {
+  padding: 10px;
+  border: 1px dashed rgba(113, 233, 237, .22);
+  border-radius: 11px;
+  color: rgba(234, 245, 243, .72);
+  font-size: 12px;
+}
+
+.molecular-memory__integrity {
+  position: relative;
+  margin: 10px 0 0;
+  color: rgba(214, 229, 225, .52);
+  font-size: 10px;
+  line-height: 1.4;
+}
+
+.molecular-memory__sr {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+@keyframes molecular-memory-panel-arrive {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(5px) scale(.965);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
+}
+
+@media (max-width: 520px) {
+  .molecular-memory__panel {
+    width: min(336px, calc(100vw - 16px));
+    max-height: min(430px, calc(100dvh - 16px));
+    padding: 13px;
+    border-radius: 17px;
+  }
+
+  .molecular-memory__recipe-step {
+    grid-template-columns: 24px minmax(0, 1fr);
+    gap: 7px;
+    padding: 7px;
+  }
+
+  .molecular-memory__step-number {
+    width: 24px;
+    height: 24px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .molecular-memory,
+  .molecular-memory__panel {
+    animation: none !important;
+    transition-duration: .01ms !important;
+  }
+}
+
+@media (forced-colors: active) {
+  .molecular-memory {
+    color: ButtonText;
+    opacity: .55;
+    forced-color-adjust: auto;
+  }
+
+  .molecular-memory__panel {
+    border: 2px solid CanvasText;
+    background: Canvas;
+    color: CanvasText;
+    box-shadow: none;
+    forced-color-adjust: auto;
+  }
+
+  .molecular-memory__close,
+  .molecular-memory__isomer,
+  .molecular-memory__formula,
+  .molecular-memory__recipe-step {
+    border: 1px solid ButtonText;
+    background: Canvas;
+    color: CanvasText;
+  }
+
+  .molecular-memory__close:focus-visible,
+  .molecular-memory__isomer:focus-visible {
+    outline: 3px solid Highlight;
+    outline-offset: 2px;
+    box-shadow: none;
+  }
+}

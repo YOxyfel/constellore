@@ -2,11 +2,11 @@
   "schemaVersion": 1,
   "product": "Constellore",
   "studio": "Oxyfel Games",
-  "version": "5.0.0-beta.1",
-  "buildId": "5.0.0-beta.1+source",
+  "version": "5.0.0-beta.4",
+  "buildId": "5.0.0-beta.4+source",
   "revision": "source",
   "channel": "server-beta",
   "runtime": "server",
-  "graphVersion": "world-5.0.0-beta.1",
+  "graphVersion": "world-5.0.0-beta.4",
   "commerceEnabled": false
 }

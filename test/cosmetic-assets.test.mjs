@@ -134,6 +134,11 @@ test("portable builds rewrite and verify every cosmetics runtime URL", async () 
   }
   assert.match(pagesVerifier, /"cosmetics-observatory[.]css"/, "Pages verifier does not require the lazy Observatory stylesheet.");
   assert.match(itchVerifier, /"cosmetics-observatory[.]css"/, "itch verifier does not require the lazy Observatory stylesheet.");
+  for (const stylesheet of ["cosmetics-observatory-full-page.css", "profile-rank-frame.css"]) {
+    const pattern = new RegExp(`"${stylesheet.replaceAll(".", "[.]")}"`);
+    assert.match(pagesVerifier, pattern, `Pages verifier does not require ${stylesheet}.`);
+    assert.match(itchVerifier, pattern, `itch verifier does not require ${stylesheet}.`);
+  }
   assert.ok(build.includes('src="./cosmetic-preload-bootstrap.js?v='), "Pages build does not rewrite the cosmetic preload bootstrap.");
   assert.ok(pagesVerifier.includes('src="./cosmetic-preload-bootstrap.js?v='), "Pages verifier does not require the relative cosmetic preload bootstrap.");
   assert.ok(itchVerifier.includes('src="[.]\\\\/cosmetic-preload-bootstrap[.]js'), "itch verifier does not require the relative cosmetic preload bootstrap.");
@@ -152,4 +157,22 @@ test("release sync validates cosmetic packs before mutating release sources", as
   const firstSourceWrite = sync.indexOf("for (const name of");
   assert.ok(validation >= 0, "Release sync does not validate cosmetic packs.");
   assert.ok(validation < firstSourceWrite, "Release sync must fail before rewriting release sources.");
+});
+
+test("the Observatory composes with equipped board and word cosmetics", async () => {
+  const styles = await readFile(projectFile("public/combining-board.css"), "utf8");
+  const boardRule = styles.match(/\[data-board-presentation="observatory"\] \.cosmos-board \{([\s\S]*?)\n\}/)?.[1] || "";
+  const wordRule = styles.match(/\[data-board-presentation="observatory"\] \.board-word \{([\s\S]*?)\n\}/)?.[1] || "";
+
+  assert.match(boardRule, /background-color:\s*var\(--observatory-space\)/);
+  assert.doesNotMatch(boardRule, /(?:^|\s)background\s*:/, "Observatory must not erase the equipped universe background image.");
+  for (const variable of [
+    "--cosmetic-word-highlight",
+    "--cosmetic-word-pattern",
+    "--cosmetic-word-surface-a",
+    "--cosmetic-word-surface-b",
+    "--cosmetic-word-shadow"
+  ]) {
+    assert.ok(wordRule.includes(variable), `Observatory word plaques do not preserve ${variable}.`);
+  }
 });

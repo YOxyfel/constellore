@@ -1,5 +1,6 @@
 import { GameStore, RunRegistry } from "../../game-services.mjs";
 import { DuelService } from "../../duel-services.mjs";
+import { createRemixProgressionState, getRemixRank } from "../../public/remix-progression.mjs";
 
 const STARTERS = ["Earth", "Water", "Fire", "Air"];
 const RECIPES = [
@@ -21,7 +22,8 @@ export async function createDuelHarness({
   buildGame = null,
   resolveCombination = null,
   routeProgress = null,
-  storage = null
+  storage = null,
+  routeRank = "silver"
 } = {}) {
   let now = startedAt;
   const store = await new GameStore(":memory:", {
@@ -33,6 +35,14 @@ export async function createDuelHarness({
     await store.registerPlayer(),
     await store.registerPlayer()
   ];
+  const seededRank = getRemixRank(routeRank);
+  for (const player of players) {
+    store.data.players[player.id].routeProgression = createRemixProgressionState({
+      rankId: seededRank.id,
+      masteryPoints: seededRank.masteryPoints,
+      completedChallenges: seededRank.completedChallenges
+    });
+  }
   const runs = new RunRegistry(store);
   const service = new DuelService(store, runs, {
     clock: () => now,
@@ -47,7 +57,7 @@ export async function createDuelHarness({
       return {
         game: {
           mode: "duel",
-          modeName: "Constellation Scramble",
+          modeName: "Scramble Arena",
           target: gameTarget,
           tier: 1,
           seed,

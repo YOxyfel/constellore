@@ -1,0 +1,799 @@
+{
+  "version": 1,
+  "contract": "constellore-moon-settlement-gate1-v1",
+  "generatedBy": "Blender 5.1 + scripts/moon-settlement-gate1-blender.py",
+  "portable": true,
+  "compressedGeometry": false,
+  "fieldkitTextures": {
+    "contract": "public/art/moon-settlement/materials/fieldkit-role-contract.json",
+    "records": {
+      "master-basecolor": {
+        "path": "production/moon-settlement/gate-1/source/textures/pbr/fieldkit-basecolor-master.png",
+        "bytes": 6695494,
+        "sha256": "c4e7ab2bacd7ef6c1c2396c40291a40e7f16f8d15c34f24845be348204730b94",
+        "pixels": 2048,
+        "channels": 4
+      },
+      "master-orm": {
+        "path": "production/moon-settlement/gate-1/source/textures/pbr/fieldkit-orm-master.png",
+        "bytes": 4866330,
+        "sha256": "7a445b24b336d588944fc8e0e2251d0cce46042c2b87b0b41b8b309817bfc810",
+        "pixels": 2048,
+        "channels": 3
+      },
+      "master-normal": {
+        "path": "production/moon-settlement/gate-1/source/textures/pbr/fieldkit-normal-master.png",
+        "bytes": 8821370,
+        "sha256": "07ef484bfe29270755e40b6e741e73deb274706410facb275397729a00aae803",
+        "pixels": 2048,
+        "channels": 3
+      },
+      "embedded-standard-basecolor": {
+        "path": "production/moon-settlement/gate-1/source/textures/pbr/fieldkit-basecolor-standard.png",
+        "bytes": 353365,
+        "sha256": "d47976b25c3c57530c98215b17db0f057f578611ae467022c3e554e9a942c421",
+        "pixels": 512,
+        "channels": 4
+      },
+      "embedded-standard-orm": {
+        "path": "production/moon-settlement/gate-1/source/textures/pbr/fieldkit-orm-standard.png",
+        "bytes": 253662,
+        "sha256": "18d96473c1a7121098f9a5fae80f7e2733a5b1f709094d84f0c483b97d5b7ab7",
+        "pixels": 512,
+        "channels": 3
+      },
+      "embedded-standard-normal": {
+        "path": "production/moon-settlement/gate-1/source/textures/pbr/fieldkit-normal-standard.png",
+        "bytes": 402954,
+        "sha256": "6edddf64030134119dd434c2477b65deb2ad6440b16a35a0a6ad8adecaf06330",
+        "pixels": 512,
+        "channels": 3
+      },
+      "embedded-low-basecolor": {
+        "path": "production/moon-settlement/gate-1/source/textures/pbr/fieldkit-basecolor-low.png",
+        "bytes": 84770,
+        "sha256": "ab4210e42478e0b88d2284e64e8985325a4a89d9e48c4e192da63bf9e497a8b0",
+        "pixels": 256,
+        "channels": 4
+      },
+      "embedded-low-orm": {
+        "path": "production/moon-settlement/gate-1/source/textures/pbr/fieldkit-orm-low.png",
+        "bytes": 59130,
+        "sha256": "49a45a93872c371155d7245a8e537d72236817c364d527f41fad7e1f67cfd55c",
+        "pixels": 256,
+        "channels": 3
+      },
+      "embedded-low-normal": {
+        "path": "production/moon-settlement/gate-1/source/textures/pbr/fieldkit-normal-low.png",
+        "bytes": 76043,
+        "sha256": "724341792772b2058df43407a2521e6f4b0f769b9e2b003a7a5b940a3520175c",
+        "pixels": 256,
+        "channels": 3
+      },
+      "shared-standard-basecolor": {
+        "path": "public/art/moon-settlement/materials/fieldkit-basecolor-standard.png",
+        "bytes": 1571235,
+        "sha256": "dc1c6148bb54d9e6fe316cf25e8b950c137754235729164a8840bf6cc767be1a",
+        "pixels": 1024,
+        "channels": 4
+      },
+      "shared-standard-orm": {
+        "path": "public/art/moon-settlement/materials/fieldkit-orm-standard.png",
+        "bytes": 1148892,
+        "sha256": "2212faa80b0f99bfebf59a885173e3284bf8753668b0c499756e7f90e213d584",
+        "pixels": 1024,
+        "channels": 3
+      },
+      "shared-standard-normal": {
+        "path": "public/art/moon-settlement/materials/fieldkit-normal-standard.png",
+        "bytes": 2039395,
+        "sha256": "c1e7cf9b6f78cbbd66ea7dc62dbb7333fb819ae80f348a92e14595b283b31958",
+        "pixels": 1024,
+        "channels": 3
+      },
+      "shared-low-basecolor": {
+        "path": "public/art/moon-settlement/materials/fieldkit-basecolor-low.png",
+        "bytes": 353365,
+        "sha256": "d47976b25c3c57530c98215b17db0f057f578611ae467022c3e554e9a942c421",
+        "pixels": 512,
+        "channels": 4
+      },
+      "shared-low-orm": {
+        "path": "public/art/moon-settlement/materials/fieldkit-orm-low.png",
+        "bytes": 253662,
+        "sha256": "18d96473c1a7121098f9a5fae80f7e2733a5b1f709094d84f0c483b97d5b7ab7",
+        "pixels": 512,
+        "channels": 3
+      },
+      "shared-low-normal": {
+        "path": "public/art/moon-settlement/materials/fieldkit-normal-low.png",
+        "bytes": 402954,
+        "sha256": "6edddf64030134119dd434c2477b65deb2ad6440b16a35a0a6ad8adecaf06330",
+        "pixels": 512,
+        "channels": 3
+      }
+    }
+  },
+  "assetIds": [
+    "solar-power",
+    "lunar-power",
+    "bastion-shelter",
+    "hive-shelter",
+    "haven-shelter",
+    "beacon-signal",
+    "stars-signal",
+    "starter-vault",
+    "processor",
+    "storage",
+    "reservoir",
+    "greenhouse"
+  ],
+  "profiles": {
+    "low": {
+      "solar-power": "./art/moon-settlement/models/solar-power-low.glb",
+      "lunar-power": "./art/moon-settlement/models/lunar-power-low.glb",
+      "bastion-shelter": "./art/moon-settlement/models/bastion-shelter-low.glb",
+      "hive-shelter": "./art/moon-settlement/models/hive-shelter-low.glb",
+      "haven-shelter": "./art/moon-settlement/models/haven-shelter-low.glb",
+      "beacon-signal": "./art/moon-settlement/models/beacon-signal-low.glb",
+      "stars-signal": "./art/moon-settlement/models/stars-signal-low.glb",
+      "starter-vault": "./art/moon-settlement/models/starter-vault-low.glb",
+      "processor": "./art/moon-settlement/models/processor-low.glb",
+      "storage": "./art/moon-settlement/models/storage-low.glb",
+      "reservoir": "./art/moon-settlement/models/reservoir-low.glb",
+      "greenhouse": "./art/moon-settlement/models/greenhouse-low.glb"
+    },
+    "standard": {
+      "solar-power": "./art/moon-settlement/models/solar-power-standard.glb",
+      "lunar-power": "./art/moon-settlement/models/lunar-power-standard.glb",
+      "bastion-shelter": "./art/moon-settlement/models/bastion-shelter-standard.glb",
+      "hive-shelter": "./art/moon-settlement/models/hive-shelter-standard.glb",
+      "haven-shelter": "./art/moon-settlement/models/haven-shelter-standard.glb",
+      "beacon-signal": "./art/moon-settlement/models/beacon-signal-standard.glb",
+      "stars-signal": "./art/moon-settlement/models/stars-signal-standard.glb",
+      "starter-vault": "./art/moon-settlement/models/starter-vault-standard.glb",
+      "processor": "./art/moon-settlement/models/processor-standard.glb",
+      "storage": "./art/moon-settlement/models/storage-standard.glb",
+      "reservoir": "./art/moon-settlement/models/reservoir-standard.glb",
+      "greenhouse": "./art/moon-settlement/models/greenhouse-standard.glb"
+    }
+  },
+  "records": {
+    "solar-power-low": {
+      "url": "./art/moon-settlement/models/solar-power-low.glb",
+      "sha256": "6e93fa2df8b9785bac4989c52dd04552a87badf74fdcd9640d9abe94c3af6f06",
+      "bytes": 152160,
+      "triangles": 1024,
+      "meshes": 21,
+      "materials": 6,
+      "textures": 1,
+      "bounds": {
+        "min": [
+          -0.6500709074609113,
+          0,
+          -0.3637955557954214
+        ],
+        "max": [
+          0.650070907609697,
+          0.7579768020816066,
+          0.3637955557954214
+        ],
+        "extent": [
+          1.3001418150706083,
+          0.7579768020816066,
+          0.7275911115908428
+        ]
+      }
+    },
+    "lunar-power-low": {
+      "url": "./art/moon-settlement/models/lunar-power-low.glb",
+      "sha256": "cf9ffee13a2afb206dfbf1a24e53f0b7a00ea8ddda95981004948ee3549cbc7b",
+      "bytes": 165056,
+      "triangles": 1320,
+      "meshes": 26,
+      "materials": 6,
+      "textures": 1,
+      "bounds": {
+        "min": [
+          -0.43748602271080017,
+          0,
+          -0.5298394443416665
+        ],
+        "max": [
+          0.5842623114585876,
+          1.0599999874830246,
+          0.5662253339127665
+        ],
+        "extent": [
+          1.0217483341693878,
+          1.0599999874830246,
+          1.096064778254433
+        ]
+      }
+    },
+    "bastion-shelter-low": {
+      "url": "./art/moon-settlement/models/bastion-shelter-low.glb",
+      "sha256": "a338dc7b8555d9fe6400c6bec3493bfae54ed71f0beb6c5400bcbeed99de2bc3",
+      "bytes": 180616,
+      "triangles": 1168,
+      "meshes": 24,
+      "materials": 8,
+      "textures": 1,
+      "bounds": {
+        "min": [
+          -0.6323463320732117,
+          0,
+          -0.6323463320732117
+        ],
+        "max": [
+          0.6323463320732117,
+          1.0200000256299973,
+          0.7280000206083059
+        ],
+        "extent": [
+          1.2646926641464233,
+          1.0200000256299973,
+          1.3603463526815176
+        ]
+      }
+    },
+    "hive-shelter-low": {
+      "url": "./art/moon-settlement/models/hive-shelter-low.glb",
+      "sha256": "3d9b82bc3164b5a0d741bb7eb41fcef42df1799184fec42a07c2bc4f087223ea",
+      "bytes": 181964,
+      "triangles": 1520,
+      "meshes": 24,
+      "materials": 7,
+      "textures": 1,
+      "bounds": {
+        "min": [
+          -0.7014014720916748,
+          0,
+          -0.6638196408748627
+        ],
+        "max": [
+          0.7014014720916748,
+          1.2707279324531555,
+          0.6323463320732117
+        ],
+        "extent": [
+          1.4028029441833496,
+          1.2707279324531555,
+          1.2961659729480743
+        ]
+      }
+    },
+    "haven-shelter-low": {
+      "url": "./art/moon-settlement/models/haven-shelter-low.glb",
+      "sha256": "22c3187792ba86f56a0fd7426c4cc3254498e1b4cf32ebcca87a746902e262df",
+      "bytes": 160528,
+      "triangles": 1088,
+      "meshes": 19,
+      "materials": 6,
+      "textures": 1,
+      "bounds": {
+        "min": [
+          -0.6050000190734863,
+          0,
+          -0.655389204621315
+        ],
+        "max": [
+          0.6050000190734863,
+          1.0135999619960785,
+          0.7565000178292394
+        ],
+        "extent": [
+          1.2100000381469727,
+          1.0135999619960785,
+          1.4118892224505544
+        ]
+      }
+    },
+    "beacon-signal-low": {
+      "url": "./art/moon-settlement/models/beacon-signal-low.glb",
+      "sha256": "2693ec4355a2da9f65205457ef012377188d4c20ed06fc572b05cd6ca1d33f08",
+      "bytes": 166472,
+      "triangles": 1508,
+      "meshes": 24,
+      "materials": 6,
+      "textures": 1,
+      "bounds": {
+        "min": [
+          -0.34234631061553955,
+          0,
+          -0.34234631061553955
+        ],
+        "max": [
+          0.34234631061553955,
+          1.6549999415874481,
+          0.34234631061553955
+        ],
+        "extent": [
+          0.6846926212310791,
+          1.6549999415874481,
+          0.6846926212310791
+        ]
+      }
+    },
+    "stars-signal-low": {
+      "url": "./art/moon-settlement/models/stars-signal-low.glb",
+      "sha256": "54fc0c1ea083fd97f279f2ac83a03d5bebbf1cc7004e2cbd4f7d656660395189",
+      "bytes": 170724,
+      "triangles": 1456,
+      "meshes": 22,
+      "materials": 6,
+      "textures": 1,
+      "bounds": {
+        "min": [
+          -0.4755282700061798,
+          0,
+          -0.4938196539878845
+        ],
+        "max": [
+          0.4755282700061798,
+          1.267999994145383,
+          0.4938196539878845
+        ],
+        "extent": [
+          0.9510565400123596,
+          1.267999994145383,
+          0.987639307975769
+        ]
+      }
+    },
+    "starter-vault-low": {
+      "url": "./art/moon-settlement/models/starter-vault-low.glb",
+      "sha256": "ac7f3ec5dbc6f361201705654bcc0525e441bc33f6a92baaf7efa5a6ca683fd1",
+      "bytes": 167636,
+      "triangles": 1328,
+      "meshes": 24,
+      "materials": 8,
+      "textures": 1,
+      "bounds": {
+        "min": [
+          -0.4099999964237213,
+          0,
+          -0.33000001311302185
+        ],
+        "max": [
+          0.4099999964237213,
+          0.8250000344328764,
+          0.3750000204162197
+        ],
+        "extent": [
+          0.8199999928474426,
+          0.8250000344328764,
+          0.7050000335292416
+        ]
+      }
+    },
+    "processor-low": {
+      "url": "./art/moon-settlement/models/processor-low.glb",
+      "sha256": "88a6acdbcafe030861300ac3ed5271839d60a6c87c49947d9e3619c9e783c0c1",
+      "bytes": 167636,
+      "triangles": 1376,
+      "meshes": 27,
+      "materials": 7,
+      "textures": 1,
+      "bounds": {
+        "min": [
+          -0.5723463296890259,
+          0,
+          -0.5723463296890259
+        ],
+        "max": [
+          0.58132688511396,
+          1.3299999833106995,
+          0.5723463296890259
+        ],
+        "extent": [
+          1.153673214802986,
+          1.3299999833106995,
+          1.1446926593780518
+        ]
+      }
+    },
+    "storage-low": {
+      "url": "./art/moon-settlement/models/storage-low.glb",
+      "sha256": "19383d0fa1c07b4723f35d8768244274d2685d7ffab1ef6b32c39b9030b3cefc",
+      "bytes": 192028,
+      "triangles": 1728,
+      "meshes": 25,
+      "materials": 7,
+      "textures": 1,
+      "bounds": {
+        "min": [
+          -0.6100000143051147,
+          0,
+          -0.3700000047683716
+        ],
+        "max": [
+          0.6100000143051147,
+          0.8500000238418579,
+          0.3700000047683716
+        ],
+        "extent": [
+          1.2200000286102295,
+          0.8500000238418579,
+          0.7400000095367432
+        ]
+      }
+    },
+    "reservoir-low": {
+      "url": "./art/moon-settlement/models/reservoir-low.glb",
+      "sha256": "640ec2f2ca9218126ed09b058297dc7fe2442599c65c8ef5fc74077b79d271d0",
+      "bytes": 154140,
+      "triangles": 1148,
+      "meshes": 19,
+      "materials": 8,
+      "textures": 1,
+      "bounds": {
+        "min": [
+          -0.40895432233810425,
+          0,
+          -0.4238196611404419
+        ],
+        "max": [
+          0.40895432233810425,
+          1.101865451175147,
+          0.4238196611404419
+        ],
+        "extent": [
+          0.8179086446762085,
+          1.101865451175147,
+          0.8476393222808838
+        ]
+      }
+    },
+    "greenhouse-low": {
+      "url": "./art/moon-settlement/models/greenhouse-low.glb",
+      "sha256": "2cff3bebab494f7b504937bc7413b71f77ce8c65352fe124a0da3965a12f5dd0",
+      "bytes": 224840,
+      "triangles": 1928,
+      "meshes": 38,
+      "materials": 11,
+      "textures": 1,
+      "bounds": {
+        "min": [
+          -0.6679999828338623,
+          0,
+          -0.6999000199139118
+        ],
+        "max": [
+          0.6679999828338623,
+          1.2334314812885014,
+          0.8000000212341547
+        ],
+        "extent": [
+          1.3359999656677246,
+          1.2334314812885014,
+          1.4999000411480665
+        ]
+      }
+    },
+    "solar-power-standard": {
+      "url": "./art/moon-settlement/models/solar-power-standard.glb",
+      "sha256": "6adcdf6d56a00bc518654cbd00d27ec9392358cc9eed6ffc54b2e3fae605697f",
+      "bytes": 548440,
+      "triangles": 3904,
+      "meshes": 41,
+      "materials": 6,
+      "textures": 1,
+      "bounds": {
+        "min": [
+          -0.6550526686076166,
+          0,
+          -0.3639450534742886
+        ],
+        "max": [
+          0.6550526687564023,
+          0.7680000029504299,
+          0.3639450534742886
+        ],
+        "extent": [
+          1.310105337364019,
+          0.7680000029504299,
+          0.7278901069485773
+        ]
+      }
+    },
+    "lunar-power-standard": {
+      "url": "./art/moon-settlement/models/lunar-power-standard.glb",
+      "sha256": "d8cf63a95c7b6929f90383b5c45acebdbc33461c559a3f9e7a793e12e41bc3b8",
+      "bytes": 432212,
+      "triangles": 2932,
+      "meshes": 31,
+      "materials": 6,
+      "textures": 1,
+      "bounds": {
+        "min": [
+          -0.46000000834465027,
+          0,
+          -0.533788522324062
+        ],
+        "max": [
+          0.5842623114585876,
+          1.0599999874830246,
+          0.5723838677575922
+        ],
+        "extent": [
+          1.044262319803238,
+          1.0599999874830246,
+          1.1061723900816542
+        ]
+      }
+    },
+    "bastion-shelter-standard": {
+      "url": "./art/moon-settlement/models/bastion-shelter-standard.glb",
+      "sha256": "7e7630a4b73e843a1d97ad1964fa5ad59a36cd1f76062b2e764bc63e974e4979",
+      "bytes": 472076,
+      "triangles": 2872,
+      "meshes": 28,
+      "materials": 8,
+      "textures": 1,
+      "bounds": {
+        "min": [
+          -0.6355165839195251,
+          0,
+          -0.6355165839195251
+        ],
+        "max": [
+          0.6355165839195251,
+          1.0200000256299973,
+          0.7280000206083059
+        ],
+        "extent": [
+          1.2710331678390503,
+          1.0200000256299973,
+          1.363516604527831
+        ]
+      }
+    },
+    "hive-shelter-standard": {
+      "url": "./art/moon-settlement/models/hive-shelter-standard.glb",
+      "sha256": "fb6b69b308ddd7c2897ba239bef91f1e2cf9f2144496129f26528218008df759",
+      "bytes": 488260,
+      "triangles": 3700,
+      "meshes": 28,
+      "materials": 7,
+      "textures": 1,
+      "bounds": {
+        "min": [
+          -0.7199999988079071,
+          0,
+          -0.6699999868869781
+        ],
+        "max": [
+          0.7199999988079071,
+          1.2707279324531555,
+          0.6355165839195251
+        ],
+        "extent": [
+          1.4399999976158142,
+          1.2707279324531555,
+          1.3055165708065033
+        ]
+      }
+    },
+    "haven-shelter-standard": {
+      "url": "./art/moon-settlement/models/haven-shelter-standard.glb",
+      "sha256": "04051586520a2541d4c2ea1f79f3cb520e4fc2428e3c7c10c18e9dfd942ecbc9",
+      "bytes": 437980,
+      "triangles": 2476,
+      "meshes": 23,
+      "materials": 6,
+      "textures": 1,
+      "bounds": {
+        "min": [
+          -0.6200002431869507,
+          0,
+          -0.685000017285347
+        ],
+        "max": [
+          0.6200001835823059,
+          1.0135999619960785,
+          0.7565000178292394
+        ],
+        "extent": [
+          1.2400004267692566,
+          1.0135999619960785,
+          1.4415000351145864
+        ]
+      }
+    },
+    "beacon-signal-standard": {
+      "url": "./art/moon-settlement/models/beacon-signal-standard.glb",
+      "sha256": "4951505bfd67ce38c385aeaccd2e6966d6c423214c83d043e5e394feb55c7545",
+      "bytes": 435720,
+      "triangles": 3172,
+      "meshes": 29,
+      "materials": 6,
+      "textures": 1,
+      "bounds": {
+        "min": [
+          -0.34682974219322205,
+          0,
+          -0.34682974219322205
+        ],
+        "max": [
+          0.3464584513403668,
+          1.6549999415874481,
+          0.34682974219322205
+        ],
+        "extent": [
+          0.6932881935335888,
+          1.6549999415874481,
+          0.6936594843864441
+        ]
+      }
+    },
+    "stars-signal-standard": {
+      "url": "./art/moon-settlement/models/stars-signal-standard.glb",
+      "sha256": "c656be03f07b8c09487938e59ef60a06253a4e0af2d954696f34db6ed074b873",
+      "bytes": 445092,
+      "triangles": 3064,
+      "meshes": 27,
+      "materials": 6,
+      "textures": 1,
+      "bounds": {
+        "min": [
+          -0.5,
+          0,
+          -0.5
+        ],
+        "max": [
+          0.5,
+          1.2680000370661633,
+          0.5
+        ],
+        "extent": [
+          1,
+          1.2680000370661633,
+          1
+        ]
+      }
+    },
+    "starter-vault-standard": {
+      "url": "./art/moon-settlement/models/starter-vault-standard.glb",
+      "sha256": "8ea7266445a9f1a6b3a857f4821d90dad03f3809ad3da2e09c0422a65a810b58",
+      "bytes": 450428,
+      "triangles": 2992,
+      "meshes": 32,
+      "materials": 8,
+      "textures": 1,
+      "bounds": {
+        "min": [
+          -0.4099999964237213,
+          0,
+          -0.3449999988079071
+        ],
+        "max": [
+          0.4099999964237213,
+          0.8250000344328764,
+          0.3750000204162197
+        ],
+        "extent": [
+          0.8199999928474426,
+          0.8250000344328764,
+          0.7200000192241268
+        ]
+      }
+    },
+    "processor-standard": {
+      "url": "./art/moon-settlement/models/processor-standard.glb",
+      "sha256": "0a3ce507206cde6f6c4b994015e4548f75d2ad1c9903a341277882663b4c93d6",
+      "bytes": 449168,
+      "triangles": 3248,
+      "meshes": 35,
+      "materials": 7,
+      "textures": 1,
+      "bounds": {
+        "min": [
+          -0.5755165815353394,
+          0,
+          -0.5755165815353394
+        ],
+        "max": [
+          0.5824329539509683,
+          1.3299999833106995,
+          0.5755165815353394
+        ],
+        "extent": [
+          1.1579495354863076,
+          1.3299999833106995,
+          1.1510331630706787
+        ]
+      }
+    },
+    "storage-standard": {
+      "url": "./art/moon-settlement/models/storage-standard.glb",
+      "sha256": "6024499fc69972650d65ac417fb81d27dfd65ba131fb405f9690f1ba31f0df6b",
+      "bytes": 491048,
+      "triangles": 3944,
+      "meshes": 25,
+      "materials": 7,
+      "textures": 1,
+      "bounds": {
+        "min": [
+          -0.6100000143051147,
+          0,
+          -0.3700000047683716
+        ],
+        "max": [
+          0.6100000143051147,
+          0.8500000238418579,
+          0.3700000047683716
+        ],
+        "extent": [
+          1.2200000286102295,
+          0.8500000238418579,
+          0.7400000095367432
+        ]
+      }
+    },
+    "reservoir-standard": {
+      "url": "./art/moon-settlement/models/reservoir-standard.glb",
+      "sha256": "5e59d099870bbf168f8c0ee42eeaaa360aba8e82ce7b91e01d638d8f2a2d98e0",
+      "bytes": 426116,
+      "triangles": 2624,
+      "meshes": 24,
+      "materials": 8,
+      "textures": 1,
+      "bounds": {
+        "min": [
+          -0.4300000071525574,
+          0,
+          -0.4300000071525574
+        ],
+        "max": [
+          0.4300000071525574,
+          1.101824123682391,
+          0.4300000071525574
+        ],
+        "extent": [
+          0.8600000143051147,
+          1.101824123682391,
+          0.8600000143051147
+        ]
+      }
+    },
+    "greenhouse-standard": {
+      "url": "./art/moon-settlement/models/greenhouse-standard.glb",
+      "sha256": "f436ecf810d4db7bf5fca2f37314477775c4187bfe6cd1e4f21645a0fadb595a",
+      "bytes": 545812,
+      "triangles": 4292,
+      "meshes": 48,
+      "materials": 11,
+      "textures": 1,
+      "bounds": {
+        "min": [
+          -0.6800000071525574,
+          -0.025000062819601987,
+          -0.7179999835789204
+        ],
+        "max": [
+          0.6800000071525574,
+          1.265000072356345,
+          0.8000000212341547
+        ],
+        "extent": [
+          1.3600000143051147,
+          1.290000135175947,
+          1.518000004813075
+        ]
+      }
+    }
+  },
+  "source": {
+    "blend": {
+      "path": "production/moon-settlement/gate-1/source/moon-settlement-gate1-kit.blend",
+      "bytes": 2344556,
+      "sha256": "79dc65b832bc61f45ab1b2450036c9bad28490bfd4ac6003533b5822d2db0a32"
+    },
+    "review": {
+      "path": "production/moon-settlement/gate-1/review/moon-settlement-gate1-kit.png",
+      "bytes": 2155208,
+      "sha256": "50d5744057801af91aaeb81c99772d8e8f91da8e23fb1fff00673cb07d0cec05"
+    }
+  }
+}

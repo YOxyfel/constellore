@@ -16,36 +16,21 @@ test("the optional launch cinematic pack declares every source artifact", async 
   }
 });
 
-test("the cinematic runs once per browser session while active runs bypass it before boot", async () => {
-  const [app, cinematic, sessionResume] = await Promise.all([
+test("public entry cannot import archived intros and preserves direct home and saved-run handoffs", async () => {
+  const [app, website, landing] = await Promise.all([
     readFile(projectFile("public/app.js"), "utf8"),
-    readFile(projectFile("public/cinematic/first-open-cinematic.mjs"), "utf8"),
-    readFile(projectFile("public/session-resume.mjs"), "utf8")
+    readFile(projectFile("Website/site.js"), "utf8"),
+    readFile(projectFile("Website/index.html"), "utf8")
   ]);
-  assert.doesNotMatch(app, /^import .*first-open-cinematic[.]mjs/m);
-  assert.match(app, /const FIRST_OPEN_CINEMATIC_KEY = "constellore-first-open-cinematic-v1"/);
-  assert.match(app, /import \{[^}]*markLaunchCinematicSessionPlayed[^}]*selectStartupResumeSnapshot[^}]*\} from "[.]\/session-resume[.]mjs[?]v=/);
-  assert.match(sessionResume, /export const FIRST_OPEN_CINEMATIC_SESSION_KEY = "constellore-launch-cinematic-session-v1"/);
-  assert.match(sessionResume, /export function markLaunchCinematicSessionPlayed\([\s\S]*target[?][.]setItem[?][.]\(key, "played"\)[\s\S]*target[?][.]getItem[?][.]\(key\) === "played"/);
-  assert.match(cinematic, /export const FIRST_OPEN_CINEMATIC_SESSION_KEY = "constellore-launch-cinematic-session-v1"/);
-  assert.match(cinematic, /function hasPlayedFirstOpenCinematicThisSession\(/);
-  assert.match(cinematic, /if \(!force && playedThisSession\)[\s\S]*reason: "session-played"[\s\S]*menuHandoff: true/);
-  assert.match(cinematic, /markFirstOpenCinematicSessionPlayed\(sessionStorage, sessionStorageKey\)/);
-
-  const activeRunPreflight = app.indexOf("const startupResumeSnapshot = selectStartupResumeSnapshot({");
-  const activeRunRead = app.indexOf("snapshot: readActiveRunSnapshot()", activeRunPreflight);
-  const dynamicImport = app.indexOf('await import("./cinematic/first-open-cinematic.mjs?v=');
-  const playback = app.indexOf("}).playLaunch()");
-  const handoff = app.indexOf("onHandoff: handoffLaunchMenu");
-  assert.ok(activeRunPreflight >= 0 && activeRunRead > activeRunPreflight && dynamicImport > activeRunRead && handoff > dynamicImport && playback > handoff);
+  assert.doesNotMatch(app, /first-open-cinematic|voyage-projection-experience|FIRST_OPEN_CINEMATIC_KEY|markLaunchCinematicSessionPlayed/);
+  assert.doesNotMatch(website, /watchVoyage|website-voyage-preview|playWebsiteVoyage/);
+  assert.doesNotMatch(landing, /watchVoyage|Experience the opening|57-second Voyage/);
   assert.match(app, /const startupResumeSnapshot = selectStartupResumeSnapshot\(\{\s*snapshot: readActiveRunSnapshot\(\),\s*sharedChallenge: startupSharedChallenge,\s*modeIntent: startupModeIntent\s*\}\)/);
-  assert.match(app, /if \(!startupResumeSnapshot\) \{[\s\S]*[}][)][.]playLaunch\(\);[\s\S]*\} else \{[\s\S]*markLaunchCinematicSessionPlayed\(\)/);
-  assert.match(app, /function handoffLaunchMenu\(\)[\s\S]*gameAudio[.]setScene\("home"\)[\s\S]*gameAudio[.]prime\(\)[\s\S]*releaseLaunchBlackout\(\)/);
+  assert.match(app, /const startupOpensHome = !startupResumeSnapshot \|\| startupScramblePreemptsResume/);
+  assert.match(app, /if \(startupOpensHome\) void handoffLaunchMenu\(\)/);
+  assert.match(app, /function handoffLaunchMenu\(\)[\s\S]*prepareHomeJourneyArt\(\)[\s\S]*releaseLaunchBlackout\(\)/);
   assert.match(app, /function releaseLaunchBlackout\(\)\s*\{\s*cosmicGate[.]skipIntro\(\);\s*\}/);
-  assert.match(app, /onPlaybackIntent: \(\) => gameAudio[.]prime\(\{ startMusic: false \}\)/);
-  assert.match(app, /[}][)][.]playLaunch\(\);[\s\S]*handoffLaunchMenu\(\);[\s\S]*markLaunchCinematicSessionPlayed\(\)[\s\S]*const ctrlHover/);
-  assert.doesNotMatch(app.slice(dynamicImport, app.indexOf("const ctrlHover")), /cosmicGate[.]playIntro/);
-  assert.match(app, /launchCinematicOutcome[.]menuHandoff === true/);
+  assert.match(app, /const launchMenuHandoff = startupOpensHome/);
   assert.match(app, /function resetLocalPractice\([\s\S]*clearGameStorage\(safeBrowserStorage\(\)\)/);
 });
 
