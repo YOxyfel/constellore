@@ -27,6 +27,9 @@ jobs:
         run: python -m pip install numpy==2.5.0
       - run: npm ci --ignore-scripts
       - run: npm run check
+        env:
+          # Match the locked audio reference profile across AVX2 and AVX-512 runners.
+          NPY_ENABLE_CPU_FEATURES: X86_V3
 
   browser-e2e:
     name: Server runtime / ${{ matrix.label }}

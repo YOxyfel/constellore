@@ -45,6 +45,9 @@ jobs:
           git diff --exit-code
           test -z "$(git status --porcelain)"
       - run: npm run check
+        env:
+          # Match the locked audio reference profile across AVX2 and AVX-512 runners.
+          NPY_ENABLE_CPU_FEATURES: X86_V3
       - run: npm run build:release
         env:
           PUBLIC_FEEDBACK_API_URL: ${{ vars.PUBLIC_FEEDBACK_API_URL }}
