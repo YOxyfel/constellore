@@ -96,6 +96,54 @@ test("procedural guide generation is byte deterministic", async () => {
   assert.deepEqual(second, first);
 });
 
+test("procedural noise stays byte identical across OpenBLAS CPU kernels", () => {
+  // Exercise the real synthesis helper with every authored smoothing length.
+  // Separate interpreters select their BLAS kernels before NumPy is imported.
+  // These profiles need no AVX512 and expose the prior float32 convolve drift.
+  const probe = `
+import hashlib
+import importlib.util
+import json
+import sys
+import numpy as np
+
+spec = importlib.util.spec_from_file_location("voyage_audio_guide", sys.argv[1])
+guide = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(guide)
+outputs = {}
+for width in (6, 10, 12, 18, 20, 32, 40):
+    rng = np.random.Generator(np.random.PCG64(314159))
+    samples = guide.shaped_noise(
+        rng, 0.25, gain=0.12, smooth_samples=width, attack=0.02, release=0.04
+    )
+    assert samples.shape == (12000,) and samples.dtype == np.float32
+    outputs[str(width)] = hashlib.sha256(samples.tobytes()).hexdigest()
+print(json.dumps(outputs, sort_keys=True))
+`;
+  const outputs = {};
+  for (const core of ["Haswell", "Nehalem"]) {
+    const result = spawnSync("python", ["-c", probe, BUILDER], {
+      cwd: SOURCE_ROOT,
+      encoding: "utf8",
+      timeout: 30_000,
+      env: {
+        ...process.env,
+        OPENBLAS_CORETYPE: core,
+        OPENBLAS_NUM_THREADS: "1",
+        PYTHONDONTWRITEBYTECODE: "1"
+      }
+    });
+    assert.equal(result.status, 0, `${core} noise probe failed:\n${result.stdout}\n${result.stderr}`);
+    outputs[core] = JSON.parse(result.stdout);
+    assert.deepEqual(Object.keys(outputs[core]).map(Number).sort((a, b) => a - b),
+      [6, 10, 12, 18, 20, 32, 40]);
+  }
+  const differences = Object.fromEntries(Object.keys(outputs.Haswell)
+    .filter((width) => outputs.Haswell[width] !== outputs.Nehalem[width])
+    .map((width) => [width, { Haswell: outputs.Haswell[width], Nehalem: outputs.Nehalem[width] }]));
+  assert.deepEqual(differences, {}, "Noise changed with the OpenBLAS CPU kernel.");
+});
+
 test("reduced-motion narration map retains all words at 110 WPM without overlap", async () => {
   const source = await readFile(resolve(artifactRoot, VOYAGE_AUDIO_CUE_SHEET_PATH), "utf8");
   const rows = parseVoyageAudioCueSheet(source)

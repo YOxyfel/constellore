@@ -72,8 +72,8 @@
     {
       "path": "scripts/build-voyage-projection-audio.py",
       "status": "present",
-      "bytes": 27732,
-      "sha256": "f2db33a6089283bf7f4ed30d4f4b82606010f417493d0b2ef6bce24fa5f2d29d"
+      "bytes": 28349,
+      "sha256": "6b9ed79f6fceadec267b835b0de85927bd1ef2468d55f23f5c99efbf064fb6eb"
     },
     {
       "path": "scripts/verify-voyage-projection-audio.mjs",

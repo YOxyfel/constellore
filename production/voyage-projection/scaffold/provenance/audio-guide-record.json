@@ -9,7 +9,7 @@
   },
   "generator": {
     "path": "scripts/build-voyage-projection-audio.py",
-    "sha256": "f2db33a6089283bf7f4ed30d4f4b82606010f417493d0b2ef6bce24fa5f2d29d",
+    "sha256": "6b9ed79f6fceadec267b835b0de85927bd1ef2468d55f23f5c99efbf064fb6eb",
     "seed": 314159,
     "method": "deterministic sample-free additive synthesis and filtered procedural noise",
     "thirdPartySamples": false,
@@ -113,7 +113,7 @@
       "durationSeconds": 57.0,
       "samplePeakDbfs": -8.000002,
       "rmsDbfs": -22.237942,
-      "sha256": "83bdf1effaa750e3a429541e8d688f7cd5f5f31e1b9477c9ebdfff2dea66d102"
+      "sha256": "7002ed9c9b7d6a574deb1793a02cd1f99f7740bed549a330129744ddf0ade5f7"
     },
     {
       "id": "sfx-unresolved",
@@ -135,7 +135,7 @@
       "durationSeconds": 57.0,
       "samplePeakDbfs": -8.000002,
       "rmsDbfs": -22.297318,
-      "sha256": "6ca2e31db953edc6b6bb6427d809082f15f35de720e754314baf15d3ef3909c5"
+      "sha256": "02cdf50fc059032bf721182ffcfa2f60ca528f00eebfe72d443191f57c44db94"
     }
   ]
 }

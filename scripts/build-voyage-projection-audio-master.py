@@ -49,8 +49,8 @@ BIT_GENERATOR = "PCG64"
 FILE_ATTRIBUTE_REPARSE_POINT = 0x0400
 
 KNOWN_REVIEW_SHA256 = {
-    "completion-review-master": "ae81025cf2ca7c30e3e5655bf3fbfbe6bf74c625de3aa251f17d225290e6e132",
-    "promise-review-master": "52294ba7bd2ff65c483dfaf421c20d4b7cfaeb495d7c284c3eca4aac8c56590b",
+    "completion-review-master": "225e95e2c6102bc5601044cb15e0fee2f22b607c02d9e31164c7095625821d5e",
+    "promise-review-master": "f8897861fdc09548a5e31c5d795efb2062f9ecb23c204f0772e2c6b4e80feb7b",
 }
 
 # ITU-R BS.1770 K-weighting coefficients at 48 kHz. The review analysis uses

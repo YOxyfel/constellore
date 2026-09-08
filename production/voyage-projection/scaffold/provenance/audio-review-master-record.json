@@ -9,7 +9,7 @@
   },
   "generator": {
     "path": "scripts/build-voyage-projection-audio-master.py",
-    "sha256": "18c9fe9f7e379e45fd77d9f957adaeef6a96af554a8b33526be52dc9d1c771b8",
+    "sha256": "380327e520558fbff799489812cd854d0614df706251d2023ee16a9317cf028a",
     "seed": 271828,
     "deterministic": true
   },
@@ -23,7 +23,7 @@
   },
   "sourceGuideRecord": {
     "path": "production/voyage-projection/scaffold/provenance/audio-guide-record.json",
-    "sha256": "39d1bec688804dc283cfe02bb91dfc7a1a92e8716a6fff4f90c7ff41ee7da418"
+    "sha256": "ea3158d989cdd16f23ab36f9577e4685d94309c9315a5eb4bc0d728cf670679d"
   },
   "provenance": {
     "projectAuthored": true,
@@ -65,7 +65,7 @@
         },
         {
           "id": "sfx-completion",
-          "sha256": "83bdf1effaa750e3a429541e8d688f7cd5f5f31e1b9477c9ebdfff2dea66d102"
+          "sha256": "7002ed9c9b7d6a574deb1793a02cd1f99f7740bed549a330129744ddf0ade5f7"
         }
       ],
       "mix": {
@@ -115,7 +115,7 @@
       "durationSeconds": 57.0,
       "samplePeakDbfs": -5.440099,
       "rmsDbfs": -19.183646,
-      "sha256": "ae81025cf2ca7c30e3e5655bf3fbfbe6bf74c625de3aa251f17d225290e6e132"
+      "sha256": "225e95e2c6102bc5601044cb15e0fee2f22b607c02d9e31164c7095625821d5e"
     },
     {
       "id": "promise-review-master",
@@ -133,7 +133,7 @@
         },
         {
           "id": "sfx-unresolved",
-          "sha256": "6ca2e31db953edc6b6bb6427d809082f15f35de720e754314baf15d3ef3909c5"
+          "sha256": "02cdf50fc059032bf721182ffcfa2f60ca528f00eebfe72d443191f57c44db94"
         }
       ],
       "mix": {
@@ -167,7 +167,7 @@
         "truePeakCeilingDbtp": -2.0,
         "truePeakMethod": "4x four-point cubic intersample estimate for review; calibrated release metering still required",
         "normalizationGainDb": 0.204333,
-        "samplePeakDbfs": -5.24183,
+        "samplePeakDbfs": -5.241829,
         "truePeakDbtp": -5.230486,
         "integratedLoudnessLufs": -18.0,
         "maximumMomentaryLufs": -12.546625,
@@ -187,7 +187,7 @@
       "durationSeconds": 57.0,
       "samplePeakDbfs": -5.241829,
       "rmsDbfs": -19.115579,
-      "sha256": "52294ba7bd2ff65c483dfaf421c20d4b7cfaeb495d7c284c3eca4aac8c56590b"
+      "sha256": "f8897861fdc09548a5e31c5d795efb2062f9ecb23c204f0772e2c6b4e80feb7b"
     }
   ]
 }

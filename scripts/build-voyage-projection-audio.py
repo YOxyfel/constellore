@@ -280,6 +280,21 @@ def chirp(
     return signal.astype(np.float32, copy=False)
 
 
+def boxcar_smooth(signal: np.ndarray, smooth_samples: int) -> np.ndarray:
+    """Average zero-padded windows with a fixed accumulation order."""
+    # np.convolve delegates these float32 dot products to OpenBLAS, whose CPU
+    # kernels round differently. Accumulate left to right in float64 instead,
+    # then round once to float32 so guide PCM does not depend on BLAS dispatch.
+    padded = np.pad(
+        signal.astype(np.float64),
+        (smooth_samples // 2, (smooth_samples - 1) // 2),
+    )
+    smoothed = np.zeros(signal.size, dtype=np.float64)
+    for offset in range(smooth_samples):
+        smoothed += padded[offset : offset + signal.size]
+    return (smoothed / float(smooth_samples)).astype(np.float32)
+
+
 def shaped_noise(
     rng: np.random.Generator,
     seconds: float,
@@ -292,8 +307,7 @@ def shaped_noise(
     size = max(1, round(seconds * SAMPLE_RATE))
     signal = rng.standard_normal(size).astype(np.float32)
     if smooth_samples > 1:
-        kernel = np.ones(smooth_samples, dtype=np.float32) / float(smooth_samples)
-        signal = np.convolve(signal, kernel, mode="same").astype(np.float32)
+        signal = boxcar_smooth(signal, smooth_samples)
     peak = float(np.max(np.abs(signal))) or 1.0
     signal *= float(gain) / peak
     signal *= envelope(size, attack, release)

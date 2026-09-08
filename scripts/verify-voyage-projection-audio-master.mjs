@@ -52,7 +52,7 @@ export const EXPECTED_VOYAGE_AUDIO_REVIEW_OUTPUTS = Object.freeze([
     id: "completion-review-master",
     variant: "completion",
     path: "output/voyage-projection/audio/review/voyage-projection-completion-review-master.wav",
-    sha256: "ae81025cf2ca7c30e3e5655bf3fbfbe6bf74c625de3aa251f17d225290e6e132",
+    sha256: "225e95e2c6102bc5601044cb15e0fee2f22b607c02d9e31164c7095625821d5e",
     stems: Object.freeze(["score-completion", "sfx-completion"]),
     narrationWindows: Object.freeze([[1, 6.2], [8.4, 14.2], [39.4, 46.8]])
   }),
@@ -60,7 +60,7 @@ export const EXPECTED_VOYAGE_AUDIO_REVIEW_OUTPUTS = Object.freeze([
     id: "promise-review-master",
     variant: "promise",
     path: "output/voyage-projection/audio/review/voyage-projection-promise-review-master.wav",
-    sha256: "52294ba7bd2ff65c483dfaf421c20d4b7cfaeb495d7c284c3eca4aac8c56590b",
+    sha256: "f8897861fdc09548a5e31c5d795efb2062f9ecb23c204f0772e2c6b4e80feb7b",
     stems: Object.freeze(["score-unresolved", "sfx-unresolved"]),
     narrationWindows: Object.freeze([[1, 6.2], [8.4, 14.2], [39.4, 46.8], [54, 56.4]])
   })
