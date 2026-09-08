@@ -17,6 +17,7 @@ import { validatePublicFeedbackApiUrl } from "./public-feedback-config.mjs";
 import { createDeterministicZip, readZip, sha256 } from "./release-archive.mjs";
 import { withAssetVersion } from "./release-metadata.mjs";
 import { startupModuleFiles } from "./startup-module-files.mjs";
+import { PAGES_MINIFIED_CORE_RUNTIME_FILES } from "./pages-runtime-inventory.mjs";
 import {
   assertPlanetHubReleaseInventory,
   buildPlanetHubRuntimeBundle,
@@ -133,6 +134,12 @@ assert.equal(sidecar, `${sha256(archive)}  ${artifactName}\n`, "The artifact che
 const entries = readZip(archive);
 assert.deepEqual(archive, createDeterministicZip(entries), "The itch package is not in canonical deterministic ZIP form.");
 const files = new Map(entries.map((entry) => [entry.path, entry.data]));
+for (const file of PAGES_MINIFIED_CORE_RUNTIME_FILES) {
+  const source = await readFile(join(root, "public", file), "utf8");
+  const built = files.get(file)?.toString("utf8");
+  assert.equal(built, await buildPlanetHubRuntimeModule(source, packageMetadata.version),
+    `${file} must preserve its versioned executable code in the minified itch release.`);
+}
 assertPlanetHubReleaseInventory([...files.keys()], "itch HTML5 archive");
 const planetHubRuntimeFiles = [...files.keys()].filter(isPlanetHubRuntimeFile);
 assert.deepEqual(planetHubRuntimeFiles.sort(), [...PLANET_HUB_RELEASE_RUNTIME_FILES].sort(), "The itch archive must contain only the Planet Hub bridge and bundled runtime.");
@@ -153,7 +160,9 @@ for (const file of planetHubRuntimeFiles) {
 }
 for (const file of PLANET_HUB_OPTIONAL_MODULE_FILES) {
   const built = files.get(file).toString("utf8");
-  const expected = await buildPlanetHubRuntimeModule(await readFile(join(root, "public", file), "utf8"), packageMetadata.version);
+  const expected = file === "planet-hub-space.mjs"
+    ? await buildPlanetHubRuntimeBundle(join(root, "public", file), packageMetadata.version)
+    : await buildPlanetHubRuntimeModule(await readFile(join(root, "public", file), "utf8"), packageMetadata.version);
   assert.equal(built, expected, `${file} was not emitted as a deterministic minified lazy Planet Hub module.`);
 }
 const rankArtFiles = [
@@ -170,7 +179,9 @@ for (const required of SCRAMBLE_LAZY_FILES) {
   const built = files.get(required).toString("utf8");
   const expected = required.endsWith(".css")
     ? minifyCss(source)
-    : withAssetVersion(source, packageMetadata.version);
+    : PAGES_MINIFIED_CORE_RUNTIME_FILES.includes(required)
+      ? await buildPlanetHubRuntimeModule(source, packageMetadata.version)
+      : withAssetVersion(source, packageMetadata.version);
   assert.equal(built, expected, `${required} was not transformed as a versioned lazy Scramble asset.`);
 }
 for (const required of MOON_WORLDWEAVING_LAZY_FILES) {
@@ -211,7 +222,9 @@ for (const required of MOON_HEART_LAZY_FILES) {
   const built = files.get(required).toString("utf8");
   const expected = required.endsWith(".css")
     ? minifyCss(source)
-    : withAssetVersion(source, packageMetadata.version);
+    : PAGES_MINIFIED_CORE_RUNTIME_FILES.includes(required)
+      ? await buildPlanetHubRuntimeModule(source, packageMetadata.version)
+      : withAssetVersion(source, packageMetadata.version);
   assert.equal(built, expected, `${required} was not transformed as a versioned lazy Moon Heart asset.`);
 }
 for (const required of ["worldweaving.mjs", "moon-worldweaving-controller.mjs", ...MOON_OUTPOST_CORE_FILES]) {
@@ -440,14 +453,16 @@ for (const forbidden of ["server.mjs", "game-services.mjs", ".env", "package.jso
 }
 
 const html = files.get("index.html").toString("utf8");
-const gameApp = files.get("app.js").toString("utf8");
+// The minified app was checked against its exact transform above. Inspect
+// readable contracts here without depending on minifier-local identifier names.
+const gameAppContract = withAssetVersion(await readFile(join(root, "public", "app.js"), "utf8"), packageMetadata.version);
 const cosmeticPreloadBootstrap = files.get("cosmetic-preload-bootstrap.js").toString("utf8");
 const cosmicGateStyles = files.get("cosmic-gate.css").toString("utf8");
 const epicHomeStyles = files.get("epic-home.css").toString("utf8");
 const uiFoundationStyles = files.get("ui-foundation.css").toString("utf8");
 assert.match(html, /data-runtime="local-practice"/);
-assert.doesNotMatch(gameApp, /\b(?:ensureCosmosCircuit|openCosmosCircuit|COSMOS_CIRCUIT_RELEASE_ENABLED)\b/, "The itch shell must not ship staged Cosmos Circuit host glue.");
-assert.match(gameApp, /localStorage[.]removeItem\(COSMOS_CIRCUIT_SAVE_KEY\)/, "Legacy Cosmos Circuit state cleanup must remain available.");
+assert.doesNotMatch(gameAppContract, /\b(?:ensureCosmosCircuit|openCosmosCircuit|COSMOS_CIRCUIT_RELEASE_ENABLED)\b/, "The itch shell must not ship staged Cosmos Circuit host glue.");
+assert.match(gameAppContract, /localStorage[.]removeItem\(COSMOS_CIRCUIT_SAVE_KEY\)/, "Legacy Cosmos Circuit state cleanup must remain available.");
 const feedbackApiAttribute = html.match(/<body\b[^>]*\bdata-feedback-api="([^"]*)"/i)?.[1];
 assert.notEqual(feedbackApiAttribute, undefined, "The itch package is missing its data-feedback-api configuration.");
 assert.equal(
