@@ -10,8 +10,9 @@ permissions:
 
 jobs:
   verify:
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
+    # Locked procedural audio hashes use the Windows NumPy reference wheel.
+    runs-on: windows-latest
+    timeout-minutes: 15
     strategy:
       matrix:
         node-version: [20, 22]
@@ -28,7 +29,7 @@ jobs:
       - run: npm ci --ignore-scripts
       - run: npm run check
         env:
-          # Match the locked audio reference profile across AVX2 and AVX-512 runners.
+          # Keep the validated Windows audio reference CPU profile.
           NPY_ENABLE_CPU_FEATURES: X86_V3
 
   browser-e2e:

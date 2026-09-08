@@ -15,9 +15,12 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
+  verify:
+    # Locked procedural audio hashes use the Windows NumPy reference wheel.
+    runs-on: windows-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -37,8 +40,23 @@ jobs:
       - name: Verify project
         run: npm run check
         env:
-          # Match the locked audio reference profile across AVX2 and AVX-512 runners.
+          # Keep the validated Windows audio reference CPU profile.
           NPY_ENABLE_CPU_FEATURES: X86_V3
+
+  build:
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci --ignore-scripts
       - name: Configure Pages
         uses: actions/configure-pages@v5
       - name: Build static marketing site
