@@ -6,6 +6,7 @@ import {
   mkdir,
   mkdtemp,
   readFile,
+  realpath,
   rename,
   rm,
   symlink,
@@ -26,6 +27,9 @@ import {
 const SOURCE_ROOT = resolve(import.meta.dirname, "..");
 const GUIDE_BUILDER = resolve(SOURCE_ROOT, "scripts/build-voyage-projection-audio.py");
 const REVIEW_BUILDER = resolve(SOURCE_ROOT, "scripts/build-voyage-projection-audio-master.py");
+// Windows runners can expose TEMP through an 8.3 alias. Give the strict
+// artifact-root guard a canonical test fixture; deliberate junction tests stay intact.
+const SYSTEM_TEMP_ROOT = await realpath(tmpdir());
 let artifactRoot;
 
 function spawnPython(script, targetRoot = artifactRoot) {
@@ -56,7 +60,7 @@ async function snapshot() {
 }
 
 before(async () => {
-  artifactRoot = await mkdtemp(join(tmpdir(), "constellore-voyage-review-audio-"));
+  artifactRoot = await mkdtemp(join(SYSTEM_TEMP_ROOT, "constellore-voyage-review-audio-"));
   runPython(GUIDE_BUILDER);
   const output = runPython(REVIEW_BUILDER);
   assert.match(output, /Voice: absent; human approval: absent; release eligible: false[.]/u);
@@ -218,8 +222,8 @@ test("verifier rejects toolchain drift and the builder pins explicit PCG64", asy
 test("review output parent junction cannot escape the artifact root on Windows", {
   skip: process.platform !== "win32"
 }, async (context) => {
-  const isolatedRoot = await mkdtemp(join(tmpdir(), "constellore-voyage-junction-root-"));
-  const escapedRoot = await mkdtemp(join(tmpdir(), "constellore-voyage-junction-escape-"));
+  const isolatedRoot = await mkdtemp(join(SYSTEM_TEMP_ROOT, "constellore-voyage-junction-root-"));
+  const escapedRoot = await mkdtemp(join(SYSTEM_TEMP_ROOT, "constellore-voyage-junction-escape-"));
   const reviewParent = resolve(isolatedRoot, "output/voyage-projection/audio/review");
   try {
     const guide = spawnPython(GUIDE_BUILDER, isolatedRoot);
@@ -252,7 +256,7 @@ test("review verifier rejects a junction before reading candidate audio on Windo
   skip: process.platform !== "win32"
 }, async (context) => {
   const reviewParent = resolve(artifactRoot, "output/voyage-projection/audio/review");
-  const escapedRoot = await mkdtemp(join(tmpdir(), "constellore-voyage-verifier-junction-"));
+  const escapedRoot = await mkdtemp(join(SYSTEM_TEMP_ROOT, "constellore-voyage-verifier-junction-"));
   const escapedReview = resolve(escapedRoot, "review");
   let moved = false;
   let linked = false;
