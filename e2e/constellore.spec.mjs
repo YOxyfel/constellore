@@ -107,6 +107,9 @@ test("marketing path makes the playable beta obvious and mobile-safe", async ({ 
 });
 
 test("a first-time player starts from Home, completes Mud, resumes Mountain, and returns to the menu", async ({ page }) => {
+  // This full journey includes two lessons, a reload, Home, and the Cosmetic Lab.
+  // Shared CI software rendering needs more time than a single-screen check.
+  test.setTimeout(120_000);
   await page.goto("/play/?birthday=off");
   await startFirstGameFromHome(page);
   await expect(page.locator("#cosmicGate")).toBeHidden();
